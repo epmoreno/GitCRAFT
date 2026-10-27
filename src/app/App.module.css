@@ -34,7 +34,6 @@
   border-radius: var(--radius);
   border: 1px solid transparent;
   background: transparent;
-  cursor: pointer;
 }
 
 .toolButton:hover:not(:disabled) {
@@ -43,7 +42,6 @@
 
 .toolButton:disabled {
   color: var(--text-faint);
-  cursor: default;
 }
 
 .primaryButton {
@@ -52,22 +50,12 @@
   font-weight: 600;
 }
 
-.primaryButton:hover {
+.primaryButton:hover:not(:disabled) {
   background: var(--accent-strong);
 }
 
-/* Tabs */
-.tabbar {
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-3);
-  background: var(--surface-0);
-  border-bottom: 1px solid var(--border);
-}
-
-.tabbarEmpty {
-  color: var(--text-faint);
-  font-size: var(--font-size-small);
+.primaryButton:disabled {
+  opacity: 0.6;
 }
 
 /* Three zones */
@@ -114,28 +102,7 @@
 
 .graph {
   position: relative;
+  overflow-y: auto;
   background: var(--surface-0);
   min-width: 0;
-}
-
-.emptyState {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: var(--text-muted);
-}
-
-.emptyState h1 {
-  margin: 0 0 var(--space-2);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.emptyState p {
-  margin: 0;
 }

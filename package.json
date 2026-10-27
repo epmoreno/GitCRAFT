@@ -15,7 +15,8 @@
     "test": "vitest run",
     "check:web": "npm run format:check && npm run lint && npm run typecheck && npm run test",
     "check:rust": "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace",
-    "check": "npm run check:web && npm run check:rust"
+    "check": "npm run check:web && npm run check:rust",
+    "bindings": "UPDATE_BINDINGS=1 cargo test -q -p gitcraft typescript_bindings_are_up_to_date"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.4",
@@ -23,13 +24,15 @@
     "i18next": "^26.5.11",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-i18next": "^17.1.9"
+    "react-i18next": "^17.1.9",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tauri-apps/cli": "^2.12.4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

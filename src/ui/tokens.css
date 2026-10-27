@@ -63,11 +63,53 @@ body {
   font-family: var(--font-ui);
   font-size: var(--font-size);
   -webkit-font-smoothing: antialiased;
-  user-select: none;
   overflow: hidden;
+}
+
+/*
+ * Desktop-app text behaviour: interface text (titles, labels, buttons) is not
+ * selectable and keeps the normal arrow cursor. WebKit (WKWebView) still
+ * needs the -webkit- prefix; without it everything is selectable.
+ * Only content the user may want to copy opts in with `.selectable`:
+ * commit messages, hashes, paths, diffs, git output.
+ */
+html {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: auto;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* Focus rings only for keyboard navigation, in the accent colour. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 button {
   font: inherit;
   color: inherit;
+  cursor: default;
 }

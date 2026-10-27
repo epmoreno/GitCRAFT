@@ -1,14 +1,22 @@
 {
+  "zones": {
+    "sidebar": "Sidebar",
+    "graph": "History",
+    "detail": "Details"
+  },
   "toolbar": {
     "pull": "Pull",
     "push": "Push",
     "branch": "Branch",
     "stash": "Stash",
     "undo": "Undo",
-    "openRepo": "Open repository"
+    "openRepo": "Open repository",
+    "needsRepo": "Open a repository first",
+    "notYetAvailable": "Not available yet"
   },
   "tabs": {
-    "empty": "No open repositories"
+    "empty": "No open repositories",
+    "close": "Close {{name}}"
   },
   "sidebar": {
     "local": "Local branches",
@@ -17,11 +25,31 @@
     "stashes": "Stashes",
     "empty": "—"
   },
-  "graph": {
-    "emptyTitle": "No repository open",
-    "emptyHint": "Open, clone or initialize a repository to see its history."
+  "start": {
+    "title": "No repository open",
+    "hint": "Open a repository to see its history.",
+    "open": "Open repository…",
+    "dialogTitle": "Open repository",
+    "recent": "Recent",
+    "recentEmpty": "You haven't opened any repositories yet."
+  },
+  "repo": {
+    "historyPlaceholder": "The commit history will appear here."
   },
   "detail": {
     "empty": "Select a commit to see its details."
+  },
+  "errors": {
+    "openFailed": "Couldn't open the repository",
+    "showDetails": "Show Git's original output",
+    "dismiss": "Dismiss",
+    "gitNotFound": "Git wasn't found on this computer. Install it (for example with Homebrew or the Xcode Command Line Tools) and reopen GitCRAFT.",
+    "pathNotFound": "The folder “{{path}}” doesn't exist or is no longer available.",
+    "notARepository": "The folder “{{path}}” is not a Git repository. Choose the folder of a project that uses Git (or any of its subfolders).",
+    "bareRepository": "“{{path}}” is a bare repository (it has no working directory). GitCRAFT doesn't support bare repositories yet.",
+    "dubiousOwnership": "Git refuses to open “{{path}}” because the folder belongs to another user on this system. If you trust it, mark it as safe with “git config --global --add safe.directory” followed by the path.",
+    "cancelled": "The operation was cancelled.",
+    "timedOut": "Git took too long to respond while opening “{{path}}”. If it's on a network drive, check the connection.",
+    "unknown": "Git returned an unexpected error while opening “{{path}}”."
   }
 }

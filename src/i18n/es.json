@@ -1,14 +1,22 @@
 {
+  "zones": {
+    "sidebar": "Barra lateral",
+    "graph": "Historial",
+    "detail": "Detalle"
+  },
   "toolbar": {
     "pull": "Pull",
     "push": "Push",
     "branch": "Rama",
     "stash": "Stash",
     "undo": "Deshacer",
-    "openRepo": "Abrir repositorio"
+    "openRepo": "Abrir repositorio",
+    "needsRepo": "Abre un repositorio primero",
+    "notYetAvailable": "Todavía no disponible"
   },
   "tabs": {
-    "empty": "Sin repositorios abiertos"
+    "empty": "Sin repositorios abiertos",
+    "close": "Cerrar {{name}}"
   },
   "sidebar": {
     "local": "Ramas locales",
@@ -17,11 +25,31 @@
     "stashes": "Stashes",
     "empty": "—"
   },
-  "graph": {
-    "emptyTitle": "Ningún repositorio abierto",
-    "emptyHint": "Abre, clona o inicializa un repositorio para ver su historial."
+  "start": {
+    "title": "Ningún repositorio abierto",
+    "hint": "Abre un repositorio para ver su historial.",
+    "open": "Abrir repositorio…",
+    "dialogTitle": "Abrir repositorio",
+    "recent": "Recientes",
+    "recentEmpty": "Aún no has abierto ningún repositorio."
+  },
+  "repo": {
+    "historyPlaceholder": "El historial de commits aparecerá aquí."
   },
   "detail": {
     "empty": "Selecciona un commit para ver sus detalles."
+  },
+  "errors": {
+    "openFailed": "No se pudo abrir el repositorio",
+    "showDetails": "Ver la salida original de Git",
+    "dismiss": "Cerrar",
+    "gitNotFound": "No se encontró Git en este equipo. Instálalo (por ejemplo, con Homebrew o con las Command Line Tools de Xcode) y vuelve a abrir GitCRAFT.",
+    "pathNotFound": "La carpeta «{{path}}» no existe o ya no está disponible.",
+    "notARepository": "La carpeta «{{path}}» no es un repositorio Git. Elige la carpeta de un proyecto que use Git (o cualquiera de sus subcarpetas).",
+    "bareRepository": "«{{path}}» es un repositorio «bare» (sin directorio de trabajo). GitCRAFT todavía no admite este tipo de repositorio.",
+    "dubiousOwnership": "Git se niega a abrir «{{path}}» porque la carpeta pertenece a otro usuario del sistema. Si confías en ella, márcala como segura con «git config --global --add safe.directory» seguido de la ruta.",
+    "cancelled": "La operación se canceló.",
+    "timedOut": "Git tardó demasiado en responder al abrir «{{path}}». Si está en una unidad de red, comprueba la conexión.",
+    "unknown": "Git devolvió un error inesperado al abrir «{{path}}»."
   }
 }

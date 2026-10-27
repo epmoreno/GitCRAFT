@@ -3,10 +3,11 @@
 //! This crate has no Tauri dependency so it can be tested in isolation.
 
 pub mod error;
+pub mod ops;
 pub mod runner;
 #[cfg(feature = "testing")]
 pub mod testing;
 
-pub use error::{GitError, Result};
+pub use error::{ErrorKind, GitError, Result};
 pub use runner::{Access, Git, GitCommand, GitOutput, GitVersion};
 pub use tokio_util::sync::CancellationToken;

@@ -1,8 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import i18n from "../i18n";
+import { commandError, ipc, opened } from "../test/ipc";
 import { App } from "./App";
 
-describe("App shell", () => {
+describe("App", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("es");
   });
@@ -10,23 +12,146 @@ describe("App shell", () => {
   it("renders the three zones", () => {
     render(<App />);
     expect(
-      screen.getByRole("complementary", { name: "sidebar" }),
+      screen.getByRole("complementary", { name: "Barra lateral" }),
     ).toBeVisible();
-    expect(screen.getByRole("main", { name: "graph" })).toBeVisible();
-    expect(screen.getByRole("complementary", { name: "detail" })).toBeVisible();
+    expect(screen.getByRole("main", { name: "Historial" })).toBeVisible();
+    expect(
+      screen.getByRole("complementary", { name: "Detalle" }),
+    ).toBeVisible();
   });
 
-  it("shows the empty state and disabled repo actions without a repo", () => {
+  it("explains why repository actions are disabled", () => {
     render(<App />);
-    expect(screen.getByText("Ningún repositorio abierto")).toBeVisible();
     for (const label of ["Pull", "Push", "Rama", "Stash", "Deshacer"]) {
-      expect(screen.getByRole("button", { name: label })).toBeDisabled();
+      const button = screen.getByRole("button", { name: label });
+      expect(button).toBeDisabled();
+      expect(button).toHaveAccessibleDescription("Abre un repositorio primero");
     }
+  });
+
+  it("shows the start page with an open button and an empty recent list", async () => {
+    render(<App />);
+    const main = screen.getByRole("main");
+    expect(within(main).getByText("Ningún repositorio abierto")).toBeVisible();
+    expect(
+      within(main).getByRole("button", { name: "Abrir repositorio…" }),
+    ).toBeEnabled();
+    expect(
+      await within(main).findByText("Aún no has abierto ningún repositorio."),
+    ).toBeVisible();
+    // Clone and init are not implemented yet, so they are not offered.
+    expect(within(main).queryByText(/clon/i)).toBeNull();
+    expect(within(main).queryByText(/inicializ/i)).toBeNull();
+  });
+
+  it("opens a recent repository in a tab", async () => {
+    const user = userEvent.setup();
+    ipc.listRecentRepositories.mockResolvedValue({
+      status: "ok",
+      data: [{ path: "/src/gitcraft", name: "gitcraft", lastOpened: 1 }],
+    });
+    ipc.openRepository.mockResolvedValue({
+      status: "ok",
+      data: opened(1, "/src/gitcraft"),
+    });
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: /gitcraft/ }));
+
+    expect(ipc.openRepository).toHaveBeenCalledWith("/src/gitcraft");
+    expect(
+      await screen.findByRole("tab", { name: "gitcraft" }),
+    ).toHaveAttribute("aria-selected", "true");
+    const main = screen.getByRole("main");
+    expect(
+      within(main).getByRole("heading", { name: "gitcraft" }),
+    ).toBeVisible();
+    // The path is content the user may want to copy.
+    expect(within(main).getByText("/src/gitcraft")).toHaveClass("selectable");
+    expect(
+      screen.getByRole("button", { name: "Pull" }),
+    ).toHaveAccessibleDescription("Todavía no disponible");
+  });
+
+  it("opens the folder chosen in the picker", async () => {
+    const user = userEvent.setup();
+    ipc.pickFolder.mockResolvedValue("/work/project");
+    ipc.openRepository.mockResolvedValue({
+      status: "ok",
+      data: opened(7, "/work/project"),
+    });
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Abrir repositorio…" }),
+    );
+
+    expect(ipc.pickFolder).toHaveBeenCalledWith("Abrir repositorio");
+    expect(await screen.findByRole("tab", { name: "project" })).toBeVisible();
+  });
+
+  it("explains that a plain folder is not a repository", async () => {
+    const user = userEvent.setup();
+    ipc.pickFolder.mockResolvedValue("/Users/ana/Fotos");
+    ipc.openRepository.mockResolvedValue({
+      status: "error",
+      error: commandError(
+        "notARepository",
+        "$ git rev-parse --show-toplevel --absolute-git-dir\nfatal: not a git repository (or any of the parent directories): .git",
+      ),
+    });
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Abrir repositorio…" }),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(
+      within(alert).getByText("No se pudo abrir el repositorio"),
+    ).toBeVisible();
+    expect(
+      within(alert).getByText(
+        /La carpeta «\/Users\/ana\/Fotos» no es un repositorio Git/,
+      ),
+    ).toBeVisible();
+
+    await user.click(within(alert).getByText("Ver la salida original de Git"));
+    const raw = within(alert).getByText(/fatal: not a git repository/);
+    expect(raw).toBeVisible();
+    expect(raw).toHaveClass("selectable");
+
+    expect(screen.queryByRole("tab")).toBeNull();
+    await user.click(within(alert).getByRole("button", { name: "Cerrar" }));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  });
+
+  it("closes a tab and returns to the start page", async () => {
+    const user = userEvent.setup();
+    ipc.pickFolder.mockResolvedValue("/a/repo");
+    ipc.openRepository.mockResolvedValue({
+      status: "ok",
+      data: opened(1, "/a/repo"),
+    });
+    render(<App />);
+    await user.click(
+      screen.getByRole("button", { name: "Abrir repositorio…" }),
+    );
+    await screen.findByRole("tab", { name: "repo" });
+
+    await user.click(screen.getByRole("button", { name: "Cerrar repo" }));
+
+    expect(ipc.closeRepository).toHaveBeenCalledWith(1);
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.getByText("Ningún repositorio abierto")).toBeVisible();
   });
 
   it("switches language", async () => {
     await i18n.changeLanguage("en");
     render(<App />);
     expect(screen.getByText("No repository open")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Pull" }),
+    ).toHaveAccessibleDescription("Open a repository first");
   });
 });

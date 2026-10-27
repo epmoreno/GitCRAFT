@@ -27,10 +27,10 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 ## Fase 1 — MVP
 
 ### 1. Repositorios
-- [ ] **1.1 Abrir repo.** Diálogo nativo → validación con
+- [x] **1.1 Abrir repo.** Diálogo nativo → validación con
       `git rev-parse --show-toplevel` → aparece la pestaña. Abrir una carpeta que
       no es un repo da un error claro. *Test:* integración con repo y no-repo.
-- [ ] **1.2 Recientes.** La lista persiste entre sesiones (máx. 20) y quita
+- [x] **1.2 Recientes.** La lista persiste entre sesiones (máx. 20) y quita
       entradas de rutas que ya no existen.
 - [ ] **1.3 Pestañas.** Varias pestañas con estado independiente; se pueden
       cerrar y reordenar; se restauran al reiniciar.

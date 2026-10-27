@@ -9,8 +9,12 @@ rust-version.workspace = true
 [features]
 # Deterministic temporary repositories for integration tests (`testing::TestRepo`).
 testing = ["dep:tempfile"]
+# Derives specta::Type on public types so the app can export TypeScript bindings.
+specta = ["dep:specta"]
 
 [dependencies]
+serde.workspace = true
+specta = { workspace = true, optional = true }
 tempfile = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio.workspace = true
@@ -21,6 +25,7 @@ nix = { version = "0.31", features = ["signal", "process"] }
 
 [dev-dependencies]
 gitcraft-core = { path = ".", features = ["testing"] }
+serde_json.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 

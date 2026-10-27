@@ -14,11 +14,20 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-gitcraft-core.workspace = true
+gitcraft-core = { workspace = true, features = ["specta"] }
 serde.workspace = true
 serde_json.workspace = true
+specta.workspace = true
+# Pre-release: pinned exactly together with specta (see its docs).
+specta-typescript = "=0.0.13"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
+
+[dev-dependencies]
+gitcraft-core = { workspace = true, features = ["specta", "testing"] }
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [lints]
 workspace = true

@@ -14,7 +14,7 @@
 | Listas grandes | **@tanstack/react-virtual** + `<canvas>` para el grafo | El canvas dibuja solo las filas visibles; el DOM solo tiene ~60 filas. |
 | Primitivas UI | **Radix UI** (sin estilos) + CSS Modules con tokens propios | Accesibilidad (menús, diálogos, foco) sin imponer un aspecto: la identidad visual es 100 % nuestra. |
 | i18n | **i18next** (`es`, `en`) | Estándar. Un test detecta claves que faltan. |
-| Tipos IPC | **tauri-specta** | Los tipos TS de comandos y eventos se generan desde Rust, sin desincronizaciones. |
+| Tipos IPC | **tauri-specta** (`=2.0.0-rc.26`, fijado) | Los tipos TS de comandos y eventos se generan desde Rust en `src/ipc/bindings.ts` (`npm run bindings`). Un test de Rust falla si el archivo está desactualizado. Los comandos devuelven `{status: "ok", data}` o `{status: "error", error: IpcError}`. |
 | Tests | `cargo test` + `tempfile` + `insta` (snapshots de parsers) · Vitest + Testing Library | |
 
 **¿Y Electron?** Solo lo recomendaría si necesitáramos Chromium idéntico en todas
@@ -159,9 +159,24 @@ para unstage). Esta lógica es pura y se cubre con tests unitarios exhaustivos.
 
 ## 6. Persistencia
 
-`app_config_dir/gitcraft/settings.json` guarda los recientes, las pestañas
-abiertas y las preferencias (modo de pull por repo, tema, idioma). **Nunca**
-guarda credenciales.
+`settings.json` en el `app_config_dir` de Tauri (en macOS,
+`~/Library/Application Support/dev.gitcraft.app/`) guarda:
+
+- Los recientes: máximo 20 y se descartan los que ya no existen.
+- Las pestañas abiertas.
+- Las preferencias: modo de pull por repo, tema e idioma.
+
+Se escribe de forma atómica (archivo temporal + rename). Si el archivo está
+corrupto, se usan los valores por defecto. **Nunca** guarda credenciales.
+
+### Errores hacia la UI
+
+Los errores llegan como `IpcError { kind, message, details }`:
+
+- `kind` (`ErrorKind`) lo clasifica el core a partir del stderr, que con
+  `LC_ALL=C` es estable, y elige el mensaje traducido `errors.<kind>`.
+- `details` contiene el comando y la salida original de git, que la UI muestra
+  bajo demanda.
 
 ## 7. Estrategia de tests
 
