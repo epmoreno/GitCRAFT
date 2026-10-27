@@ -33,9 +33,6 @@
     "recent": "Recent",
     "recentEmpty": "You haven't opened any repositories yet."
   },
-  "repo": {
-    "historyPlaceholder": "The commit history will appear here."
-  },
   "detail": {
     "empty": "Select a commit to see its details."
   },
@@ -51,5 +48,26 @@
     "cancelled": "The operation was cancelled.",
     "timedOut": "Git took too long to respond while opening “{{path}}”. If it's on a network drive, check the connection.",
     "unknown": "Git returned an unexpected error while opening “{{path}}”."
+  },
+  "graph": {
+    "listLabel": "History of {{name}}",
+    "columnDescription": "Description",
+    "columnAuthor": "Author",
+    "columnDate": "Date",
+    "columnCommit": "Commit",
+    "count_one": "{{count}} commit",
+    "count_other": "{{count}} commits",
+    "loadingCount_one": "Loading… {{count}} commit",
+    "loadingCount_other": "Loading… {{count}} commits",
+    "empty": "This repository has no commits yet.",
+    "loadFailed": "Couldn't load the history.",
+    "moreRefs_one": "+{{count}}",
+    "moreRefs_other": "+{{count}}",
+    "refKind": {
+      "head": "Detached HEAD",
+      "local": "Local branch {{name}}",
+      "remote": "Remote branch {{name}}",
+      "tag": "Tag {{name}}"
+    }
   }
 }

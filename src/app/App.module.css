@@ -102,7 +102,9 @@
 
 .graph {
   position: relative;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--surface-0);
   min-width: 0;
 }

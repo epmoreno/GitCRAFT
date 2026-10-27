@@ -1,0 +1,190 @@
+.view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Column layout shared by the header and the rows */
+.header,
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 110px 72px;
+  gap: var(--space-3);
+  align-items: center;
+  padding-right: var(--space-3);
+}
+
+.header {
+  height: 26px;
+  flex: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+.scroller {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The canvas stays pinned to the viewport while rows scroll under it. */
+.canvasLayer {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 0;
+  pointer-events: none;
+}
+
+.canvas {
+  display: block;
+}
+
+.row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 26px;
+  white-space: nowrap;
+}
+
+.row:hover {
+  background: var(--surface-1);
+}
+
+.rowSelected,
+.rowSelected:hover {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-1));
+}
+
+.description {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.summary,
+.author,
+.date {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.author,
+.date {
+  color: var(--text-muted);
+}
+
+.sha {
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+}
+
+/* Ref labels */
+.chips {
+  display: inline-flex;
+  flex: none;
+  gap: var(--space-1);
+  max-width: 60%;
+  overflow: hidden;
+}
+
+.chip {
+  overflow: hidden;
+  max-width: 180px;
+  padding: 1px 6px;
+  border: 1px solid var(--lane);
+  border-radius: 3px;
+  font-size: var(--font-size-small);
+  line-height: 15px;
+  text-overflow: ellipsis;
+}
+
+.chipLocal {
+  background: color-mix(in srgb, var(--lane) 22%, transparent);
+  color: var(--text);
+}
+
+.chipRemote {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.chipTag {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.chipTag::before {
+  content: "◆ ";
+  font-size: 9px;
+  color: var(--text-faint);
+}
+
+.chipHead,
+.chipCurrent {
+  background: var(--lane);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+
+.chipMore {
+  border-color: var(--border-strong);
+  color: var(--text-faint);
+}
+
+/* States */
+.empty {
+  margin: var(--space-4);
+  color: var(--text-faint);
+}
+
+.loadError {
+  margin: var(--space-3);
+  padding: var(--space-3);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.loadError p {
+  margin: 0;
+}
+
+.loadError pre {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+}
+
+.statusbar {
+  display: flex;
+  flex: none;
+  justify-content: space-between;
+  gap: var(--space-3);
+  height: 24px;
+  padding: 0 var(--space-3);
+  align-items: center;
+  border-top: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-faint);
+  font-size: var(--font-size-small);
+}
+
+.path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

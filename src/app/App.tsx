@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { GraphView } from "../features/graph/GraphView";
 import { OpenErrorBanner } from "../features/repo/OpenErrorBanner";
-import { RepoView } from "../features/repo/RepoView";
 import { StartPage } from "../features/repo/StartPage";
 import { TabBar } from "../features/repo/TabBar";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
@@ -40,7 +40,11 @@ export function App() {
         </aside>
         <main className={styles.graph} aria-label={t("zones.graph")}>
           <OpenErrorBanner />
-          {active ? <RepoView repo={active} /> : <StartPage />}
+          {active ? (
+            <GraphView key={active.id} repoId={active.id} info={active.info} />
+          ) : (
+            <StartPage />
+          )}
         </main>
         <aside className={styles.detail} aria-label={t("zones.detail")}>
           <p className={styles.detailEmpty}>{t("detail.empty")}</p>

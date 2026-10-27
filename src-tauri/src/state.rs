@@ -5,7 +5,7 @@ use std::sync::{Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gitcraft_core::graph::{GraphEntry, load_graph};
-use gitcraft_core::ops::refs::read_refs;
+use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::{CancellationToken, Git, GitError};
 use serde::Serialize;
@@ -113,6 +113,22 @@ impl AppState {
             load.cancel();
         }
         true
+    }
+
+    fn session_path(&self, id: RepoId) -> Result<PathBuf, IpcError> {
+        self.lock()
+            .sessions
+            .iter()
+            .find(|s| s.id == id)
+            .map(|s| PathBuf::from(&s.info.path))
+            .ok_or_else(|| GitError::Cancelled.into())
+    }
+
+    /// Branches, remote branches, tags and HEAD of session `id`.
+    pub async fn refs(&self, id: RepoId) -> Result<RepoRefs, IpcError> {
+        let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
+        let path = self.session_path(id)?;
+        Ok(read_refs(git, &path, &CancellationToken::new()).await?)
     }
 
     /// Streams the commit graph of session `id` to `send`. Starting a new
@@ -285,6 +301,19 @@ mod tests {
         assert_eq!(entries.len(), 7);
         assert_eq!(entries[0].commit.oid, ids["E"]);
         assert_eq!(events[1], GraphEvent::Done { total: 7 });
+    }
+
+    #[tokio::test]
+    async fn reads_the_refs_of_a_session() {
+        let f = fixture();
+        let (repo, _) = TestRepo::sample_history().await;
+        let opened = f.state.open_repository(repo.path()).await.expect("open");
+        let refs = f.state.refs(opened.id).await.expect("refs");
+        assert_eq!(refs.refs.len(), 5, "3 branches + 2 tags");
+        assert_eq!(
+            f.state.refs(999).await.expect_err("closed").kind,
+            ErrorKind::Cancelled
+        );
     }
 
     #[tokio::test]

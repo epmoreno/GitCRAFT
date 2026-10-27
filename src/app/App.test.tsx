@@ -64,8 +64,11 @@ describe("App", () => {
     ).toHaveAttribute("aria-selected", "true");
     const main = screen.getByRole("main");
     expect(
-      within(main).getByRole("heading", { name: "gitcraft" }),
+      await within(main).findByRole("listbox", {
+        name: "Historial de gitcraft",
+      }),
     ).toBeVisible();
+    expect(ipc.streamGraph).toHaveBeenCalledWith(1, expect.any(Function));
     // The path is content the user may want to copy.
     expect(within(main).getByText("/src/gitcraft")).toHaveClass("selectable");
     expect(

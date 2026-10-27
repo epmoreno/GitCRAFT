@@ -33,9 +33,6 @@
     "recent": "Recientes",
     "recentEmpty": "Aún no has abierto ningún repositorio."
   },
-  "repo": {
-    "historyPlaceholder": "El historial de commits aparecerá aquí."
-  },
   "detail": {
     "empty": "Selecciona un commit para ver sus detalles."
   },
@@ -51,5 +48,26 @@
     "cancelled": "La operación se canceló.",
     "timedOut": "Git tardó demasiado en responder al abrir «{{path}}». Si está en una unidad de red, comprueba la conexión.",
     "unknown": "Git devolvió un error inesperado al abrir «{{path}}»."
+  },
+  "graph": {
+    "listLabel": "Historial de {{name}}",
+    "columnDescription": "Descripción",
+    "columnAuthor": "Autor",
+    "columnDate": "Fecha",
+    "columnCommit": "Commit",
+    "count_one": "{{count}} commit",
+    "count_other": "{{count}} commits",
+    "loadingCount_one": "Cargando… {{count}} commit",
+    "loadingCount_other": "Cargando… {{count}} commits",
+    "empty": "Este repositorio todavía no tiene commits.",
+    "loadFailed": "No se pudo cargar el historial.",
+    "moreRefs_one": "+{{count}}",
+    "moreRefs_other": "+{{count}}",
+    "refKind": {
+      "head": "HEAD desacoplado",
+      "local": "Rama local {{name}}",
+      "remote": "Rama remota {{name}}",
+      "tag": "Tag {{name}}"
+    }
   }
 }

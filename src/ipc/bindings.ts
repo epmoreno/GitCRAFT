@@ -9,6 +9,7 @@ export const commands = {
 	listRecentRepositories: () => typedError<RecentRepository[], IpcError_Serialize>(__TAURI_INVOKE("list_recent_repositories")),
 	/**  Streams the commit graph as `page` events followed by `done`. */
 	loadGraph: (id: number, onEvent: Channel<GraphEvent>) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("load_graph", { id, onEvent })),
+	getRefs: (id: number) => typedError<RepoRefs_Serialize, IpcError_Serialize>(__TAURI_INVOKE("get_refs", { id })),
 };
 
 /* Types */
@@ -31,6 +32,40 @@ export type Commit = {
  */
 export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | "cancelled" | "timedOut" | "unknown";
 
+export type GitRef = GitRef_Serialize | GitRef_Deserialize;
+
+export type GitRef_Deserialize = {
+	/**  Full name, e.g. `refs/remotes/origin/main`. */
+	name: string,
+	/**  Display name: `main`, `origin/main`, `v1.0`. */
+	shortName: string,
+	kind: RefKind,
+	/**  The commit it points to (annotated tags are peeled). */
+	target: string,
+	/**  For remote branches: the remote's name. */
+	remote?: string | null,
+	/**  For local branches: the tracked branch, e.g. `origin/main`. */
+	upstream?: string | null,
+	/**  The branch HEAD points to. */
+	isHead: boolean,
+};
+
+export type GitRef_Serialize = {
+	/**  Full name, e.g. `refs/remotes/origin/main`. */
+	name: string,
+	/**  Display name: `main`, `origin/main`, `v1.0`. */
+	shortName: string,
+	kind: RefKind,
+	/**  The commit it points to (annotated tags are peeled). */
+	target: string,
+	/**  For remote branches: the remote's name. */
+	remote: string | null,
+	/**  For local branches: the tracked branch, e.g. `origin/main`. */
+	upstream: string | null,
+	/**  The branch HEAD points to. */
+	isHead: boolean,
+};
+
 export type GraphEntry = {
 	commit: Commit,
 	row: GraphRow,
@@ -47,6 +82,16 @@ export type GraphRow = {
 	outgoing: Lane[],
 	passing: Lane[],
 };
+
+export type Head = Head_Serialize | Head_Deserialize;
+
+export type Head_Deserialize = 
+/**  On a branch. `oid` is `None` while the branch has no commits yet. */
+{ type: "branch"; name: string; oid?: string | null } | { type: "detached"; oid: string };
+
+export type Head_Serialize = 
+/**  On a branch. `oid` is `None` while the branch has no commits yet. */
+{ type: "branch"; name: string; oid: string | null } | { type: "detached"; oid: string };
 
 /**
  *  Error returned by every command. The UI shows a translated message for
@@ -94,6 +139,8 @@ export type RecentRepository = {
 	lastOpened: number,
 };
 
+export type RefKind = "local" | "remote" | "tag";
+
 /**  A repository with a working tree, identified by its top-level directory. */
 export type RepoInfo = {
 	/**  Absolute path of the working tree root, as git reports it. */
@@ -102,6 +149,24 @@ export type RepoInfo = {
 	name: string,
 	/**  Absolute path of the `.git` directory. */
 	gitDir: string,
+};
+
+export type RepoRefs = RepoRefs_Serialize | RepoRefs_Deserialize;
+
+export type RepoRefs_Deserialize = {
+	head: Head_Deserialize,
+	/**  Local branches, remote branches and tags, sorted by full name. */
+	refs: GitRef_Deserialize[],
+	/**  Configured remotes, including those without fetched branches. */
+	remotes: string[],
+};
+
+export type RepoRefs_Serialize = {
+	head: Head_Serialize,
+	/**  Local branches, remote branches and tags, sorted by full name. */
+	refs: GitRef_Serialize[],
+	/**  Configured remotes, including those without fetched branches. */
+	remotes: string[],
 };
 
 /* Tauri Specta runtime */

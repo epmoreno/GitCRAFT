@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useGraphStore } from "../graph/store";
 import {
   commands,
   pickFolder,
@@ -81,6 +82,7 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
         ? ((remaining[index] ?? remaining[index - 1] ?? null)?.id ?? null)
         : activeId;
     set({ tabs: remaining, activeId: nextActive });
+    useGraphStore.getState().forget(id);
     await commands.closeRepository(id);
   },
 

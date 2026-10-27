@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use tauri::State;
 use tauri::ipc::Channel;
 
+use gitcraft_core::ops::refs::RepoRefs;
+
 use crate::error::IpcError;
 use crate::settings::RecentRepository;
 use crate::state::{AppState, GraphEvent, OpenedRepository, RepoId};
@@ -46,4 +48,10 @@ pub async fn load_graph(
             let _ = on_event.send(event);
         })
         .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_refs(state: State<'_, AppState>, id: RepoId) -> Result<RepoRefs, IpcError> {
+    state.refs(id).await
 }

@@ -61,6 +61,11 @@
 }
 
 /* Start page */
+.startScroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .start {
   display: flex;
   flex-direction: column;
@@ -161,29 +166,6 @@
   font-size: var(--font-size-small);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Open repository placeholder */
-.repoView {
-  padding: var(--space-4);
-}
-
-.repoName {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.repoPath {
-  margin: var(--space-1) 0 var(--space-4);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-small);
-}
-
-.repoPlaceholder {
-  margin: 0;
-  color: var(--text-faint);
 }
 
 /* Error banner */

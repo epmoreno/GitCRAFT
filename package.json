@@ -20,6 +20,7 @@
     "bench:graph": "cargo test -p gitcraft-core --release --test bench_graph -- --ignored --nocapture"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.14.23",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-dialog": "^2.8.3",
     "i18next": "^26.5.11",
