@@ -3,13 +3,13 @@ import {
   commands,
   streamGraph,
   type CommandError,
-  type GraphEntry,
+  type GraphLine,
   type RepoRefs,
 } from "../../ipc";
 
 export type RepoGraph = {
   status: "loading" | "done" | "error";
-  entries: GraphEntry[];
+  lines: GraphLine[];
   /** Widest column seen so far (nodes and lines). */
   maxColumn: number;
   refs: RepoRefs | null;
@@ -30,7 +30,7 @@ let nextLoadId = 0;
 
 const emptyGraph = (loadId: number): RepoGraph => ({
   status: "loading",
-  entries: [],
+  lines: [],
   maxColumn: 0,
   refs: null,
   error: null,
@@ -38,12 +38,12 @@ const emptyGraph = (loadId: number): RepoGraph => ({
   loadId,
 });
 
-function widest(entries: GraphEntry[]): number {
+function widest(lines: GraphLine[]): number {
   let max = 0;
-  for (const { row } of entries) {
-    max = Math.max(max, row.column);
-    for (const lane of row.passing) max = Math.max(max, lane.column);
-    for (const lane of row.outgoing) max = Math.max(max, lane.column);
+  for (const line of lines) {
+    max = Math.max(max, line.column);
+    for (const [column] of line.passing) max = Math.max(max, column);
+    for (const [column] of line.outgoing) max = Math.max(max, column);
   }
   return max;
 }
@@ -79,8 +79,8 @@ export const useGraphStore = create<GraphState>()((set, get) => {
       const result = await streamGraph(repoId, (event) => {
         if (event.type === "page") {
           patch(repoId, loadId, (g) => ({
-            entries: g.entries.concat(event.entries),
-            maxColumn: Math.max(g.maxColumn, widest(event.entries)),
+            lines: g.lines.concat(event.lines),
+            maxColumn: Math.max(g.maxColumn, widest(event.lines)),
           }));
         } else {
           patch(repoId, loadId, () => ({ status: "done" }));

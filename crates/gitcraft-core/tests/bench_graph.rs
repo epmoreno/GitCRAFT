@@ -13,7 +13,7 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use gitcraft_core::graph::{GraphEntry, load_graph};
+use gitcraft_core::graph::{GraphLine, load_graph};
 use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, Git};
 
@@ -31,7 +31,7 @@ struct Run {
 async fn run_once(git: &Git, repo: &Path) -> Run {
     let started = Instant::now();
     let mut first_page = None;
-    let mut pages: Vec<Vec<GraphEntry>> = Vec::new();
+    let mut pages: Vec<Vec<GraphLine>> = Vec::new();
     let commits = load_graph(git, repo, false, &CancellationToken::new(), |page| {
         first_page.get_or_insert_with(|| started.elapsed());
         pages.push(page);
@@ -47,12 +47,7 @@ async fn run_once(git: &Git, repo: &Path) -> Run {
         .sum();
     let json = json_started.elapsed();
 
-    let max_column = pages
-        .iter()
-        .flatten()
-        .map(|e| e.row.column)
-        .max()
-        .unwrap_or(0);
+    let max_column = pages.iter().flatten().map(|e| e.column).max().unwrap_or(0);
     Run {
         first_page: first_page.unwrap_or(total),
         total,

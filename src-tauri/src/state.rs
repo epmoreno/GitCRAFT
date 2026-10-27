@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use gitcraft_core::graph::{GraphEntry, load_graph};
+use gitcraft_core::graph::{GraphLine, load_graph};
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::{CancellationToken, Git, GitError};
@@ -26,7 +26,7 @@ pub struct OpenedRepository {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum GraphEvent {
-    Page { entries: Vec<GraphEntry> },
+    Page { lines: Vec<GraphLine> },
     Done { total: u32 },
 }
 
@@ -156,8 +156,8 @@ impl AppState {
         };
 
         let refs = read_refs(git, &path, &cancel).await?;
-        let total = load_graph(git, &path, refs.head_is_detached(), &cancel, |entries| {
-            send(GraphEvent::Page { entries });
+        let total = load_graph(git, &path, refs.head_is_detached(), &cancel, |lines| {
+            send(GraphEvent::Page { lines });
         })
         .await?;
         send(GraphEvent::Done {
@@ -295,11 +295,11 @@ mod tests {
             .await
             .expect("load");
         assert_eq!(events.len(), 2);
-        let GraphEvent::Page { entries } = &events[0] else {
+        let GraphEvent::Page { lines } = &events[0] else {
             panic!("expected a page first: {events:?}");
         };
-        assert_eq!(entries.len(), 7);
-        assert_eq!(entries[0].commit.oid, ids["E"]);
+        assert_eq!(lines.len(), 7);
+        assert_eq!(lines[0].oid, ids["E"]);
         assert_eq!(events[1], GraphEvent::Done { total: 7 });
     }
 

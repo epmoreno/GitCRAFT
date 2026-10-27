@@ -1,7 +1,7 @@
 import {
   commandError,
   ipc,
-  sampleEntries,
+  sampleLines,
   sampleRefs,
   streamEvents,
 } from "../../test/ipc";
@@ -11,18 +11,18 @@ const graph = (id: number) => useGraphStore.getState().graphs[id];
 
 describe("graph store", () => {
   it("appends pages in order, tracks the widest column and loads refs", async () => {
-    const entries = sampleEntries();
+    const lines = sampleLines();
     ipc.getRefs.mockResolvedValue({ status: "ok", data: sampleRefs() });
     streamEvents([
-      { type: "page", entries: entries.slice(0, 2) },
-      { type: "page", entries: entries.slice(2) },
-      { type: "done", total: entries.length },
+      { type: "page", lines: lines.slice(0, 2) },
+      { type: "page", lines: lines.slice(2) },
+      { type: "done", total: lines.length },
     ]);
 
     await useGraphStore.getState().load(1);
 
     expect(graph(1)?.status).toBe("done");
-    expect(graph(1)?.entries.map((e) => e.commit.summary)).toEqual([
+    expect(graph(1)?.lines.map((l) => l.summary)).toEqual([
       "E",
       "Merge branch 'feature'",
       "D",
@@ -35,7 +35,7 @@ describe("graph store", () => {
   });
 
   it("ignores events from a superseded load", async () => {
-    const entries = sampleEntries();
+    const lines = sampleLines();
     let staleSend:
       | ((e: Parameters<Parameters<typeof ipc.streamGraph>[1]>[0]) => void)
       | undefined;
@@ -45,11 +45,11 @@ describe("graph store", () => {
     });
     await useGraphStore.getState().load(1);
 
-    streamEvents([{ type: "page", entries: entries.slice(0, 1) }]);
+    streamEvents([{ type: "page", lines: lines.slice(0, 1) }]);
     await useGraphStore.getState().load(1);
-    staleSend?.({ type: "page", entries: entries.slice(1) });
+    staleSend?.({ type: "page", lines: lines.slice(1) });
 
-    expect(graph(1)?.entries).toHaveLength(1);
+    expect(graph(1)?.lines).toHaveLength(1);
     expect(graph(1)?.error).toBeNull();
   });
 

@@ -31,8 +31,22 @@ Conclusiones:
   Pendiente de decidir: ofrecer al usuario ejecutar
   `git commit-graph write --reachable` en repos grandes que no lo tengan.
 - **Tamaño del JSON:** 43 MB para 100k commits (~430 bytes por commit) pasan por
-  el puente IPC y el WebView tiene que parsearlos. Si el parseo en WebKit
-  resulta lento, el siguiente paso es un formato compacto (arrays en lugar de
-  objetos con claves, o binario).
+  el puente IPC y el WebView tiene que parsearlos. Reducido el 2026-10-28
+  (ver abajo).
 - La anchura del sintético es pequeña (máx. 4 columnas). Para medir un repo
   con muchas ramas paralelas, usa `GITCRAFT_BENCH_REPO`.
+
+### 2026-10-28 — Solo los datos de la fila (decisión: el detalle se pide aparte)
+
+Cada fila envía ahora el oid, el asunto, el autor, la fecha, si es merge, y los
+carriles como pares `[columna, color]`. Ya no se envían los padres, el email
+ni la fecha del committer: el detalle del commit se carga al seleccionarlo.
+
+| Escenario | Primera página | Grafo completo | JSON (IPC) |
+| --- | --- | --- | --- |
+| Sin `commit-graph` | 291 ms | 429 ms | **22,6 MB** en 14 ms (antes 42,9 MB en 27 ms) |
+| Con `commit-graph` | 83 ms | 533 ms | **22,6 MB** en 14 ms |
+
+Es un 47 % menos de datos para el WebView (~226 bytes por commit). Los tiempos
+de carga no cambian porque los domina `git log`. En repos anchos el ahorro es
+mayor, porque cada fila repite sus carriles que pasan.

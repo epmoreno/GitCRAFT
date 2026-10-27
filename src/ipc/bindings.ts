@@ -13,19 +13,6 @@ export const commands = {
 };
 
 /* Types */
-export type Commit = {
-	oid: string,
-	/**  First parent first. Empty for root commits. */
-	parents: string[],
-	authorName: string,
-	authorEmail: string,
-	/**  Unix seconds. (Exported as a plain JS number; i64 values fit easily.) */
-	authorTime: number,
-	commitTime: number,
-	/**  First line of the message. */
-	summary: string,
-};
-
 /**
  *  What went wrong, in terms the UI can explain. Each kind has a translated
  *  message (`errors.<kind>` in the i18n files).
@@ -66,21 +53,27 @@ export type GitRef_Serialize = {
 	isHead: boolean,
 };
 
-export type GraphEntry = {
-	commit: Commit,
-	row: GraphRow,
-};
-
 /**  Sent over the graph channel: pages in order, then `done`. */
-export type GraphEvent = { type: "page"; entries: GraphEntry[] } | { type: "done"; total: number };
+export type GraphEvent = { type: "page"; lines: GraphLine[] } | { type: "done"; total: number };
 
-export type GraphRow = {
-	/**  Column of this commit's node. */
+/**
+ *  Exactly what the history list needs to draw one row. Everything else
+ *  (full message, committer, parents, files) is loaded when a commit is
+ *  selected.
+ */
+export type GraphLine = {
+	oid: string,
+	summary: string,
+	author: string,
+	/**  Author date, Unix seconds. */
+	time: number,
+	/**  Drawn as a hollow node. */
+	merge: boolean,
 	column: number,
 	color: number,
-	incoming: Lane[],
-	outgoing: Lane[],
-	passing: Lane[],
+	incoming: ([number, number])[],
+	outgoing: ([number, number])[],
+	passing: ([number, number])[],
 };
 
 export type Head = Head_Serialize | Head_Deserialize;
@@ -119,12 +112,6 @@ export type IpcError_Serialize = {
 	/**  Technical summary (English), for logs. */
 	message: string,
 	details: string | null,
-};
-
-export type Lane = {
-	column: number,
-	/**  Colour index; the UI maps it onto its palette (modulo its size). */
-	color: number,
 };
 
 export type OpenedRepository = {

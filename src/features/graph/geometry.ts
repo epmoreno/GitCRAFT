@@ -1,4 +1,4 @@
-import type { GraphRow } from "../../ipc";
+import type { GraphLine } from "../../ipc";
 
 export const ROW_HEIGHT = 26;
 export const LANE_WIDTH = 14;
@@ -39,33 +39,29 @@ export type Point = { x: number; y: number };
 export type Segment = { from: Point; to: Point; color: number };
 
 /** Line segments of one row, in pixels relative to the row's top edge. */
-export function rowSegments(row: GraphRow): Segment[] {
+export function rowSegments(row: GraphLine): Segment[] {
   const top = 0;
   const middle = ROW_HEIGHT / 2;
   const bottom = ROW_HEIGHT;
   const node = columnX(row.column);
   const segments: Segment[] = [];
 
-  for (const lane of row.passing) {
-    const x = columnX(lane.column);
-    segments.push({
-      from: { x, y: top },
-      to: { x, y: bottom },
-      color: lane.color,
-    });
+  for (const [column, color] of row.passing) {
+    const x = columnX(column);
+    segments.push({ from: { x, y: top }, to: { x, y: bottom }, color });
   }
-  for (const lane of row.incoming) {
+  for (const [column, color] of row.incoming) {
     segments.push({
-      from: { x: columnX(lane.column), y: top },
+      from: { x: columnX(column), y: top },
       to: { x: node, y: middle },
-      color: lane.color,
+      color,
     });
   }
-  for (const lane of row.outgoing) {
+  for (const [column, color] of row.outgoing) {
     segments.push({
       from: { x: node, y: middle },
-      to: { x: columnX(lane.column), y: bottom },
-      color: lane.color,
+      to: { x: columnX(column), y: bottom },
+      color,
     });
   }
   return segments;

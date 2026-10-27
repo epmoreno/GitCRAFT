@@ -5,7 +5,7 @@ import {
   commandError,
   ipc,
   oid,
-  sampleEntries,
+  sampleLines,
   sampleRefs,
   streamEvents,
 } from "../../test/ipc";
@@ -30,7 +30,7 @@ describe("GraphView", () => {
   it("shows each commit with labels, author, relative date and short hash", async () => {
     ipc.getRefs.mockResolvedValue({ status: "ok", data: sampleRefs() });
     streamEvents([
-      { type: "page", entries: sampleEntries() },
+      { type: "page", lines: sampleLines() },
       { type: "done", total: 6 },
     ]);
     renderGraph();
@@ -48,10 +48,7 @@ describe("GraphView", () => {
       "Rama local main",
     );
     expect(within(tip).getByText("origin/main")).toBeVisible();
-    expect(within(tip).getByText("Ana")).toHaveAttribute(
-      "title",
-      "ana@example.com",
-    );
+    expect(within(tip).getByText("Ana")).toBeVisible();
     expect(within(tip).getByText("hace 3 días")).toBeVisible();
     const sha = within(tip).getByText(oid("e").slice(0, 7));
     expect(sha).toHaveClass("selectable");
@@ -65,7 +62,7 @@ describe("GraphView", () => {
   it("selects a commit on click", async () => {
     const user = userEvent.setup();
     streamEvents([
-      { type: "page", entries: sampleEntries() },
+      { type: "page", lines: sampleLines() },
       { type: "done", total: 6 },
     ]);
     renderGraph();
@@ -77,7 +74,7 @@ describe("GraphView", () => {
 
   it("reflects a selection made elsewhere (e.g. the sidebar)", async () => {
     streamEvents([
-      { type: "page", entries: sampleEntries() },
+      { type: "page", lines: sampleLines() },
       { type: "done", total: 6 },
     ]);
     renderGraph();
@@ -88,7 +85,7 @@ describe("GraphView", () => {
 
   it("shows progress while loading", async () => {
     ipc.streamGraph.mockImplementation(async (_id, onEvent) => {
-      onEvent({ type: "page", entries: sampleEntries().slice(0, 2) });
+      onEvent({ type: "page", lines: sampleLines().slice(0, 2) });
       return new Promise(() => {}); // never finishes
     });
     renderGraph();

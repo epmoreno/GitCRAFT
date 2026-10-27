@@ -10,7 +10,7 @@ function withRefs(refs: RepoGraph["refs"]) {
     graphs: {
       1: {
         status: "done",
-        entries: [],
+        lines: [],
         maxColumn: 0,
         refs,
         error: null,

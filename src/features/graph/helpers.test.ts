@@ -1,4 +1,4 @@
-import { oid, sampleEntries, sampleRefs } from "../../test/ipc";
+import { oid, sampleLines, sampleRefs } from "../../test/ipc";
 import {
   LANE_COLORS,
   LANE_WIDTH,
@@ -25,7 +25,7 @@ describe("geometry", () => {
   });
 
   it("splits a merge row into incoming, outgoing and passing segments", () => {
-    const merge = sampleEntries()[1]!.row;
+    const merge = sampleLines()[1]!;
     const segments = rowSegments(merge);
     const node = { x: columnX(0), y: ROW_HEIGHT / 2 };
     expect(segments).toEqual([
@@ -34,7 +34,7 @@ describe("geometry", () => {
       { from: node, to: { x: columnX(1), y: ROW_HEIGHT }, color: 1 },
     ]);
 
-    const passing = rowSegments(sampleEntries()[2]!.row)[0];
+    const passing = rowSegments(sampleLines()[2]!)[0];
     expect(passing).toEqual({
       from: { x: columnX(0), y: 0 },
       to: { x: columnX(0), y: ROW_HEIGHT },

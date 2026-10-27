@@ -4,9 +4,8 @@ import {
   streamGraph,
   type CommandError,
   type ErrorKind,
-  type GraphEntry,
   type GraphEvent,
-  type Lane,
+  type GraphLine,
   type OpenedRepository,
   type RepoRefs,
 } from "../ipc";
@@ -61,84 +60,67 @@ export function emptyRefs(): RepoRefs {
   };
 }
 
-const lane = (column: number, color: number): Lane => ({ column, color });
-
 /** A 40-hex oid made from a short label, e.g. "a" → "aaaa…". */
 export const oid = (label: string) => label.repeat(40).slice(0, 40);
 
 /** The documented sample: E, M(B, D), D, C, B, A — main in column 0, feature in 1. */
-export function sampleEntries(): GraphEntry[] {
+export function sampleLines(): GraphLine[] {
   const time = Math.floor(Date.now() / 1000) - 3 * 24 * 3600;
-  const commit = (label: string, parents: string[], summary: string) => ({
+  const line = (
+    label: string,
+    summary: string,
+    column: number,
+    lanes: Pick<GraphLine, "incoming" | "outgoing" | "passing">,
+    merge = false,
+  ): GraphLine => ({
     oid: oid(label),
-    parents: parents.map(oid),
-    authorName: "Ana",
-    authorEmail: "ana@example.com",
-    authorTime: time,
-    commitTime: time,
     summary,
+    author: "Ana",
+    time,
+    merge,
+    column,
+    color: column,
+    ...lanes,
   });
   return [
-    {
-      commit: commit("e", ["m"], "E"),
-      row: {
-        column: 0,
-        color: 0,
-        incoming: [],
-        outgoing: [lane(0, 0)],
+    line("e", "E", 0, { incoming: [], outgoing: [[0, 0]], passing: [] }),
+    line(
+      "f",
+      "Merge branch 'feature'",
+      0,
+      {
+        incoming: [[0, 0]],
+        outgoing: [
+          [0, 0],
+          [1, 1],
+        ],
         passing: [],
       },
-    },
-    {
-      commit: commit("f", ["b", "d"], "Merge branch 'feature'"),
-      row: {
-        column: 0,
-        color: 0,
-        incoming: [lane(0, 0)],
-        outgoing: [lane(0, 0), lane(1, 1)],
-        passing: [],
-      },
-    },
-    {
-      commit: commit("d", ["c"], "D"),
-      row: {
-        column: 1,
-        color: 1,
-        incoming: [lane(1, 1)],
-        outgoing: [lane(1, 1)],
-        passing: [lane(0, 0)],
-      },
-    },
-    {
-      commit: commit("c", ["a"], "C"),
-      row: {
-        column: 1,
-        color: 1,
-        incoming: [lane(1, 1)],
-        outgoing: [lane(1, 1)],
-        passing: [lane(0, 0)],
-      },
-    },
-    {
-      commit: commit("b", ["a"], "B"),
-      row: {
-        column: 0,
-        color: 0,
-        incoming: [lane(0, 0)],
-        outgoing: [lane(0, 0)],
-        passing: [lane(1, 1)],
-      },
-    },
-    {
-      commit: commit("a", [], "A"),
-      row: {
-        column: 0,
-        color: 0,
-        incoming: [lane(0, 0), lane(1, 1)],
-        outgoing: [],
-        passing: [],
-      },
-    },
+      true,
+    ),
+    line("d", "D", 1, {
+      incoming: [[1, 1]],
+      outgoing: [[1, 1]],
+      passing: [[0, 0]],
+    }),
+    line("c", "C", 1, {
+      incoming: [[1, 1]],
+      outgoing: [[1, 1]],
+      passing: [[0, 0]],
+    }),
+    line("b", "B", 0, {
+      incoming: [[0, 0]],
+      outgoing: [[0, 0]],
+      passing: [[1, 1]],
+    }),
+    line("a", "A", 0, {
+      incoming: [
+        [0, 0],
+        [1, 1],
+      ],
+      outgoing: [],
+      passing: [],
+    }),
   ];
 }
 

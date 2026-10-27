@@ -1,4 +1,4 @@
-import type { GraphEntry } from "../../ipc";
+import type { GraphLine } from "../../ipc";
 import {
   NODE_RADIUS,
   ROW_HEIGHT,
@@ -8,7 +8,7 @@ import {
 } from "./geometry";
 
 type DrawOptions = {
-  entries: GraphEntry[];
+  lines: GraphLine[];
   scrollTop: number;
   width: number;
   height: number;
@@ -27,17 +27,17 @@ export function drawGraph(ctx: CanvasRenderingContext2D, o: DrawOptions) {
 
   const first = Math.max(0, Math.floor(o.scrollTop / ROW_HEIGHT));
   const last = Math.min(
-    o.entries.length - 1,
+    o.lines.length - 1,
     Math.ceil((o.scrollTop + o.height) / ROW_HEIGHT),
   );
 
   ctx.lineWidth = 2;
   ctx.lineCap = "round";
   for (let i = first; i <= last; i++) {
-    const entry = o.entries[i];
-    if (!entry) continue;
+    const line = o.lines[i];
+    if (!line) continue;
     const top = i * ROW_HEIGHT - o.scrollTop;
-    for (const s of rowSegments(entry.row)) {
+    for (const s of rowSegments(line)) {
       ctx.strokeStyle = laneColor(s.color);
       ctx.beginPath();
       ctx.moveTo(s.from.x, top + s.from.y);
@@ -52,12 +52,12 @@ export function drawGraph(ctx: CanvasRenderingContext2D, o: DrawOptions) {
   }
 
   for (let i = first; i <= last; i++) {
-    const entry = o.entries[i];
-    if (!entry) continue;
-    const x = columnX(entry.row.column);
+    const line = o.lines[i];
+    if (!line) continue;
+    const x = columnX(line.column);
     const y = i * ROW_HEIGHT - o.scrollTop + ROW_HEIGHT / 2;
-    const color = laneColor(entry.row.color);
-    const isMerge = entry.commit.parents.length > 1;
+    const color = laneColor(line.color);
+    const isMerge = line.merge;
 
     ctx.beginPath();
     ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
@@ -72,13 +72,11 @@ export function drawGraph(ctx: CanvasRenderingContext2D, o: DrawOptions) {
       ctx.fill();
     }
 
-    if (entry.commit.oid === o.headOid || entry.commit.oid === o.selectedOid) {
+    if (line.oid === o.headOid || line.oid === o.selectedOid) {
       ctx.beginPath();
       ctx.arc(x, y, NODE_RADIUS + 3, 0, Math.PI * 2);
       ctx.strokeStyle =
-        entry.commit.oid === o.headOid
-          ? o.ringColor
-          : laneColor(entry.row.color);
+        line.oid === o.headOid ? o.ringColor : laneColor(line.color);
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }

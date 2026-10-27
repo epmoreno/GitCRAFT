@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use gitcraft_core::graph::{GraphEntry, load_graph};
+use gitcraft_core::graph::{GraphLine, load_graph};
 use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, Git, GitError};
 
@@ -10,7 +10,7 @@ fn git() -> Git {
     Git::discover().expect("git must be installed to run the tests")
 }
 
-async fn pages(repo: &TestRepo) -> Vec<Vec<GraphEntry>> {
+async fn pages(repo: &TestRepo) -> Vec<Vec<GraphLine>> {
     let mut pages = Vec::new();
     let total = load_graph(&git(), repo.path(), false, &CancellationToken::new(), |p| {
         pages.push(p)
@@ -27,7 +27,7 @@ async fn small_histories_arrive_in_one_page() {
     let pages = pages(&repo).await;
     assert_eq!(pages.len(), 1);
     assert_eq!(pages[0].len(), 7);
-    assert_eq!(pages[0][0].commit.oid, ids["E"]);
+    assert_eq!(pages[0][0].oid, ids["E"]);
 }
 
 #[tokio::test]
@@ -44,27 +44,25 @@ async fn large_histories_are_paged_and_stay_continuous() {
     assert_eq!(sizes, [256, 2000, 744]);
 
     // Lines continue across page boundaries exactly as within a page.
-    let entries: Vec<&GraphEntry> = pages.iter().flatten().collect();
+    let entries: Vec<&GraphLine> = pages.iter().flatten().collect();
     for pair in entries.windows(2) {
         let bottom: BTreeMap<u16, u32> = pair[0]
-            .row
             .outgoing
             .iter()
-            .chain(&pair[0].row.passing)
-            .map(|l| (l.column, l.color))
+            .chain(&pair[0].passing)
+            .copied()
             .collect();
         let top: BTreeMap<u16, u32> = pair[1]
-            .row
             .incoming
             .iter()
-            .chain(&pair[1].row.passing)
-            .map(|l| (l.column, l.color))
+            .chain(&pair[1].passing)
+            .copied()
             .collect();
-        assert_eq!(bottom, top, "at {}", pair[1].commit.oid);
+        assert_eq!(bottom, top, "at {}", pair[1].oid);
     }
     // The synthetic history has merges and parallel branches.
-    assert!(entries.iter().any(|e| e.commit.parents.len() == 2));
-    assert!(entries.iter().any(|e| e.row.column > 0));
+    assert!(entries.iter().any(|e| e.merge));
+    assert!(entries.iter().any(|e| e.column > 0));
 }
 
 #[tokio::test]

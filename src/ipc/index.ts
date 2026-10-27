@@ -4,21 +4,21 @@ import { commands, type GraphEvent } from "./bindings";
 
 export { commands } from "./bindings";
 export type {
-  Commit,
   ErrorKind,
-  GraphEntry,
   GraphEvent,
-  GraphRow,
+  GraphLine,
   IpcError_Serialize as CommandError,
   GitRef_Serialize as GitRef,
   Head_Serialize as Head,
-  Lane,
   OpenedRepository,
   RecentRepository,
   RefKind,
   RepoInfo,
   RepoRefs_Serialize as RepoRefs,
 } from "./bindings";
+
+/** A graph line: `[column, colour]`. */
+export type Lane = [column: number, color: number];
 
 /** Native folder picker. Resolves to `null` when the user cancels. */
 export async function pickFolder(title: string): Promise<string | null> {

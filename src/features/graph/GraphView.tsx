@@ -34,7 +34,7 @@ export function GraphView({
     if (!useGraphStore.getState().graphs[repoId]) void load(repoId);
   }, [repoId, load]);
 
-  const entries = useMemo(() => graph?.entries ?? [], [graph?.entries]);
+  const lines = useMemo(() => graph?.lines ?? [], [graph?.lines]);
   const refs = graph?.refs ?? null;
   const selectedOid = graph?.selectedOid ?? null;
   const width = graphWidth(graph?.maxColumn ?? 0);
@@ -47,7 +47,7 @@ export function GraphView({
   // The React Compiler is not enabled, so its memoization caveat does not apply.
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
-    count: entries.length,
+    count: lines.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 20,
@@ -55,14 +55,14 @@ export function GraphView({
 
   // Bring a newly selected commit into view (e.g. picked in the sidebar).
   // Only selection changes scroll; new pages arriving must not.
-  const latest = useRef({ entries, virtualizer });
+  const latest = useRef({ lines, virtualizer });
   useEffect(() => {
-    latest.current = { entries, virtualizer };
+    latest.current = { lines, virtualizer };
   });
   useEffect(() => {
     if (!selectedOid) return;
-    const { entries, virtualizer } = latest.current;
-    const index = entries.findIndex((e) => e.commit.oid === selectedOid);
+    const { lines, virtualizer } = latest.current;
+    const index = lines.findIndex((l) => l.oid === selectedOid);
     if (index >= 0) virtualizer.scrollToIndex(index, { align: "auto" });
   }, [selectedOid]);
 
@@ -82,7 +82,7 @@ export function GraphView({
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
     drawGraph(ctx, {
-      entries,
+      lines,
       scrollTop: scroller.scrollTop,
       width,
       height,
@@ -92,7 +92,7 @@ export function GraphView({
       background: cssVar("--surface-0", "#121417"),
       ringColor: cssVar("--text", "#e3e6ea"),
     });
-  }, [entries, width, head, selectedOid]);
+  }, [lines, width, head, selectedOid]);
 
   useEffect(() => {
     const scroller = scrollRef.current;
@@ -139,7 +139,7 @@ export function GraphView({
           )}
         </div>
       )}
-      {status === "done" && entries.length === 0 && (
+      {status === "done" && lines.length === 0 && (
         <p className={styles.empty}>{t("graph.empty")}</p>
       )}
 
@@ -156,13 +156,12 @@ export function GraphView({
           style={{ height: virtualizer.getTotalSize(), position: "relative" }}
         >
           {virtualizer.getVirtualItems().map((item) => {
-            const entry = entries[item.index];
-            if (!entry) return null;
-            const { commit, row } = entry;
-            const selected = commit.oid === selectedOid;
+            const line = lines[item.index];
+            if (!line) return null;
+            const selected = line.oid === selectedOid;
             return (
               <div
-                key={commit.oid}
+                key={line.oid}
                 role="option"
                 aria-selected={selected}
                 className={
@@ -172,28 +171,26 @@ export function GraphView({
                   transform: `translateY(${item.start}px)`,
                   paddingLeft: width,
                 }}
-                onClick={() => select(repoId, commit.oid)}
+                onClick={() => select(repoId, line.oid)}
               >
                 <span className={styles.description}>
                   <RefChips
-                    labels={labels.get(commit.oid)}
-                    color={laneColor(row.color)}
+                    labels={labels.get(line.oid)}
+                    color={laneColor(line.color)}
                   />
                   <span className={`${styles.summary} selectable`}>
-                    {commit.summary}
+                    {line.summary}
                   </span>
                 </span>
-                <span className={styles.author} title={commit.authorEmail}>
-                  {commit.authorName}
-                </span>
+                <span className={styles.author}>{line.author}</span>
                 <span
                   className={styles.date}
-                  title={absoluteTime(commit.authorTime, language)}
+                  title={absoluteTime(line.time, language)}
                 >
-                  {relativeTime(commit.authorTime, now, language)}
+                  {relativeTime(line.time, now, language)}
                 </span>
-                <span className={`${styles.sha} selectable`} title={commit.oid}>
-                  {commit.oid.slice(0, 7)}
+                <span className={`${styles.sha} selectable`} title={line.oid}>
+                  {line.oid.slice(0, 7)}
                 </span>
               </div>
             );
@@ -207,8 +204,8 @@ export function GraphView({
         </span>
         <span aria-live="polite">
           {status === "loading"
-            ? t("graph.loadingCount", { count: entries.length })
-            : t("graph.count", { count: entries.length })}
+            ? t("graph.loadingCount", { count: lines.length })
+            : t("graph.count", { count: lines.length })}
         </span>
       </footer>
     </div>
