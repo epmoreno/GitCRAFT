@@ -17,7 +17,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 - [x] **0.3 Esqueleto Tauri 2 + React + TS.** `npm run tauri dev` abre una
       ventana vacía con el layout de tres zonas. CI local con `npm run check`
       (clippy, rustfmt, cargo test, eslint, tsc, vitest).
-- [ ] **0.4 Ejecutor de git.** Un módulo Rust lanza `git` con argumentos en array,
+- [x] **0.4 Ejecutor de git.** Un módulo Rust lanza `git` con argumentos en array,
       un entorno controlado (`LC_ALL=C`, `GIT_TERMINAL_PROMPT=0`…), timeout,
       cancelación y streaming de stdout. Tests: ejecutar `git --version`,
       cancelar un proceso largo y comprobar que no se usa shell.

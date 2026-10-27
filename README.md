@@ -8,7 +8,7 @@ See [docs/VISION.md](docs/VISION.md), [docs/ROADMAP.md](docs/ROADMAP.md) and
 ## Requirements
 
 - macOS (Apple Silicon) — other platforms later
-- Rust ≥ 1.90, Node ≥ 22, git ≥ 2.40
+- Rust ≥ 1.90, Node ≥ 22, git ≥ 2.30
 
 ## Commands
 
