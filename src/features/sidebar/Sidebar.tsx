@@ -23,7 +23,10 @@ export function Sidebar({ repoId }: Props) {
       <Remotes refs={refs} onSelect={goTo} />
       <Tags refs={refs} onSelect={goTo} />
       <Section title={t("sidebar.stashes")} count={null}>
-        <p className={styles.empty}>{t("sidebar.empty")}</p>
+        {/* Stashes are not read yet (roadmap 7.x). */}
+        <p className={styles.empty}>
+          {repoId === null ? t("sidebar.empty") : t("sidebar.comingSoon")}
+        </p>
       </Section>
     </aside>
   );

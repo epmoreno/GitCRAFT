@@ -28,7 +28,8 @@
     "noRemotes": "Sin remotos",
     "noTags": "Sin tags",
     "detachedHead": "HEAD desacoplado",
-    "currentBranch": "Rama actual: {{name}}"
+    "currentBranch": "Rama actual: {{name}}",
+    "comingSoon": "Próximamente"
   },
   "start": {
     "title": "Ningún repositorio abierto",

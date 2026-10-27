@@ -28,7 +28,8 @@
     "noRemotes": "No remotes",
     "noTags": "No tags",
     "detachedHead": "Detached HEAD",
-    "currentBranch": "Current branch: {{name}}"
+    "currentBranch": "Current branch: {{name}}",
+    "comingSoon": "Coming soon"
   },
   "start": {
     "title": "No repository open",

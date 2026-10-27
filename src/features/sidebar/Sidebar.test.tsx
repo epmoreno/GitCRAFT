@@ -85,5 +85,7 @@ describe("Sidebar", () => {
     ).toBeVisible();
     expect(screen.getByText("Sin remotos")).toBeVisible();
     expect(screen.getByText("Sin tags")).toBeVisible();
+    // Stashes are not read yet: say so instead of a bare dash.
+    expect(screen.getByText("Próximamente")).toBeVisible();
   });
 });
