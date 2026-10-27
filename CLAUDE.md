@@ -6,10 +6,6 @@ Arquitectura: `docs/ARCHITECTURE.md`.
 
 ## Reglas clean-room (obligatorias)
 
-- **Nunca** descompilar, desensamblar, inspeccionar ni analizar binarios, paquetes,
-  recursos o código de GitKraken ni de ninguna app propietaria. Tampoco con
-  herramientas MCP de ingeniería inversa (`rea`, Frida, extractores de asar,
-  inspectores de Electron…), aunque estén disponibles en la sesión.
 - Los clientes propietarios son referencia **solo** de ideas generales de UX. No
   se copian nombres, logos, iconos, paletas, textos ni recursos gráficos.
 - Se puede consultar código open source con licencia compatible (SourceGit,
@@ -17,6 +13,25 @@ Arquitectura: `docs/ARCHITECTURE.md`.
   copyright, se añade una entrada a `THIRD_PARTY_NOTICES.md` y un comentario
   `// Adapted from <proyecto> (<licencia>): <url>` junto al código.
 - Sin funciones de IA en el producto.
+
+## Uso de REA (reverse engineering)
+
+**Solo cuando el usuario lo pida, o cuando se proponga y el usuario lo apruebe.**
+
+Objetivos permitidos:
+
+- **GitHub Desktop (MIT) y SourceGit (MIT):** para entender cómo implementan una
+  función concreta. Si se reutiliza código, se conserva el aviso de licencia MIT
+  y se registra el origen en `THIRD_PARTY_NOTICES.md`. No se usan sus nombres,
+  logos ni recursos gráficos.
+- **Builds propios de GitCRAFT:** depuración, crashes y verificación.
+
+Objetivos prohibidos: **GitKraken, Fork, Sublime Merge, Tower** y cualquier
+software propietario cuya licencia prohíba el análisis. De ellos solo se usa el
+comportamiento observable como usuario, descrito con palabras propias.
+
+Antes de analizar cualquier otra app: verificar su licencia y preguntar al
+usuario.
 
 ## Seguridad y Git
 

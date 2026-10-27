@@ -70,11 +70,18 @@ negociar:
    modernos (GitKraken, Fork, Sublime Merge) sirven de referencia **solo** para
    ideas generales de experiencia de usuario, como el grafo central, las
    operaciones con clic o arrastrar y soltar, y el feedback inmediato.
-2. **Prohibido analizar software propietario.** Nunca se descompila, desensambla,
-   inspecciona ni analiza el binario, los paquetes, los recursos ni el código de
-   GitKraken ni de ninguna aplicación propietaria. Eso incluye herramientas de
-   ingeniería inversa (REA, desensambladores, extractores de asar o bundles,
-   inspectores de Electron, Frida, etc.). Sus licencias lo prohíben.
+2. **Ingeniería inversa (REA) solo sobre objetivos permitidos.** Se usa solo a
+   petición del usuario, o cuando se propone y el usuario lo aprueba.
+   - *Permitidos:* GitHub Desktop (MIT) y SourceGit (MIT), para entender cómo
+     implementan una función concreta (si se reutiliza código, se conserva su
+     aviso MIT y se registra en `THIRD_PARTY_NOTICES.md`, sin usar sus nombres,
+     logos ni recursos gráficos); y los builds propios de GitCRAFT, para
+     depuración, crashes y verificación.
+   - *Prohibidos:* GitKraken, Fork, Sublime Merge, Tower y cualquier software
+     propietario cuya licencia prohíba el análisis. De ellos solo se usa el
+     comportamiento observable como usuario, descrito con palabras propias.
+   - Antes de analizar cualquier otra aplicación se verifica su licencia y se
+     pregunta al usuario.
 3. **Identidad propia.** No se copian nombres, logos, iconos, paletas de color,
    textos, tipografías propietarias ni recursos gráficos de ningún producto.
 4. **Open source con licencia compatible.** Se puede consultar el código de

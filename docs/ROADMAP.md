@@ -12,7 +12,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 
 - [x] **0.1 Documentación base.** Existen `docs/VISION.md`, `docs/ROADMAP.md`,
       `CLAUDE.md` y `LICENSE` (MIT).
-- [ ] **0.2 Arquitectura aprobada.** `docs/ARCHITECTURE.md` describe los módulos
+- [x] **0.2 Arquitectura aprobada.** `docs/ARCHITECTURE.md` describe los módulos
       y el flujo UI → comando → proceso `git` → evento → UI.
 - [ ] **0.3 Esqueleto Tauri 2 + React + TS.** `npm run tauri dev` abre una
       ventana vacía con el layout de tres zonas. CI local con `npm run check`
