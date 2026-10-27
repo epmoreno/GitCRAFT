@@ -4,6 +4,8 @@
 
 pub mod error;
 pub mod runner;
+#[cfg(feature = "testing")]
+pub mod testing;
 
 pub use error::{GitError, Result};
 pub use runner::{Access, Git, GitCommand, GitOutput, GitVersion};

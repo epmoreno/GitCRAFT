@@ -6,7 +6,12 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
+[features]
+# Deterministic temporary repositories for integration tests (`testing::TestRepo`).
+testing = ["dep:tempfile"]
+
 [dependencies]
+tempfile = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
@@ -15,6 +20,7 @@ tokio-util.workspace = true
 nix = { version = "0.31", features = ["signal", "process"] }
 
 [dev-dependencies]
+gitcraft-core = { path = ".", features = ["testing"] }
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 

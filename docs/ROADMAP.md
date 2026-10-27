@@ -21,7 +21,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
       un entorno controlado (`LC_ALL=C`, `GIT_TERMINAL_PROMPT=0`…), timeout,
       cancelación y streaming de stdout. Tests: ejecutar `git --version`,
       cancelar un proceso largo y comprobar que no se usa shell.
-- [ ] **0.5 Fixtures de test.** Un helper crea repos temporales con historial
+- [x] **0.5 Fixtures de test.** Un helper crea repos temporales con historial
       sintético (ramas, merges, tags) para los tests de integración.
 
 ## Fase 1 — MVP

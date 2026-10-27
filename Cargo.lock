@@ -1082,6 +1082,7 @@ dependencies = [
 name = "gitcraft-core"
 version = "0.1.0"
 dependencies = [
+ "gitcraft-core",
  "nix",
  "tempfile",
  "thiserror 2.0.21",
