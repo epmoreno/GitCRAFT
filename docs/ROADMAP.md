@@ -46,7 +46,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
       más de 2 padres y firmas vacías.
 - [x] **2.2 Refs.** `git for-each-ref` produce ramas, remotos, tags y HEAD (también
       HEAD desacoplado). *Tests unitarios + integración.*
-- [ ] **2.3 Layout de carriles.** Un algoritmo en Rust asigna una columna y un
+- [x] **2.3 Layout de carriles.** Un algoritmo en Rust asigna una columna y un
       color a cada commit, con segmentos de arista por fila. *Tests:* historial
       lineal, rama + merge, octopus, ramas cruzadas; el layout es estable con la
       carga incremental.
