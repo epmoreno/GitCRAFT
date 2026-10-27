@@ -56,11 +56,10 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
       `docs/benchmarks.md`). *Estado:* el total y la primera página con
       `commit-graph` cumplen. Sin `commit-graph`, la primera página tarda
       294 ms (falta decidir cómo resolverlo).
-- [~] **2.5 Render virtualizado.** Canvas para el grafo y filas virtualizadas
+- [x] **2.5 Render virtualizado.** Canvas para el grafo y filas virtualizadas
       para el texto; scroll a 60 fps con 50k commits. Muestra etiquetas de
       ramas, tags y HEAD.
-      *Estado:* implementado; falta medir los 60 fps en la app con un repo
-      grande.
+      *Estado:* scroll fluido con git/git (~78k commits), comprobado en la app.
 - [ ] **2.6 Refresco.** Un watcher de `.git` (con debounce) refresca refs y el
       grafo tras cambios externos (por ejemplo, un commit hecho en la terminal).
 
