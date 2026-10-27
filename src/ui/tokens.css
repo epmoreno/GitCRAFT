@@ -1,0 +1,73 @@
+/*
+ * GitCRAFT design tokens. Original palette: deep graphite surfaces with a
+ * forge-copper accent. Dark is the default theme.
+ */
+:root {
+  color-scheme: dark;
+
+  --surface-0: #121417;
+  --surface-1: #181b1f;
+  --surface-2: #1f2328;
+  --surface-3: #282d33;
+  --border: #2e343b;
+  --border-strong: #3c434c;
+
+  --text: #e3e6ea;
+  --text-muted: #9aa2ad;
+  --text-faint: #6b737e;
+
+  --accent: #e08a4f;
+  --accent-strong: #f09a5c;
+  --accent-contrast: #1a1006;
+
+  --danger: #e5645c;
+  --success: #6cc08b;
+  --warning: #e3b553;
+
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui,
+    sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-size: 12.5px;
+  --font-size-small: 11.5px;
+
+  --radius: 5px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+
+  --toolbar-height: 44px;
+  --tabbar-height: 30px;
+  --sidebar-width: 240px;
+  --detail-width: 380px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--surface-0);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}

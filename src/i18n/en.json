@@ -1,0 +1,27 @@
+{
+  "toolbar": {
+    "pull": "Pull",
+    "push": "Push",
+    "branch": "Branch",
+    "stash": "Stash",
+    "undo": "Undo",
+    "openRepo": "Open repository"
+  },
+  "tabs": {
+    "empty": "No open repositories"
+  },
+  "sidebar": {
+    "local": "Local branches",
+    "remote": "Remotes",
+    "tags": "Tags",
+    "stashes": "Stashes",
+    "empty": "—"
+  },
+  "graph": {
+    "emptyTitle": "No repository open",
+    "emptyHint": "Open, clone or initialize a repository to see its history."
+  },
+  "detail": {
+    "empty": "Select a commit to see its details."
+  }
+}

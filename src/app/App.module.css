@@ -1,0 +1,141 @@
+.shell {
+  display: grid;
+  grid-template-rows: var(--toolbar-height) var(--tabbar-height) 1fr;
+  height: 100%;
+}
+
+/* Toolbar (also the macOS title bar; leaves room for the traffic lights) */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) 0 84px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.toolbarActions {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  gap: var(--space-1);
+}
+
+.toolButton,
+.primaryButton {
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+
+.toolButton:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+
+.toolButton:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.primaryButton {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+
+.primaryButton:hover {
+  background: var(--accent-strong);
+}
+
+/* Tabs */
+.tabbar {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--border);
+}
+
+.tabbarEmpty {
+  color: var(--text-faint);
+  font-size: var(--font-size-small);
+}
+
+/* Three zones */
+.workspace {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr var(--detail-width);
+  min-height: 0;
+}
+
+.sidebar,
+.detail {
+  background: var(--surface-1);
+  overflow-y: auto;
+}
+
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: var(--space-2) 0;
+}
+
+.detail {
+  border-left: 1px solid var(--border);
+  padding: var(--space-4);
+}
+
+.sidebarSection {
+  padding: var(--space-1) var(--space-3);
+}
+
+.sidebarTitle {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.sidebarEmpty,
+.detailEmpty {
+  margin: 0;
+  color: var(--text-faint);
+}
+
+.graph {
+  position: relative;
+  background: var(--surface-0);
+  min-width: 0;
+}
+
+.emptyState {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.emptyState h1 {
+  margin: 0 0 var(--space-2);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.emptyState p {
+  margin: 0;
+}

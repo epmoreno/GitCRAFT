@@ -54,7 +54,7 @@ usuario.
 - **Idioma:** código, identificadores, comentarios y mensajes de commit en
   **inglés**. Documentación de `docs/` en **español**. Textos de la UI siempre
   mediante i18n (`src/i18n/{es,en}.json`), nunca literales en componentes.
-- **Rust:** edition 2021, `cargo fmt`, `cargo clippy -- -D warnings`. Errores con
+- **Rust:** edition 2024, `cargo fmt`, `cargo clippy -- -D warnings`. Errores con
   `thiserror` en las librerías; nada de `unwrap()` fuera de tests. Lógica Git en
   el crate `gitcraft-core` (sin dependencias de Tauri) para poder testearla
   aislada.

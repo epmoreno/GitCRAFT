@@ -1,0 +1,7 @@
+node_modules
+dist
+target
+src-tauri
+crates
+package-lock.json
+*.md

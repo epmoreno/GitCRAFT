@@ -1,0 +1,27 @@
+{
+  "toolbar": {
+    "pull": "Pull",
+    "push": "Push",
+    "branch": "Rama",
+    "stash": "Stash",
+    "undo": "Deshacer",
+    "openRepo": "Abrir repositorio"
+  },
+  "tabs": {
+    "empty": "Sin repositorios abiertos"
+  },
+  "sidebar": {
+    "local": "Ramas locales",
+    "remote": "Remotos",
+    "tags": "Tags",
+    "stashes": "Stashes",
+    "empty": "—"
+  },
+  "graph": {
+    "emptyTitle": "Ningún repositorio abierto",
+    "emptyHint": "Abre, clona o inicializa un repositorio para ver su historial."
+  },
+  "detail": {
+    "empty": "Selecciona un commit para ver sus detalles."
+  }
+}
