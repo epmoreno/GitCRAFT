@@ -40,7 +40,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
       local `file://`.
 
 ### 2. Grafo de commits
-- [ ] **2.1 Parser de log.** `git log --topo-order -z --format=<campos separados
+- [x] **2.1 Parser de log.** `git log --topo-order -z --format=<campos separados
       por %x00/%x1f>` se parsea a `Commit { oid, parents, author, … }`. *Tests
       unitarios:* mensajes con saltos de línea, UTF-8, commits raíz, merges con
       más de 2 padres y firmas vacías.

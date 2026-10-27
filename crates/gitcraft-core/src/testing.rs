@@ -102,6 +102,16 @@ impl TestRepo {
         self.commit_all(message).await
     }
 
+    /// Runs `git commit` with extra arguments (e.g. `--author`, `-m`) on the
+    /// fake clock. Returns the new commit id.
+    pub async fn commit_with(&self, args: &[&str]) -> String {
+        self.tick();
+        let mut full = vec!["commit", "--quiet", "--allow-empty"];
+        full.extend_from_slice(args);
+        self.run(&full).await;
+        self.head().await
+    }
+
     pub async fn head(&self) -> String {
         self.run(&["rev-parse", "HEAD"]).await
     }

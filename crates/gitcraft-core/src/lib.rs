@@ -4,6 +4,7 @@
 
 pub mod error;
 pub mod ops;
+pub mod parse;
 pub mod runner;
 #[cfg(feature = "testing")]
 pub mod testing;
