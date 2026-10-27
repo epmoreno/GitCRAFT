@@ -18,6 +18,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
         commands::open_repository,
         commands::close_repository,
         commands::list_recent_repositories,
+        commands::load_graph,
     ])
 }
 

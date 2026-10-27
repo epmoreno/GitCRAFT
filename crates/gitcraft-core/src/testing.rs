@@ -14,6 +14,8 @@ use tempfile::TempDir;
 
 use crate::{CancellationToken, Git, GitCommand};
 
+pub mod synthetic;
+
 pub const AUTHOR_NAME: &str = "GitCRAFT Test";
 pub const AUTHOR_EMAIL: &str = "test@gitcraft.invalid";
 /// 2023-11-14T22:13:20Z. The fake clock starts here.
@@ -155,6 +157,20 @@ impl TestRepo {
         self.run(&["remote", "add", name, bare_path]).await;
         self.run(&["fetch", "--quiet", name]).await;
         bare
+    }
+
+    /// A repository with `commits` synthetic commits (see
+    /// [`synthetic::fast_import_stream`]). Imports in a second or two even
+    /// for 100k commits.
+    pub async fn synthetic(commits: usize) -> Self {
+        let repo = Self::new().await;
+        repo.write()
+            .args(["fast-import", "--quiet"])
+            .stdin(synthetic::fast_import_stream(commits))
+            .output(&CancellationToken::new())
+            .await
+            .expect("git fast-import");
+        repo
     }
 
     fn tick(&self) {

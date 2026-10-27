@@ -50,10 +50,12 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
       color a cada commit, con segmentos de arista por fila. *Tests:* historial
       lineal, rama + merge, octopus, ramas cruzadas; el layout es estable con la
       carga incremental.
-- [ ] **2.4 Carga incremental.** Páginas de N commits en streaming; el layout
+- [~] **2.4 Carga incremental.** Páginas de N commits en streaming; el layout
       continúa sin recalcular lo anterior. *Benchmark:* 100k commits; la primera
       página en < 150 ms y el total < 3 s en M1 (se registran los resultados en
-      `docs/benchmarks.md`).
+      `docs/benchmarks.md`). *Estado:* el total y la primera página con
+      `commit-graph` cumplen. Sin `commit-graph`, la primera página tarda
+      294 ms (falta decidir cómo resolverlo).
 - [ ] **2.5 Render virtualizado.** Canvas para el grafo y filas virtualizadas
       para el texto; scroll a 60 fps con 50k commits. Muestra etiquetas de
       ramas, tags y HEAD.

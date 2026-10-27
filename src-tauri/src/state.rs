@@ -1,9 +1,11 @@
 //! App-wide state: open repositories (one session per tab) and settings.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use gitcraft_core::graph::{GraphEntry, load_graph};
+use gitcraft_core::ops::refs::read_refs;
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::{CancellationToken, Git, GitError};
 use serde::Serialize;
@@ -20,12 +22,22 @@ pub struct OpenedRepository {
     pub info: RepoInfo,
 }
 
-/// One open repository. Will also own the write queue, graph cache and
-/// watcher (see docs/ARCHITECTURE.md).
+/// Sent over the graph channel: pages in order, then `done`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum GraphEvent {
+    Page { entries: Vec<GraphEntry> },
+    Done { total: u32 },
+}
+
+/// One open repository. Will also own the write queue and watcher
+/// (see docs/ARCHITECTURE.md).
 #[derive(Debug)]
 struct RepoSession {
     id: RepoId,
     info: RepoInfo,
+    /// Cancels the graph load in progress, if any.
+    graph_load: Option<CancellationToken>,
 }
 
 #[derive(Debug, Default)]
@@ -85,16 +97,57 @@ impl AppState {
         inner.sessions.push(RepoSession {
             id,
             info: info.clone(),
+            graph_load: None,
         });
         Ok(OpenedRepository { id, info })
     }
 
-    /// Returns whether a session with that id existed.
+    /// Returns whether a session with that id existed. Cancels its work.
     pub fn close_repository(&self, id: RepoId) -> bool {
         let mut inner = self.lock();
-        let before = inner.sessions.len();
-        inner.sessions.retain(|s| s.id != id);
-        inner.sessions.len() != before
+        let Some(index) = inner.sessions.iter().position(|s| s.id == id) else {
+            return false;
+        };
+        let session = inner.sessions.remove(index);
+        if let Some(load) = session.graph_load {
+            load.cancel();
+        }
+        true
+    }
+
+    /// Streams the commit graph of session `id` to `send`. Starting a new
+    /// load cancels the previous one for that session. A closed session
+    /// reports `cancelled`.
+    pub async fn load_graph(
+        &self,
+        id: RepoId,
+        mut send: impl FnMut(GraphEvent),
+    ) -> Result<(), IpcError> {
+        let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
+        let (path, cancel) = {
+            let mut inner = self.lock();
+            let session = inner
+                .sessions
+                .iter_mut()
+                .find(|s| s.id == id)
+                .ok_or(GitError::Cancelled)?;
+            if let Some(previous) = session.graph_load.take() {
+                previous.cancel();
+            }
+            let cancel = CancellationToken::new();
+            session.graph_load = Some(cancel.clone());
+            (PathBuf::from(&session.info.path), cancel)
+        };
+
+        let refs = read_refs(git, &path, &cancel).await?;
+        let total = load_graph(git, &path, refs.head_is_detached(), &cancel, |entries| {
+            send(GraphEvent::Page { entries });
+        })
+        .await?;
+        send(GraphEvent::Done {
+            total: u32::try_from(total).unwrap_or(u32::MAX),
+        });
+        Ok(())
     }
 
     /// Recent repositories, most recent first, without entries whose folder
@@ -213,6 +266,36 @@ mod tests {
             .await
             .expect_err("no git");
         assert_eq!(err.kind, ErrorKind::GitNotFound);
+    }
+
+    #[tokio::test]
+    async fn streams_the_graph_then_done() {
+        let f = fixture();
+        let (repo, ids) = TestRepo::sample_history().await;
+        let opened = f.state.open_repository(repo.path()).await.expect("open");
+        let mut events = Vec::new();
+        f.state
+            .load_graph(opened.id, |e| events.push(e))
+            .await
+            .expect("load");
+        assert_eq!(events.len(), 2);
+        let GraphEvent::Page { entries } = &events[0] else {
+            panic!("expected a page first: {events:?}");
+        };
+        assert_eq!(entries.len(), 7);
+        assert_eq!(entries[0].commit.oid, ids["E"]);
+        assert_eq!(events[1], GraphEvent::Done { total: 7 });
+    }
+
+    #[tokio::test]
+    async fn loading_a_closed_session_is_cancelled() {
+        let f = fixture();
+        let err = f
+            .state
+            .load_graph(99, |_| {})
+            .await
+            .expect_err("unknown session");
+        assert_eq!(err.kind, ErrorKind::Cancelled);
     }
 
     #[tokio::test]
