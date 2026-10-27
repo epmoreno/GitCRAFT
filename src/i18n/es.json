@@ -23,7 +23,12 @@
     "remote": "Remotos",
     "tags": "Tags",
     "stashes": "Stashes",
-    "empty": "—"
+    "empty": "—",
+    "noBranches": "Sin ramas",
+    "noRemotes": "Sin remotos",
+    "noTags": "Sin tags",
+    "detachedHead": "HEAD desacoplado",
+    "currentBranch": "Rama actual: {{name}}"
   },
   "start": {
     "title": "Ningún repositorio abierto",

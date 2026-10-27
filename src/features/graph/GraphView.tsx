@@ -53,6 +53,19 @@ export function GraphView({
     overscan: 20,
   });
 
+  // Bring a newly selected commit into view (e.g. picked in the sidebar).
+  // Only selection changes scroll; new pages arriving must not.
+  const latest = useRef({ entries, virtualizer });
+  useEffect(() => {
+    latest.current = { entries, virtualizer };
+  });
+  useEffect(() => {
+    if (!selectedOid) return;
+    const { entries, virtualizer } = latest.current;
+    const index = entries.findIndex((e) => e.commit.oid === selectedOid);
+    if (index >= 0) virtualizer.scrollToIndex(index, { align: "auto" });
+  }, [selectedOid]);
+
   const redraw = useCallback(() => {
     const scroller = scrollRef.current;
     const canvas = canvasRef.current;

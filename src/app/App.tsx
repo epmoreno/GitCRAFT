@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { GraphView } from "../features/graph/GraphView";
 import { OpenErrorBanner } from "../features/repo/OpenErrorBanner";
 import { StartPage } from "../features/repo/StartPage";
+import { Sidebar } from "../features/sidebar/Sidebar";
 import { TabBar } from "../features/repo/TabBar";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
 import styles from "./App.module.css";
@@ -18,26 +19,12 @@ export function App() {
     void loadRecents();
   }, [loadRecents]);
 
-  const sidebarSections = [
-    t("sidebar.local"),
-    t("sidebar.remote"),
-    t("sidebar.tags"),
-    t("sidebar.stashes"),
-  ];
-
   return (
     <div className={styles.shell}>
       <Toolbar />
       <TabBar />
       <div className={styles.workspace}>
-        <aside className={styles.sidebar} aria-label={t("zones.sidebar")}>
-          {sidebarSections.map((title) => (
-            <section key={title} className={styles.sidebarSection}>
-              <h2 className={styles.sidebarTitle}>{title}</h2>
-              <p className={styles.sidebarEmpty}>{t("sidebar.empty")}</p>
-            </section>
-          ))}
-        </aside>
+        <Sidebar repoId={active?.id ?? null} />
         <main className={styles.graph} aria-label={t("zones.graph")}>
           <OpenErrorBanner />
           {active ? (

@@ -88,8 +88,10 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
       muestra su salida si fallan.
 
 ### 5. Ramas
-- [ ] **5.1 Barra lateral.** Ramas locales, remotas (agrupadas por remoto), tags y
+- [~] **5.1 Barra lateral.** Ramas locales, remotas (agrupadas por remoto), tags y
       stashes, con filtro.
+      *Estado:* ramas locales, remotos y tags hechos (clic → commit en el
+      grafo); faltan stashes (7.x) y el filtro.
 - [ ] **5.2 Crear, checkout, renombrar y borrar.** Borrar una rama no fusionada
       pide confirmación y explica qué commits quedan inaccesibles. Para hacer
       checkout de una rama remota se crea una rama de seguimiento.

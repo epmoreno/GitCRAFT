@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
 import {
@@ -10,6 +10,7 @@ import {
   streamEvents,
 } from "../../test/ipc";
 import { GraphView } from "./GraphView";
+import { useGraphStore } from "./store";
 
 const info = {
   path: "/src/sample",
@@ -72,6 +73,17 @@ describe("GraphView", () => {
     await user.click(within(rows[2]!).getByText(oid("d").slice(0, 7)));
     expect(rows[2]).toHaveAttribute("aria-selected", "true");
     expect(rows[0]).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("reflects a selection made elsewhere (e.g. the sidebar)", async () => {
+    streamEvents([
+      { type: "page", entries: sampleEntries() },
+      { type: "done", total: 6 },
+    ]);
+    renderGraph();
+    const rows = await screen.findAllByRole("option");
+    act(() => useGraphStore.getState().select(1, oid("b")));
+    expect(rows[4]).toHaveAttribute("aria-selected", "true");
   });
 
   it("shows progress while loading", async () => {

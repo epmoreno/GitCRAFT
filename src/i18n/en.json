@@ -23,7 +23,12 @@
     "remote": "Remotes",
     "tags": "Tags",
     "stashes": "Stashes",
-    "empty": "—"
+    "empty": "—",
+    "noBranches": "No branches",
+    "noRemotes": "No remotes",
+    "noTags": "No tags",
+    "detachedHead": "Detached HEAD",
+    "currentBranch": "Current branch: {{name}}"
   },
   "start": {
     "title": "No repository open",
