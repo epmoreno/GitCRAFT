@@ -1,0 +1,66 @@
+# CLAUDE.md — GitCRAFT
+
+Cliente Git de escritorio original (Tauri 2 + Rust + React + TypeScript).
+Visión y alcance: `docs/VISION.md`. Tareas: `docs/ROADMAP.md`.
+Arquitectura: `docs/ARCHITECTURE.md`.
+
+## Reglas clean-room (obligatorias)
+
+- **Nunca** descompilar, desensamblar, inspeccionar ni analizar binarios, paquetes,
+  recursos o código de GitKraken ni de ninguna app propietaria. Tampoco con
+  herramientas MCP de ingeniería inversa (`rea`, Frida, extractores de asar,
+  inspectores de Electron…), aunque estén disponibles en la sesión.
+- Los clientes propietarios son referencia **solo** de ideas generales de UX. No
+  se copian nombres, logos, iconos, paletas, textos ni recursos gráficos.
+- Se puede consultar código open source con licencia compatible (SourceGit,
+  GitHub Desktop, lazygit: MIT). Si se reutiliza código: se conserva el aviso de
+  copyright, se añade una entrada a `THIRD_PARTY_NOTICES.md` y un comentario
+  `// Adapted from <proyecto> (<licencia>): <url>` junto al código.
+- Sin funciones de IA en el producto.
+
+## Seguridad y Git
+
+- `git` se invoca **siempre** con `std::process::Command` / `tokio::process::Command`
+  y los argumentos como array. **Nunca** se usa shell (`sh -c`) ni se interpolan
+  entradas del usuario en una cadena de comando.
+- Las entradas del usuario que puedan empezar por `-` (nombres de rama, rutas,
+  refs) se separan con `--` o se validan (`git check-ref-format`).
+- No se guardan credenciales. La autenticación la hace el credential helper o SSH
+  del usuario. Se ejecuta con `GIT_TERMINAL_PROMPT=0` y los fallos de
+  autenticación se muestran como error claro.
+- Toda la salida que se parsea usa formatos estables: `--porcelain=v2`, `-z`,
+  `--format` con separadores `%x00`/`%x1f`. Nunca se parsea salida pensada para
+  humanos. `LC_ALL=C` para que los mensajes de error sean estables.
+- Toda operación destructiva pasa por un diálogo de confirmación que explica sus
+  consecuencias.
+
+## Convenciones
+
+- **Idioma:** código, identificadores, comentarios y mensajes de commit en
+  **inglés**. Documentación de `docs/` en **español**. Textos de la UI siempre
+  mediante i18n (`src/i18n/{es,en}.json`), nunca literales en componentes.
+- **Rust:** edition 2021, `cargo fmt`, `cargo clippy -- -D warnings`. Errores con
+  `thiserror` en las librerías; nada de `unwrap()` fuera de tests. Lógica Git en
+  el crate `gitcraft-core` (sin dependencias de Tauri) para poder testearla
+  aislada.
+- **TypeScript:** `strict`, ESLint + Prettier. Los tipos de los comandos Tauri se
+  generan desde Rust (`specta`/`ts-rs`), no se escriben a mano.
+- **Tests:**
+  - Unitarios para cada parser, con salidas reales de git guardadas como
+    fixtures (`crates/gitcraft-core/tests/fixtures/`).
+  - Integración contra repos temporales creados en el propio test (`tempfile`) con
+    identidad y fechas fijas (`GIT_AUTHOR_DATE`, `GIT_COMMITTER_DATE`), aislados
+    de la config global (`GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1`).
+  - Frontend: Vitest + Testing Library.
+- **Commits:** directamente a `main`, un commit por paso del roadmap, mensaje
+  en inglés estilo Conventional Commits (`feat(graph): …`, `fix(status): …`).
+  Cada commit compila y pasa `npm run check`.
+- **Comandos:** `npm run tauri dev` (app), `npm run check` (lint + tests),
+  `cargo test -p gitcraft-core` (tests del núcleo).
+
+## Flujo de trabajo
+
+1. Pasos pequeños siguiendo `docs/ROADMAP.md`. Al terminar un paso se marca la
+   casilla, se hace commit y se explica qué se ha hecho, cómo probarlo y cuál es
+   el siguiente.
+2. Los cambios de arquitectura se reflejan en `docs/ARCHITECTURE.md`.
