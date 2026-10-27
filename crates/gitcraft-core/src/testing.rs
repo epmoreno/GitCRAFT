@@ -145,6 +145,18 @@ impl TestRepo {
         self.run(&["tag", "-a", "-m", message, name]).await;
     }
 
+    /// Creates a bare copy of this repo, adds it as remote `name` and fetches
+    /// it, so `refs/remotes/<name>/*` exist. Keep the returned dir alive.
+    pub async fn add_bare_remote(&self, name: &str) -> TempDir {
+        let bare = tempfile::tempdir().expect("create temp dir");
+        let bare_path = bare.path().to_str().expect("utf-8 temp path");
+        self.run(&["clone", "--quiet", "--bare", ".", bare_path])
+            .await;
+        self.run(&["remote", "add", name, bare_path]).await;
+        self.run(&["fetch", "--quiet", name]).await;
+        bare
+    }
+
     fn tick(&self) {
         self.clock.fetch_add(1, Ordering::SeqCst);
     }

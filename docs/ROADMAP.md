@@ -44,7 +44,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
       por %x00/%x1f>` se parsea a `Commit { oid, parents, author, … }`. *Tests
       unitarios:* mensajes con saltos de línea, UTF-8, commits raíz, merges con
       más de 2 padres y firmas vacías.
-- [ ] **2.2 Refs.** `git for-each-ref` produce ramas, remotos, tags y HEAD (también
+- [x] **2.2 Refs.** `git for-each-ref` produce ramas, remotos, tags y HEAD (también
       HEAD desacoplado). *Tests unitarios + integración.*
 - [ ] **2.3 Layout de carriles.** Un algoritmo en Rust asigna una columna y un
       color a cada commit, con segmentos de arista por fila. *Tests:* historial

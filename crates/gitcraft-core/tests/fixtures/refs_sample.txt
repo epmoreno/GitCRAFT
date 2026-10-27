@@ -1,0 +1,13 @@
+refs/heads/feature1006592faa2a0e8b21d3fe7b70d591db1b697691 
+refs/heads/maina5c88f4591d1cabedaa6307872b76b22e52a8d79*refs/remotes/origin/main
+refs/heads/topic6be2c3fbe54b774a340eebe6d7d2a5ef153b6a81 
+refs/remotes/origin/HEADa5c88f4591d1cabedaa6307872b76b22e52a8d79 refs/remotes/origin/main
+refs/remotes/origin/feature1006592faa2a0e8b21d3fe7b70d591db1b697691 
+refs/remotes/origin/maina5c88f4591d1cabedaa6307872b76b22e52a8d79 
+refs/remotes/origin/topic6be2c3fbe54b774a340eebe6d7d2a5ef153b6a81 
+refs/remotes/team/fork/HEADa5c88f4591d1cabedaa6307872b76b22e52a8d79 refs/remotes/team/fork/main
+refs/remotes/team/fork/feature1006592faa2a0e8b21d3fe7b70d591db1b697691 
+refs/remotes/team/fork/maina5c88f4591d1cabedaa6307872b76b22e52a8d79 
+refs/remotes/team/fork/topic6be2c3fbe54b774a340eebe6d7d2a5ef153b6a81 
+refs/tags/v1.0ee60ac32fb2ff3ebd4757c450e8d6811f9cd6348004ba647f5366e1e260d45f4e30a5fa387b9ce8b 
+refs/tags/v2.0a5c88f4591d1cabedaa6307872b76b22e52a8d79 
