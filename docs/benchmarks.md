@@ -28,8 +28,11 @@ Conclusiones:
   recorrer todo el historial antes de emitir el primer commit. Con
   `commit-graph` (git lo escribe en `gc`/`maintenance` y muchos repos ya lo
   tienen) emite en streaming.
-  Pendiente de decidir: ofrecer al usuario ejecutar
-  `git commit-graph write --reachable` en repos grandes que no lo tengan.
+  Decisión (2026-10-28): GitCRAFT nunca lo genera sin permiso. En repos de
+  más de 10.000 commits sin `commit-graph` muestra un aviso discreto con el
+  botón «Optimizar repositorio», que ejecuta
+  `git commit-graph write --reachable --changed-paths` con progreso y
+  cancelación. El aviso se puede descartar para cada repo.
 - **Tamaño del JSON:** 43 MB para 100k commits (~430 bytes por commit) pasan por
   el puente IPC y el WebView tiene que parsearlos. Reducido el 2026-10-28
   (ver abajo).

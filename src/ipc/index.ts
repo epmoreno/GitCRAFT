@@ -32,3 +32,13 @@ export function streamGraph(id: number, onEvent: (event: GraphEvent) => void) {
   channel.onmessage = onEvent;
   return commands.loadGraph(id, channel);
 }
+
+/** Writes the repository's commit-graph, reporting git's progress lines. */
+export function optimizeRepository(
+  id: number,
+  onProgress: (line: string) => void,
+) {
+  const channel = new Channel<string>();
+  channel.onmessage = onProgress;
+  return commands.optimizeRepository(id, channel);
+}

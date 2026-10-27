@@ -15,6 +15,8 @@ export type RepoGraph = {
   refs: RepoRefs | null;
   error: CommandError | null;
   selectedOid: string | null;
+  /** Offer to write a commit-graph (large repo without one). */
+  suggestOptimize: boolean;
   /** Identifies the load in progress; events from older loads are ignored. */
   loadId: number;
 };
@@ -23,6 +25,7 @@ type GraphState = {
   graphs: Record<number, RepoGraph>;
   load: (repoId: number) => Promise<void>;
   select: (repoId: number, oid: string | null) => void;
+  hideOptimizeNotice: (repoId: number) => void;
   forget: (repoId: number) => void;
 };
 
@@ -35,6 +38,7 @@ const emptyGraph = (loadId: number): RepoGraph => ({
   refs: null,
   error: null,
   selectedOid: null,
+  suggestOptimize: false,
   loadId,
 });
 
@@ -83,7 +87,10 @@ export const useGraphStore = create<GraphState>()((set, get) => {
             maxColumn: Math.max(g.maxColumn, widest(event.lines)),
           }));
         } else {
-          patch(repoId, loadId, () => ({ status: "done" }));
+          patch(repoId, loadId, () => ({
+            status: "done",
+            suggestOptimize: event.suggestOptimize,
+          }));
         }
       });
       if (result.status === "error" && result.error.kind !== "cancelled") {
@@ -95,6 +102,13 @@ export const useGraphStore = create<GraphState>()((set, get) => {
     select: (repoId, oid) => {
       const graph = get().graphs[repoId];
       if (graph) patch(repoId, graph.loadId, () => ({ selectedOid: oid }));
+    },
+
+    hideOptimizeNotice: (repoId) => {
+      const graph = get().graphs[repoId];
+      if (graph) {
+        patch(repoId, graph.loadId, () => ({ suggestOptimize: false }));
+      }
     },
 
     forget: (repoId) =>

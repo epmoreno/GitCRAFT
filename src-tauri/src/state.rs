@@ -5,6 +5,9 @@ use std::sync::{Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gitcraft_core::graph::{GraphLine, load_graph};
+use gitcraft_core::ops::maintenance::{
+    COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
+};
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::{CancellationToken, Git, GitError};
@@ -24,10 +27,21 @@ pub struct OpenedRepository {
 
 /// Sent over the graph channel: pages in order, then `done`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum GraphEvent {
-    Page { lines: Vec<GraphLine> },
-    Done { total: u32 },
+    Page {
+        lines: Vec<GraphLine>,
+    },
+    Done {
+        total: u32,
+        /// Large repository without a commit-graph, notice not dismissed:
+        /// offer "Optimize repository".
+        suggest_optimize: bool,
+    },
 }
 
 /// One open repository. Will also own the write queue and watcher
@@ -38,6 +52,8 @@ struct RepoSession {
     info: RepoInfo,
     /// Cancels the graph load in progress, if any.
     graph_load: Option<CancellationToken>,
+    /// Cancels the user-started operation in progress, if any.
+    operation: Option<CancellationToken>,
 }
 
 #[derive(Debug, Default)]
@@ -98,6 +114,7 @@ impl AppState {
             id,
             info: info.clone(),
             graph_load: None,
+            operation: None,
         });
         Ok(OpenedRepository { id, info })
     }
@@ -109,8 +126,11 @@ impl AppState {
             return false;
         };
         let session = inner.sessions.remove(index);
-        if let Some(load) = session.graph_load {
-            load.cancel();
+        for token in [session.graph_load, session.operation]
+            .into_iter()
+            .flatten()
+        {
+            token.cancel();
         }
         true
     }
@@ -160,10 +180,76 @@ impl AppState {
             send(GraphEvent::Page { lines });
         })
         .await?;
+
+        let suggest_optimize = total > COMMIT_GRAPH_SUGGESTION_THRESHOLD
+            && !self
+                .lock()
+                .settings
+                .optimize_notice_dismissed(&path.to_string_lossy())
+            && !has_commit_graph(git, &path, &cancel).await?;
         send(GraphEvent::Done {
             total: u32::try_from(total).unwrap_or(u32::MAX),
+            suggest_optimize,
         });
         Ok(())
+    }
+
+    /// Writes the commit-graph of session `id` (only ever at the user's
+    /// request), forwarding git's progress lines.
+    pub async fn optimize_repository(
+        &self,
+        id: RepoId,
+        on_progress: impl FnMut(&str),
+    ) -> Result<(), IpcError> {
+        let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
+        let (path, cancel) = self.start_operation(id)?;
+        let result = write_commit_graph(git, &path, &cancel, on_progress).await;
+        self.finish_operation(id);
+        Ok(result?)
+    }
+
+    /// Cancels the user-started operation of session `id`, if any.
+    pub fn cancel_operation(&self, id: RepoId) {
+        let mut inner = self.lock();
+        if let Some(session) = inner.sessions.iter_mut().find(|s| s.id == id)
+            && let Some(token) = session.operation.take()
+        {
+            token.cancel();
+        }
+    }
+
+    /// Never suggest optimizing session `id`'s repository again.
+    pub fn dismiss_optimize_notice(&self, id: RepoId) -> Result<(), IpcError> {
+        let mut inner = self.lock();
+        let path = inner
+            .sessions
+            .iter()
+            .find(|s| s.id == id)
+            .map(|s| s.info.path.clone())
+            .ok_or(GitError::Cancelled)?;
+        inner.settings.dismiss_optimize_notice(&path);
+        self.persist(&inner.settings);
+        Ok(())
+    }
+
+    fn start_operation(&self, id: RepoId) -> Result<(PathBuf, CancellationToken), IpcError> {
+        let mut inner = self.lock();
+        let session = inner
+            .sessions
+            .iter_mut()
+            .find(|s| s.id == id)
+            .ok_or(GitError::Cancelled)?;
+        let cancel = CancellationToken::new();
+        if let Some(previous) = session.operation.replace(cancel.clone()) {
+            previous.cancel();
+        }
+        Ok((PathBuf::from(&session.info.path), cancel))
+    }
+
+    fn finish_operation(&self, id: RepoId) {
+        if let Some(session) = self.lock().sessions.iter_mut().find(|s| s.id == id) {
+            session.operation = None;
+        }
     }
 
     /// Recent repositories, most recent first, without entries whose folder
@@ -300,7 +386,13 @@ mod tests {
         };
         assert_eq!(lines.len(), 7);
         assert_eq!(lines[0].oid, ids["E"]);
-        assert_eq!(events[1], GraphEvent::Done { total: 7 });
+        assert_eq!(
+            events[1],
+            GraphEvent::Done {
+                total: 7,
+                suggest_optimize: false
+            }
+        );
     }
 
     #[tokio::test]
@@ -314,6 +406,60 @@ mod tests {
             f.state.refs(999).await.expect_err("closed").kind,
             ErrorKind::Cancelled
         );
+    }
+
+    async fn done_event(state: &AppState, id: RepoId) -> GraphEvent {
+        let mut last = None;
+        state
+            .load_graph(id, |e| last = Some(e))
+            .await
+            .expect("load");
+        last.expect("done event")
+    }
+
+    fn suggests(event: &GraphEvent) -> bool {
+        matches!(
+            event,
+            GraphEvent::Done {
+                suggest_optimize: true,
+                ..
+            }
+        )
+    }
+
+    #[tokio::test]
+    async fn suggests_optimizing_large_repositories_until_optimized() {
+        let f = fixture();
+        let repo = TestRepo::synthetic(COMMIT_GRAPH_SUGGESTION_THRESHOLD + 1).await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        assert!(suggests(&done_event(&f.state, id).await));
+
+        let mut progress = Vec::new();
+        f.state
+            .optimize_repository(id, |line| progress.push(line.to_owned()))
+            .await
+            .expect("optimize");
+        assert!(!progress.is_empty());
+        assert!(!suggests(&done_event(&f.state, id).await));
+    }
+
+    #[tokio::test]
+    async fn the_optimize_notice_can_be_dismissed_per_repository() {
+        let f = fixture();
+        let repo = TestRepo::synthetic(COMMIT_GRAPH_SUGGESTION_THRESHOLD + 1).await;
+        let opened = f.state.open_repository(repo.path()).await.expect("open");
+        f.state.dismiss_optimize_notice(opened.id).expect("dismiss");
+        assert!(!suggests(&done_event(&f.state, opened.id).await));
+        let saved = SettingsFile::new(&f.settings_path).load();
+        assert_eq!(saved.optimize_notice_dismissed, [opened.info.path]);
+    }
+
+    #[tokio::test]
+    async fn small_repositories_are_never_flagged() {
+        let f = fixture();
+        let (repo, _) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        assert!(!suggests(&done_event(&f.state, id).await));
     }
 
     #[tokio::test]

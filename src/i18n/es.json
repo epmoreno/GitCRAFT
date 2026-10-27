@@ -75,5 +75,17 @@
       "remote": "Rama remota {{name}}",
       "tag": "Tag {{name}}"
     }
+  },
+  "optimize": {
+    "message_one": "Este repositorio tiene {{count}} commit y no tiene el índice de grafo de Git (commit-graph). Optimizarlo hace que el historial empiece a mostrarse antes. Solo añade un archivo de índice: no cambia commits, ramas ni archivos.",
+    "message_other": "Este repositorio tiene {{count}} commits y no tiene el índice de grafo de Git (commit-graph). Optimizarlo hace que el historial empiece a mostrarse antes. Solo añade un archivo de índice: no cambia commits, ramas ni archivos.",
+    "run": "Optimizar repositorio",
+    "dismiss": "No mostrar más",
+    "dismissHint": "No volver a sugerirlo para este repositorio",
+    "running": "Optimizando el repositorio…",
+    "cancel": "Cancelar",
+    "done": "Repositorio optimizado. El historial cargará antes la próxima vez que lo abras.",
+    "failed": "No se pudo optimizar el repositorio.",
+    "close": "Cerrar"
   }
 }

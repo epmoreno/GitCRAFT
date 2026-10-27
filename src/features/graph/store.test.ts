@@ -16,7 +16,7 @@ describe("graph store", () => {
     streamEvents([
       { type: "page", lines: lines.slice(0, 2) },
       { type: "page", lines: lines.slice(2) },
-      { type: "done", total: lines.length },
+      { type: "done", total: lines.length, suggestOptimize: false },
     ]);
 
     await useGraphStore.getState().load(1);
@@ -64,7 +64,7 @@ describe("graph store", () => {
   });
 
   it("selects a commit and forgets a closed repository", async () => {
-    streamEvents([{ type: "done", total: 0 }]);
+    streamEvents([{ type: "done", total: 0, suggestOptimize: false }]);
     await useGraphStore.getState().load(3);
     useGraphStore.getState().select(3, "abc");
     expect(graph(3)?.selectedOid).toBe("abc");

@@ -75,5 +75,17 @@
       "remote": "Remote branch {{name}}",
       "tag": "Tag {{name}}"
     }
+  },
+  "optimize": {
+    "message_one": "This repository has {{count}} commit and no Git commit-graph index. Optimizing it makes the history start showing sooner. It only adds an index file: commits, branches and files are not changed.",
+    "message_other": "This repository has {{count}} commits and no Git commit-graph index. Optimizing it makes the history start showing sooner. It only adds an index file: commits, branches and files are not changed.",
+    "run": "Optimize repository",
+    "dismiss": "Don't show again",
+    "dismissHint": "Don't suggest this again for this repository",
+    "running": "Optimizing the repository…",
+    "cancel": "Cancel",
+    "done": "Repository optimized. The history will load sooner next time you open it.",
+    "failed": "Couldn't optimize the repository.",
+    "close": "Close"
   }
 }

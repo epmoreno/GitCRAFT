@@ -41,7 +41,11 @@ pub struct GitRef {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub enum Head {
     /// On a branch. `oid` is `None` while the branch has no commits yet.

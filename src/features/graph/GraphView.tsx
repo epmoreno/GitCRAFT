@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { RepoInfo } from "../../ipc";
 import { drawGraph } from "./drawGraph";
+import { OptimizeNotice } from "./OptimizeNotice";
 import { ROW_HEIGHT, graphWidth, laneColor } from "./geometry";
 import { RefChips } from "./RefChips";
 import { headOid, labelsByCommit } from "./refLabels";
@@ -138,6 +139,13 @@ export function GraphView({
             <pre className="selectable">{graph.error.details}</pre>
           )}
         </div>
+      )}
+      {graph?.suggestOptimize && (
+        <OptimizeNotice
+          repoId={repoId}
+          commitCount={lines.length}
+          path={info.path}
+        />
       )}
       {status === "done" && lines.length === 0 && (
         <p className={styles.empty}>{t("graph.empty")}</p>

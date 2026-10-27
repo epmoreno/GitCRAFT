@@ -10,6 +10,10 @@ export const commands = {
 	/**  Streams the commit graph as `page` events followed by `done`. */
 	loadGraph: (id: number, onEvent: Channel<GraphEvent>) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("load_graph", { id, onEvent })),
 	getRefs: (id: number) => typedError<RepoRefs_Serialize, IpcError_Serialize>(__TAURI_INVOKE("get_refs", { id })),
+	/**  Writes the repository's commit-graph (opt-in), streaming git's progress. */
+	optimizeRepository: (id: number, onProgress: Channel<string>) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("optimize_repository", { id, onProgress })),
+	cancelOperation: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_operation", { id })),
+	dismissOptimizeNotice: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("dismiss_optimize_notice", { id })),
 };
 
 /* Types */
@@ -54,7 +58,12 @@ export type GitRef_Serialize = {
 };
 
 /**  Sent over the graph channel: pages in order, then `done`. */
-export type GraphEvent = { type: "page"; lines: GraphLine[] } | { type: "done"; total: number };
+export type GraphEvent = { type: "page"; lines: GraphLine[] } | { type: "done"; total: number; 
+/**
+ *  Large repository without a commit-graph, notice not dismissed:
+ *  offer "Optimize repository".
+ */
+suggestOptimize: boolean };
 
 /**
  *  Exactly what the history list needs to draw one row. Everything else

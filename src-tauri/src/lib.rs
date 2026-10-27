@@ -20,6 +20,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
         commands::list_recent_repositories,
         commands::load_graph,
         commands::get_refs,
+        commands::optimize_repository,
+        commands::cancel_operation,
+        commands::dismiss_optimize_notice,
     ])
 }
 

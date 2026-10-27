@@ -25,6 +25,8 @@ pub struct RecentRepository {
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub recent_repositories: Vec<RecentRepository>,
+    /// Repositories (by path) whose "optimize repository" notice was dismissed.
+    pub optimize_notice_dismissed: Vec<String>,
 }
 
 impl Settings {
@@ -41,6 +43,16 @@ impl Settings {
             },
         );
         self.recent_repositories.truncate(MAX_RECENT_REPOSITORIES);
+    }
+
+    pub fn dismiss_optimize_notice(&mut self, path: &str) {
+        if !self.optimize_notice_dismissed.iter().any(|p| p == path) {
+            self.optimize_notice_dismissed.push(path.to_owned());
+        }
+    }
+
+    pub fn optimize_notice_dismissed(&self, path: &str) -> bool {
+        self.optimize_notice_dismissed.iter().any(|p| p == path)
     }
 
     /// Drops recent entries whose directory no longer exists. Returns whether

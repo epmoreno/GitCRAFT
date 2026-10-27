@@ -50,12 +50,13 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
       color a cada commit, con segmentos de arista por fila. *Tests:* historial
       lineal, rama + merge, octopus, ramas cruzadas; el layout es estable con la
       carga incremental.
-- [~] **2.4 Carga incremental.** Páginas de N commits en streaming; el layout
+- [x] **2.4 Carga incremental.** Páginas de N commits en streaming; el layout
       continúa sin recalcular lo anterior. *Benchmark:* 100k commits; la primera
       página en < 150 ms y el total < 3 s en M1 (se registran los resultados en
-      `docs/benchmarks.md`). *Estado:* el total y la primera página con
-      `commit-graph` cumplen. Sin `commit-graph`, la primera página tarda
-      294 ms (falta decidir cómo resolverlo).
+      `docs/benchmarks.md`). *Estado:* el total cumple siempre. La primera
+      página cumple con `commit-graph` (83 ms). En repos de más de 10.000
+      commits sin él, GitCRAFT ofrece «Optimizar repositorio» (nunca lo genera
+      sin permiso; el aviso se puede descartar por repo).
 - [x] **2.5 Render virtualizado.** Canvas para el grafo y filas virtualizadas
       para el texto; scroll a 60 fps con 50k commits. Muestra etiquetas de
       ramas, tags y HEAD.

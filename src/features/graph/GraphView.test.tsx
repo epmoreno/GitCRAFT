@@ -31,7 +31,7 @@ describe("GraphView", () => {
     ipc.getRefs.mockResolvedValue({ status: "ok", data: sampleRefs() });
     streamEvents([
       { type: "page", lines: sampleLines() },
-      { type: "done", total: 6 },
+      { type: "done", total: 6, suggestOptimize: false },
     ]);
     renderGraph();
 
@@ -63,7 +63,7 @@ describe("GraphView", () => {
     const user = userEvent.setup();
     streamEvents([
       { type: "page", lines: sampleLines() },
-      { type: "done", total: 6 },
+      { type: "done", total: 6, suggestOptimize: false },
     ]);
     renderGraph();
     const rows = await screen.findAllByRole("option");
@@ -75,7 +75,7 @@ describe("GraphView", () => {
   it("reflects a selection made elsewhere (e.g. the sidebar)", async () => {
     streamEvents([
       { type: "page", lines: sampleLines() },
-      { type: "done", total: 6 },
+      { type: "done", total: 6, suggestOptimize: false },
     ]);
     renderGraph();
     const rows = await screen.findAllByRole("option");
@@ -93,7 +93,7 @@ describe("GraphView", () => {
   });
 
   it("explains an empty repository", async () => {
-    streamEvents([{ type: "done", total: 0 }]);
+    streamEvents([{ type: "done", total: 0, suggestOptimize: false }]);
     renderGraph();
     expect(
       await screen.findByText("Este repositorio todavía no tiene commits."),
@@ -117,7 +117,7 @@ describe("GraphView", () => {
   });
 
   it("loads the graph only once per repository", async () => {
-    streamEvents([{ type: "done", total: 0 }]);
+    streamEvents([{ type: "done", total: 0, suggestOptimize: false }]);
     const { unmount } = renderGraph();
     await screen.findByText("0 commits");
     unmount();
