@@ -61,8 +61,11 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
       para el texto; scroll a 60 fps con 50k commits. Muestra etiquetas de
       ramas, tags y HEAD.
       *Estado:* scroll fluido con git/git (~78k commits), comprobado en la app.
-- [ ] **2.6 Refresco.** Un watcher de `.git` (con debounce) refresca refs y el
+- [x] **2.6 Refresco.** Un watcher de `.git` (con debounce) refresca refs y el
       grafo tras cambios externos (por ejemplo, un commit hecho en la terminal).
+      *Estado:* vigila HEAD, `packed-refs` y `refs/` del git dir (y del común en
+      worktrees) con FSEvents; debounce de 300 ms; las operaciones propias se
+      silencian. La UI mantiene las filas y la selección hasta tener el grafo nuevo.
 
 ### 3. Detalle de commit
 - [ ] **3.1 Metadatos.** Autor, committer, fechas, mensaje completo, padres

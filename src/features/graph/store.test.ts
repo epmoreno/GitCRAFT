@@ -63,6 +63,35 @@ describe("graph store", () => {
     expect(graph(2)?.error?.details).toContain("bad object");
   });
 
+  it("refreshes without clearing the current rows or the selection", async () => {
+    const lines = sampleLines();
+    streamEvents([
+      { type: "page", lines: lines.slice(1) },
+      { type: "done", total: 5, suggestOptimize: false },
+    ]);
+    await useGraphStore.getState().load(1);
+    useGraphStore.getState().select(1, lines[2]!.oid);
+
+    let seenDuringRefresh: number | undefined;
+    ipc.streamGraph.mockImplementation(async (_id, onEvent) => {
+      onEvent({ type: "page", lines });
+      seenDuringRefresh = graph(1)?.lines.length;
+      onEvent({ type: "done", total: 6, suggestOptimize: false });
+      return { status: "ok", data: null };
+    });
+    await useGraphStore.getState().refresh(1);
+
+    expect(seenDuringRefresh).toBe(5); // old rows stay until the new set is complete
+    expect(graph(1)?.lines).toHaveLength(6);
+    expect(graph(1)?.selectedOid).toBe(lines[2]!.oid);
+    expect(ipc.getRefs).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores refresh requests for repositories that are not loaded", async () => {
+    await useGraphStore.getState().refresh(42);
+    expect(ipc.streamGraph).not.toHaveBeenCalled();
+  });
+
   it("selects a commit and forgets a closed repository", async () => {
     streamEvents([{ type: "done", total: 0, suggestOptimize: false }]);
     await useGraphStore.getState().load(3);

@@ -5,7 +5,12 @@ import { commandError, ipc, sampleLines, streamEvents } from "../../test/ipc";
 import { GraphView } from "./GraphView";
 import { progressPercent } from "./OptimizeNotice";
 
-const info = { path: "/src/big", name: "big", gitDir: "/src/big/.git" };
+const info = {
+  path: "/src/big",
+  name: "big",
+  gitDir: "/src/big/.git",
+  commonDir: "/src/big/.git",
+};
 
 function renderLargeRepo(suggestOptimize = true) {
   streamEvents([

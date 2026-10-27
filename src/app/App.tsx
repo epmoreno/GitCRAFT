@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { GraphView } from "../features/graph/GraphView";
+import { useGraphStore } from "../features/graph/store";
+import { onRepoChanged } from "../ipc";
 import { OpenErrorBanner } from "../features/repo/OpenErrorBanner";
 import { StartPage } from "../features/repo/StartPage";
 import { Sidebar } from "../features/sidebar/Sidebar";
@@ -18,6 +20,16 @@ export function App() {
   useEffect(() => {
     void loadRecents();
   }, [loadRecents]);
+
+  // Refs changed outside GitCRAFT (terminal, another client): refresh.
+  useEffect(() => {
+    const unlisten = onRepoChanged((id) => {
+      void useGraphStore.getState().refresh(id);
+    });
+    return () => {
+      void unlisten.then((stop) => stop());
+    };
+  }, []);
 
   return (
     <div className={styles.shell}>

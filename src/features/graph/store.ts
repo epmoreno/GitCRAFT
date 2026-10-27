@@ -24,6 +24,9 @@ export type RepoGraph = {
 type GraphState = {
   graphs: Record<number, RepoGraph>;
   load: (repoId: number) => Promise<void>;
+  /** Reloads after an external change, keeping the current rows (and the
+   * selection) on screen until the new history is complete. */
+  refresh: (repoId: number) => Promise<void>;
   select: (repoId: number, oid: string | null) => void;
   hideOptimizeNotice: (repoId: number) => void;
   forget: (repoId: number) => void;
@@ -89,6 +92,41 @@ export const useGraphStore = create<GraphState>()((set, get) => {
         } else {
           patch(repoId, loadId, () => ({
             status: "done",
+            suggestOptimize: event.suggestOptimize,
+          }));
+        }
+      });
+      if (result.status === "error" && result.error.kind !== "cancelled") {
+        patch(repoId, loadId, () => ({ status: "error", error: result.error }));
+      }
+      await refs;
+    },
+
+    refresh: async (repoId) => {
+      if (!get().graphs[repoId]) return;
+      const loadId = ++nextLoadId;
+      set((s) => {
+        const graph = s.graphs[repoId];
+        return graph
+          ? { graphs: { ...s.graphs, [repoId]: { ...graph, loadId } } }
+          : s;
+      });
+
+      const refs = commands.getRefs(repoId).then((result) => {
+        if (result.status === "ok") {
+          patch(repoId, loadId, () => ({ refs: result.data }));
+        }
+      });
+      const fresh: GraphLine[] = [];
+      const result = await streamGraph(repoId, (event) => {
+        if (event.type === "page") {
+          fresh.push(...event.lines);
+        } else {
+          patch(repoId, loadId, () => ({
+            status: "done",
+            lines: fresh,
+            maxColumn: widest(fresh),
+            error: null,
             suggestOptimize: event.suggestOptimize,
           }));
         }

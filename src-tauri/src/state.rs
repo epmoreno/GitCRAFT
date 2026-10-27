@@ -1,7 +1,7 @@
 //! App-wide state: open repositories (one session per tab) and settings.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gitcraft_core::graph::{GraphLine, load_graph};
@@ -15,14 +15,25 @@ use serde::Serialize;
 
 use crate::error::IpcError;
 use crate::settings::{RecentRepository, Settings, SettingsFile};
+use crate::watcher::{RepoWatcher, Suppression};
 
 pub type RepoId = u32;
+
+/// Called (from a background thread) when a repository changed on disk.
+pub type ChangeNotifier = Arc<dyn Fn(RepoId) + Send + Sync>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenedRepository {
     pub id: RepoId,
     pub info: RepoInfo,
+}
+
+/// Emitted when an open repository's refs changed outside GitCRAFT.
+#[derive(Debug, Clone, Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoChanged {
+    pub id: RepoId,
 }
 
 /// Sent over the graph channel: pages in order, then `done`.
@@ -44,9 +55,8 @@ pub enum GraphEvent {
     },
 }
 
-/// One open repository. Will also own the write queue and watcher
-/// (see docs/ARCHITECTURE.md).
-#[derive(Debug)]
+/// One open repository. Will also own the write queue (see
+/// docs/ARCHITECTURE.md).
 struct RepoSession {
     id: RepoId,
     info: RepoInfo,
@@ -54,9 +64,11 @@ struct RepoSession {
     graph_load: Option<CancellationToken>,
     /// Cancels the user-started operation in progress, if any.
     operation: Option<CancellationToken>,
+    /// Reports external ref changes; `None` if watching failed.
+    watcher: Option<RepoWatcher>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 struct Inner {
     next_id: RepoId,
     sessions: Vec<RepoSession>,
@@ -67,15 +79,21 @@ pub struct AppState {
     /// `None` when git is not installed; commands then fail with `gitNotFound`.
     git: Option<Git>,
     settings_file: SettingsFile,
+    notify_change: ChangeNotifier,
     inner: Mutex<Inner>,
 }
 
 impl AppState {
-    pub fn new(git: Option<Git>, settings_file: SettingsFile) -> Self {
+    pub fn new(
+        git: Option<Git>,
+        settings_file: SettingsFile,
+        notify_change: ChangeNotifier,
+    ) -> Self {
         let settings = settings_file.load();
         Self {
             git,
             settings_file,
+            notify_change,
             inner: Mutex::new(Inner {
                 settings,
                 ..Inner::default()
@@ -115,8 +133,20 @@ impl AppState {
             info: info.clone(),
             graph_load: None,
             operation: None,
+            watcher: self.watch(id, &info),
         });
         Ok(OpenedRepository { id, info })
+    }
+
+    fn watch(&self, id: RepoId, info: &RepoInfo) -> Option<RepoWatcher> {
+        let notify = Arc::clone(&self.notify_change);
+        let dirs = [
+            PathBuf::from(&info.git_dir),
+            PathBuf::from(&info.common_dir),
+        ];
+        RepoWatcher::start(&dirs, move || notify(id))
+            .inspect_err(|err| eprintln!("not watching {}: {err}", info.path))
+            .ok()
     }
 
     /// Returns whether a session with that id existed. Cancels its work.
@@ -202,8 +232,9 @@ impl AppState {
         on_progress: impl FnMut(&str),
     ) -> Result<(), IpcError> {
         let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
-        let (path, cancel) = self.start_operation(id)?;
+        let (path, cancel, quiet) = self.start_operation(id)?;
         let result = write_commit_graph(git, &path, &cancel, on_progress).await;
+        drop(quiet);
         self.finish_operation(id);
         Ok(result?)
     }
@@ -232,7 +263,12 @@ impl AppState {
         Ok(())
     }
 
-    fn start_operation(&self, id: RepoId) -> Result<(PathBuf, CancellationToken), IpcError> {
+    /// Registers an own operation: its token, and a guard that holds back the
+    /// watcher until it ends.
+    fn start_operation(
+        &self,
+        id: RepoId,
+    ) -> Result<(PathBuf, CancellationToken, Option<Suppression>), IpcError> {
         let mut inner = self.lock();
         let session = inner
             .sessions
@@ -243,7 +279,8 @@ impl AppState {
         if let Some(previous) = session.operation.replace(cancel.clone()) {
             previous.cancel();
         }
-        Ok((PathBuf::from(&session.info.path), cancel))
+        let quiet = session.watcher.as_ref().map(RepoWatcher::suppress);
+        Ok((PathBuf::from(&session.info.path), cancel, quiet))
     }
 
     fn finish_operation(&self, id: RepoId) {
@@ -287,17 +324,63 @@ mod tests {
         _config: tempfile::TempDir,
         settings_path: std::path::PathBuf,
         state: AppState,
+        changed: Arc<Mutex<Vec<RepoId>>>,
     }
 
     fn fixture() -> Fixture {
         let config = tempfile::tempdir().expect("tempdir");
         let settings_path = config.path().join("settings.json");
-        let state = AppState::new(Git::discover().ok(), SettingsFile::new(&settings_path));
+        let changed = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&changed);
+        let state = AppState::new(
+            Git::discover().ok(),
+            SettingsFile::new(&settings_path),
+            Arc::new(move |id| sink.lock().expect("lock").push(id)),
+        );
         Fixture {
             _config: config,
             settings_path,
             state,
+            changed,
         }
+    }
+
+    async fn settle() {
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+    }
+
+    #[tokio::test]
+    async fn external_ref_changes_are_reported_per_session() {
+        let f = fixture();
+        let (repo, _) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        settle().await;
+        f.changed.lock().expect("lock").clear();
+
+        repo.commit_file("x.txt", "x", "from the terminal").await;
+        settle().await;
+        assert_eq!(*f.changed.lock().expect("lock"), [id]);
+
+        // A closed session stops watching.
+        f.state.close_repository(id);
+        repo.commit_file("y.txt", "y", "after closing").await;
+        settle().await;
+        assert_eq!(*f.changed.lock().expect("lock"), [id]);
+    }
+
+    #[tokio::test]
+    async fn optimizing_does_not_trigger_a_refresh() {
+        let f = fixture();
+        let (repo, _) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        settle().await;
+        f.changed.lock().expect("lock").clear();
+        f.state
+            .optimize_repository(id, |_| {})
+            .await
+            .expect("optimize");
+        settle().await;
+        assert!(f.changed.lock().expect("lock").is_empty());
     }
 
     #[tokio::test]
@@ -362,7 +445,11 @@ mod tests {
     #[tokio::test]
     async fn missing_git_is_reported() {
         let config = tempfile::tempdir().expect("tempdir");
-        let state = AppState::new(None, SettingsFile::new(config.path().join("s.json")));
+        let state = AppState::new(
+            None,
+            SettingsFile::new(config.path().join("s.json")),
+            Arc::new(|_| {}),
+        );
         let err = state
             .open_repository(config.path())
             .await

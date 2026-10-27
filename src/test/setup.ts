@@ -18,6 +18,7 @@ vi.mock("../ipc", () => ({
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
   optimizeRepository: vi.fn(),
+  onRepoChanged: vi.fn(),
 }));
 
 // jsdom has no layout: give scroll containers a viewport so virtualized

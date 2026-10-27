@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../i18n";
 import { commandError, ipc, opened } from "../test/ipc";
@@ -147,6 +147,29 @@ describe("App", () => {
     expect(ipc.closeRepository).toHaveBeenCalledWith(1);
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.getByText("Ningún repositorio abierto")).toBeVisible();
+  });
+
+  it("refreshes the graph when the repository changes outside the app", async () => {
+    const user = userEvent.setup();
+    let notify: ((id: number) => void) | undefined;
+    ipc.onRepoChanged.mockImplementation(async (handler) => {
+      notify = handler;
+      return () => {};
+    });
+    ipc.pickFolder.mockResolvedValue("/a/repo");
+    ipc.openRepository.mockResolvedValue({
+      status: "ok",
+      data: opened(1, "/a/repo"),
+    });
+    render(<App />);
+    await user.click(
+      screen.getByRole("button", { name: "Abrir repositorio…" }),
+    );
+    await screen.findByText("0 commits");
+    expect(ipc.streamGraph).toHaveBeenCalledTimes(1);
+
+    act(() => notify?.(1));
+    await waitFor(() => expect(ipc.streamGraph).toHaveBeenCalledTimes(2));
   });
 
   it("switches language", async () => {

@@ -1,5 +1,6 @@
 import {
   commands,
+  onRepoChanged,
   optimizeRepository,
   pickFolder,
   streamGraph,
@@ -20,6 +21,7 @@ export const ipc = {
   pickFolder: vi.mocked(pickFolder),
   streamGraph: vi.mocked(streamGraph),
   optimizeRepository: vi.mocked(optimizeRepository),
+  onRepoChanged: vi.mocked(onRepoChanged),
   cancelOperation: vi.mocked(commands.cancelOperation),
   dismissOptimizeNotice: vi.mocked(commands.dismissOptimizeNotice),
 };
@@ -29,6 +31,7 @@ export function resetIpcMock() {
   ipc.listRecentRepositories.mockResolvedValue({ status: "ok", data: [] });
   ipc.closeRepository.mockResolvedValue({ status: "ok", data: true });
   ipc.pickFolder.mockResolvedValue(null);
+  ipc.onRepoChanged.mockResolvedValue(() => {});
   ipc.cancelOperation.mockResolvedValue({ status: "ok", data: null });
   ipc.dismissOptimizeNotice.mockResolvedValue({ status: "ok", data: null });
   ipc.getRefs.mockResolvedValue({ status: "ok", data: emptyRefs() });
@@ -48,7 +51,10 @@ export function streamEvents(events: GraphEvent[]) {
 
 export function opened(id: number, path: string): OpenedRepository {
   const name = path.split("/").pop() ?? path;
-  return { id, info: { path, name, gitDir: `${path}/.git` } };
+  return {
+    id,
+    info: { path, name, gitDir: `${path}/.git`, commonDir: `${path}/.git` },
+  };
 }
 
 export function commandError(

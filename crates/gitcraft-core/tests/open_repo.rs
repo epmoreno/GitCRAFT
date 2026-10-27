@@ -27,6 +27,7 @@ async fn opens_a_repository_root() {
         .expect("open");
     assert_eq!(info.path, canonical(repo.path()));
     assert_eq!(info.git_dir, canonical(&repo.path().join(".git")));
+    assert_eq!(info.common_dir, info.git_dir);
     assert_eq!(
         info.name,
         repo.path().file_name().expect("name").to_string_lossy()
@@ -45,6 +46,27 @@ async fn opening_a_subdirectory_opens_the_enclosing_repository() {
     .await
     .expect("open");
     assert_eq!(info.path, canonical(repo.path()));
+}
+
+#[tokio::test]
+async fn a_linked_worktree_shares_the_main_common_dir() {
+    let (repo, _) = TestRepo::sample_history().await;
+    let parent = tempfile::tempdir().expect("tempdir");
+    let worktree = parent.path().join("wt");
+    repo.run(&[
+        "worktree",
+        "add",
+        "--quiet",
+        worktree.to_str().expect("utf-8"),
+        "topic",
+    ])
+    .await;
+    let info = open_repository(&git(), &worktree, &CancellationToken::new())
+        .await
+        .expect("open worktree");
+    assert_eq!(info.path, canonical(&worktree));
+    assert_ne!(info.git_dir, info.common_dir);
+    assert_eq!(info.common_dir, canonical(&repo.path().join(".git")));
 }
 
 #[tokio::test]

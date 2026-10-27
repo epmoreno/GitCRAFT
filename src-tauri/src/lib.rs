@@ -4,26 +4,31 @@ mod commands;
 mod error;
 mod settings;
 mod state;
+mod watcher;
 
 use gitcraft_core::Git;
+use std::sync::Arc;
 use tauri::Manager;
-use tauri_specta::{Builder, collect_commands};
+
+use tauri_specta::{Builder, Event, collect_commands, collect_events};
 
 use crate::settings::SettingsFile;
-use crate::state::AppState;
+use crate::state::{AppState, RepoChanged};
 
 /// Registers every command; also the source of `src/ipc/bindings.ts`.
 fn specta_builder() -> Builder<tauri::Wry> {
-    Builder::<tauri::Wry>::new().commands(collect_commands![
-        commands::open_repository,
-        commands::close_repository,
-        commands::list_recent_repositories,
-        commands::load_graph,
-        commands::get_refs,
-        commands::optimize_repository,
-        commands::cancel_operation,
-        commands::dismiss_optimize_notice,
-    ])
+    Builder::<tauri::Wry>::new()
+        .events(collect_events![RepoChanged])
+        .commands(collect_commands![
+            commands::open_repository,
+            commands::close_repository,
+            commands::list_recent_repositories,
+            commands::load_graph,
+            commands::get_refs,
+            commands::optimize_repository,
+            commands::cancel_operation,
+            commands::dismiss_optimize_notice,
+        ])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -32,11 +37,16 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(builder.invoke_handler())
-        .setup(|app| {
+        .setup(move |app| {
+            builder.mount_events(app);
             let settings = app.path().app_config_dir()?.join("settings.json");
+            let handle = app.handle().clone();
             app.manage(AppState::new(
                 Git::discover().ok(),
                 SettingsFile::new(settings),
+                Arc::new(move |id| {
+                    let _ = RepoChanged { id }.emit(&handle);
+                }),
             ));
             Ok(())
         })

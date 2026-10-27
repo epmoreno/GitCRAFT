@@ -16,6 +16,7 @@ const info = {
   path: "/src/sample",
   name: "sample",
   gitDir: "/src/sample/.git",
+  commonDir: "/src/sample/.git",
 };
 
 function renderGraph() {

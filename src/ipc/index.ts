@@ -1,6 +1,6 @@
 import { Channel } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { commands, type GraphEvent } from "./bindings";
+import { commands, events, type GraphEvent } from "./bindings";
 
 export { commands } from "./bindings";
 export type {
@@ -41,4 +41,10 @@ export function optimizeRepository(
   const channel = new Channel<string>();
   channel.onmessage = onProgress;
   return commands.optimizeRepository(id, channel);
+}
+
+/** Calls `handler` with the session id whenever a repository's refs change
+ * outside GitCRAFT. Resolves to an unsubscribe function. */
+export function onRepoChanged(handler: (id: number) => void) {
+  return events.repoChanged.listen((event) => handler(event.payload.id));
 }

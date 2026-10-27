@@ -105,7 +105,9 @@ GitCRAFT/
 - **Concurrencia por repo:** las lecturas (log, status, diff) van en paralelo y
   las escrituras (commit, checkout, fetch…) pasan por una cola serial por
   `RepoSession` para evitar choques con `index.lock`.
-- **Vigilante de `.git` y del worktree:** agrupa eventos con un debounce de
+- **Vigilante de `.git` y del worktree** (`src-tauri/src/watcher.rs`, crate
+  `notify`; hoy solo refs: HEAD, `packed-refs`, `refs/**` del git dir y del
+  common dir): agrupa eventos con un debounce de
   ~300 ms. Mientras haya una operación propia en curso en ese repo, sus eventos
   se **ignoran**; al terminar la operación se emite un único `repo-changed`.
   Así se evitan los refrescos en bucle (por ejemplo, un `status` que toca el
