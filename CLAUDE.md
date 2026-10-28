@@ -89,3 +89,8 @@ usuario.
    `git clean -f`, `git restore` sobre el worktree…). Para deshacer un commit
    de prueba se usa `git reset --soft HEAD~1`, y las pruebas se hacen en un
    repositorio de prueba desechable, no en GitCRAFT.
+5. **Procesos que no terminan solos:** nunca se ejecutan en primer plano
+   procesos que no terminan solos (`tauri dev`, servidores, watchers). Se
+   lanzan en segundo plano con un límite de tiempo, se revisa su salida y se
+   terminan. Si una comprobación tarda más de 2 minutos sin salida nueva, se
+   detiene y se avisa al usuario.
