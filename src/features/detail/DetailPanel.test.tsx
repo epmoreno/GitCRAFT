@@ -75,10 +75,27 @@ describe("DetailPanel", () => {
     );
     expect(within(panel).getByText("Ana <ana@example.com>")).toBeVisible();
     expect(within(panel).getByText(/hace 2 horas/)).toBeVisible();
-    expect(within(panel).getByText(oid("f"))).toHaveClass("selectable");
+    const hash = within(panel).getByText(oid("f"));
+    expect(hash).toHaveClass("selectable");
+    expect(hash).toHaveAttribute("title", oid("f"));
     expect(within(panel).getByText("Padres")).toBeVisible();
     // Same author and committer: no separate committer row.
     expect(within(panel).queryByText("Committer")).toBeNull();
+  });
+
+  it("re-flows the body's wrapped lines", async () => {
+    ipc.commitDetails.mockResolvedValue({
+      status: "ok",
+      data: details({
+        body: "Stream the commits instead of walking the whole\nhistory first.\n\n- one\n- two\n\nSigned-off-by: Ana <ana@example.com>",
+      }),
+    });
+    withSelection(oid("f"));
+    render(<DetailPanel repoId={1} />);
+    const body = await screen.findByText(/Stream the commits/);
+    expect(body.textContent).toBe(
+      "Stream the commits instead of walking the whole history first.\n\n- one\n- two\n\nSigned-off-by: Ana <ana@example.com>",
+    );
   });
 
   it("shows a different committer and a root commit", async () => {

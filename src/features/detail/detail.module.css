@@ -75,9 +75,15 @@
   gap: var(--space-2) !important;
 }
 
-.hashRow code {
+.hash {
+  /* One line: clipped with an ellipsis; the tooltip and "Copy" have it all.
+     Selecting it still copies the full hash. */
+  flex: 1;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  font-size: 11px !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .parents {

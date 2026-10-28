@@ -12,6 +12,7 @@ import { labelsByCommit } from "../graph/refLabels";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
 import { useGraphStore } from "../graph/store";
 import { FileList } from "./FileList";
+import { reflowMessage } from "./reflow";
 import styles from "./detail.module.css";
 
 type Loaded =
@@ -95,7 +96,9 @@ function CommitInfo({
       <RefChips labels={labels} color={laneColor(color)} />
       <h2 className={`${styles.summary} selectable`}>{details.summary}</h2>
       {details.body && (
-        <pre className={`${styles.body} selectable`}>{details.body}</pre>
+        <pre className={`${styles.body} selectable`}>
+          {reflowMessage(details.body)}
+        </pre>
       )}
 
       <dl className={styles.facts}>
@@ -113,7 +116,9 @@ function CommitInfo({
         )}
         <dt>{t("detail.commit")}</dt>
         <dd className={styles.hashRow}>
-          <code className="selectable">{details.oid}</code>
+          <code className={`${styles.hash} selectable`} title={details.oid}>
+            {details.oid}
+          </code>
           <CopyButton text={details.oid} />
         </dd>
         <dt>{t("detail.parent", { count: details.parents.length })}</dt>
