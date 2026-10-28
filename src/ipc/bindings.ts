@@ -55,6 +55,23 @@ export const commands = {
 	discardChanges: (id: number, target: DiscardTarget_Deserialize) => typedError<DiscardResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("discard_changes", { id, target })),
 	/**  Puts back what a discard removed, if the files did not change since. */
 	undoDiscard: (id: number, undoId: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("undo_discard", { id, undoId })),
+	/**  Whether `name` can be used for a new branch. */
+	checkBranchName: (id: number, name: string) => typedError<BranchNameCheck, IpcError_Serialize>(__TAURI_INVOKE("check_branch_name", { id, name })),
+	/**
+	 *  Creates branch `name` at `start` (a commit id or a full ref name);
+	 *  `track` makes `start`, a remote branch, its upstream. With `checkout`
+	 *  it then switches to it and returns the outcome.
+	 */
+	createBranch: (id: number, name: string, start: string, track: boolean, checkout: boolean) => typedError<CheckoutOutcome | null, IpcError_Serialize>(__TAURI_INVOKE("create_branch", { id, name, start, track, checkout })),
+	renameBranch: (id: number, oldName: string, newName: string) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("rename_branch", { id, oldName, newName })),
+	/**  What deleting a branch would leave without a branch, to confirm first. */
+	branchDeletionPreview: (id: number, name: string) => typedError<BranchDeletion_Serialize, IpcError_Serialize>(__TAURI_INVOKE("branch_deletion_preview", { id, name })),
+	/**  Deletes a branch if it still points to `expected_tip` (the confirmed one). */
+	deleteBranch: (id: number, name: string, expectedTip: string) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("delete_branch", { id, name, expectedTip })),
+	/**  Switches to a local branch. Never forces: blocking changes are reported. */
+	checkoutBranch: (id: number, name: string) => typedError<CheckoutOutcome, IpcError_Serialize>(__TAURI_INVOKE("checkout_branch", { id, name })),
+	/**  Saves every uncommitted change in a stash entry, then switches. */
+	stashAndCheckout: (id: number, name: string, includeUntracked: boolean) => typedError<CheckoutOutcome, IpcError_Serialize>(__TAURI_INVOKE("stash_and_checkout", { id, name, includeUntracked })),
 };
 
 /** Events */
@@ -74,6 +91,53 @@ export type AmendInfo = {
 	 */
 	publishedIn: string[],
 };
+
+/**  A file whose uncommitted change blocks switching branches. */
+export type BlockingFile = {
+	path: string,
+	untracked: boolean,
+};
+
+/**  What deleting a branch would leave behind, shown before confirming. */
+export type BranchDeletion = BranchDeletion_Serialize | BranchDeletion_Deserialize;
+
+/**  What deleting a branch would leave behind, shown before confirming. */
+export type BranchDeletion_Deserialize = {
+	name: string,
+	/**
+	 *  Where the branch points: to recreate it, and to check nothing moved
+	 *  between the preview and the deletion.
+	 */
+	tip: string,
+	/**  The tracked remote branch (it is not deleted). */
+	upstream?: string | null,
+	/**  Commits no other branch, remote branch or tag contains. */
+	orphaned: number,
+	/**  The newest of them (at most [`LISTED_COMMITS`]). */
+	commits: OrphanCommit[],
+};
+
+/**  What deleting a branch would leave behind, shown before confirming. */
+export type BranchDeletion_Serialize = {
+	name: string,
+	/**
+	 *  Where the branch points: to recreate it, and to check nothing moved
+	 *  between the preview and the deletion.
+	 */
+	tip: string,
+	/**  The tracked remote branch (it is not deleted). */
+	upstream: string | null,
+	/**  Commits no other branch, remote branch or tag contains. */
+	orphaned: number,
+	/**  The newest of them (at most [`LISTED_COMMITS`]). */
+	commits: OrphanCommit[],
+};
+
+export type BranchNameCheck = "valid" | 
+/**  Not a valid branch name (see git-check-ref-format). */
+"invalid" | 
+/**  A local branch with that name exists. */
+"exists";
 
 export type BranchStatus = BranchStatus_Serialize | BranchStatus_Deserialize;
 
@@ -96,6 +160,18 @@ export type BranchStatus_Serialize = {
 	ahead: number,
 	behind: number,
 };
+
+export type CheckoutOutcome = { type: "switched" } | 
+/**
+ *  git refused because these uncommitted changes would be overwritten;
+ *  nothing was touched.
+ */
+{ type: "blocked"; files: BlockingFile[]; 
+/**
+ *  How many files have uncommitted changes in total (all of them
+ *  would go to the stash).
+ */
+changed: number };
 
 export type CommitChanges = CommitChanges_Serialize | CommitChanges_Deserialize;
 
@@ -246,7 +322,9 @@ export type DiscardedFile_Serialize = {
  */
 export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | 
 /**  No user.name / user.email configured. */
-"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "cancelled" | "timedOut" | "unknown";
+"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "invalidBranchName" | "branchExists" | "branchChanged" | 
+/**  The branch is checked out in another worktree. */
+"branchInWorktree" | "cancelled" | "timedOut" | "unknown";
 
 export type FileChange = FileChange_Serialize | FileChange_Deserialize;
 
@@ -467,6 +545,15 @@ export type LineKind = "context" | "added" | "removed";
 export type OpenedRepository = {
 	id: number,
 	info: RepoInfo,
+};
+
+/**  A commit that only the branch being deleted reaches. */
+export type OrphanCommit = {
+	oid: string,
+	summary: string,
+	author: string,
+	/**  Author date, Unix seconds. */
+	time: number,
 };
 
 export type RecentRepository = {

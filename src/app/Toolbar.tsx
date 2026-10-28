@@ -1,9 +1,11 @@
 import { useTranslation } from "react-i18next";
+import { useBranchStore } from "../features/branches/store";
+import { useGraphStore } from "../features/graph/store";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
 import { Tooltip } from "../ui/Tooltip";
 import styles from "./App.module.css";
 
-const ACTIONS = ["pull", "push", "branch", "stash", "undo"] as const;
+const PENDING = ["pull", "push", "stash", "undo"] as const;
 
 /**
  * Top bar. Doubles as the window title bar on macOS (overlay title bar),
@@ -14,8 +16,12 @@ export function Toolbar() {
   const active = useActiveRepository();
   const opening = useRepoStore((s) => s.opening);
   const pickAndOpen = useRepoStore((s) => s.pickAndOpen);
+  const requestCreate = useBranchStore((s) => s.requestCreate);
+  const head = useGraphStore((s) =>
+    active ? (s.graphs[active.id]?.refs?.head ?? null) : null,
+  );
 
-  // None of the repository actions exist yet; explain why they are disabled.
+  // The other actions do not exist yet; explain why they are disabled.
   const disabledReason = active
     ? t("toolbar.notYetAvailable")
     : t("toolbar.needsRepo");
@@ -34,7 +40,32 @@ export function Toolbar() {
         {t("toolbar.openRepo")}
       </button>
       <div className={styles.toolbarActions} data-tauri-drag-region>
-        {ACTIONS.map((action) => (
+        <Tooltip
+          label={
+            !active
+              ? t("toolbar.needsRepo")
+              : head?.oid
+                ? t("branches.newFromHead")
+                : t("branches.needsCommit")
+          }
+        >
+          <button
+            type="button"
+            className={styles.toolButton}
+            disabled={!active || !head?.oid}
+            onClick={() => {
+              if (!active || !head?.oid) return;
+              requestCreate(
+                active.id,
+                head.oid,
+                head.type === "branch" ? head.name : head.oid.slice(0, 7),
+              );
+            }}
+          >
+            {t("toolbar.branch")}
+          </button>
+        </Tooltip>
+        {PENDING.map((action) => (
           <Tooltip key={action} label={disabledReason}>
             <button type="button" className={styles.toolButton} disabled>
               {t(`toolbar.${action}`)}

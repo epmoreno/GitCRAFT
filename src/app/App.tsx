@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { BranchDialogs, BranchToast } from "../features/branches/BranchDialogs";
 import { DetailPanel } from "../features/detail/DetailPanel";
 import { GraphView } from "../features/graph/GraphView";
 import { useGraphStore } from "../features/graph/store";
@@ -60,9 +61,11 @@ export function App() {
             <StartPage />
           )}
           <UndoToast />
+          <BranchToast />
         </main>
         <DetailPanel repoId={active?.id ?? null} />
         <DiscardDialog />
+        <BranchDialogs />
       </div>
     </div>
   );

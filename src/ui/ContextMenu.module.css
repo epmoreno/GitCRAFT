@@ -1,0 +1,36 @@
+.menu {
+  position: fixed;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-2);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+}
+
+.item {
+  padding: 4px var(--space-3);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.item:hover:not(:disabled),
+.item:focus-visible {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  outline: none;
+}
+
+.item:disabled {
+  color: var(--text-faint);
+}
+
+.danger:not(:disabled) {
+  color: var(--danger);
+}

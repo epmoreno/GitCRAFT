@@ -194,6 +194,32 @@ para unstage). Esta lógica es pura y se cubre con tests unitarios exhaustivos.
    «GitCRAFT: descarte de …», con confirmación si el archivo cambió desde el
    descarte. *Test:* `a_partial_discard_is_recoverable_from_the_stash_later`.
 
+## 5c. Ramas
+
+`gitcraft-core/src/ops/branch.rs`. Los nombres que llegan de la UI se validan
+con `git check-ref-format --branch` (rechaza los que empiezan por «-») y van
+siempre detrás de `--`; los puntos de partida son ids o nombres completos
+(`refs/…`).
+
+- **Cambiar de rama:** `git switch --no-guess -- <rama>`, nunca forzado. Si Git
+  se niega, se calculan con formatos estables los archivos que lo impiden
+  (cambios sin confirmar ∩ `git diff --name-only -z HEAD <rama>`) y se
+  devuelve `Blocked` sin haber tocado nada. La UI lo explica y ofrece
+  «Guardar en el stash y cambiar» (`git stash push` con el mensaje
+  «GitCRAFT: antes de cambiar a <rama>», con `--include-untracked` solo si
+  algún archivo sin seguimiento estorba) o «Cancelar». Ese stash nunca se
+  borra automáticamente.
+- **Rama remota:** se crea una rama local con seguimiento
+  (`git branch --track`) y se cambia a ella; si ya hay una que la sigue, se
+  usa esa.
+- **Borrar:** primero `preview_branch_deletion`: los commits que ninguna otra
+  rama, rama remota ni tag contiene
+  (`rev-list <punta> --not --exclude=<rama> --branches --remotes --tags`).
+  El diálogo los lista y muestra `git branch <rama> <punta>` para
+  recrearla. `git branch --delete --force` solo se ejecuta tras esa
+  confirmación y si la rama sigue en la punta confirmada (si no,
+  `BranchChanged` y no se hace nada).
+
 ## 6. Persistencia
 
 `settings.json` en el `app_config_dir` de Tauri (en macOS,

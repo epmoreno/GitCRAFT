@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use tauri::State;
 use tauri::ipc::Channel;
 
+use gitcraft_core::ops::branch::{BranchDeletion, BranchNameCheck, CheckoutOutcome};
 use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
@@ -256,4 +257,88 @@ pub async fn undo_discard(
     undo_id: u32,
 ) -> Result<(), IpcError> {
     state.undo_discard(id, undo_id).await
+}
+
+/// Whether `name` can be used for a new branch.
+#[tauri::command]
+#[specta::specta]
+pub async fn check_branch_name(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+) -> Result<BranchNameCheck, IpcError> {
+    state.check_branch_name(id, &name).await
+}
+
+/// Creates branch `name` at `start` (a commit id or a full ref name);
+/// `track` makes `start`, a remote branch, its upstream. With `checkout`
+/// it then switches to it and returns the outcome.
+#[tauri::command]
+#[specta::specta]
+pub async fn create_branch(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+    start: String,
+    track: bool,
+    checkout: bool,
+) -> Result<Option<CheckoutOutcome>, IpcError> {
+    state.create_branch(id, name, start, track, checkout).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn rename_branch(
+    state: State<'_, AppState>,
+    id: RepoId,
+    old_name: String,
+    new_name: String,
+) -> Result<(), IpcError> {
+    state.rename_branch(id, old_name, new_name).await
+}
+
+/// What deleting a branch would leave without a branch, to confirm first.
+#[tauri::command]
+#[specta::specta]
+pub async fn branch_deletion_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+) -> Result<BranchDeletion, IpcError> {
+    state.branch_deletion_preview(id, &name).await
+}
+
+/// Deletes a branch if it still points to `expected_tip` (the confirmed one).
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_branch(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+    expected_tip: String,
+) -> Result<(), IpcError> {
+    state.delete_branch(id, name, expected_tip).await
+}
+
+/// Switches to a local branch. Never forces: blocking changes are reported.
+#[tauri::command]
+#[specta::specta]
+pub async fn checkout_branch(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+) -> Result<CheckoutOutcome, IpcError> {
+    state.checkout_branch(id, name).await
+}
+
+/// Saves every uncommitted change in a stash entry, then switches.
+#[tauri::command]
+#[specta::specta]
+pub async fn stash_and_checkout(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+    include_untracked: bool,
+) -> Result<CheckoutOutcome, IpcError> {
+    state.stash_and_checkout(id, name, include_untracked).await
 }

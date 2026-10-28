@@ -48,6 +48,16 @@ pub enum GitError {
     /// since; nothing was modified.
     #[error("cannot undo the discard of {0}: it changed since")]
     UndoConflict(String),
+
+    #[error("{0:?} is not a valid branch name")]
+    InvalidBranchName(String),
+
+    #[error("a branch named {0:?} already exists")]
+    BranchExists(String),
+
+    /// The branch moved or disappeared since it was shown; nothing was done.
+    #[error("branch {0:?} changed since it was shown")]
+    BranchChanged(String),
 }
 
 /// What went wrong, in terms the UI can explain. Each kind has a translated
@@ -67,6 +77,11 @@ pub enum ErrorKind {
     EmptyMessage,
     StaleDiff,
     UndoConflict,
+    InvalidBranchName,
+    BranchExists,
+    BranchChanged,
+    /// The branch is checked out in another worktree.
+    BranchInWorktree,
     Cancelled,
     TimedOut,
     Unknown,
@@ -86,6 +101,9 @@ impl GitError {
             } => classify_output(stderr, stdout_tail),
             Self::StaleDiff => ErrorKind::StaleDiff,
             Self::UndoConflict(_) => ErrorKind::UndoConflict,
+            Self::InvalidBranchName(_) => ErrorKind::InvalidBranchName,
+            Self::BranchExists(_) => ErrorKind::BranchExists,
+            Self::BranchChanged(_) => ErrorKind::BranchChanged,
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
     }
@@ -115,7 +133,13 @@ impl GitError {
                 Some(self.to_string())
             }
             Self::UndoConflict(_) => Some(self.to_string()),
-            Self::GitNotFound | Self::PathNotFound(_) | Self::Cancelled | Self::StaleDiff => None,
+            Self::GitNotFound
+            | Self::PathNotFound(_)
+            | Self::Cancelled
+            | Self::StaleDiff
+            | Self::InvalidBranchName(_)
+            | Self::BranchExists(_)
+            | Self::BranchChanged(_) => None,
         }
     }
 }
@@ -143,6 +167,11 @@ pub fn classify_output(stderr: &str, stdout: &str) -> ErrorKind {
         ("nothing to commit", ErrorKind::NothingToCommit),
         ("nothing added to commit", ErrorKind::NothingToCommit),
         ("no changes added to commit", ErrorKind::NothingToCommit),
+        ("is not a valid branch name", ErrorKind::InvalidBranchName),
+        ("already exists", ErrorKind::BranchExists),
+        ("is already checked out at", ErrorKind::BranchInWorktree),
+        ("is already used by worktree", ErrorKind::BranchInWorktree),
+        ("used by worktree at", ErrorKind::BranchInWorktree),
     ];
     PATTERNS
         .iter()

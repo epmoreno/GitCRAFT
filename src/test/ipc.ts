@@ -39,6 +39,13 @@ export const ipc = {
   discardPreview: vi.mocked(commands.discardPreview),
   discardChanges: vi.mocked(commands.discardChanges),
   undoDiscard: vi.mocked(commands.undoDiscard),
+  checkBranchName: vi.mocked(commands.checkBranchName),
+  createBranch: vi.mocked(commands.createBranch),
+  renameBranch: vi.mocked(commands.renameBranch),
+  branchDeletionPreview: vi.mocked(commands.branchDeletionPreview),
+  deleteBranch: vi.mocked(commands.deleteBranch),
+  checkoutBranch: vi.mocked(commands.checkoutBranch),
+  stashAndCheckout: vi.mocked(commands.stashAndCheckout),
 };
 
 export function resetIpcMock() {
@@ -54,6 +61,18 @@ export function resetIpcMock() {
   ipc.amendInfo.mockResolvedValue({ status: "ok", data: null });
   ipc.applySelection.mockResolvedValue({ status: "ok", data: null });
   ipc.undoDiscard.mockResolvedValue({ status: "ok", data: null });
+  ipc.checkBranchName.mockResolvedValue({ status: "ok", data: "valid" });
+  ipc.createBranch.mockResolvedValue({ status: "ok", data: null });
+  ipc.renameBranch.mockResolvedValue({ status: "ok", data: null });
+  ipc.deleteBranch.mockResolvedValue({ status: "ok", data: null });
+  ipc.checkoutBranch.mockResolvedValue({
+    status: "ok",
+    data: { type: "switched" },
+  });
+  ipc.stashAndCheckout.mockResolvedValue({
+    status: "ok",
+    data: { type: "switched" },
+  });
   ipc.commitChanges.mockResolvedValue({
     status: "ok",
     data: { base: null, files: [] },

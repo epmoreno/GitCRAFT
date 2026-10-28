@@ -1,0 +1,146 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  color: var(--text);
+}
+
+.input {
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.hint,
+.problem {
+  min-height: 1.5em;
+  margin: var(--space-1) 0 var(--space-2);
+  font-size: var(--font-size-small);
+}
+
+.hint {
+  color: var(--text-faint);
+}
+
+.problem {
+  color: var(--danger);
+}
+
+.checkbox {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--text);
+}
+
+.checkbox input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.commitList,
+.fileList {
+  max-height: 180px;
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2);
+  overflow-y: auto;
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  list-style: none;
+  font-size: var(--font-size-small);
+}
+
+.commit,
+.file {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.file {
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.oid {
+  flex: none;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.summary {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.author {
+  flex: none;
+  margin-left: auto;
+  color: var(--text-faint);
+}
+
+.more {
+  color: var(--text-faint);
+}
+
+.command {
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Result of a branch operation */
+.toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  max-width: min(600px, 100% - 32px);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-3);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+  transform: translateX(-50%);
+}
+
+.toastBody p {
+  margin: 0 0 var(--space-1);
+}
+
+.toastBody pre {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.toastClose {
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 16px;
+}

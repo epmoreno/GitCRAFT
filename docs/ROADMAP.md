@@ -121,12 +121,19 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
       stashes, con filtro.
       *Estado:* ramas locales, remotos y tags hechos (clic → commit en el
       grafo); faltan stashes (7.x) y el filtro.
-- [ ] **5.2 Crear, checkout, renombrar y borrar.** Borrar una rama no fusionada
+- [x] **5.2 Crear, checkout, renombrar y borrar.** Borrar una rama no fusionada
       pide confirmación y explica qué commits quedarían sin rama; nunca se usa
       `branch -D` sin esa confirmación. Cambiar de rama con cambios sin
       confirmar que chocan: se explica el conflicto y se ofrece «Guardar en el
       stash y cambiar» o «Cancelar»; nunca se fuerza el checkout. Para hacer
       checkout de una rama remota se crea una rama de seguimiento.
+      *Estado:* barra lateral con doble clic (cambiar), menú contextual
+      (cambiar, nueva rama desde aquí, renombrar, borrar) y botón «+»; botón
+      «Rama» de la barra superior. Borrar solo si la rama sigue donde se
+      confirmó; el diálogo muestra el comando para volver a crearla.
+      *Tests:* integración (nombres, crear con seguimiento, renombrar la
+      actual, commits sin rama, borrado con rama movida, cambio bloqueado sin
+      tocar nada, stash y cambiar byte a byte) y de interfaz.
 
 ### 6. Remotos
 Las pruebas usan un repo bare local como remoto (p. ej.

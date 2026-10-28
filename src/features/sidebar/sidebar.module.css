@@ -13,6 +13,34 @@
   margin: 0;
 }
 
+.withAction {
+  display: flex;
+  align-items: center;
+}
+
+.sectionAction {
+  flex: none;
+  width: 22px;
+  height: 20px;
+  margin-right: var(--space-2);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.sectionAction:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.sectionAction:disabled {
+  opacity: 0.4;
+}
+
 .toggle {
   display: flex;
   align-items: center;

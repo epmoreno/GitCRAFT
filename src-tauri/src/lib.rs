@@ -41,6 +41,13 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::discard_preview,
             commands::discard_changes,
             commands::undo_discard,
+            commands::check_branch_name,
+            commands::create_branch,
+            commands::rename_branch,
+            commands::branch_deletion_preview,
+            commands::delete_branch,
+            commands::checkout_branch,
+            commands::stash_and_checkout,
         ])
 }
 

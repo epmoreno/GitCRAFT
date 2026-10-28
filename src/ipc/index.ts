@@ -10,6 +10,11 @@ import {
 export { commands } from "./bindings";
 export type {
   AmendInfo,
+  BlockingFile,
+  BranchDeletion_Serialize as BranchDeletion,
+  BranchNameCheck,
+  CheckoutOutcome,
+  OrphanCommit,
   CommitChanges_Serialize as CommitChanges,
   ConflictEntry,
   ConflictKind,

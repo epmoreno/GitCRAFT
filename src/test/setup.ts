@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import "../i18n";
+import { initialBranchState, useBranchStore } from "../features/branches/store";
 import { useGraphStore } from "../features/graph/store";
 import { initialRepoState, useRepoStore } from "../features/repo/store";
 import { useWorkdirStore } from "../features/workdir/store";
@@ -28,6 +29,13 @@ vi.mock("../ipc", () => ({
     discardPreview: vi.fn(),
     discardChanges: vi.fn(),
     undoDiscard: vi.fn(),
+    checkBranchName: vi.fn(),
+    createBranch: vi.fn(),
+    renameBranch: vi.fn(),
+    branchDeletionPreview: vi.fn(),
+    deleteBranch: vi.fn(),
+    checkoutBranch: vi.fn(),
+    stashAndCheckout: vi.fn(),
   },
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
@@ -51,6 +59,7 @@ HTMLCanvasElement.prototype.getContext = (() =>
 beforeEach(() => {
   resetIpcMock();
   useRepoStore.setState(initialRepoState);
+  useBranchStore.setState(initialBranchState);
   useGraphStore.setState({ graphs: {} });
   useWorkdirStore.setState({
     statuses: {},

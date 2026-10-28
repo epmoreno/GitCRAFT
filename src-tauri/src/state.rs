@@ -5,6 +5,10 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gitcraft_core::graph::{GraphLine, load_graph};
+use gitcraft_core::ops::branch::{
+    self, BranchDeletion, BranchNameCheck, CheckoutOutcome, check_branch_name,
+    preview_branch_deletion,
+};
 use gitcraft_core::ops::commit::{CommitChanges, commit_changes, commit_details, commit_file_diff};
 use gitcraft_core::ops::commit_write::{AmendInfo, amend_info, compose_message, create_commit};
 use gitcraft_core::ops::discard::{
@@ -458,6 +462,110 @@ impl AppState {
             session.discards.retain(|(d, _)| *d != undo_id);
         }
         Ok(())
+    }
+
+    /// Whether `name` can be used for a new branch.
+    pub async fn check_branch_name(
+        &self,
+        id: RepoId,
+        name: &str,
+    ) -> Result<BranchNameCheck, IpcError> {
+        let git = self.git()?;
+        let path = self.session_path(id)?;
+        Ok(check_branch_name(git, &path, name, &CancellationToken::new()).await?)
+    }
+
+    /// Creates a branch at `start` and, if asked, switches to it (`None`
+    /// when not switching).
+    pub async fn create_branch(
+        &self,
+        id: RepoId,
+        name: String,
+        start: String,
+        track: bool,
+        checkout: bool,
+    ) -> Result<Option<CheckoutOutcome>, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            branch::create_branch(git, &repo, &name, &start, track, &cancel).await?;
+            if !checkout {
+                return Ok(None);
+            }
+            branch::checkout_branch(git, &repo, &name, &cancel)
+                .await
+                .map(Some)
+        })
+        .await
+    }
+
+    pub async fn rename_branch(
+        &self,
+        id: RepoId,
+        old: String,
+        new: String,
+    ) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            branch::rename_branch(git, &repo, &old, &new, &cancel).await
+        })
+        .await
+    }
+
+    /// What deleting branch `name` would leave without a branch.
+    pub async fn branch_deletion_preview(
+        &self,
+        id: RepoId,
+        name: &str,
+    ) -> Result<BranchDeletion, IpcError> {
+        let git = self.git()?;
+        let path = self.session_path(id)?;
+        Ok(preview_branch_deletion(git, &path, name, &CancellationToken::new()).await?)
+    }
+
+    /// Deletes branch `name` if it still points to `expected_tip`.
+    pub async fn delete_branch(
+        &self,
+        id: RepoId,
+        name: String,
+        expected_tip: String,
+    ) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            branch::delete_branch(git, &repo, &name, &expected_tip, &cancel).await
+        })
+        .await
+    }
+
+    /// Switches branch, never forcing.
+    pub async fn checkout_branch(
+        &self,
+        id: RepoId,
+        name: String,
+    ) -> Result<CheckoutOutcome, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            branch::checkout_branch(git, &repo, &name, &cancel).await
+        })
+        .await
+    }
+
+    /// Stashes every uncommitted change, then switches.
+    pub async fn stash_and_checkout(
+        &self,
+        id: RepoId,
+        name: String,
+        include_untracked: bool,
+    ) -> Result<CheckoutOutcome, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            branch::stash_and_checkout(git, &repo, &name, include_untracked, &cancel).await
+        })
+        .await
     }
 
     #[cfg(test)]
