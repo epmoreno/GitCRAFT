@@ -114,7 +114,19 @@ export const useGraphStore = create<GraphState>()((set, get) => {
     },
 
     refresh: async (repoId) => {
-      if (!get().graphs[repoId]) return;
+      const current = get().graphs[repoId];
+      if (!current) return;
+      // The history is fully determined by the refs: when none moved (e.g.
+      // the second notice after our own commit), there is nothing to reload.
+      if (current.status === "done" && current.refs) {
+        const latest = await commands.getRefs(repoId);
+        if (
+          latest.status === "ok" &&
+          JSON.stringify(latest.data) === JSON.stringify(current.refs)
+        ) {
+          return;
+        }
+      }
       const loadId = ++nextLoadId;
       set((s) => {
         const graph = s.graphs[repoId];

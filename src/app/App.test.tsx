@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../i18n";
 import type { RepoChanged } from "../ipc";
-import { commandError, ipc, opened } from "../test/ipc";
+import { commandError, ipc, opened, sampleRefs } from "../test/ipc";
 import { App } from "./App";
 
 describe("App", () => {
@@ -170,6 +170,7 @@ describe("App", () => {
     expect(ipc.streamGraph).toHaveBeenCalledTimes(1);
 
     const statusCalls = ipc.workingStatus.mock.calls.length;
+    ipc.getRefs.mockResolvedValue({ status: "ok", data: sampleRefs() });
     act(() => notify?.({ id: 1, refs: true, worktree: true }));
     await waitFor(() => expect(ipc.streamGraph).toHaveBeenCalledTimes(2));
     await waitFor(() =>

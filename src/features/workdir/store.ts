@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { commands, type CommandError, type WorkingStatus } from "../../ipc";
+import { useGraphStore } from "../graph/store";
 
 export type RepoStatus = {
   status: WorkingStatus | null;
@@ -10,13 +11,23 @@ export type RepoStatus = {
   opError?: CommandError | null;
 };
 
+/** Commit message being written, kept per repository across tab switches. */
+export type Draft = { summary: string; description: string; amend: boolean };
+
+const EMPTY_DRAFT: Draft = { summary: "", description: "", amend: false };
+
 type WorkdirState = {
   statuses: Record<number, RepoStatus>;
+  drafts: Record<number, Draft>;
   /** Re-reads the working directory status (cheap; safe to call often). */
   refresh: (repoId: number) => Promise<void>;
   /** `paths: null` means every change. */
   stage: (repoId: number, paths: string[] | null) => Promise<void>;
   unstage: (repoId: number, paths: string[] | null) => Promise<void>;
+  setDraft: (repoId: number, patch: Partial<Draft>) => void;
+  /** Commits the staged changes (or amends) with the draft message; on
+   * success clears the draft and selects the new commit. */
+  commit: (repoId: number) => Promise<void>;
   dismissError: (repoId: number) => void;
   forget: (repoId: number) => void;
 };
@@ -57,12 +68,43 @@ export const useWorkdirStore = create<WorkdirState>()((set, get) => {
 
   return {
     statuses: {},
+    drafts: {},
 
     stage: (repoId, paths) =>
       run(repoId, () => commands.stageFiles(repoId, paths)),
 
     unstage: (repoId, paths) =>
       run(repoId, () => commands.unstageFiles(repoId, paths)),
+
+    setDraft: (repoId, patch) =>
+      set((s) => ({
+        drafts: {
+          ...s.drafts,
+          [repoId]: { ...EMPTY_DRAFT, ...s.drafts[repoId], ...patch },
+        },
+      })),
+
+    commit: async (repoId) => {
+      const draft = get().drafts[repoId] ?? EMPTY_DRAFT;
+      update(repoId, { busy: true, opError: null });
+      const result = await commands.createCommit(
+        repoId,
+        draft.summary,
+        draft.description,
+        draft.amend,
+      );
+      update(repoId, {
+        busy: false,
+        opError: result.status === "error" ? result.error : null,
+      });
+      if (result.status === "ok") {
+        set((s) => ({ drafts: { ...s.drafts, [repoId]: EMPTY_DRAFT } }));
+        const graph = useGraphStore.getState();
+        graph.select(repoId, result.data);
+        void graph.refresh(repoId);
+      }
+      await get().refresh(repoId);
+    },
 
     dismissError: (repoId) => update(repoId, { opError: null }),
 
@@ -86,7 +128,9 @@ export const useWorkdirStore = create<WorkdirState>()((set, get) => {
         latest.delete(repoId);
         const statuses = { ...s.statuses };
         delete statuses[repoId];
-        return { statuses };
+        const drafts = { ...s.drafts };
+        delete drafts[repoId];
+        return { statuses, drafts };
       }),
   };
 });

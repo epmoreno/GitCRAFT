@@ -31,6 +31,8 @@ export const ipc = {
   workingStatus: vi.mocked(commands.workingStatus),
   stageFiles: vi.mocked(commands.stageFiles),
   unstageFiles: vi.mocked(commands.unstageFiles),
+  createCommit: vi.mocked(commands.createCommit),
+  amendInfo: vi.mocked(commands.amendInfo),
 };
 
 export function resetIpcMock() {
@@ -42,6 +44,8 @@ export function resetIpcMock() {
   ipc.workingStatus.mockResolvedValue({ status: "ok", data: cleanStatus() });
   ipc.stageFiles.mockResolvedValue({ status: "ok", data: null });
   ipc.unstageFiles.mockResolvedValue({ status: "ok", data: null });
+  ipc.createCommit.mockResolvedValue({ status: "ok", data: oid("9") });
+  ipc.amendInfo.mockResolvedValue({ status: "ok", data: null });
   ipc.commitChanges.mockResolvedValue({
     status: "ok",
     data: { base: null, files: [] },

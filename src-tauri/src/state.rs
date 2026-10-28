@@ -6,6 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use gitcraft_core::graph::{GraphLine, load_graph};
 use gitcraft_core::ops::commit::{CommitChanges, commit_changes, commit_details, commit_file_diff};
+use gitcraft_core::ops::commit_write::{AmendInfo, amend_info, compose_message, create_commit};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
@@ -291,6 +292,31 @@ impl AppState {
         .await
     }
 
+    /// Commits the staged changes (or amends the last commit). Returns the
+    /// new commit's id.
+    pub async fn commit(
+        &self,
+        id: RepoId,
+        summary: &str,
+        description: &str,
+        amend: bool,
+    ) -> Result<String, IpcError> {
+        let git = self.git()?;
+        let message = compose_message(summary, description);
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            create_commit(git, &repo, &message, amend, &cancel).await
+        })
+        .await
+    }
+
+    /// The last commit, to prefill and confirm an amend.
+    pub async fn amend_info(&self, id: RepoId) -> Result<Option<AmendInfo>, IpcError> {
+        let git = self.git()?;
+        let path = self.session_path(id)?;
+        Ok(amend_info(git, &path, &CancellationToken::new()).await?)
+    }
+
     /// Working directory and index status of session `id`.
     pub async fn working_status(&self, id: RepoId) -> Result<WorkingStatus, IpcError> {
         let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
@@ -541,6 +567,37 @@ mod tests {
                 .len(),
             4
         );
+    }
+
+    #[tokio::test]
+    async fn commits_and_amends_from_a_session() {
+        let f = fixture();
+        let (repo, ids) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        repo.write_file("a.txt", "a");
+        f.state
+            .stage(id, Some(vec!["a.txt".into()]))
+            .await
+            .expect("stage");
+        let oid = f
+            .state
+            .commit(id, "Add a", "Because.", false)
+            .await
+            .expect("commit");
+        let d = f.state.commit_details(id, &oid).await.expect("details");
+        assert_eq!((d.summary.as_str(), d.body.as_str()), ("Add a", "Because."));
+        assert_eq!(d.parents, [ids["E"].clone()]);
+
+        let info = f.state.amend_info(id).await.expect("info").expect("head");
+        assert_eq!(info.oid, oid);
+        let amended = f
+            .state
+            .commit(id, "Add a (amended)", "", true)
+            .await
+            .expect("amend");
+        let d = f.state.commit_details(id, &amended).await.expect("details");
+        assert_eq!(d.summary, "Add a (amended)");
+        assert_eq!(d.parents, [ids["E"].clone()]);
     }
 
     #[tokio::test]

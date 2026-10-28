@@ -63,8 +63,11 @@
     "bareRepository": "«{{path}}» es un repositorio «bare» (sin directorio de trabajo). GitCRAFT todavía no admite este tipo de repositorio.",
     "dubiousOwnership": "Git se niega a abrir «{{path}}» porque la carpeta pertenece a otro usuario del sistema. Si confías en ella, márcala como segura con «git config --global --add safe.directory» seguido de la ruta.",
     "cancelled": "La operación se canceló.",
-    "timedOut": "Git tardó demasiado en responder al abrir «{{path}}». Si está en una unidad de red, comprueba la conexión.",
-    "unknown": "Git devolvió un error inesperado al abrir «{{path}}»."
+    "timedOut": "Git tardó demasiado en responder. Si el repositorio está en una unidad de red, comprueba la conexión.",
+    "unknown": "Git devolvió un error inesperado. Revisa la salida original de Git.",
+    "identityUnknown": "Git no sabe quién eres. Configura tu nombre y tu email con «git config --global user.name \"Tu nombre\"» y «git config --global user.email tu@email».",
+    "nothingToCommit": "No hay cambios preparados para el commit.",
+    "emptyMessage": "El mensaje del commit está vacío."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",
@@ -165,5 +168,28 @@
     "stageFile": "Preparar {{path}}",
     "unstageFile": "Quitar {{path}} del stage",
     "opFailed": "No se pudo completar la operación."
+  },
+  "commit": {
+    "label": "Crear commit",
+    "summary": "Resumen",
+    "summaryPlaceholder": "Resumen (obligatorio)",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Descripción (opcional)",
+    "counter": "{{count}} de {{limit}} caracteres recomendados",
+    "summaryTooLong": "El resumen supera los {{limit}} caracteres recomendados; se verá cortado en muchas herramientas.",
+    "amend": "Modificar el último commit (amend)",
+    "button_one": "Commit de {{count}} archivo",
+    "button_other": "Commit de {{count}} archivos",
+    "amendButton": "Modificar el último commit",
+    "shortcut": "⌘↩ para confirmar",
+    "blockedConflicts": "Resuelve los conflictos antes de hacer commit.",
+    "blockedNothingStaged": "Prepara algún cambio para poder hacer commit.",
+    "blockedNoSummary": "Escribe un resumen para el commit.",
+    "publishedTitle": "¿Modificar un commit ya publicado?",
+    "publishedWhere": "El commit «{{summary}}» ({{sha}}) ya está en {{branches}}.",
+    "publishedConsequence": "Al modificarlo se crea un commit nuevo que lo sustituye en tu rama. Para publicarlo tendrás que hacer push forzado, y quien ya lo haya descargado tendrá que reconciliar su historial.",
+    "publishedRecovery": "El commit original no se pierde: sigue accesible en el reflog.",
+    "publishedConfirm": "Modificar de todos modos",
+    "cancel": "Cancelar"
   }
 }

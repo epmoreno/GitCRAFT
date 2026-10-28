@@ -1,0 +1,69 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 45%);
+}
+
+.dialog {
+  width: min(460px, 100%);
+  padding: var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 50%);
+}
+
+.title {
+  margin: 0 0 var(--space-3);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.body {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.body p {
+  margin: 0 0 var(--space-2);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.cancel,
+.confirm,
+.danger {
+  height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+}
+
+.cancel:hover {
+  background: var(--surface-3);
+}
+
+.confirm {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+
+.danger {
+  border-color: transparent;
+  background: var(--danger);
+  color: #1c0706;
+  font-weight: 600;
+}

@@ -52,6 +52,10 @@ pub enum ErrorKind {
     NotARepository,
     BareRepository,
     DubiousOwnership,
+    /// No user.name / user.email configured.
+    IdentityUnknown,
+    NothingToCommit,
+    EmptyMessage,
     Cancelled,
     TimedOut,
     Unknown,
@@ -64,7 +68,11 @@ impl GitError {
             Self::PathNotFound(_) => ErrorKind::PathNotFound,
             Self::Cancelled => ErrorKind::Cancelled,
             Self::TimedOut(_) => ErrorKind::TimedOut,
-            Self::Failed { stderr, .. } => classify_stderr(stderr),
+            Self::Failed {
+                stderr,
+                stdout_tail,
+                ..
+            } => classify_output(stderr, stdout_tail),
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
     }
@@ -100,14 +108,31 @@ impl GitError {
 
 /// Maps git's stderr (always produced with `LC_ALL=C`) to an [`ErrorKind`].
 pub fn classify_stderr(stderr: &str) -> ErrorKind {
+    classify_output(stderr, "")
+}
+
+/// Like [`classify_stderr`], also looking at stdout: some commands (e.g.
+/// `git commit` with nothing staged) explain themselves there.
+pub fn classify_output(stderr: &str, stdout: &str) -> ErrorKind {
     const PATTERNS: &[(&str, ErrorKind)] = &[
         ("detected dubious ownership", ErrorKind::DubiousOwnership),
         ("not a git repository", ErrorKind::NotARepository),
         ("must be run in a work tree", ErrorKind::BareRepository),
+        ("Please tell me who you are", ErrorKind::IdentityUnknown),
+        ("Author identity unknown", ErrorKind::IdentityUnknown),
+        ("Committer identity unknown", ErrorKind::IdentityUnknown),
+        (
+            "unable to auto-detect email address",
+            ErrorKind::IdentityUnknown,
+        ),
+        ("empty commit message", ErrorKind::EmptyMessage),
+        ("nothing to commit", ErrorKind::NothingToCommit),
+        ("nothing added to commit", ErrorKind::NothingToCommit),
+        ("no changes added to commit", ErrorKind::NothingToCommit),
     ];
     PATTERNS
         .iter()
-        .find(|(needle, _)| stderr.contains(needle))
+        .find(|(needle, _)| stderr.contains(needle) || stdout.contains(needle))
         .map_or(ErrorKind::Unknown, |&(_, kind)| kind)
 }
 

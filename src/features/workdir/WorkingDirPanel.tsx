@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { ConflictEntry, StatusEntry } from "../../ipc";
 import { useWorkdirStore } from "./store";
+import { CommitBox } from "./CommitBox";
 import { StatusLetter } from "./StatusLetter";
 import styles from "./workdir.module.css";
 
@@ -112,6 +113,7 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
           />
         ))}
       </Section>
+      <CommitBox repoId={repoId} status={status} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 
 export { commands } from "./bindings";
 export type {
+  AmendInfo,
   CommitChanges_Serialize as CommitChanges,
   ConflictEntry,
   ConflictKind,

@@ -63,8 +63,11 @@
     "bareRepository": "“{{path}}” is a bare repository (it has no working directory). GitCRAFT doesn't support bare repositories yet.",
     "dubiousOwnership": "Git refuses to open “{{path}}” because the folder belongs to another user on this system. If you trust it, mark it as safe with “git config --global --add safe.directory” followed by the path.",
     "cancelled": "The operation was cancelled.",
-    "timedOut": "Git took too long to respond while opening “{{path}}”. If it's on a network drive, check the connection.",
-    "unknown": "Git returned an unexpected error while opening “{{path}}”."
+    "timedOut": "Git took too long to respond. If the repository is on a network drive, check the connection.",
+    "unknown": "Git returned an unexpected error. Check Git's original output.",
+    "identityUnknown": "Git doesn't know who you are. Set your name and email with “git config --global user.name \"Your Name\"” and “git config --global user.email you@example.com”.",
+    "nothingToCommit": "There are no staged changes to commit.",
+    "emptyMessage": "The commit message is empty."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -165,5 +168,28 @@
     "stageFile": "Stage {{path}}",
     "unstageFile": "Unstage {{path}}",
     "opFailed": "The operation couldn't be completed."
+  },
+  "commit": {
+    "label": "Create commit",
+    "summary": "Summary",
+    "summaryPlaceholder": "Summary (required)",
+    "description": "Description",
+    "descriptionPlaceholder": "Description (optional)",
+    "counter": "{{count}} of {{limit}} recommended characters",
+    "summaryTooLong": "The summary is longer than the recommended {{limit}} characters; many tools will cut it.",
+    "amend": "Amend the last commit",
+    "button_one": "Commit {{count}} file",
+    "button_other": "Commit {{count}} files",
+    "amendButton": "Amend the last commit",
+    "shortcut": "⌘↩ to confirm",
+    "blockedConflicts": "Resolve the conflicts before committing.",
+    "blockedNothingStaged": "Stage some changes to commit.",
+    "blockedNoSummary": "Write a summary for the commit.",
+    "publishedTitle": "Amend a commit that is already published?",
+    "publishedWhere": "The commit “{{summary}}” ({{sha}}) is already in {{branches}}.",
+    "publishedConsequence": "Amending creates a new commit that replaces it on your branch. To publish it you will need a force push, and anyone who already fetched it will have to reconcile their history.",
+    "publishedRecovery": "The original commit is not lost: it remains reachable in the reflog.",
+    "publishedConfirm": "Amend anyway",
+    "cancel": "Cancel"
   }
 }

@@ -86,7 +86,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
       con `git apply --cached` (con `-R` para unstage). *Tests:* hunks
       parciales, líneas sueltas y finales de archivo.
 - [ ] **4.4 Descartar cambios** con confirmación.
-- [ ] **4.5 Commit.** Resumen + descripción, contador de caracteres; amend
+- [x] **4.5 Commit.** Resumen + descripción, contador de caracteres; amend
       precarga el último mensaje. Respeta hooks (`pre-commit`, `commit-msg`) y
       muestra su salida si fallan.
 

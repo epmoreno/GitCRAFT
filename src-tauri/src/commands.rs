@@ -6,6 +6,7 @@ use tauri::State;
 use tauri::ipc::Channel;
 
 use gitcraft_core::ops::commit::CommitChanges;
+use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
@@ -156,4 +157,29 @@ pub async fn unstage_files(
     paths: Option<Vec<String>>,
 ) -> Result<(), IpcError> {
     state.unstage(id, paths).await
+}
+
+/// Commits the staged changes (or amends the last commit) with a summary and
+/// an optional description. Returns the new commit's id.
+#[tauri::command]
+#[specta::specta]
+pub async fn create_commit(
+    state: State<'_, AppState>,
+    id: RepoId,
+    summary: String,
+    description: String,
+    amend: bool,
+) -> Result<String, IpcError> {
+    state.commit(id, &summary, &description, amend).await
+}
+
+/// The last commit, to prefill and confirm an amend (`null` before the
+/// first commit).
+#[tauri::command]
+#[specta::specta]
+pub async fn amend_info(
+    state: State<'_, AppState>,
+    id: RepoId,
+) -> Result<Option<AmendInfo>, IpcError> {
+    state.amend_info(id).await
 }

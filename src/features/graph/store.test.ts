@@ -72,6 +72,8 @@ describe("graph store", () => {
     await useGraphStore.getState().load(1);
     useGraphStore.getState().select(1, lines[2]!.oid);
 
+    // A branch moved: the refs differ, so the history is reloaded.
+    ipc.getRefs.mockResolvedValue({ status: "ok", data: sampleRefs() });
     let seenDuringRefresh: number | undefined;
     ipc.streamGraph.mockImplementation(async (_id, onEvent) => {
       onEvent({ type: "page", lines });
@@ -84,7 +86,17 @@ describe("graph store", () => {
     expect(seenDuringRefresh).toBe(5); // old rows stay until the new set is complete
     expect(graph(1)?.lines).toHaveLength(6);
     expect(graph(1)?.selectedOid).toBe(lines[2]!.oid);
-    expect(ipc.getRefs).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips reloading the history when no ref moved", async () => {
+    streamEvents([
+      { type: "page", lines: sampleLines() },
+      { type: "done", total: 6, suggestOptimize: false },
+    ]);
+    await useGraphStore.getState().load(1);
+    expect(ipc.streamGraph).toHaveBeenCalledTimes(1);
+    await useGraphStore.getState().refresh(1);
+    expect(ipc.streamGraph).toHaveBeenCalledTimes(1);
   });
 
   it("ignores refresh requests for repositories that are not loaded", async () => {

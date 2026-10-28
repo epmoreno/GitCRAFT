@@ -34,6 +34,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::working_status,
             commands::stage_files,
             commands::unstage_files,
+            commands::create_commit,
+            commands::amend_info,
         ])
 }
 

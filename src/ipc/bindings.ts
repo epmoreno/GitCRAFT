@@ -26,6 +26,16 @@ export const commands = {
 	 *  working tree.
 	 */
 	unstageFiles: (id: number, paths: string[] | null) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("unstage_files", { id, paths })),
+	/**
+	 *  Commits the staged changes (or amends the last commit) with a summary and
+	 *  an optional description. Returns the new commit's id.
+	 */
+	createCommit: (id: number, summary: string, description: string, amend: boolean) => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("create_commit", { id, summary, description, amend })),
+	/**
+	 *  The last commit, to prefill and confirm an amend (`null` before the
+	 *  first commit).
+	 */
+	amendInfo: (id: number) => typedError<AmendInfo | null, IpcError_Serialize>(__TAURI_INVOKE("amend_info", { id })),
 };
 
 /** Events */
@@ -34,6 +44,18 @@ export const events = {
 };
 
 /* Types */
+/**  What "amend" would rewrite. */
+export type AmendInfo = {
+	oid: string,
+	summary: string,
+	body: string,
+	/**
+	 *  Remote-tracking branches that already contain the commit: amending
+	 *  it then requires a force push and affects whoever fetched it.
+	 */
+	publishedIn: string[],
+};
+
 export type BranchStatus = BranchStatus_Serialize | BranchStatus_Deserialize;
 
 export type BranchStatus_Deserialize = {
@@ -124,7 +146,9 @@ export type DiffLine_Serialize = {
  *  What went wrong, in terms the UI can explain. Each kind has a translated
  *  message (`errors.<kind>` in the i18n files).
  */
-export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | "cancelled" | "timedOut" | "unknown";
+export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | 
+/**  No user.name / user.email configured. */
+"identityUnknown" | "nothingToCommit" | "emptyMessage" | "cancelled" | "timedOut" | "unknown";
 
 export type FileChange = FileChange_Serialize | FileChange_Deserialize;
 
