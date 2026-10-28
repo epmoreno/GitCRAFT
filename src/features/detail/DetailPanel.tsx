@@ -11,6 +11,7 @@ import { RefChips } from "../graph/RefChips";
 import { labelsByCommit } from "../graph/refLabels";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
 import { useGraphStore } from "../graph/store";
+import { FileList } from "./FileList";
 import styles from "./detail.module.css";
 
 type Loaded =
@@ -132,6 +133,13 @@ function CommitInfo({
               ))}
         </dd>
       </dl>
+
+      <FileList
+        key={details.oid}
+        repoId={repoId}
+        oid={details.oid}
+        isMerge={details.parents.length > 1}
+      />
     </article>
   );
 }

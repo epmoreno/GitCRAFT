@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gitcraft_core::graph::{GraphLine, load_graph};
-use gitcraft_core::ops::commit::commit_details;
+use gitcraft_core::ops::commit::{CommitChanges, commit_changes, commit_details};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
@@ -188,6 +188,13 @@ impl AppState {
         let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
         let path = self.session_path(id)?;
         Ok(commit_details(git, &path, oid, &CancellationToken::new()).await?)
+    }
+
+    /// Files changed by one commit, with line counts.
+    pub async fn commit_changes(&self, id: RepoId, oid: &str) -> Result<CommitChanges, IpcError> {
+        let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
+        let path = self.session_path(id)?;
+        Ok(commit_changes(git, &path, oid, &CancellationToken::new()).await?)
     }
 
     /// Streams the commit graph of session `id` to `send`. Starting a new
@@ -570,6 +577,13 @@ mod tests {
             .expect("details");
         assert_eq!(d.summary, "D");
         assert_eq!(d.parents, [ids["C"].clone()]);
+        let changes = f
+            .state
+            .commit_changes(id, &ids["D"])
+            .await
+            .expect("changes");
+        assert_eq!(changes.base.as_deref(), Some(ids["C"].as_str()));
+        assert_eq!(changes.files.len(), 1);
     }
 
     #[tokio::test]

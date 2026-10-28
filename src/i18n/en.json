@@ -98,5 +98,26 @@
     "done": "Repository optimized. The history will load sooner next time you open it.",
     "failed": "Couldn't optimize the repository.",
     "close": "Close"
+  },
+  "files": {
+    "title": "Changed files",
+    "count_one": "{{count}} file changed",
+    "count_other": "{{count}} files changed",
+    "loading": "Loading files…",
+    "failed": "Couldn't load the files.",
+    "againstFirstParent": "Changes against the first parent ({{sha}}).",
+    "none": "This commit doesn't change any file.",
+    "binary": "binary",
+    "renamedFrom": "was: {{path}}",
+    "status": {
+      "added": "Added",
+      "modified": "Modified",
+      "deleted": "Deleted",
+      "renamed": "Renamed",
+      "copied": "Copied",
+      "typeChanged": "Type changed",
+      "unmerged": "Unmerged",
+      "unknown": "Unknown"
+    }
   }
 }

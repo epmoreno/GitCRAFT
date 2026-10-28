@@ -98,5 +98,26 @@
     "done": "Repositorio optimizado. El historial cargará antes la próxima vez que lo abras.",
     "failed": "No se pudo optimizar el repositorio.",
     "close": "Cerrar"
+  },
+  "files": {
+    "title": "Archivos cambiados",
+    "count_one": "{{count}} archivo cambiado",
+    "count_other": "{{count}} archivos cambiados",
+    "loading": "Cargando archivos…",
+    "failed": "No se pudieron cargar los archivos.",
+    "againstFirstParent": "Cambios respecto al primer padre ({{sha}}).",
+    "none": "Este commit no cambia ningún archivo.",
+    "binary": "binario",
+    "renamedFrom": "antes: {{path}}",
+    "status": {
+      "added": "Añadido",
+      "modified": "Modificado",
+      "deleted": "Eliminado",
+      "renamed": "Renombrado",
+      "copied": "Copiado",
+      "typeChanged": "Cambio de tipo",
+      "unmerged": "Sin fusionar",
+      "unknown": "Desconocido"
+    }
   }
 }

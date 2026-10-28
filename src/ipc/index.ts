@@ -4,8 +4,11 @@ import { commands, events, type GraphEvent } from "./bindings";
 
 export { commands } from "./bindings";
 export type {
+  CommitChanges_Serialize as CommitChanges,
   CommitDetails,
   ErrorKind,
+  FileChange_Serialize as FileChange,
+  FileStatus,
   GraphEvent,
   GraphLine,
   IpcError_Serialize as CommandError,

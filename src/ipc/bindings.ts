@@ -16,6 +16,7 @@ export const commands = {
 	cancelOperation: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_operation", { id })),
 	dismissOptimizeNotice: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("dismiss_optimize_notice", { id })),
 	commitDetails: (id: number, oid: string) => typedError<CommitDetails, IpcError_Serialize>(__TAURI_INVOKE("commit_details", { id, oid })),
+	commitChanges: (id: number, oid: string) => typedError<CommitChanges_Serialize, IpcError_Serialize>(__TAURI_INVOKE("commit_changes", { id, oid })),
 };
 
 /** Events */
@@ -24,6 +25,28 @@ export const events = {
 };
 
 /* Types */
+export type CommitChanges = CommitChanges_Serialize | CommitChanges_Deserialize;
+
+export type CommitChanges_Deserialize = {
+	/**
+	 *  What the commit is compared with: its first parent, or `None` for a
+	 *  root commit (compared with the empty tree). Merges are shown against
+	 *  their first parent.
+	 */
+	base?: string | null,
+	files: FileChange_Deserialize[],
+};
+
+export type CommitChanges_Serialize = {
+	/**
+	 *  What the commit is compared with: its first parent, or `None` for a
+	 *  root commit (compared with the empty tree). Merges are shown against
+	 *  their first parent.
+	 */
+	base: string | null,
+	files: FileChange_Serialize[],
+};
+
 export type CommitDetails = {
 	oid: string,
 	/**  First parent first. */
@@ -41,6 +64,36 @@ export type CommitDetails = {
  *  message (`errors.<kind>` in the i18n files).
  */
 export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | "cancelled" | "timedOut" | "unknown";
+
+export type FileChange = FileChange_Serialize | FileChange_Deserialize;
+
+export type FileChange_Deserialize = {
+	path: string,
+	/**  Previous path for renames and copies. */
+	oldPath?: string | null,
+	status: FileStatus,
+	/**  Rename/copy similarity, 0–100. */
+	similarity?: number | null,
+	/**  Lines added/removed; `None` for binary files. */
+	additions?: number | null,
+	deletions?: number | null,
+};
+
+export type FileChange_Serialize = {
+	path: string,
+	/**  Previous path for renames and copies. */
+	oldPath: string | null,
+	status: FileStatus,
+	/**  Rename/copy similarity, 0–100. */
+	similarity: number | null,
+	/**  Lines added/removed; `None` for binary files. */
+	additions: number | null,
+	deletions: number | null,
+};
+
+export type FileStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | 
+/**  File type changed (e.g. file ↔ symlink). */
+"typeChanged" | "unmerged" | "unknown";
 
 export type GitRef = GitRef_Serialize | GitRef_Deserialize;
 

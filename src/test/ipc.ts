@@ -25,6 +25,7 @@ export const ipc = {
   cancelOperation: vi.mocked(commands.cancelOperation),
   dismissOptimizeNotice: vi.mocked(commands.dismissOptimizeNotice),
   commitDetails: vi.mocked(commands.commitDetails),
+  commitChanges: vi.mocked(commands.commitChanges),
 };
 
 export function resetIpcMock() {
@@ -33,6 +34,10 @@ export function resetIpcMock() {
   ipc.closeRepository.mockResolvedValue({ status: "ok", data: true });
   ipc.pickFolder.mockResolvedValue(null);
   ipc.onRepoChanged.mockResolvedValue(() => {});
+  ipc.commitChanges.mockResolvedValue({
+    status: "ok",
+    data: { base: null, files: [] },
+  });
   ipc.cancelOperation.mockResolvedValue({ status: "ok", data: null });
   ipc.dismissOptimizeNotice.mockResolvedValue({ status: "ok", data: null });
   ipc.getRefs.mockResolvedValue({ status: "ok", data: emptyRefs() });

@@ -70,7 +70,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 ### 3. Detalle de commit
 - [x] **3.1 Metadatos.** Autor, committer, fechas, mensaje completo, padres
       navegables y refs.
-- [ ] **3.2 Archivos cambiados.** `git diff-tree -r -z --name-status -M` con
+- [x] **3.2 Archivos cambiados.** `git diff-tree -r -z --name-status -M` con
       estado A/M/D/R/C y contadores +/−. *Tests:* renombrados, binarios y commit
       raíz.
 - [ ] **3.3 Diff.** Parser de diff unificado (hunks, líneas, no-newline-at-EOF,

@@ -109,3 +109,108 @@
   font-size: var(--font-size-small);
   white-space: pre-wrap;
 }
+
+/* Changed files */
+.files {
+  align-self: stretch;
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.filesTitle {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size);
+  font-weight: 600;
+}
+
+.fileList {
+  margin: var(--space-2) calc(-1 * var(--space-4)) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: 3px var(--space-4);
+}
+
+.file:hover {
+  background: var(--surface-2);
+}
+
+.status {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.status-added {
+  color: var(--success);
+}
+
+.status-modified,
+.status-typeChanged {
+  color: var(--warning);
+}
+
+.status-deleted {
+  color: var(--danger);
+}
+
+.status-renamed,
+.status-copied {
+  color: var(--info);
+}
+
+.path {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dir {
+  color: var(--text-faint);
+}
+
+.oldPath {
+  flex-basis: 100%;
+  color: var(--text-faint);
+  font-size: var(--font-size-small);
+}
+
+.counts {
+  display: flex;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+}
+
+.added {
+  color: var(--success);
+}
+
+.removed {
+  color: var(--danger);
+}
+
+.filesTitle .added,
+.filesTitle .removed {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  font-weight: 400;
+}
+
+.binary {
+  color: var(--text-faint);
+  font-size: var(--font-size-small);
+}

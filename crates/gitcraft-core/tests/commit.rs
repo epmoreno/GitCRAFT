@@ -122,3 +122,144 @@ fn parses_the_details_fixture() {
     assert_eq!(d.body, "con cuerpo");
     assert!(d.parents.is_empty());
 }
+
+mod changes {
+    use super::*;
+    use gitcraft_core::ops::commit::commit_changes;
+    use gitcraft_core::parse::diff_tree::{FileChange, FileStatus};
+
+    fn find<'a>(files: &'a [FileChange], path: &str) -> &'a FileChange {
+        files
+            .iter()
+            .find(|f| f.path == path)
+            .unwrap_or_else(|| panic!("{path} not in {files:?}"))
+    }
+
+    /// A commit touching every kind of change.
+    async fn mixed_commit() -> (TestRepo, String) {
+        let repo = TestRepo::new().await;
+        repo.write_file("keep.txt", "1\n2\n3\n");
+        repo.write_file("remove.txt", "bye\n");
+        repo.write_file(
+            "old name.txt",
+            "line one\nline two\nline three\nline four\nline five\n",
+        );
+        repo.commit_all("base").await;
+
+        repo.write_file("keep.txt", "1\nTWO\n3\n4\n");
+        std::fs::remove_file(repo.path().join("remove.txt")).expect("rm");
+        std::fs::remove_file(repo.path().join("old name.txt")).expect("rm");
+        repo.write_file(
+            "dir/new name.txt",
+            "line one\nline two\nline three\nline four\nline 5\n",
+        );
+        repo.write_file("ñandú.md", "hola\n");
+        std::fs::write(repo.path().join("image.bin"), [0u8, 159, 146, 150, 0, 1]).expect("binary");
+        let oid = repo.commit_all("mixed").await;
+        (repo, oid)
+    }
+
+    #[tokio::test]
+    async fn lists_every_kind_of_change_with_counts() {
+        let (repo, oid) = mixed_commit().await;
+        let changes = commit_changes(&git(), repo.path(), &oid, &CancellationToken::new())
+            .await
+            .expect("changes");
+        assert!(changes.base.is_some());
+        assert_eq!(changes.files.len(), 5, "{:?}", changes.files);
+
+        let keep = find(&changes.files, "keep.txt");
+        assert_eq!(keep.status, FileStatus::Modified);
+        assert_eq!((keep.additions, keep.deletions), (Some(2), Some(1)));
+
+        assert_eq!(
+            find(&changes.files, "remove.txt").status,
+            FileStatus::Deleted
+        );
+
+        let renamed = find(&changes.files, "dir/new name.txt");
+        assert_eq!(renamed.status, FileStatus::Renamed);
+        assert_eq!(renamed.old_path.as_deref(), Some("old name.txt"));
+        assert!(renamed.similarity.is_some_and(|s| s >= 50));
+        assert_eq!((renamed.additions, renamed.deletions), (Some(1), Some(1)));
+
+        assert_eq!(find(&changes.files, "ñandú.md").status, FileStatus::Added);
+        let binary = find(&changes.files, "image.bin");
+        assert_eq!((binary.additions, binary.deletions), (None, None));
+    }
+
+    #[tokio::test]
+    async fn root_commits_compare_with_the_empty_tree() {
+        let (repo, ids) = TestRepo::sample_history().await;
+        let changes = commit_changes(&git(), repo.path(), &ids["A"], &CancellationToken::new())
+            .await
+            .expect("changes");
+        assert_eq!(changes.base, None);
+        assert_eq!(changes.files.len(), 1);
+        assert_eq!(changes.files[0].path, "README.md");
+        assert_eq!(changes.files[0].status, FileStatus::Added);
+    }
+
+    #[tokio::test]
+    async fn merges_compare_with_their_first_parent() {
+        let (repo, ids) = TestRepo::sample_history().await;
+        let changes = commit_changes(&git(), repo.path(), &ids["M"], &CancellationToken::new())
+            .await
+            .expect("changes");
+        assert_eq!(changes.base.as_deref(), Some(ids["B"].as_str()));
+        // The merge brings feature.txt (from C and D) into main.
+        let paths: Vec<_> = changes.files.iter().map(|f| f.path.as_str()).collect();
+        assert_eq!(paths, ["feature.txt"]);
+    }
+
+    fn fixture(name: &str) -> std::path::PathBuf {
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures")
+            .join(name)
+    }
+
+    /// Real diff-tree output; regenerate with
+    /// `UPDATE_FIXTURES=1 cargo test -p gitcraft-core --test commit`.
+    #[tokio::test]
+    async fn diff_tree_fixtures_match_current_git_output() {
+        let (repo, oid) = mixed_commit().await;
+        for (format, name) in [
+            ("--name-status", "diff_tree_name_status.z"),
+            ("--numstat", "diff_tree_numstat.z"),
+        ] {
+            let fresh = repo
+                .read()
+                .args(["diff-tree", "-r", "-z", "-M", "--no-commit-id", format])
+                .arg(format!("{oid}^1"))
+                .arg(&oid)
+                .output(&CancellationToken::new())
+                .await
+                .expect("diff-tree")
+                .stdout;
+            if std::env::var_os("UPDATE_FIXTURES").is_some() {
+                std::fs::write(fixture(name), &fresh).expect("write fixture");
+            }
+            assert!(
+                std::fs::read(fixture(name)).expect("fixture") == fresh,
+                "{name}"
+            );
+        }
+    }
+
+    #[test]
+    fn parses_the_diff_tree_fixtures() {
+        use gitcraft_core::parse::diff_tree::{merge_counts, parse_name_status, parse_numstat};
+        let names = std::fs::read(fixture("diff_tree_name_status.z")).expect("fixture");
+        let counts = std::fs::read(fixture("diff_tree_numstat.z")).expect("fixture");
+        let files = merge_counts(
+            parse_name_status(&names).expect("names"),
+            &parse_numstat(&counts).expect("counts"),
+        );
+        assert_eq!(files.len(), 5);
+        assert_eq!(
+            find(&files, "dir/new name.txt").old_path.as_deref(),
+            Some("old name.txt")
+        );
+        assert_eq!(find(&files, "image.bin").additions, None);
+    }
+}
