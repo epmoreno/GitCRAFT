@@ -78,7 +78,7 @@ pub fn parse_commit(record: &[u8]) -> Result<Commit> {
 }
 
 /// SHA-1 (40) or SHA-256 (64) hex object id.
-fn is_object_id(s: &str) -> bool {
+pub(crate) fn is_object_id(s: &str) -> bool {
     matches!(s.len(), 40 | 64) && s.bytes().all(|b| b.is_ascii_hexdigit())
 }
 

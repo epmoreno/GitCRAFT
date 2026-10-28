@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { DetailPanel } from "../features/detail/DetailPanel";
 import { GraphView } from "../features/graph/GraphView";
 import { useGraphStore } from "../features/graph/store";
 import { onRepoChanged } from "../ipc";
@@ -45,9 +46,7 @@ export function App() {
             <StartPage />
           )}
         </main>
-        <aside className={styles.detail} aria-label={t("zones.detail")}>
-          <p className={styles.detailEmpty}>{t("detail.empty")}</p>
-        </aside>
+        <DetailPanel repoId={active?.id ?? null} />
       </div>
     </div>
   );

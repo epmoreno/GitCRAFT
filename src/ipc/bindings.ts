@@ -15,6 +15,7 @@ export const commands = {
 	optimizeRepository: (id: number, onProgress: Channel<string>) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("optimize_repository", { id, onProgress })),
 	cancelOperation: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_operation", { id })),
 	dismissOptimizeNotice: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("dismiss_optimize_notice", { id })),
+	commitDetails: (id: number, oid: string) => typedError<CommitDetails, IpcError_Serialize>(__TAURI_INVOKE("commit_details", { id, oid })),
 };
 
 /** Events */
@@ -23,6 +24,18 @@ export const events = {
 };
 
 /* Types */
+export type CommitDetails = {
+	oid: string,
+	/**  First parent first. */
+	parents: string[],
+	author: Signature,
+	committer: Signature,
+	/**  Subject line. */
+	summary: string,
+	/**  Everything after the subject and its blank line; may be empty. */
+	body: string,
+};
+
 /**
  *  What went wrong, in terms the UI can explain. Each kind has a translated
  *  message (`errors.<kind>` in the i18n files).
@@ -179,6 +192,13 @@ export type RepoRefs_Serialize = {
 	refs: GitRef_Serialize[],
 	/**  Configured remotes, including those without fetched branches. */
 	remotes: string[],
+};
+
+export type Signature = {
+	name: string,
+	email: string,
+	/**  Unix seconds. */
+	time: number,
 };
 
 /* Tauri Specta runtime */

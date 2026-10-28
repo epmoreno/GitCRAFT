@@ -40,7 +40,18 @@
     "recentEmpty": "Aún no has abierto ningún repositorio."
   },
   "detail": {
-    "empty": "Selecciona un commit para ver sus detalles."
+    "empty": "Selecciona un commit para ver sus detalles.",
+    "loading": "Cargando detalles…",
+    "failed": "No se pudo cargar el commit.",
+    "author": "Autor",
+    "committer": "Committer",
+    "commit": "Commit",
+    "parent_one": "Padre",
+    "parent_other": "Padres",
+    "noParents": "Ninguno (commit raíz)",
+    "goToParent": "Ir al commit padre {{sha}}",
+    "copy": "Copiar",
+    "copied": "Copiado"
   },
   "errors": {
     "openFailed": "No se pudo abrir el repositorio",

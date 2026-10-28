@@ -5,11 +5,13 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gitcraft_core::graph::{GraphLine, load_graph};
+use gitcraft_core::ops::commit::commit_details;
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::repo::{self, RepoInfo};
+use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::{CancellationToken, Git, GitError};
 use serde::Serialize;
 
@@ -179,6 +181,13 @@ impl AppState {
         let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
         let path = self.session_path(id)?;
         Ok(read_refs(git, &path, &CancellationToken::new()).await?)
+    }
+
+    /// Full metadata of one commit (loaded when it is selected).
+    pub async fn commit_details(&self, id: RepoId, oid: &str) -> Result<CommitDetails, IpcError> {
+        let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
+        let path = self.session_path(id)?;
+        Ok(commit_details(git, &path, oid, &CancellationToken::new()).await?)
     }
 
     /// Streams the commit graph of session `id` to `send`. Starting a new
@@ -547,6 +556,20 @@ mod tests {
         let (repo, _) = TestRepo::sample_history().await;
         let id = f.state.open_repository(repo.path()).await.expect("open").id;
         assert!(!suggests(&done_event(&f.state, id).await));
+    }
+
+    #[tokio::test]
+    async fn reads_commit_details_of_a_session() {
+        let f = fixture();
+        let (repo, ids) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        let d = f
+            .state
+            .commit_details(id, &ids["D"])
+            .await
+            .expect("details");
+        assert_eq!(d.summary, "D");
+        assert_eq!(d.parents, [ids["C"].clone()]);
     }
 
     #[tokio::test]

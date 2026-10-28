@@ -24,6 +24,7 @@ export const ipc = {
   onRepoChanged: vi.mocked(onRepoChanged),
   cancelOperation: vi.mocked(commands.cancelOperation),
   dismissOptimizeNotice: vi.mocked(commands.dismissOptimizeNotice),
+  commitDetails: vi.mocked(commands.commitDetails),
 };
 
 export function resetIpcMock() {

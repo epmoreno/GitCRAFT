@@ -28,6 +28,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::optimize_repository,
             commands::cancel_operation,
             commands::dismiss_optimize_notice,
+            commands::commit_details,
         ])
 }
 

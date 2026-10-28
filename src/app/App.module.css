@@ -65,21 +65,6 @@
   min-height: 0;
 }
 
-.detail {
-  background: var(--surface-1);
-  overflow-y: auto;
-}
-
-.detail {
-  border-left: 1px solid var(--border);
-  padding: var(--space-4);
-}
-
-.detailEmpty {
-  margin: 0;
-  color: var(--text-faint);
-}
-
 .graph {
   position: relative;
   display: flex;

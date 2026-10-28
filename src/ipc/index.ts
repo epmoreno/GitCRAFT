@@ -4,6 +4,7 @@ import { commands, events, type GraphEvent } from "./bindings";
 
 export { commands } from "./bindings";
 export type {
+  CommitDetails,
   ErrorKind,
   GraphEvent,
   GraphLine,
@@ -15,6 +16,7 @@ export type {
   RefKind,
   RepoInfo,
   RepoRefs_Serialize as RepoRefs,
+  Signature,
 } from "./bindings";
 
 /** A graph line: `[column, colour]`. */

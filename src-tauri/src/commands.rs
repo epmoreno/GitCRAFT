@@ -6,6 +6,7 @@ use tauri::State;
 use tauri::ipc::Channel;
 
 use gitcraft_core::ops::refs::RepoRefs;
+use gitcraft_core::parse::commit::CommitDetails;
 
 use crate::error::IpcError;
 use crate::settings::RecentRepository;
@@ -85,4 +86,14 @@ pub async fn load_graph(
 #[specta::specta]
 pub async fn get_refs(state: State<'_, AppState>, id: RepoId) -> Result<RepoRefs, IpcError> {
     state.refs(id).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn commit_details(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+) -> Result<CommitDetails, IpcError> {
+    state.commit_details(id, &oid).await
 }
