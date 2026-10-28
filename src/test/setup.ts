@@ -41,6 +41,8 @@ vi.mock("../ipc", () => ({
     createStash: vi.fn(),
     applyStash: vi.fn(),
     dropStash: vi.fn(),
+    recoverPreview: vi.fn(),
+    recoverFile: vi.fn(),
   },
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),

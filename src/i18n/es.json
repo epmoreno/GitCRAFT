@@ -69,7 +69,7 @@
     "nothingToCommit": "No hay cambios preparados para el commit.",
     "emptyMessage": "El mensaje del commit está vacío.",
     "staleDiff": "El archivo cambió desde que se mostró el diff. Se ha actualizado: vuelve a seleccionar lo que quieras.",
-    "undoConflict": "Algún archivo ha cambiado desde el descarte, así que no se ha tocado nada. La copia sigue en el stash («GitCRAFT: descarte de …» en git stash list): cada archivo se recupera con «git restore --source=stash@{N} --worktree -- <ruta>». Los archivos sin seguimiento están en la Papelera.",
+    "undoConflict": "Algún archivo ha cambiado desde el descarte, así que no se ha tocado nada. La copia sigue en el stash («GitCRAFT: descarte de …» en git stash list): cada archivo se recupera con «Recuperar» en esa entrada (barra lateral → Stashes). Los archivos sin seguimiento están en la Papelera.",
     "invalidBranchName": "Ese nombre no es válido para una rama.",
     "branchExists": "Ya existe una rama con ese nombre.",
     "branchChanged": "La rama ha cambiado desde que se mostró (alguien la movió, la renombró o la borró). No se ha hecho nada; revisa la barra lateral y vuelve a intentarlo.",
@@ -359,6 +359,19 @@
     "originLong": {
       "discard": "Copia de seguridad que GitCRAFT guardó antes de descartar cambios.",
       "beforeSwitch": "Cambios que GitCRAFT guardó antes de cambiar de rama."
-    }
+    },
+    "recoverLabel": "Recuperar",
+    "recoverFile": "Recuperar {{path}}",
+    "recoverHint": "«Recuperar» devuelve un archivo al contenido que tenía justo antes del descarte, sin tocar los cambios preparados.",
+    "recoverTitle": "¿Recuperar «{{path}}»?",
+    "recoverLoses_one": "Has cambiado este archivo desde el descarte. Recuperarlo sustituye su contenido actual, y se perdería esta línea que la copia no tiene:",
+    "recoverLoses_other": "Has cambiado este archivo desde el descarte. Recuperarlo sustituye su contenido actual, y se perderían estas {{count}} líneas que la copia no tiene:",
+    "recoverWhole": "Este archivo no se puede comparar línea a línea (es binario o ya no tiene seguimiento). Recuperarlo sustituye entero su contenido actual.",
+    "recoverKeeps": "Solo cambia el archivo en el directorio de trabajo: los cambios preparados no se tocan y la entrada sigue en el stash.",
+    "recoverOverwrite": "Recuperar y sobrescribir",
+    "moreLines_one": "y 1 línea más",
+    "moreLines_other": "y {{count}} líneas más",
+    "recovered": "«{{path}}» recuperado tal como estaba antes del descarte. La entrada sigue en el stash.",
+    "alreadyRecovered": "«{{path}}» ya tiene el contenido guardado: no había nada que recuperar."
   }
 }

@@ -1,8 +1,15 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
-import type { StashEntry, WorkingStatus } from "../../ipc";
-import { cleanStatus, ipc, oid, opened, sampleRefs } from "../../test/ipc";
+import type { RecoverPreview, StashEntry, WorkingStatus } from "../../ipc";
+import {
+  cleanStatus,
+  ipc,
+  oid,
+  opened,
+  sampleRefs,
+  textDiff,
+} from "../../test/ipc";
 import { Toolbar } from "../../app/Toolbar";
 import { useGraphStore } from "../graph/store";
 import { useRepoStore } from "../repo/store";
@@ -378,5 +385,145 @@ describe("stash", () => {
     await waitFor(() =>
       expect(useGraphStore.getState().graphs[1]?.selectedOid).toBeNull(),
     );
+  });
+
+  describe("recover file (discard backups)", () => {
+    const preview = (overrides: Partial<RecoverPreview>): RecoverPreview => ({
+      path: "c.txt",
+      identical: false,
+      lost: 0,
+      diff: null,
+      replacesWhole: false,
+      current: oid("c"),
+      ...overrides,
+    });
+
+    async function openDiscardEntry() {
+      const user = userEvent.setup();
+      ipc.commitChanges.mockResolvedValue({
+        status: "ok",
+        data: {
+          base: oid("0"),
+          files: [
+            {
+              path: "c.txt",
+              oldPath: null,
+              similarity: null,
+              status: "modified",
+              additions: 2,
+              deletions: 1,
+            },
+            {
+              path: "gone.txt",
+              oldPath: null,
+              similarity: null,
+              status: "deleted",
+              additions: 0,
+              deletions: 1,
+            },
+          ],
+        },
+      });
+      renderSidebar();
+      render(<DetailPanel repoId={1} />);
+      await user.click(item(/descarte de c\.txt/));
+      const panel = screen.getByRole("complementary", { name: "Detalle" });
+      await within(panel).findByText("2 archivos cambiados");
+      return { user, panel };
+    }
+
+    it("is offered only on discard entries, for files that still exist", async () => {
+      const { user, panel } = await openDiscardEntry();
+      expect(
+        within(panel).getByRole("button", { name: "Recuperar c.txt" }),
+      ).toBeVisible();
+      expect(
+        within(panel).queryByRole("button", { name: "Recuperar gone.txt" }),
+      ).not.toBeInTheDocument();
+
+      await user.click(item(/^mi trabajo/));
+      expect(
+        within(panel).queryByRole("button", { name: /^Recuperar / }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("recovers straight away when nothing would be overwritten", async () => {
+      ipc.recoverPreview.mockResolvedValue({ status: "ok", data: preview({}) });
+      const { user, panel } = await openDiscardEntry();
+      await user.click(
+        within(panel).getByRole("button", { name: "Recuperar c.txt" }),
+      );
+      expect(ipc.recoverPreview).toHaveBeenCalledWith(1, oid("2"), "c.txt");
+      expect(ipc.recoverFile).toHaveBeenCalledWith(
+        1,
+        oid("2"),
+        "c.txt",
+        oid("c"),
+      );
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "«c.txt» recuperado tal como estaba antes del descarte",
+      );
+    });
+
+    it("asks first, showing the lines that would be lost", async () => {
+      const diff = textDiff();
+      diff.hunks[0]!.lines.push({
+        kind: "added",
+        content: "trabajo nuevo",
+        oldLine: null,
+        newLine: 9,
+        noNewline: false,
+      });
+      const lost = diff.hunks.flatMap((h) =>
+        h.lines.filter((l) => l.kind === "added"),
+      ).length;
+      ipc.recoverPreview.mockResolvedValue({
+        status: "ok",
+        data: preview({ lost, diff }),
+      });
+      const { user, panel } = await openDiscardEntry();
+      await user.click(
+        within(panel).getByRole("button", { name: "Recuperar c.txt" }),
+      );
+      const dialog = await screen.findByRole("alertdialog", {
+        name: "¿Recuperar «c.txt»?",
+      });
+      expect(within(dialog).getByText("9: trabajo nuevo")).toBeVisible();
+      expect(
+        within(dialog).getByText(/los cambios preparados no se tocan/),
+      ).toBeVisible();
+      expect(ipc.recoverFile).not.toHaveBeenCalled();
+      expect(
+        within(dialog).getByRole("button", { name: "Cancelar" }),
+      ).toHaveFocus();
+
+      await user.click(
+        within(dialog).getByRole("button", {
+          name: "Recuperar y sobrescribir",
+        }),
+      );
+      expect(ipc.recoverFile).toHaveBeenCalledWith(
+        1,
+        oid("2"),
+        "c.txt",
+        oid("c"),
+      );
+    });
+
+    it("says when there is nothing to recover", async () => {
+      ipc.recoverPreview.mockResolvedValue({
+        status: "ok",
+        data: preview({ identical: true }),
+      });
+      const { user, panel } = await openDiscardEntry();
+      await user.click(
+        within(panel).getByRole("button", { name: "Recuperar c.txt" }),
+      );
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "ya tiene el contenido guardado",
+      );
+      expect(ipc.recoverFile).not.toHaveBeenCalled();
+    });
   });
 });

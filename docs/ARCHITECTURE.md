@@ -190,9 +190,16 @@ para unstage). Esta lógica es pura y se cubre con tests unitarios exhaustivos.
    contenido que tenía el archivo justo antes del descarte y no toca el índice.
    **Nunca** `git stash apply`: aborta si el archivo tiene otros cambios
    (por ejemplo, partes preparadas), que es lo normal tras descartar un hunk o
-   unas líneas. La 7.x lo ofrecerá como «Recuperar archivo» en las entradas
-   «GitCRAFT: descarte de …», con confirmación si el archivo cambió desde el
-   descarte. *Test:* `a_partial_discard_is_recoverable_from_the_stash_later`.
+   unas líneas. La app lo hace con «Recuperar» en las entradas
+   «GitCRAFT: descarte de …» (`preview_recover` + `recover_file` en
+   `ops/stash.rs`): `git diff <stash> -- <ruta>` muestra qué líneas del
+   archivo actual no están en la copia (trabajo posterior, que se perdería);
+   si no hay ninguna se recupera directamente y, si las hay, se piden
+   confirmación listándolas. La recuperación lleva el hash del contenido
+   comprobado (`hash-object --no-filters`) y se niega (`StaleDiff`) si el
+   archivo cambió entretanto. *Tests:*
+   `a_partial_discard_is_recoverable_from_the_stash_later` y
+   `recovers_a_discarded_file_later_without_touching_the_index`.
 
 ## 5c. Ramas
 

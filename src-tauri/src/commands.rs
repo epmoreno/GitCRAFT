@@ -10,7 +10,7 @@ use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::refs::RepoRefs;
-use gitcraft_core::ops::stash::ApplyOutcome;
+use gitcraft_core::ops::stash::{ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
@@ -396,4 +396,31 @@ pub async fn drop_stash(
     oid: String,
 ) -> Result<(), IpcError> {
     state.drop_stash(id, oid).await
+}
+
+/// What recovering one file from a stash entry would overwrite.
+#[tauri::command]
+#[specta::specta]
+pub async fn recover_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+    path: String,
+) -> Result<RecoverPreview, IpcError> {
+    state.recover_preview(id, &oid, &path).await
+}
+
+/// Puts a file's version from a stash entry back in the working tree
+/// (`git restore --source=<oid> --worktree`), without touching the index.
+/// `current` is the preview's: a file changed since is `staleDiff`.
+#[tauri::command]
+#[specta::specta]
+pub async fn recover_file(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+    path: String,
+    current: Option<String>,
+) -> Result<(), IpcError> {
+    state.recover_file(id, oid, path, current).await
 }

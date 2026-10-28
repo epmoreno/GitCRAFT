@@ -34,6 +34,7 @@ export type {
   Head_Serialize as Head,
   OpenedRepository,
   RecentRepository,
+  RecoverPreview_Serialize as RecoverPreview,
   RefKind,
   RepoInfo,
   RepoChanged,

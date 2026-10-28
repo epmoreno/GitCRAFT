@@ -105,9 +105,9 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
       *Verificado manualmente* en un repo de prueba: descartar una línea y
       «Deshacer» antes de 10 s; un archivo sin seguimiento a la Papelera y
       recuperado; «Deshacer» se niega si el archivo se edita antes.
-      *Pendiente de verificar:* la recuperación tardía (pasado el aviso), hasta
-      que se pueda hacer desde la app (7.3). Mientras tanto, por archivo:
-      `git restore --source=stash@{N} --worktree -- <ruta>` (nunca
+      *Pendiente de verificar:* la recuperación tardía (pasado el aviso), ya
+      disponible desde la app con «Recuperar» (7.3). Desde la terminal, por
+      archivo: `git restore --source=stash@{N} --worktree -- <ruta>` (nunca
       `git stash apply`, que aborta si el archivo tiene más cambios).
 - [x] **4.5 Commit.** Resumen + descripción, contador de caracteres; amend
       precarga el último mensaje. Respeta hooks (`pre-commit`, `commit-msg`) y
@@ -182,9 +182,19 @@ confirmación.
       fecha, `stash@{n}` y hash, los botones aplicar/pop/borrar y dos listas:
       cambios (contra `<stash>^1`) y archivos sin seguimiento (el commit
       `<stash>^3`); cada archivo abre su diff.
-- [ ] **7.3 Recuperar archivo** en las entradas «GitCRAFT: descarte de …»:
+- [x] **7.3 Recuperar archivo** en las entradas «GitCRAFT: descarte de …»:
       `git restore --source=<stash> --worktree -- <ruta>`. Si el archivo cambió
       desde el descarte, pide confirmación mostrando qué se sobrescribiría.
+      *Estado:* botón «Recuperar» por archivo en el panel de la entrada. Si
+      recuperar solo devuelve lo descartado, se hace directamente; si el
+      archivo tiene líneas que la copia no tiene (trabajo nuevo), se listan y
+      se pide confirmación; si no se puede comparar línea a línea (binario o
+      sin seguimiento), se avisa de que se sustituye entero. Solo se aplica si
+      el archivo sigue como en esa comprobación. La entrada no se borra.
+      *Tests:* integración (el caso pendiente de la 4.4 —descarte de una línea
+      en un archivo con cambios preparados— recuperado byte a byte sin tocar
+      el índice; trabajo nuevo listado; archivo cambiado tras la comprobación;
+      archivo borrado) y de interfaz.
 
 ### Transversal del MVP
 - [ ] **T.1 Errores.** Un catálogo traduce los errores conocidos de git a

@@ -228,3 +228,15 @@
   color: var(--text-faint);
   font-size: var(--font-size-small);
 }
+
+/* A file row with an extra action (e.g. "Recover" in a stash entry) */
+.withAction {
+  display: flex;
+  align-items: center;
+  padding-right: var(--space-4);
+}
+
+.withAction .file {
+  flex: 1;
+  min-width: 0;
+}

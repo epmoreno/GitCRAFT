@@ -22,6 +22,8 @@ export function StashDialogs() {
       return <ConflictDialog />;
     case "drop":
       return <DropDialog />;
+    case "recover":
+      return <RecoverDialog />;
   }
 }
 
@@ -193,6 +195,57 @@ function ConflictDialog() {
   );
 }
 
+const MAX_LOST_LINES = 20;
+
+/** Recovering a file changed since the discard: what would be lost. */
+function RecoverDialog() {
+  const { t } = useTranslation();
+  const current = useStashStore((s) => s.dialog);
+  const close = useStashStore((s) => s.closeDialog);
+  const confirm = useStashStore((s) => s.confirmRecover);
+  if (current?.kind !== "recover") return null;
+  const { preview } = current;
+  const lost =
+    preview.diff?.hunks.flatMap((h) =>
+      h.lines.filter((l) => l.kind === "added"),
+    ) ?? [];
+
+  return (
+    <ConfirmDialog
+      title={t("stash.recoverTitle", { path: preview.path })}
+      confirmLabel={t("stash.recoverOverwrite")}
+      cancelLabel={t("stash.cancel")}
+      danger
+      onCancel={close}
+      onConfirm={() => void confirm()}
+    >
+      {preview.replacesWhole ? (
+        <p>{t("stash.recoverWhole")}</p>
+      ) : (
+        <>
+          <p>{t("stash.recoverLoses", { count: preview.lost })}</p>
+          <ul className={branches.fileList}>
+            {lost.slice(0, MAX_LOST_LINES).map((line, i) => (
+              <li key={i} className={branches.file}>
+                <span className="selectable">
+                  {line.newLine !== null && `${line.newLine}: `}
+                  {line.content}
+                </span>
+              </li>
+            ))}
+            {lost.length > MAX_LOST_LINES && (
+              <li className={branches.more}>
+                {t("stash.moreLines", { count: lost.length - MAX_LOST_LINES })}
+              </li>
+            )}
+          </ul>
+        </>
+      )}
+      <p>{t("stash.recoverKeeps")}</p>
+    </ConfirmDialog>
+  );
+}
+
 /** Deleting an entry: always confirmed, with the way back. */
 function DropDialog() {
   const { t } = useTranslation();
@@ -263,6 +316,10 @@ export function StashToast() {
             {t(notice.dropped ? "stash.popped" : "stash.applied")}
             {notice.savedLocal && ` ${t("stash.localSaved")}`}
           </p>
+        ) : notice.kind === "recovered" ? (
+          <p>{t("stash.recovered", { path: notice.path })}</p>
+        ) : notice.kind === "alreadyRecovered" ? (
+          <p>{t("stash.alreadyRecovered", { path: notice.path })}</p>
         ) : notice.kind === "conflicted" ? (
           <>
             <p>{t("stash.conflicted", { count: notice.files.length })}</p>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commands,
@@ -32,12 +32,15 @@ export function FileList({
   oid,
   isMerge,
   untracked = false,
+  action,
 }: {
   repoId: number;
   oid: string;
   isMerge: boolean;
   /** The untracked files saved in a stash entry (all additions). */
   untracked?: boolean;
+  /** An extra button per file (e.g. "Recover"). */
+  action?: (file: FileChange) => ReactNode;
 }) {
   const { t } = useTranslation();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -95,7 +98,13 @@ export function FileList({
       ) : (
         <ul className={styles.fileList}>
           {files.map((file) => (
-            <FileRow key={file.path} repoId={repoId} oid={oid} file={file} />
+            <FileRow
+              key={file.path}
+              repoId={repoId}
+              oid={oid}
+              file={file}
+              action={action?.(file)}
+            />
           ))}
         </ul>
       )}
@@ -107,10 +116,12 @@ function FileRow({
   repoId,
   oid,
   file,
+  action,
 }: {
   repoId: number;
   oid: string;
   file: FileChange;
+  action?: ReactNode;
 }) {
   const { t } = useTranslation();
   const open = useGraphStore((s) => s.openFileDiff);
@@ -126,7 +137,7 @@ function FileRow({
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const name = file.path.slice(slash + 1);
   return (
-    <li>
+    <li className={action ? styles.withAction : undefined}>
       <button
         type="button"
         className={styles.file}
@@ -166,6 +177,7 @@ function FileRow({
           </span>
         )}
       </button>
+      {action}
     </li>
   );
 }

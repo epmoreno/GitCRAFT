@@ -4,6 +4,7 @@ import {
   type ApplyOutcome,
   type BlockingFile,
   type CommandError,
+  type RecoverPreview,
   type StashEntry,
 } from "../../ipc";
 import { stashSelection, useGraphStore } from "../graph/store";
@@ -41,7 +42,13 @@ export type StashDialog =
       files: string[];
       exact: boolean;
     }
-  | { kind: "drop"; repoId: number; entry: StashEntry };
+  | { kind: "drop"; repoId: number; entry: StashEntry }
+  | {
+      kind: "recover";
+      repoId: number;
+      entry: StashEntry;
+      preview: RecoverPreview;
+    };
 
 /** What the stash toast reports after an operation. */
 export type StashNotice =
@@ -49,7 +56,9 @@ export type StashNotice =
   | { kind: "created"; repoId: number }
   | { kind: "applied"; repoId: number; dropped: boolean; savedLocal: boolean }
   | { kind: "conflicted"; repoId: number; files: string[] }
-  | { kind: "dropped"; repoId: number; entry: StashEntry };
+  | { kind: "dropped"; repoId: number; entry: StashEntry }
+  | { kind: "recovered"; repoId: number; path: string }
+  | { kind: "alreadyRecovered"; repoId: number; path: string };
 
 type StashState = {
   stashes: Record<number, RepoStashes>;
@@ -71,6 +80,14 @@ type StashState = {
   saveLocalAndApply: () => Promise<void>;
   /** From the "conflict" dialog: apply leaving conflict markers. */
   applyWithConflicts: () => Promise<void>;
+  /** "Recover file": straight away when nothing would be overwritten,
+   * otherwise after showing what would. */
+  requestRecover: (
+    repoId: number,
+    entry: StashEntry,
+    path: string,
+  ) => Promise<void>;
+  confirmRecover: () => Promise<void>;
   requestDrop: (repoId: number, entry: StashEntry) => void;
   confirmDrop: () => Promise<void>;
   closeDialog: () => void;
@@ -107,6 +124,24 @@ export const useStashStore = create<StashState>()((set, get) => {
 
   const fail = (repoId: number, error: CommandError) =>
     set({ notice: { kind: "error", repoId, error } });
+
+  const recover = async (
+    repoId: number,
+    entry: StashEntry,
+    preview: RecoverPreview,
+  ) => {
+    set({ busy: true });
+    const result = await commands.recoverFile(
+      repoId,
+      entry.oid,
+      preview.path,
+      preview.current,
+    );
+    set({ busy: false });
+    afterWrite(repoId);
+    if (result.status === "error") fail(repoId, result.error);
+    else set({ notice: { kind: "recovered", repoId, path: preview.path } });
+  };
 
   const settle = (
     repoId: number,
@@ -226,6 +261,30 @@ export const useStashStore = create<StashState>()((set, get) => {
       const dialog = get().dialog;
       if (dialog?.kind !== "conflict") return;
       await get().apply(dialog.repoId, dialog.entry, dialog.mode, true);
+    },
+
+    requestRecover: async (repoId, entry, path) => {
+      set({ notice: null });
+      const result = await commands.recoverPreview(repoId, entry.oid, path);
+      if (result.status === "error") {
+        fail(repoId, result.error);
+        return;
+      }
+      const preview = result.data;
+      if (preview.identical) {
+        set({ notice: { kind: "alreadyRecovered", repoId, path } });
+      } else if (preview.lost === 0 && !preview.replacesWhole) {
+        await recover(repoId, entry, preview);
+      } else {
+        set({ dialog: { kind: "recover", repoId, entry, preview } });
+      }
+    },
+
+    confirmRecover: async () => {
+      const dialog = get().dialog;
+      if (dialog?.kind !== "recover") return;
+      set({ dialog: null });
+      await recover(dialog.repoId, dialog.entry, dialog.preview);
     },
 
     requestDrop: (repoId, entry) =>

@@ -88,6 +88,14 @@ export const commands = {
 	applyStash: (id: number, oid: string, pop: boolean, allowConflicts: boolean, saveLocal: boolean) => typedError<ApplyOutcome, IpcError_Serialize>(__TAURI_INVOKE("apply_stash", { id, oid, pop, allowConflicts, saveLocal })),
 	/**  Deletes stash entry `oid` (the UI confirms first). */
 	dropStash: (id: number, oid: string) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("drop_stash", { id, oid })),
+	/**  What recovering one file from a stash entry would overwrite. */
+	recoverPreview: (id: number, oid: string, path: string) => typedError<RecoverPreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("recover_preview", { id, oid, path })),
+	/**
+	 *  Puts a file's version from a stash entry back in the working tree
+	 *  (`git restore --source=<oid> --worktree`), without touching the index.
+	 *  `current` is the preview's: a file changed since is `staleDiff`.
+	 */
+	recoverFile: (id: number, oid: string, path: string, current: string | null) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("recover_file", { id, oid, path, current })),
 };
 
 /** Events */
@@ -597,6 +605,65 @@ export type RecentRepository = {
 	name: string,
 	/**  Seconds since the Unix epoch (exported as `number`: fits until 2106). */
 	lastOpened: number,
+};
+
+/**  What recovering one file from a stash entry would do, shown first. */
+export type RecoverPreview = RecoverPreview_Serialize | RecoverPreview_Deserialize;
+
+/**  What recovering one file from a stash entry would do, shown first. */
+export type RecoverPreview_Deserialize = {
+	path: string,
+	/**  The file already has the saved content: nothing to do. */
+	identical: boolean,
+	/**
+	 *  Lines in the current file that the saved version does not have:
+	 *  work done since, which recovering would overwrite. Zero when
+	 *  recovering only puts back what was removed.
+	 */
+	lost: number,
+	/**
+	 *  Current file vs saved version: `added` lines would be lost. `None`
+	 *  when it cannot be shown line by line (binary, or untracked now).
+	 */
+	diff?: FileDiff_Deserialize | null,
+	/**
+	 *  The current file can't be compared line by line: recovering
+	 *  replaces it whole.
+	 */
+	replacesWhole: boolean,
+	/**
+	 *  Identifies the current content (`None`: the file does not exist),
+	 *  so the recovery applies only to what the preview showed.
+	 */
+	current?: string | null,
+};
+
+/**  What recovering one file from a stash entry would do, shown first. */
+export type RecoverPreview_Serialize = {
+	path: string,
+	/**  The file already has the saved content: nothing to do. */
+	identical: boolean,
+	/**
+	 *  Lines in the current file that the saved version does not have:
+	 *  work done since, which recovering would overwrite. Zero when
+	 *  recovering only puts back what was removed.
+	 */
+	lost: number,
+	/**
+	 *  Current file vs saved version: `added` lines would be lost. `None`
+	 *  when it cannot be shown line by line (binary, or untracked now).
+	 */
+	diff: FileDiff_Serialize | null,
+	/**
+	 *  The current file can't be compared line by line: recovering
+	 *  replaces it whole.
+	 */
+	replacesWhole: boolean,
+	/**
+	 *  Identifies the current content (`None`: the file does not exist),
+	 *  so the recovery applies only to what the preview showed.
+	 */
+	current: string | null,
 };
 
 export type RefKind = "local" | "remote" | "tag";

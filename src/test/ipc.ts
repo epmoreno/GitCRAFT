@@ -50,6 +50,8 @@ export const ipc = {
   createStash: vi.mocked(commands.createStash),
   applyStash: vi.mocked(commands.applyStash),
   dropStash: vi.mocked(commands.dropStash),
+  recoverPreview: vi.mocked(commands.recoverPreview),
+  recoverFile: vi.mocked(commands.recoverFile),
 };
 
 export function resetIpcMock() {
@@ -73,6 +75,7 @@ export function resetIpcMock() {
     data: { type: "applied", dropped: false },
   });
   ipc.dropStash.mockResolvedValue({ status: "ok", data: null });
+  ipc.recoverFile.mockResolvedValue({ status: "ok", data: null });
   ipc.createBranch.mockResolvedValue({ status: "ok", data: null });
   ipc.renameBranch.mockResolvedValue({ status: "ok", data: null });
   ipc.deleteBranch.mockResolvedValue({ status: "ok", data: null });

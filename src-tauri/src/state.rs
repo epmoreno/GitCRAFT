@@ -21,7 +21,7 @@ use gitcraft_core::ops::maintenance::{
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::ops::stage;
-use gitcraft_core::ops::stash::{self, ApplyOutcome};
+use gitcraft_core::ops::stash::{self, ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::status::working_status;
 use gitcraft_core::ops::worktree::{
     SelectionAction, WorktreeArea, apply_selection, worktree_file_diff,
@@ -613,6 +613,35 @@ impl AppState {
             } else {
                 stash::apply_stash(git, &repo, &oid, pop, allow_conflicts, &cancel).await
             }
+        })
+        .await
+    }
+
+    /// What recovering `path` from entry `oid` would overwrite.
+    pub async fn recover_preview(
+        &self,
+        id: RepoId,
+        oid: &str,
+        path: &str,
+    ) -> Result<RecoverPreview, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(stash::preview_recover(git, &repo, oid, path, &CancellationToken::new()).await?)
+    }
+
+    /// Restores `path` from entry `oid` in the working tree, if it is still
+    /// what the preview showed.
+    pub async fn recover_file(
+        &self,
+        id: RepoId,
+        oid: String,
+        path: String,
+        current: Option<String>,
+    ) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            stash::recover_file(git, &repo, &oid, &path, current.as_deref(), &cancel).await
         })
         .await
     }

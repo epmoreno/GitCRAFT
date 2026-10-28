@@ -5,12 +5,16 @@ use std::path::PathBuf;
 
 use gitcraft_core::ops::branch::BlockingFile;
 use gitcraft_core::ops::commit::{commit_changes, commit_file_diff};
+use gitcraft_core::ops::discard::{DiscardTarget, Trash, discard};
 use gitcraft_core::ops::stash::{
-    ApplyOutcome, apply_stash, create_stash, drop_stash, list_stashes, stash_and_apply,
+    ApplyOutcome, apply_stash, create_stash, drop_stash, list_stashes, preview_recover,
+    recover_file, stash_and_apply,
 };
+use gitcraft_core::ops::worktree::{WorktreeArea, worktree_file_diff};
 use gitcraft_core::parse::diff::LineKind;
 use gitcraft_core::parse::diff_tree::FileStatus;
 use gitcraft_core::parse::stash::{STASH_FORMAT, StashOrigin, parse_stash_list};
+use gitcraft_core::patch::HunkSelection;
 use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, ErrorKind, Git};
 
@@ -391,4 +395,191 @@ async fn shows_an_entry_with_its_untracked_files() {
         .map(|l| (l.kind, l.content.as_str()))
         .collect();
     assert_eq!(lines, [(LineKind::Added, "nuevo")]);
+}
+
+/// Tracked files never go to the Trash.
+struct NoTrash;
+
+impl Trash for NoTrash {
+    fn trash(&self, _: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
+        panic!("nothing untracked is discarded here")
+    }
+}
+
+/// The case left pending in 4.4: part of a file with staged and unstaged
+/// changes is discarded and, after the undo window, recovered from the app.
+async fn discard_one_line() -> (TestRepo, Vec<u8>, String, String) {
+    let repo = TestRepo::new().await;
+    let base: String = (1..=15).map(|i| format!("{i}\n")).collect();
+    repo.commit_file("c.txt", &base, "base").await;
+    repo.write_file("c.txt", &base.replacen("2\n", "staged\n", 1));
+    repo.run(&["add", "c.txt"]).await;
+    repo.write_file(
+        "c.txt",
+        "1\nstaged\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\nDOCE\n14\n15\nnuevo\n",
+    );
+    let before = read(&repo, "c.txt");
+    let index = repo.run(&["write-tree"]).await;
+
+    let diff = worktree_file_diff(
+        &git(),
+        repo.path(),
+        "c.txt",
+        None,
+        WorktreeArea::Unstaged,
+        false,
+        &c(),
+    )
+    .await
+    .expect("diff");
+    let line = diff.hunks[0]
+        .lines
+        .iter()
+        .position(|l| l.kind == LineKind::Added && l.content == "nuevo")
+        .expect("line") as u32;
+    let target = DiscardTarget::Selection {
+        path: "c.txt".into(),
+        fingerprint: diff.fingerprint,
+        selection: vec![HunkSelection {
+            hunk: 0,
+            lines: Some(vec![line]),
+        }],
+    };
+    let (_, record) = discard(&git(), repo.path(), &target, &NoTrash, &c())
+        .await
+        .expect("discard");
+    (repo, before, index, record.stash.expect("stash backup"))
+}
+
+#[tokio::test]
+async fn recovers_a_discarded_file_later_without_touching_the_index() {
+    let (repo, before, index, backup) = discard_one_line().await;
+    let entry = list_stashes(&git(), repo.path(), &c())
+        .await
+        .expect("list")
+        .remove(0);
+    assert_eq!(entry.oid, backup);
+    assert_eq!(entry.origin, StashOrigin::Discard);
+
+    // Nothing new since the discard: recovering only puts "nuevo" back.
+    let preview = preview_recover(&git(), repo.path(), &backup, "c.txt", &c())
+        .await
+        .expect("preview");
+    assert!(!preview.identical);
+    assert_eq!(preview.lost, 0);
+    assert!(!preview.replaces_whole);
+
+    recover_file(
+        &git(),
+        repo.path(),
+        &backup,
+        "c.txt",
+        preview.current.as_deref(),
+        &c(),
+    )
+    .await
+    .expect("recover");
+    assert_eq!(read(&repo, "c.txt"), before, "identical byte for byte");
+    assert_eq!(repo.run(&["write-tree"]).await, index, "index untouched");
+    assert_eq!(
+        repo.run(&["diff", "--cached", "--name-only"]).await,
+        "c.txt",
+        "the staged change is still staged"
+    );
+    let preview = preview_recover(&git(), repo.path(), &backup, "c.txt", &c())
+        .await
+        .expect("preview");
+    assert!(preview.identical);
+    assert_eq!(messages(&repo).await.len(), 1, "the entry is kept");
+}
+
+#[tokio::test]
+async fn shows_what_recovering_would_overwrite() {
+    let (repo, before, index, backup) = discard_one_line().await;
+    // New work after the discard.
+    let mut edited = read(&repo, "c.txt");
+    edited.extend_from_slice(b"trabajo nuevo\n");
+    std::fs::write(repo.path().join("c.txt"), &edited).expect("edit");
+
+    let preview = preview_recover(&git(), repo.path(), &backup, "c.txt", &c())
+        .await
+        .expect("preview");
+    assert_eq!(preview.lost, 1);
+    let lost: Vec<_> = preview
+        .diff
+        .as_ref()
+        .expect("diff")
+        .hunks
+        .iter()
+        .flat_map(|h| &h.lines)
+        .filter(|l| l.kind == LineKind::Added)
+        .map(|l| l.content.as_str())
+        .collect();
+    assert_eq!(lost, ["trabajo nuevo"]);
+
+    // Changed again after the preview: refused, nothing touched.
+    edited.extend_from_slice(b"aun mas\n");
+    std::fs::write(repo.path().join("c.txt"), &edited).expect("edit");
+    let err = recover_file(
+        &git(),
+        repo.path(),
+        &backup,
+        "c.txt",
+        preview.current.as_deref(),
+        &c(),
+    )
+    .await
+    .expect_err("stale");
+    assert_eq!(err.kind(), ErrorKind::StaleDiff);
+    assert_eq!(read(&repo, "c.txt"), edited);
+
+    // Confirmed with what is there now.
+    let preview = preview_recover(&git(), repo.path(), &backup, "c.txt", &c())
+        .await
+        .expect("preview");
+    assert_eq!(preview.lost, 2);
+    recover_file(
+        &git(),
+        repo.path(),
+        &backup,
+        "c.txt",
+        preview.current.as_deref(),
+        &c(),
+    )
+    .await
+    .expect("recover");
+    assert_eq!(read(&repo, "c.txt"), before);
+    assert_eq!(repo.run(&["write-tree"]).await, index);
+}
+
+#[tokio::test]
+async fn recovers_a_deleted_file_and_refuses_paths_not_in_the_entry() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("f.txt", "base\n", "base").await;
+    repo.write_file("f.txt", "saved\n");
+    let oid = create_stash(&git(), repo.path(), "s", false, &c())
+        .await
+        .expect("stash");
+    std::fs::remove_file(repo.path().join("f.txt")).expect("rm");
+
+    let preview = preview_recover(&git(), repo.path(), &oid, "f.txt", &c())
+        .await
+        .expect("preview");
+    assert_eq!(preview.current, None);
+    assert_eq!(preview.lost, 0);
+    recover_file(&git(), repo.path(), &oid, "f.txt", None, &c())
+        .await
+        .expect("recover");
+    assert_eq!(read(&repo, "f.txt"), b"saved\n");
+
+    assert!(
+        preview_recover(&git(), repo.path(), &oid, "nope.txt", &c())
+            .await
+            .is_err()
+    );
+    assert!(
+        preview_recover(&git(), repo.path(), &oid, "", &c())
+            .await
+            .is_err()
+    );
 }

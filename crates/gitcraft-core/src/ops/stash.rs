@@ -361,3 +361,150 @@ pub async fn drop_stash(
         .await?;
     Ok(())
 }
+
+/// What recovering one file from a stash entry would do, shown first.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct RecoverPreview {
+    pub path: String,
+    /// The file already has the saved content: nothing to do.
+    pub identical: bool,
+    /// Lines in the current file that the saved version does not have:
+    /// work done since, which recovering would overwrite. Zero when
+    /// recovering only puts back what was removed.
+    pub lost: u32,
+    /// Current file vs saved version: `added` lines would be lost. `None`
+    /// when it cannot be shown line by line (binary, or untracked now).
+    pub diff: Option<crate::parse::diff::FileDiff>,
+    /// The current file can't be compared line by line: recovering
+    /// replaces it whole.
+    pub replaces_whole: bool,
+    /// Identifies the current content (`None`: the file does not exist),
+    /// so the recovery applies only to what the preview showed.
+    pub current: Option<String>,
+}
+
+fn literal_path(path: &str) -> Result<&str> {
+    if path.is_empty() || path.contains('\0') {
+        return Err(GitError::Parse("invalid path".into()));
+    }
+    Ok(path)
+}
+
+/// Id of the current working tree file, as stored (no filters).
+async fn current_blob(
+    git: &Git,
+    repo: &Path,
+    path: &str,
+    cancel: &CancellationToken,
+) -> Result<Option<String>> {
+    if std::fs::symlink_metadata(repo.join(path)).is_err() {
+        return Ok(None);
+    }
+    let out = git
+        .read(repo)
+        .args(["hash-object", "--no-filters", "--", path])
+        .output(cancel)
+        .await?;
+    Ok(Some(out.stdout_lossy().trim().to_owned()))
+}
+
+/// Compares the working tree file with its version in stash entry `oid`.
+pub async fn preview_recover(
+    git: &Git,
+    repo: &Path,
+    oid: &str,
+    path: &str,
+    cancel: &CancellationToken,
+) -> Result<RecoverPreview> {
+    let path = literal_path(path)?;
+    selector(git, repo, oid, cancel).await?;
+    let current = current_blob(git, repo, path, cancel).await?;
+    let saved = git
+        .read(repo)
+        .args(["rev-parse", "-q", "--verify"])
+        .arg(format!("{oid}:{path}"))
+        .accept_exit_code(1)
+        .output(cancel)
+        .await?;
+    if saved.exit_code != Some(0) {
+        return Err(GitError::Parse(format!("{path} is not in the stash entry")));
+    }
+    let preview = |identical, lost, diff, replaces_whole| RecoverPreview {
+        path: path.to_owned(),
+        identical,
+        lost,
+        diff,
+        replaces_whole,
+        current: current.clone(),
+    };
+    if current.is_none() {
+        return Ok(preview(false, 0, None, false));
+    }
+
+    let status = working_status(git, repo, cancel).await?;
+    if status.untracked.iter().any(|e| e.path == path) {
+        // Not tracked now: git cannot diff it against the entry.
+        return Ok(preview(false, 0, None, true));
+    }
+    let out = git
+        .read(repo)
+        .env("GIT_LITERAL_PATHSPECS", "1")
+        .args([
+            "diff",
+            "--no-ext-diff",
+            "--no-textconv",
+            "-U3",
+            oid,
+            "--",
+            path,
+        ])
+        .output(cancel)
+        .await?;
+    if out.stdout.is_empty() {
+        return Ok(preview(true, 0, None, false));
+    }
+    let diff = crate::ops::commit::finish_diff(&out.stdout, true)?;
+    if diff.binary {
+        return Ok(preview(false, 0, None, true));
+    }
+    let lost = diff
+        .hunks
+        .iter()
+        .flat_map(|h| &h.lines)
+        .filter(|l| l.kind == crate::parse::diff::LineKind::Added)
+        .count();
+    let lost = u32::try_from(lost).unwrap_or(u32::MAX);
+    Ok(preview(false, lost, Some(diff), false))
+}
+
+/// Puts the version of `path` saved in stash entry `oid` back in the working
+/// tree (`git restore --source=<oid> --worktree`): the index is not
+/// touched. Only if the file still is what the preview showed (`current`).
+pub async fn recover_file(
+    git: &Git,
+    repo: &Path,
+    oid: &str,
+    path: &str,
+    current: Option<&str>,
+    cancel: &CancellationToken,
+) -> Result<()> {
+    let path = literal_path(path)?;
+    selector(git, repo, oid, cancel).await?;
+    if current_blob(git, repo, path, cancel).await?.as_deref() != current {
+        return Err(GitError::StaleDiff);
+    }
+    git.write(repo)
+        .env("GIT_LITERAL_PATHSPECS", "1")
+        .args([
+            "restore",
+            &format!("--source={oid}"),
+            "--worktree",
+            "--",
+            path,
+        ])
+        .output(cancel)
+        .await?;
+    Ok(())
+}

@@ -69,7 +69,7 @@
     "nothingToCommit": "There are no staged changes to commit.",
     "emptyMessage": "The commit message is empty.",
     "staleDiff": "The file changed since its diff was shown. It has been refreshed: select again what you want.",
-    "undoConflict": "A file changed since the discard, so nothing was touched. The copy is still in the stash (“GitCRAFT: descarte de …” in git stash list): recover each file with “git restore --source=stash@{N} --worktree -- <path>”. Untracked files are in the Trash.",
+    "undoConflict": "A file changed since the discard, so nothing was touched. The copy is still in the stash (“GitCRAFT: descarte de …” in git stash list): recover each file with “Recover” on that entry (sidebar → Stashes). Untracked files are in the Trash.",
     "invalidBranchName": "That is not a valid branch name.",
     "branchExists": "A branch with that name already exists.",
     "branchChanged": "The branch changed since it was shown (it was moved, renamed or deleted). Nothing was done; check the sidebar and try again.",
@@ -359,6 +359,19 @@
     "originLong": {
       "discard": "Backup GitCRAFT saved before discarding changes.",
       "beforeSwitch": "Changes GitCRAFT saved before switching branches."
-    }
+    },
+    "recoverLabel": "Recover",
+    "recoverFile": "Recover {{path}}",
+    "recoverHint": "“Recover” puts a file back as it was right before the discard, without touching staged changes.",
+    "recoverTitle": "Recover “{{path}}”?",
+    "recoverLoses_one": "You changed this file since the discard. Recovering replaces its current content, and this line, which the copy does not have, would be lost:",
+    "recoverLoses_other": "You changed this file since the discard. Recovering replaces its current content, and these {{count}} lines, which the copy does not have, would be lost:",
+    "recoverWhole": "This file cannot be compared line by line (it is binary or no longer tracked). Recovering replaces its current content entirely.",
+    "recoverKeeps": "Only the file in the working directory changes: staged changes are not touched and the entry stays in the stash.",
+    "recoverOverwrite": "Recover and overwrite",
+    "moreLines_one": "and 1 more line",
+    "moreLines_other": "and {{count}} more lines",
+    "recovered": "“{{path}}” recovered as it was before the discard. The entry is still in the stash.",
+    "alreadyRecovered": "“{{path}}” already has the saved content: nothing to recover."
   }
 }

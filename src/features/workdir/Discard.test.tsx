@@ -210,7 +210,7 @@ describe("discarding changes", () => {
     await user.click(await screen.findByRole("button", { name: "Deshacer" }));
     const toast = screen.getByRole("status");
     expect(toast).toHaveTextContent(/no se ha tocado nada/);
-    expect(toast).toHaveTextContent(/git stash list/);
+    expect(toast).toHaveTextContent(/«Recuperar» en esa entrada/);
   });
 
   it("discards a hunk or selected lines from the diff, with the same confirmation", async () => {

@@ -15,6 +15,7 @@ export function StashPanel({ repoId, oid }: { repoId: number; oid: string }) {
   const loaded = useStashStore((s) => s.stashes[repoId]?.entries != null);
   const apply = useStashStore((s) => s.apply);
   const requestDrop = useStashStore((s) => s.requestDrop);
+  const requestRecover = useStashStore((s) => s.requestRecover);
   const busy = useStashStore((s) => s.busy);
 
   if (!entry) {
@@ -80,11 +81,32 @@ export function StashPanel({ repoId, oid }: { repoId: number; oid: string }) {
         </dd>
       </dl>
 
+      {entry.origin === "discard" && (
+        <p className={detail.muted}>{t("stash.recoverHint")}</p>
+      )}
       <FileList
         key={entry.oid}
         repoId={repoId}
         oid={entry.oid}
         isMerge={false}
+        action={
+          entry.origin === "discard"
+            ? (file) =>
+                file.status === "deleted" ? null : (
+                  <button
+                    type="button"
+                    className={styles.recover}
+                    disabled={busy}
+                    aria-label={t("stash.recoverFile", { path: file.path })}
+                    onClick={() =>
+                      void requestRecover(repoId, entry, file.path)
+                    }
+                  >
+                    {t("stash.recoverLabel")}
+                  </button>
+                )
+            : undefined
+        }
       />
       {entry.untracked && (
         <FileList
