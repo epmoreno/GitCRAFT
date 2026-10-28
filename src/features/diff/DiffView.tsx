@@ -1,41 +1,61 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { commands, type CommandError, type FileDiff } from "../../ipc";
+import {
+  commands,
+  type CommandError,
+  type FileDiff,
+  type HunkSelection,
+} from "../../ipc";
 import { useGraphStore, type OpenFile } from "../graph/store";
+import { useWorkdirStore } from "../workdir/store";
 import styles from "./diff.module.css";
-
-type Request = OpenFile & { full: boolean };
 
 type Loaded =
   | { key: string; diff: FileDiff; error?: undefined }
   | { key: string; error: CommandError; diff?: undefined };
 
-const keyOf = (r: Request) => JSON.stringify(r);
+/** Selected changed lines: hunk index → line indexes. */
+type Selection = Map<number, Set<number>>;
 
 const SIGN = { context: " ", added: "+", removed: "−" } as const;
 
-/** The diff of one file of a commit, shown over the history. */
+function load(repoId: number, file: OpenFile, full: boolean) {
+  return file.kind === "commit"
+    ? commands.commitFileDiff(repoId, file.oid, file.path, file.oldPath, full)
+    : commands.worktreeFileDiff(
+        repoId,
+        file.path,
+        file.oldPath,
+        file.area,
+        full,
+      );
+}
+
+/** The diff of one file — of a commit, or an uncommitted change — shown
+ * over the history. Uncommitted changes can be staged/unstaged by hunk or
+ * by line from here. */
 export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
   const { t } = useTranslation();
   const close = useGraphStore((s) => s.closeFile);
+  // Uncommitted diffs follow the status: re-read when it changes.
+  const version = useWorkdirStore((s) =>
+    file.kind === "worktree" ? (s.statuses[repoId]?.version ?? 0) : 0,
+  );
   const [full, setFull] = useState(false);
-  const request: Request = { ...file, full };
-  const key = keyOf(request);
+  const key = JSON.stringify({ file, full, version });
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   useEffect(() => {
     let stale = false;
-    const { oid, path, oldPath, full } = JSON.parse(key) as Request;
-    void commands
-      .commitFileDiff(repoId, oid, path, oldPath, full)
-      .then((result) => {
-        if (stale) return;
-        setLoaded(
-          result.status === "ok"
-            ? { key, diff: result.data }
-            : { key, error: result.error },
-        );
-      });
+    const { file, full } = JSON.parse(key) as { file: OpenFile; full: boolean };
+    void load(repoId, file, full).then((result) => {
+      if (stale) return;
+      setLoaded(
+        result.status === "ok"
+          ? { key, diff: result.data }
+          : { key, error: result.error },
+      );
+    });
     return () => {
       stale = true;
     };
@@ -49,7 +69,12 @@ export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [repoId, close]);
 
-  const current = loaded?.key === key ? loaded : null;
+  // While a refreshed diff of the same file loads, keep showing the last one.
+  const sameFile =
+    loaded !== null &&
+    JSON.stringify((JSON.parse(loaded.key) as { file: OpenFile }).file) ===
+      JSON.stringify(file);
+  const current = loaded?.key === key || sameFile ? loaded : null;
 
   return (
     <section
@@ -71,9 +96,13 @@ export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
           )}
           {file.path}
         </span>
-        <code className={`${styles.sha} selectable`}>
-          {file.oid.slice(0, 7)}
-        </code>
+        {file.kind === "commit" ? (
+          <code className={`${styles.sha} selectable`}>
+            {file.oid.slice(0, 7)}
+          </code>
+        ) : (
+          <span className={styles.area}>{t(`diff.area.${file.area}`)}</span>
+        )}
       </header>
 
       <div className={styles.body}>
@@ -87,7 +116,14 @@ export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
             )}
           </div>
         ) : (
-          <DiffBody diff={current.diff} onShowAll={() => setFull(true)} />
+          <DiffBody
+            // A new diff (other content) starts with an empty selection.
+            key={current.diff.fingerprint}
+            repoId={repoId}
+            file={file}
+            diff={current.diff}
+            onShowAll={() => setFull(true)}
+          />
         )}
       </div>
     </section>
@@ -95,15 +131,104 @@ export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
 }
 
 function DiffBody({
+  repoId,
+  file,
   diff,
   onShowAll,
 }: {
+  repoId: number;
+  file: OpenFile;
   diff: FileDiff;
   onShowAll: () => void;
 }) {
   const { t } = useTranslation();
+  const applySelection = useWorkdirStore((s) => s.applySelection);
+  const busy = useWorkdirStore((s) => s.statuses[repoId]?.busy ?? false);
+  const [selection, setSelection] = useState<Selection>(new Map());
+  const [anchor, setAnchor] = useState<{ hunk: number; line: number } | null>(
+    null,
+  );
+
+  const editable = file.kind === "worktree" && !diff.binary && !diff.tooLarge;
+  const action =
+    file.kind === "worktree" && file.area === "staged" ? "unstage" : "stage";
+  const selectedCount = [...selection.values()].reduce((n, s) => n + s.size, 0);
+
+  const submit = (hunks: HunkSelection[]) => {
+    if (file.kind !== "worktree" || hunks.length === 0) return;
+    setSelection(new Map());
+    void applySelection(repoId, {
+      path: file.path,
+      oldPath: file.oldPath,
+      area: file.area,
+      fingerprint: diff.fingerprint,
+      selection: hunks,
+      action,
+    });
+  };
+
+  const toggle = (hunk: number, line: number, range: boolean) => {
+    const lines = diff.hunks[hunk]?.lines ?? [];
+    const next = new Map(selection);
+    const set = new Set(next.get(hunk));
+    let indexes = [line];
+    if (range && anchor?.hunk === hunk) {
+      const from = Math.min(anchor.line, line);
+      const to = Math.max(anchor.line, line);
+      indexes = [];
+      for (let i = from; i <= to; i++) {
+        if (lines[i]?.kind !== "context") indexes.push(i);
+      }
+    }
+    const select = range || !set.has(line);
+    for (const i of indexes) {
+      if (select) set.add(i);
+      else set.delete(i);
+    }
+    if (set.size > 0) next.set(hunk, set);
+    else next.delete(hunk);
+    setSelection(next);
+    setAnchor({ hunk, line });
+  };
+
+  const selectedHunks = (): HunkSelection[] =>
+    [...selection.entries()].map(([hunk, lines]) => ({
+      hunk,
+      lines: [...lines].sort((a, b) => a - b),
+    }));
+
   return (
     <>
+      {editable && (
+        <div className={styles.selectionBar}>
+          {selectedCount === 0 ? (
+            <span className={styles.selectionHint}>
+              {t("diff.selectionHint")}
+            </span>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={styles.primary}
+                disabled={busy}
+                onClick={() => submit(selectedHunks())}
+              >
+                {t(
+                  action === "stage" ? "diff.stageLines" : "diff.unstageLines",
+                  { count: selectedCount },
+                )}
+              </button>
+              <button
+                type="button"
+                className={styles.showAll}
+                onClick={() => setSelection(new Map())}
+              >
+                {t("diff.clearSelection")}
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {diff.notes.length > 0 && (
         <ul className={styles.notes}>
           {diff.notes.map((note) => (
@@ -126,35 +251,82 @@ function DiffBody({
         <p className={styles.message}>{t("diff.noChanges")}</p>
       ) : (
         <table className={styles.table}>
-          {diff.hunks.map((hunk) => (
+          {diff.hunks.map((hunk, h) => (
             <tbody key={`${hunk.oldStart}:${hunk.newStart}`}>
               <tr className={styles.hunk}>
-                <td colSpan={4} className="selectable">
-                  @@ -{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},
-                  {hunk.newLines} @@ {hunk.section}
+                <td colSpan={editable ? 5 : 4}>
+                  <span className="selectable">
+                    @@ -{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},
+                    {hunk.newLines} @@ {hunk.section}
+                  </span>
+                  {editable && (
+                    <button
+                      type="button"
+                      className={styles.hunkAction}
+                      disabled={busy}
+                      onClick={() => submit([{ hunk: h, lines: null }])}
+                    >
+                      {t(
+                        action === "stage"
+                          ? "diff.stageHunk"
+                          : "diff.unstageHunk",
+                      )}
+                    </button>
+                  )}
                 </td>
               </tr>
-              {hunk.lines.map((line, i) => (
-                <tr key={i} className={styles[line.kind]} data-kind={line.kind}>
-                  <td className={styles.number}>{line.oldLine ?? ""}</td>
-                  <td className={styles.number}>{line.newLine ?? ""}</td>
-                  <td className={styles.sign} aria-hidden="true">
-                    {SIGN[line.kind]}
-                  </td>
-                  <td className={`${styles.code} selectable`}>
-                    {line.content}
-                    {line.noNewline && (
-                      <span
-                        className={styles.noNewline}
-                        title={t("diff.noNewline")}
-                        aria-label={t("diff.noNewline")}
-                      >
-                        ⏎̸
-                      </span>
+              {hunk.lines.map((line, i) => {
+                const changed = line.kind !== "context";
+                const selected = selection.get(h)?.has(i) ?? false;
+                return (
+                  <tr
+                    key={i}
+                    className={`${styles[line.kind]} ${selected ? styles.selected : ""}`}
+                    data-kind={line.kind}
+                    onClick={
+                      editable && changed
+                        ? (e) => toggle(h, i, e.shiftKey)
+                        : undefined
+                    }
+                  >
+                    {editable && (
+                      <td className={styles.pick}>
+                        {changed && (
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            aria-label={t("diff.selectLine", {
+                              line: line.newLine ?? line.oldLine,
+                            })}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggle(h, i, e.shiftKey);
+                            }}
+                            onChange={() => {}}
+                          />
+                        )}
+                      </td>
                     )}
-                  </td>
-                </tr>
-              ))}
+                    <td className={styles.number}>{line.oldLine ?? ""}</td>
+                    <td className={styles.number}>{line.newLine ?? ""}</td>
+                    <td className={styles.sign} aria-hidden="true">
+                      {SIGN[line.kind]}
+                    </td>
+                    <td className={`${styles.code} selectable`}>
+                      {line.content}
+                      {line.noNewline && (
+                        <span
+                          className={styles.noNewline}
+                          title={t("diff.noNewline")}
+                          aria-label={t("diff.noNewline")}
+                        >
+                          ⏎̸
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           ))}
         </table>

@@ -36,6 +36,16 @@ export const commands = {
 	 *  first commit).
 	 */
 	amendInfo: (id: number) => typedError<AmendInfo | null, IpcError_Serialize>(__TAURI_INVOKE("amend_info", { id })),
+	/**
+	 *  Diff of one file's uncommitted change (`area`: unstaged, staged or
+	 *  untracked). Large diffs only when `full`.
+	 */
+	worktreeFileDiff: (id: number, path: string, oldPath: string | null, area: WorktreeArea, full: boolean) => typedError<FileDiff_Serialize, IpcError_Serialize>(__TAURI_INVOKE("worktree_file_diff", { id, path, oldPath, area, full })),
+	/**
+	 *  Stages or unstages selected hunks/lines of one file. `fingerprint` is the
+	 *  one of the diff shown; a changed file is reported as `staleDiff`.
+	 */
+	applySelection: (id: number, path: string, oldPath: string | null, area: WorktreeArea, fingerprint: string, selection: HunkSelection_Deserialize[], action: SelectionAction) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("apply_selection", { id, path, oldPath, area, fingerprint, selection, action })),
 };
 
 /** Events */
@@ -148,7 +158,7 @@ export type DiffLine_Serialize = {
  */
 export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | 
 /**  No user.name / user.email configured. */
-"identityUnknown" | "nothingToCommit" | "emptyMessage" | "cancelled" | "timedOut" | "unknown";
+"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "cancelled" | "timedOut" | "unknown";
 
 export type FileChange = FileChange_Serialize | FileChange_Deserialize;
 
@@ -187,6 +197,12 @@ export type FileDiff_Deserialize = {
 	/**  Header lines such as "new file mode 100644" or "similarity index 90%". */
 	notes: string[],
 	hunks: Hunk_Deserialize[],
+	/**
+	 *  Identifies this exact diff. Partial stage/unstage/discard requests
+	 *  carry it back, so a file that changed meanwhile is never patched
+	 *  with stale line positions.
+	 */
+	fingerprint: string,
 };
 
 export type FileDiff_Serialize = {
@@ -198,6 +214,12 @@ export type FileDiff_Serialize = {
 	/**  Header lines such as "new file mode 100644" or "similarity index 90%". */
 	notes: string[],
 	hunks: Hunk_Serialize[],
+	/**
+	 *  Identifies this exact diff. Partial stage/unstage/discard requests
+	 *  carry it back, so a file that changed meanwhile is never patched
+	 *  with stale line positions.
+	 */
+	fingerprint: string,
 };
 
 export type FileStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | 
@@ -279,6 +301,30 @@ export type Head_Serialize =
 { type: "branch"; name: string; oid: string | null } | { type: "detached"; oid: string };
 
 export type Hunk = Hunk_Serialize | Hunk_Deserialize;
+
+/**
+ *  Lines chosen in one hunk; `lines: None` means the whole hunk.
+ *  Indexes refer to [`crate::parse::diff::Hunk::lines`].
+ */
+export type HunkSelection = HunkSelection_Serialize | HunkSelection_Deserialize;
+
+/**
+ *  Lines chosen in one hunk; `lines: None` means the whole hunk.
+ *  Indexes refer to [`crate::parse::diff::Hunk::lines`].
+ */
+export type HunkSelection_Deserialize = {
+	hunk: number,
+	lines?: number[] | null,
+};
+
+/**
+ *  Lines chosen in one hunk; `lines: None` means the whole hunk.
+ *  Indexes refer to [`crate::parse::diff::Hunk::lines`].
+ */
+export type HunkSelection_Serialize = {
+	hunk: number,
+	lines: number[] | null,
+};
 
 export type Hunk_Deserialize = {
 	oldStart: number,
@@ -386,6 +432,9 @@ export type RepoRefs_Serialize = {
 	remotes: string[],
 };
 
+/**  What to do with a selection of a file's changes. */
+export type SelectionAction = "stage" | "unstage";
+
 export type Signature = {
 	name: string,
 	email: string,
@@ -430,6 +479,15 @@ export type WorkingStatus_Serialize = {
 	untracked: StatusEntry_Serialize[],
 	conflicted: ConflictEntry[],
 };
+
+/**  Which uncommitted change of a file to diff. */
+export type WorktreeArea = 
+/**  Working tree vs index. */
+"unstaged" | 
+/**  Index vs HEAD. */
+"staged" | 
+/**  A file git does not track yet (vs nothing). */
+"untracked";
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

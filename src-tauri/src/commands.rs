@@ -8,9 +8,11 @@ use tauri::ipc::Channel;
 use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::refs::RepoRefs;
+use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
 use gitcraft_core::parse::status::WorkingStatus;
+use gitcraft_core::patch::HunkSelection;
 
 use crate::error::IpcError;
 use crate::settings::RecentRepository;
@@ -182,4 +184,41 @@ pub async fn amend_info(
     id: RepoId,
 ) -> Result<Option<AmendInfo>, IpcError> {
     state.amend_info(id).await
+}
+
+/// Diff of one file's uncommitted change (`area`: unstaged, staged or
+/// untracked). Large diffs only when `full`.
+#[tauri::command]
+#[specta::specta]
+pub async fn worktree_file_diff(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+    old_path: Option<String>,
+    area: WorktreeArea,
+    full: bool,
+) -> Result<FileDiff, IpcError> {
+    state
+        .worktree_file_diff(id, &path, old_path.as_deref(), area, full)
+        .await
+}
+
+/// Stages or unstages selected hunks/lines of one file. `fingerprint` is the
+/// one of the diff shown; a changed file is reported as `staleDiff`.
+#[tauri::command]
+#[specta::specta]
+#[allow(clippy::too_many_arguments)]
+pub async fn apply_selection(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+    old_path: Option<String>,
+    area: WorktreeArea,
+    fingerprint: String,
+    selection: Vec<HunkSelection>,
+    action: SelectionAction,
+) -> Result<(), IpcError> {
+    state
+        .apply_selection(id, path, old_path, area, fingerprint, selection, action)
+        .await
 }

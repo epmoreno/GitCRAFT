@@ -88,7 +88,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 - [x] **4.2 Stage/unstage por archivo** (también todos a la vez).
       *Verificado manualmente* en un repo de prueba: Preparar/Quitar por
       archivo y doble clic.
-- [ ] **4.3 Stage/unstage por hunk y por línea.** Se genera un parche y se aplica
+- [x] **4.3 Stage/unstage por hunk y por línea.** Se genera un parche y se aplica
       con `git apply --cached` (con `-R` para unstage). *Tests:* hunks
       parciales, líneas sueltas y finales de archivo.
 - [ ] **4.4 Descartar cambios** con confirmación.

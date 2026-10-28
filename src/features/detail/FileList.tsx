@@ -111,7 +111,11 @@ function FileRow({
   const open = useGraphStore((s) => s.openFileDiff);
   const isOpen = useGraphStore((s) => {
     const current = s.graphs[repoId]?.openFile;
-    return current?.oid === oid && current.path === file.path;
+    return (
+      current?.kind === "commit" &&
+      current.oid === oid &&
+      current.path === file.path
+    );
   });
   const slash = file.path.lastIndexOf("/");
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
@@ -124,7 +128,12 @@ function FileRow({
         title={t("files.openDiff", { path: file.path })}
         aria-current={isOpen || undefined}
         onClick={() =>
-          open(repoId, { oid, path: file.path, oldPath: file.oldPath })
+          open(repoId, {
+            kind: "commit",
+            oid,
+            path: file.path,
+            oldPath: file.oldPath,
+          })
         }
       >
         <span

@@ -5,13 +5,21 @@ import {
   type CommandError,
   type GraphLine,
   type RepoRefs,
+  type WorktreeArea,
 } from "../../ipc";
 
 /** Selection id of the "uncommitted changes" entry (never a commit id). */
 export const WORKTREE = "worktree";
 
 /** A file of a commit whose diff is shown over the history. */
-export type OpenFile = { oid: string; path: string; oldPath: string | null };
+export type OpenFile =
+  | { kind: "commit"; oid: string; path: string; oldPath: string | null }
+  | {
+      kind: "worktree";
+      area: WorktreeArea;
+      path: string;
+      oldPath: string | null;
+    };
 
 export type RepoGraph = {
   status: "loading" | "done" | "error";

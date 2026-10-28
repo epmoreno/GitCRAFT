@@ -14,9 +14,13 @@ use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::ops::stage;
 use gitcraft_core::ops::status::working_status;
+use gitcraft_core::ops::worktree::{
+    SelectionAction, WorktreeArea, apply_selection, worktree_file_diff,
+};
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
 use gitcraft_core::parse::status::WorkingStatus;
+use gitcraft_core::patch::HunkSelection;
 use gitcraft_core::{CancellationToken, Git, GitError};
 use serde::Serialize;
 
@@ -317,6 +321,52 @@ impl AppState {
         Ok(amend_info(git, &path, &CancellationToken::new()).await?)
     }
 
+    /// Diff of one file's uncommitted change.
+    pub async fn worktree_file_diff(
+        &self,
+        id: RepoId,
+        path: &str,
+        old_path: Option<&str>,
+        area: WorktreeArea,
+        full: bool,
+    ) -> Result<FileDiff, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        let cancel = CancellationToken::new();
+        Ok(worktree_file_diff(git, &repo, path, old_path, area, full, &cancel).await?)
+    }
+
+    /// Stages or unstages selected hunks/lines of one file.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn apply_selection(
+        &self,
+        id: RepoId,
+        path: String,
+        old_path: Option<String>,
+        area: WorktreeArea,
+        fingerprint: String,
+        selection: Vec<HunkSelection>,
+        action: SelectionAction,
+    ) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            apply_selection(
+                git,
+                &repo,
+                &path,
+                old_path.as_deref(),
+                area,
+                &fingerprint,
+                &selection,
+                action,
+                &cancel,
+            )
+            .await
+        })
+        .await
+    }
+
     /// Working directory and index status of session `id`.
     pub async fn working_status(&self, id: RepoId) -> Result<WorkingStatus, IpcError> {
         let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
@@ -598,6 +648,37 @@ mod tests {
         let d = f.state.commit_details(id, &amended).await.expect("details");
         assert_eq!(d.summary, "Add a (amended)");
         assert_eq!(d.parents, [ids["E"].clone()]);
+    }
+
+    #[tokio::test]
+    async fn stages_a_hunk_of_a_session() {
+        let f = fixture();
+        let (repo, _) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        repo.write_file("main.txt", "b\ne\nnew line\n");
+        let diff = f
+            .state
+            .worktree_file_diff(id, "main.txt", None, WorktreeArea::Unstaged, false)
+            .await
+            .expect("diff");
+        f.state
+            .apply_selection(
+                id,
+                "main.txt".into(),
+                None,
+                WorktreeArea::Unstaged,
+                diff.fingerprint,
+                vec![HunkSelection {
+                    hunk: 0,
+                    lines: None,
+                }],
+                SelectionAction::Stage,
+            )
+            .await
+            .expect("stage hunk");
+        let status = f.state.working_status(id).await.expect("status");
+        assert_eq!(status.staged.len(), 1);
+        assert!(status.unstaged.is_empty());
     }
 
     #[tokio::test]

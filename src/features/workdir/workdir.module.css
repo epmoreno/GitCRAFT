@@ -315,3 +315,22 @@
 .commitButton:disabled {
   opacity: 0.45;
 }
+
+.pathButton {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.pathButton:hover .path {
+  text-decoration: underline;
+  text-decoration-color: var(--text-faint);
+}
+
+.fileOpen {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-1));
+}

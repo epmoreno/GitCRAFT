@@ -6,6 +6,7 @@ import {
   streamGraph,
   type CommandError,
   type ErrorKind,
+  type FileDiff,
   type GraphEvent,
   type GraphLine,
   type OpenedRepository,
@@ -33,6 +34,8 @@ export const ipc = {
   unstageFiles: vi.mocked(commands.unstageFiles),
   createCommit: vi.mocked(commands.createCommit),
   amendInfo: vi.mocked(commands.amendInfo),
+  worktreeFileDiff: vi.mocked(commands.worktreeFileDiff),
+  applySelection: vi.mocked(commands.applySelection),
 };
 
 export function resetIpcMock() {
@@ -46,6 +49,7 @@ export function resetIpcMock() {
   ipc.unstageFiles.mockResolvedValue({ status: "ok", data: null });
   ipc.createCommit.mockResolvedValue({ status: "ok", data: oid("9") });
   ipc.amendInfo.mockResolvedValue({ status: "ok", data: null });
+  ipc.applySelection.mockResolvedValue({ status: "ok", data: null });
   ipc.commitChanges.mockResolvedValue({
     status: "ok",
     data: { base: null, files: [] },
@@ -197,3 +201,52 @@ export function sampleRefs(): RepoRefs {
     remotes: ["origin"],
   };
 }
+
+/** A one-hunk diff: two → TWO, between context lines. */
+export const textDiff = (overrides: Partial<FileDiff> = {}): FileDiff => ({
+  binary: false,
+  tooLarge: false,
+  lineCount: 4,
+  notes: [],
+  hunks: [
+    {
+      oldStart: 1,
+      oldLines: 3,
+      newStart: 1,
+      newLines: 3,
+      section: "fn main() {",
+      lines: [
+        {
+          kind: "context",
+          content: "one",
+          oldLine: 1,
+          newLine: 1,
+          noNewline: false,
+        },
+        {
+          kind: "removed",
+          content: "two",
+          oldLine: 2,
+          newLine: null,
+          noNewline: false,
+        },
+        {
+          kind: "added",
+          content: "TWO",
+          oldLine: null,
+          newLine: 2,
+          noNewline: false,
+        },
+        {
+          kind: "context",
+          content: "three",
+          oldLine: 3,
+          newLine: 3,
+          noNewline: true,
+        },
+      ],
+    },
+  ],
+  fingerprint: "f1",
+  ...overrides,
+});

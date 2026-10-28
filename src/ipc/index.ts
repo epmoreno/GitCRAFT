@@ -32,6 +32,9 @@ export type {
   Signature,
   StatusEntry_Serialize as StatusEntry,
   WorkingStatus_Serialize as WorkingStatus,
+  WorktreeArea,
+  HunkSelection_Deserialize as HunkSelection,
+  SelectionAction,
 } from "./bindings";
 
 /** A graph line: `[column, colour]`. */

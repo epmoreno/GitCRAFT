@@ -51,6 +51,39 @@ pub struct FileDiff {
     /// Header lines such as "new file mode 100644" or "similarity index 90%".
     pub notes: Vec<String>,
     pub hunks: Vec<Hunk>,
+    /// Identifies this exact diff. Partial stage/unstage/discard requests
+    /// carry it back, so a file that changed meanwhile is never patched
+    /// with stale line positions.
+    pub fingerprint: String,
+    /// The raw header of the first file ("diff --git" … "+++"), reused
+    /// verbatim when building partial patches.
+    #[serde(skip)]
+    #[cfg_attr(feature = "specta", specta(skip))]
+    pub header: Vec<String>,
+}
+
+impl FileDiff {
+    pub fn empty() -> Self {
+        Self {
+            binary: false,
+            too_large: false,
+            line_count: 0,
+            notes: Vec::new(),
+            hunks: Vec::new(),
+            fingerprint: String::new(),
+            header: Vec::new(),
+        }
+    }
+}
+
+/// FNV-1a: a small, dependency-free fingerprint (not a security measure).
+pub fn fingerprint(bytes: &[u8]) -> String {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for &b in bytes {
+        hash ^= u64::from(b);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{hash:016x}")
 }
 
 /// Header lines worth showing to the user.
@@ -68,18 +101,20 @@ const NOTE_PREFIXES: [&str; 8] = [
 pub fn parse_diff(stdout: &[u8]) -> Result<FileDiff> {
     let text = String::from_utf8_lossy(stdout);
     let mut diff = FileDiff {
-        binary: false,
-        too_large: false,
-        line_count: 0,
-        notes: Vec::new(),
-        hunks: Vec::new(),
+        fingerprint: fingerprint(stdout),
+        ..FileDiff::empty()
     };
     let mut in_header = true;
+    let mut sections = 0;
     let (mut old_no, mut new_no) = (0u32, 0u32);
 
     for line in text.split_terminator('\n') {
         if line.starts_with("diff --git ") {
             in_header = true;
+            sections += 1;
+            if sections == 1 {
+                diff.header.push(line.to_owned());
+            }
             continue;
         }
         if let Some(rest) = line.strip_prefix("@@ ") {
@@ -91,6 +126,9 @@ pub fn parse_diff(stdout: &[u8]) -> Result<FileDiff> {
             continue;
         }
         if in_header {
+            if sections <= 1 {
+                diff.header.push(line.to_owned());
+            }
             if line.starts_with("Binary files ") || line == "GIT binary patch" {
                 diff.binary = true;
             } else if NOTE_PREFIXES.iter().any(|p| line.starts_with(p)) {

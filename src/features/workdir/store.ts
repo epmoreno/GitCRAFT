@@ -1,5 +1,12 @@
 import { create } from "zustand";
-import { commands, type CommandError, type WorkingStatus } from "../../ipc";
+import {
+  commands,
+  type CommandError,
+  type HunkSelection,
+  type SelectionAction,
+  type WorkingStatus,
+  type WorktreeArea,
+} from "../../ipc";
 import { useGraphStore } from "../graph/store";
 
 export type RepoStatus = {
@@ -9,6 +16,17 @@ export type RepoStatus = {
   busy?: boolean;
   /** The last stage/unstage/commit failure, until the next action. */
   opError?: CommandError | null;
+  /** Bumped on every successful status read (views re-read their diffs). */
+  version?: number;
+};
+
+export type SelectionRequest = {
+  path: string;
+  oldPath: string | null;
+  area: WorktreeArea;
+  fingerprint: string;
+  selection: HunkSelection[];
+  action: SelectionAction;
 };
 
 /** Commit message being written, kept per repository across tab switches. */
@@ -24,6 +42,8 @@ type WorkdirState = {
   /** `paths: null` means every change. */
   stage: (repoId: number, paths: string[] | null) => Promise<void>;
   unstage: (repoId: number, paths: string[] | null) => Promise<void>;
+  /** Stages or unstages selected hunks/lines of one file. */
+  applySelection: (repoId: number, request: SelectionRequest) => Promise<void>;
   setDraft: (repoId: number, patch: Partial<Draft>) => void;
   /** Commits the staged changes (or amends) with the draft message; on
    * success clears the draft and selects the new commit. */
@@ -76,6 +96,19 @@ export const useWorkdirStore = create<WorkdirState>()((set, get) => {
     unstage: (repoId, paths) =>
       run(repoId, () => commands.unstageFiles(repoId, paths)),
 
+    applySelection: (repoId, r) =>
+      run(repoId, () =>
+        commands.applySelection(
+          repoId,
+          r.path,
+          r.oldPath,
+          r.area,
+          r.fingerprint,
+          r.selection,
+          r.action,
+        ),
+      ),
+
     setDraft: (repoId, patch) =>
       set((s) => ({
         drafts: {
@@ -118,7 +151,11 @@ export const useWorkdirStore = create<WorkdirState>()((set, get) => {
       update(
         repoId,
         result.status === "ok"
-          ? { status: result.data, error: null }
+          ? {
+              status: result.data,
+              error: null,
+              version: (get().statuses[repoId]?.version ?? 0) + 1,
+            }
           : { error: result.error },
       );
     },

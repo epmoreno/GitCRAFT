@@ -147,17 +147,22 @@ pub async fn commit_file_diff(
         .output(cancel)
         .await?;
 
-    if !full && out.stdout.len() > DIFF_BYTE_LIMIT {
-        let lines = out.stdout.iter().filter(|&&b| b == b'\n').count();
+    finish_diff(&out.stdout, full)
+}
+
+/// Parses diff output, leaving out the hunks of large diffs unless `full`.
+/// The fingerprint always covers the whole output.
+pub(crate) fn finish_diff(stdout: &[u8], full: bool) -> Result<FileDiff> {
+    if !full && stdout.len() > DIFF_BYTE_LIMIT {
+        let lines = stdout.iter().filter(|&&b| b == b'\n').count();
         return Ok(FileDiff {
-            binary: false,
             too_large: true,
             line_count: u32::try_from(lines).unwrap_or(u32::MAX),
-            notes: Vec::new(),
-            hunks: Vec::new(),
+            fingerprint: crate::parse::diff::fingerprint(stdout),
+            ..FileDiff::empty()
         });
     }
-    let mut diff = parse_diff(&out.stdout)?;
+    let mut diff = parse_diff(stdout)?;
     if !full && diff.line_count > DIFF_LINE_LIMIT {
         diff.hunks.clear();
         diff.too_large = true;

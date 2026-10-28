@@ -1,13 +1,13 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
-import type { FileDiff } from "../../ipc";
 import {
   commandError,
   ipc,
   oid,
   sampleLines,
   sampleRefs,
+  textDiff,
 } from "../../test/ipc";
 import { DetailPanel } from "../detail/DetailPanel";
 import { GraphView } from "../graph/GraphView";
@@ -19,53 +19,6 @@ const info = {
   gitDir: "/src/sample/.git",
   commonDir: "/src/sample/.git",
 };
-
-const textDiff = (overrides: Partial<FileDiff> = {}): FileDiff => ({
-  binary: false,
-  tooLarge: false,
-  lineCount: 4,
-  notes: [],
-  hunks: [
-    {
-      oldStart: 1,
-      oldLines: 3,
-      newStart: 1,
-      newLines: 3,
-      section: "fn main() {",
-      lines: [
-        {
-          kind: "context",
-          content: "one",
-          oldLine: 1,
-          newLine: 1,
-          noNewline: false,
-        },
-        {
-          kind: "removed",
-          content: "two",
-          oldLine: 2,
-          newLine: null,
-          noNewline: false,
-        },
-        {
-          kind: "added",
-          content: "TWO",
-          oldLine: null,
-          newLine: 2,
-          noNewline: false,
-        },
-        {
-          kind: "context",
-          content: "three",
-          oldLine: 3,
-          newLine: 3,
-          noNewline: true,
-        },
-      ],
-    },
-  ],
-  ...overrides,
-});
 
 function withGraph() {
   useGraphStore.setState({

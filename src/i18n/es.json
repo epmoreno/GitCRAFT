@@ -67,7 +67,8 @@
     "unknown": "Git devolvió un error inesperado. Revisa la salida original de Git.",
     "identityUnknown": "Git no sabe quién eres. Configura tu nombre y tu email con «git config --global user.name \"Tu nombre\"» y «git config --global user.email tu@email».",
     "nothingToCommit": "No hay cambios preparados para el commit.",
-    "emptyMessage": "El mensaje del commit está vacío."
+    "emptyMessage": "El mensaje del commit está vacío.",
+    "staleDiff": "El archivo cambió desde que se mostró el diff. Se ha actualizado: vuelve a seleccionar lo que quieras."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",
@@ -136,7 +137,21 @@
     "tooLarge_other": "Este diff tiene {{count}} líneas; mostrarlo entero puede ir lento.",
     "showAnyway": "Mostrar de todos modos",
     "noChanges": "No hay cambios de texto en este archivo.",
-    "noNewline": "Sin salto de línea al final del archivo"
+    "noNewline": "Sin salto de línea al final del archivo",
+    "area": {
+      "unstaged": "Sin preparar",
+      "staged": "Preparado",
+      "untracked": "Sin seguimiento"
+    },
+    "stageHunk": "Preparar hunk",
+    "unstageHunk": "Quitar hunk",
+    "stageLines_one": "Preparar {{count}} línea",
+    "stageLines_other": "Preparar {{count}} líneas",
+    "unstageLines_one": "Quitar {{count}} línea del stage",
+    "unstageLines_other": "Quitar {{count}} líneas del stage",
+    "clearSelection": "Deseleccionar",
+    "selectLine": "Seleccionar la línea {{line}}",
+    "selectionHint": "Marca líneas para prepararlas por separado (Mayús+clic para un rango)."
   },
   "workdir": {
     "row": "Cambios sin confirmar",
@@ -167,7 +182,8 @@
     "unstageAll": "Quitar todo",
     "stageFile": "Preparar {{path}}",
     "unstageFile": "Quitar {{path}} del stage",
-    "opFailed": "No se pudo completar la operación."
+    "opFailed": "No se pudo completar la operación.",
+    "viewChanges": "Ver cambios de {{path}}"
   },
   "commit": {
     "label": "Crear commit",

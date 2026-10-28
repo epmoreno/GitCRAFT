@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import type { ConflictEntry, StatusEntry } from "../../ipc";
+import type { ConflictEntry, StatusEntry, WorktreeArea } from "../../ipc";
+import { useGraphStore } from "../graph/store";
 import { useWorkdirStore } from "./store";
 import { CommitBox } from "./CommitBox";
 import { StatusLetter } from "./StatusLetter";
@@ -77,6 +78,8 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
         {unstaged.map((e) => (
           <FileRow
             key={`u:${e.path}`}
+            repoId={repoId}
+            area={e.status === "untracked" ? "untracked" : "unstaged"}
             entry={e}
             actionLabel={t("workdir.stage")}
             actionTitle={t("workdir.stageFile", { path: e.path })}
@@ -102,6 +105,8 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
         {status.staged.map((e) => (
           <FileRow
             key={`s:${e.path}`}
+            repoId={repoId}
+            area="staged"
             entry={e}
             actionLabel={t("workdir.unstage")}
             actionTitle={t("workdir.unstageFile", { path: e.path })}
@@ -173,22 +178,56 @@ export function PathLabel({
 }
 
 function FileRow({
+  repoId,
+  area,
   entry,
   actionLabel,
   actionTitle,
   disabled,
   onAction,
 }: {
+  repoId: number;
+  area: WorktreeArea;
   entry: StatusEntry;
   actionLabel: string;
   actionTitle: string;
   disabled: boolean;
   onAction: () => void;
 }) {
+  const { t } = useTranslation();
+  const open = useGraphStore((s) => s.openFileDiff);
+  const isOpen = useGraphStore((s) => {
+    const f = s.graphs[repoId]?.openFile;
+    return f?.kind === "worktree" && f.area === area && f.path === entry.path;
+  });
+  // An untracked directory has no single-file diff.
+  const hasDiff = !entry.path.endsWith("/");
   return (
-    <li className={styles.file} onDoubleClick={disabled ? undefined : onAction}>
+    <li
+      className={isOpen ? `${styles.file} ${styles.fileOpen}` : styles.file}
+      onDoubleClick={disabled ? undefined : onAction}
+    >
       <StatusLetter status={entry.status} />
-      <PathLabel path={entry.path} oldPath={entry.oldPath} />
+      {hasDiff ? (
+        <button
+          type="button"
+          className={styles.pathButton}
+          aria-label={t("workdir.viewChanges", { path: entry.path })}
+          aria-current={isOpen || undefined}
+          onClick={() =>
+            open(repoId, {
+              kind: "worktree",
+              area,
+              path: entry.path,
+              oldPath: entry.oldPath,
+            })
+          }
+        >
+          <PathLabel path={entry.path} oldPath={entry.oldPath} />
+        </button>
+      ) : (
+        <PathLabel path={entry.path} oldPath={entry.oldPath} />
+      )}
       <button
         type="button"
         className={styles.rowAction}

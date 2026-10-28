@@ -67,7 +67,8 @@
     "unknown": "Git returned an unexpected error. Check Git's original output.",
     "identityUnknown": "Git doesn't know who you are. Set your name and email with “git config --global user.name \"Your Name\"” and “git config --global user.email you@example.com”.",
     "nothingToCommit": "There are no staged changes to commit.",
-    "emptyMessage": "The commit message is empty."
+    "emptyMessage": "The commit message is empty.",
+    "staleDiff": "The file changed since its diff was shown. It has been refreshed: select again what you want."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -136,7 +137,21 @@
     "tooLarge_other": "This diff has {{count}} lines; showing it all may be slow.",
     "showAnyway": "Show anyway",
     "noChanges": "There are no text changes in this file.",
-    "noNewline": "No newline at end of file"
+    "noNewline": "No newline at end of file",
+    "area": {
+      "unstaged": "Unstaged",
+      "staged": "Staged",
+      "untracked": "Untracked"
+    },
+    "stageHunk": "Stage hunk",
+    "unstageHunk": "Unstage hunk",
+    "stageLines_one": "Stage {{count}} line",
+    "stageLines_other": "Stage {{count}} lines",
+    "unstageLines_one": "Unstage {{count}} line",
+    "unstageLines_other": "Unstage {{count}} lines",
+    "clearSelection": "Clear selection",
+    "selectLine": "Select line {{line}}",
+    "selectionHint": "Tick lines to stage them on their own (Shift+click for a range)."
   },
   "workdir": {
     "row": "Uncommitted changes",
@@ -167,7 +182,8 @@
     "unstageAll": "Unstage all",
     "stageFile": "Stage {{path}}",
     "unstageFile": "Unstage {{path}}",
-    "opFailed": "The operation couldn't be completed."
+    "opFailed": "The operation couldn't be completed.",
+    "viewChanges": "Show changes of {{path}}"
   },
   "commit": {
     "label": "Create commit",
