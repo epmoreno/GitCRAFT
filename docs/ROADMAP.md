@@ -60,7 +60,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 - [x] **2.5 Render virtualizado.** Canvas para el grafo y filas virtualizadas
       para el texto; scroll a 60 fps con 50k commits. Muestra etiquetas de
       ramas, tags y HEAD.
-      *Estado:* scroll fluido con git/git (~78k commits), comprobado en la app.
+      *Estado:* scroll fluido, verificado manualmente con un repo grande.
 - [x] **2.6 Refresco.** Un watcher de `.git` (con debounce) refresca refs y el
       grafo tras cambios externos (por ejemplo, un commit hecho en la terminal).
       *Estado:* vigila HEAD, `packed-refs` y `refs/` del git dir (y del común en

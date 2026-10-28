@@ -79,3 +79,13 @@ usuario.
    casilla, se hace commit y se explica qué se ha hecho, cómo probarlo y cuál es
    el siguiente.
 2. Los cambios de arquitectura se reflejan en `docs/ARCHITECTURE.md`.
+3. **Verificación manual:** algo solo se marca como verificado (en el roadmap,
+   en docs o en un commit) cuando el usuario confirma que lo ha probado, y se
+   describe exactamente lo que probó (p. ej. «verificado manualmente con un repo
+   grande»), sin añadir detalles que no ha dado. Los tests automáticos no
+   cuentan como verificación manual.
+4. **Instrucciones de prueba seguras:** nunca se proponen comandos que puedan
+   borrar cambios sin commitear (`git reset --hard`, `git checkout -- .`,
+   `git clean -f`, `git restore` sobre el worktree…). Para deshacer un commit
+   de prueba se usa `git reset --soft HEAD~1`, y las pruebas se hacen en un
+   repositorio de prueba desechable, no en GitCRAFT.
