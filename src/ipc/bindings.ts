@@ -18,6 +18,7 @@ export const commands = {
 	commitDetails: (id: number, oid: string) => typedError<CommitDetails, IpcError_Serialize>(__TAURI_INVOKE("commit_details", { id, oid })),
 	commitChanges: (id: number, oid: string) => typedError<CommitChanges_Serialize, IpcError_Serialize>(__TAURI_INVOKE("commit_changes", { id, oid })),
 	commitFileDiff: (id: number, oid: string, path: string, oldPath: string | null, full: boolean) => typedError<FileDiff_Serialize, IpcError_Serialize>(__TAURI_INVOKE("commit_file_diff", { id, oid, path, oldPath, full })),
+	workingStatus: (id: number) => typedError<WorkingStatus_Serialize, IpcError_Serialize>(__TAURI_INVOKE("working_status", { id })),
 };
 
 /** Events */
@@ -26,6 +27,28 @@ export const events = {
 };
 
 /* Types */
+export type BranchStatus = BranchStatus_Serialize | BranchStatus_Deserialize;
+
+export type BranchStatus_Deserialize = {
+	/**  `None` when HEAD is detached. */
+	name?: string | null,
+	/**  `None` before the first commit. */
+	oid?: string | null,
+	upstream?: string | null,
+	ahead: number,
+	behind: number,
+};
+
+export type BranchStatus_Serialize = {
+	/**  `None` when HEAD is detached. */
+	name: string | null,
+	/**  `None` before the first commit. */
+	oid: string | null,
+	upstream: string | null,
+	ahead: number,
+	behind: number,
+};
+
 export type CommitChanges = CommitChanges_Serialize | CommitChanges_Deserialize;
 
 export type CommitChanges_Deserialize = {
@@ -59,6 +82,14 @@ export type CommitDetails = {
 	/**  Everything after the subject and its blank line; may be empty. */
 	body: string,
 };
+
+export type ConflictEntry = {
+	path: string,
+	kind: ConflictKind,
+};
+
+/**  How a path conflicts during a merge, rebase, cherry-pick… */
+export type ConflictKind = "bothModified" | "bothAdded" | "bothDeleted" | "addedByUs" | "addedByThem" | "deletedByUs" | "deletedByThem";
 
 export type DiffLine = DiffLine_Serialize | DiffLine_Deserialize;
 
@@ -140,7 +171,9 @@ export type FileDiff_Serialize = {
 
 export type FileStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | 
 /**  File type changed (e.g. file ↔ symlink). */
-"typeChanged" | "unmerged" | "unknown";
+"typeChanged" | "unmerged" | 
+/**  Not tracked by git (working directory status only). */
+"untracked" | "unknown";
 
 export type GitRef = GitRef_Serialize | GitRef_Deserialize;
 
@@ -280,9 +313,13 @@ export type RecentRepository = {
 
 export type RefKind = "local" | "remote" | "tag";
 
-/**  Emitted when an open repository's refs changed outside GitCRAFT. */
+/**  Emitted when an open repository changed outside GitCRAFT. */
 export type RepoChanged = {
 	id: number,
+	/**  HEAD, branches or tags moved: reload the graph. */
+	refs: boolean,
+	/**  Files, the index or the merge state changed: reload the status. */
+	worktree: boolean,
 };
 
 /**  A repository with a working tree, identified by its top-level directory. */
@@ -323,6 +360,44 @@ export type Signature = {
 	email: string,
 	/**  Unix seconds. */
 	time: number,
+};
+
+export type StatusEntry = StatusEntry_Serialize | StatusEntry_Deserialize;
+
+export type StatusEntry_Deserialize = {
+	path: string,
+	/**  Previous path of a rename or copy. */
+	oldPath?: string | null,
+	status: FileStatus,
+};
+
+export type StatusEntry_Serialize = {
+	path: string,
+	/**  Previous path of a rename or copy. */
+	oldPath: string | null,
+	status: FileStatus,
+};
+
+export type WorkingStatus = WorkingStatus_Serialize | WorkingStatus_Deserialize;
+
+export type WorkingStatus_Deserialize = {
+	branch: BranchStatus_Deserialize,
+	/**  Changes in the index (what the next commit will contain). */
+	staged: StatusEntry_Deserialize[],
+	/**  Changes in tracked files not yet staged. */
+	unstaged: StatusEntry_Deserialize[],
+	untracked: StatusEntry_Deserialize[],
+	conflicted: ConflictEntry[],
+};
+
+export type WorkingStatus_Serialize = {
+	branch: BranchStatus_Serialize,
+	/**  Changes in the index (what the next commit will contain). */
+	staged: StatusEntry_Serialize[],
+	/**  Changes in tracked files not yet staged. */
+	unstaged: StatusEntry_Serialize[],
+	untracked: StatusEntry_Serialize[],
+	conflicted: ConflictEntry[],
 };
 
 /* Tauri Specta runtime */

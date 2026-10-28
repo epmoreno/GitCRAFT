@@ -10,6 +10,7 @@ import {
   type GraphLine,
   type OpenedRepository,
   type RepoRefs,
+  type WorkingStatus,
 } from "../ipc";
 
 /** Typed handles to the mocked IPC module (see setup.ts). */
@@ -27,6 +28,7 @@ export const ipc = {
   commitDetails: vi.mocked(commands.commitDetails),
   commitChanges: vi.mocked(commands.commitChanges),
   commitFileDiff: vi.mocked(commands.commitFileDiff),
+  workingStatus: vi.mocked(commands.workingStatus),
 };
 
 export function resetIpcMock() {
@@ -35,6 +37,7 @@ export function resetIpcMock() {
   ipc.closeRepository.mockResolvedValue({ status: "ok", data: true });
   ipc.pickFolder.mockResolvedValue(null);
   ipc.onRepoChanged.mockResolvedValue(() => {});
+  ipc.workingStatus.mockResolvedValue({ status: "ok", data: cleanStatus() });
   ipc.commitChanges.mockResolvedValue({
     status: "ok",
     data: { base: null, files: [] },
@@ -69,6 +72,22 @@ export function commandError(
   details: string | null = null,
 ): CommandError {
   return { kind, message: `${kind} (test)`, details };
+}
+
+export function cleanStatus(): WorkingStatus {
+  return {
+    branch: {
+      name: "main",
+      oid: oid("e"),
+      upstream: null,
+      ahead: 0,
+      behind: 0,
+    },
+    staged: [],
+    unstaged: [],
+    untracked: [],
+    conflicted: [],
+  };
 }
 
 export function emptyRefs(): RepoRefs {

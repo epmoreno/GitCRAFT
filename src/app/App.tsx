@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { DetailPanel } from "../features/detail/DetailPanel";
 import { GraphView } from "../features/graph/GraphView";
 import { useGraphStore } from "../features/graph/store";
+import { useWorkdirStore } from "../features/workdir/store";
 import { onRepoChanged } from "../ipc";
 import { OpenErrorBanner } from "../features/repo/OpenErrorBanner";
 import { StartPage } from "../features/repo/StartPage";
@@ -22,15 +23,27 @@ export function App() {
     void loadRecents();
   }, [loadRecents]);
 
-  // Refs changed outside GitCRAFT (terminal, another client): refresh.
+  // Changes made outside GitCRAFT (terminal, editor, another client).
   useEffect(() => {
-    const unlisten = onRepoChanged((id) => {
-      void useGraphStore.getState().refresh(id);
+    const unlisten = onRepoChanged(({ id, refs, worktree }) => {
+      if (refs) void useGraphStore.getState().refresh(id);
+      if (worktree) void useWorkdirStore.getState().refresh(id);
     });
     return () => {
       void unlisten.then((stop) => stop());
     };
   }, []);
+
+  // The working directory status of the active tab: on activation and
+  // whenever the window regains focus (cheap, catches anything missed).
+  const activeId = active?.id ?? null;
+  useEffect(() => {
+    if (activeId === null) return;
+    const refresh = () => void useWorkdirStore.getState().refresh(activeId);
+    refresh();
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [activeId]);
 
   return (
     <div className={styles.shell}>

@@ -1,10 +1,17 @@
 import { Channel } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { commands, events, type GraphEvent } from "./bindings";
+import {
+  commands,
+  events,
+  type GraphEvent,
+  type RepoChanged,
+} from "./bindings";
 
 export { commands } from "./bindings";
 export type {
   CommitChanges_Serialize as CommitChanges,
+  ConflictEntry,
+  ConflictKind,
   CommitDetails,
   ErrorKind,
   FileChange_Serialize as FileChange,
@@ -19,8 +26,11 @@ export type {
   RecentRepository,
   RefKind,
   RepoInfo,
+  RepoChanged,
   RepoRefs_Serialize as RepoRefs,
   Signature,
+  StatusEntry_Serialize as StatusEntry,
+  WorkingStatus_Serialize as WorkingStatus,
 } from "./bindings";
 
 /** A graph line: `[column, colour]`. */
@@ -49,8 +59,8 @@ export function optimizeRepository(
   return commands.optimizeRepository(id, channel);
 }
 
-/** Calls `handler` with the session id whenever a repository's refs change
- * outside GitCRAFT. Resolves to an unsubscribe function. */
-export function onRepoChanged(handler: (id: number) => void) {
-  return events.repoChanged.listen((event) => handler(event.payload.id));
+/** Calls `handler` whenever an open repository changes outside GitCRAFT
+ * (refs and/or working directory). Resolves to an unsubscribe function. */
+export function onRepoChanged(handler: (change: RepoChanged) => void) {
+  return events.repoChanged.listen((event) => handler(event.payload));
 }

@@ -18,6 +18,7 @@ const STATUS_LETTER: Record<FileStatus, string> = {
   copied: "C",
   typeChanged: "T",
   unmerged: "U",
+  untracked: "?",
   unknown: "?",
 };
 

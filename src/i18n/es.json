@@ -117,7 +117,8 @@
       "copied": "Copiado",
       "typeChanged": "Cambio de tipo",
       "unmerged": "Sin fusionar",
-      "unknown": "Desconocido"
+      "unknown": "Desconocido",
+      "untracked": "Sin seguimiento"
     },
     "openDiff": "Ver el diff de {{path}}"
   },
@@ -133,5 +134,29 @@
     "showAnyway": "Mostrar de todos modos",
     "noChanges": "No hay cambios de texto en este archivo.",
     "noNewline": "Sin salto de línea al final del archivo"
+  },
+  "workdir": {
+    "row": "Cambios sin confirmar",
+    "stagedCount_one": "{{count}} preparado",
+    "stagedCount_other": "{{count}} preparados",
+    "unstagedCount_one": "{{count}} sin preparar",
+    "unstagedCount_other": "{{count}} sin preparar",
+    "conflictedCount_one": "{{count}} conflicto",
+    "conflictedCount_other": "{{count}} conflictos",
+    "staged": "Preparados",
+    "unstaged": "Sin preparar",
+    "conflicts": "Conflictos",
+    "none": "Ninguno",
+    "loading": "Leyendo el estado…",
+    "failed": "No se pudo leer el estado del repositorio.",
+    "conflict": {
+      "bothModified": "modificado en ambos",
+      "bothAdded": "añadido en ambos",
+      "bothDeleted": "eliminado en ambos",
+      "addedByUs": "añadido por nosotros",
+      "addedByThem": "añadido por ellos",
+      "deletedByUs": "eliminado por nosotros",
+      "deletedByThem": "eliminado por ellos"
+    }
   }
 }

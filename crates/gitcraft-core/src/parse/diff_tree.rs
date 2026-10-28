@@ -16,6 +16,8 @@ pub enum FileStatus {
     /// File type changed (e.g. file ↔ symlink).
     TypeChanged,
     Unmerged,
+    /// Not tracked by git (working directory status only).
+    Untracked,
     Unknown,
 }
 

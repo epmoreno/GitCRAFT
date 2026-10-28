@@ -9,6 +9,7 @@ use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
+use gitcraft_core::parse::status::WorkingStatus;
 
 use crate::error::IpcError;
 use crate::settings::RecentRepository;
@@ -123,4 +124,13 @@ pub async fn commit_file_diff(
     state
         .commit_file_diff(id, &oid, &path, old_path.as_deref(), full)
         .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn working_status(
+    state: State<'_, AppState>,
+    id: RepoId,
+) -> Result<WorkingStatus, IpcError> {
+    state.working_status(id).await
 }

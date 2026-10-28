@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { RepoInfo } from "../../ipc";
 import { DiffView } from "../diff/DiffView";
+import { UncommittedRow } from "../workdir/UncommittedRow";
 import { drawGraph } from "./drawGraph";
 import { OptimizeNotice } from "./OptimizeNotice";
 import { ROW_HEIGHT, graphWidth, laneColor } from "./geometry";
@@ -148,6 +149,7 @@ export function GraphView({
           path={info.path}
         />
       )}
+      <UncommittedRow repoId={repoId} graphWidth={width} />
       {status === "done" && lines.length === 0 && (
         <p className={styles.empty}>{t("graph.empty")}</p>
       )}

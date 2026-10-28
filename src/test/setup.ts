@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import "../i18n";
 import { useGraphStore } from "../features/graph/store";
 import { initialRepoState, useRepoStore } from "../features/repo/store";
+import { useWorkdirStore } from "../features/workdir/store";
 import { resetIpcMock } from "./ipc";
 
 // No test talks to a real Tauri backend.
@@ -17,6 +18,7 @@ vi.mock("../ipc", () => ({
     commitDetails: vi.fn(),
     commitChanges: vi.fn(),
     commitFileDiff: vi.fn(),
+    workingStatus: vi.fn(),
   },
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
@@ -41,4 +43,5 @@ beforeEach(() => {
   resetIpcMock();
   useRepoStore.setState(initialRepoState);
   useGraphStore.setState({ graphs: {} });
+  useWorkdirStore.setState({ statuses: {} });
 });

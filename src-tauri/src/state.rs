@@ -11,8 +11,10 @@ use gitcraft_core::ops::maintenance::{
 };
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::repo::{self, RepoInfo};
+use gitcraft_core::ops::status::working_status;
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
+use gitcraft_core::parse::status::WorkingStatus;
 use gitcraft_core::{CancellationToken, Git, GitError};
 use serde::Serialize;
 
@@ -23,7 +25,7 @@ use crate::watcher::{RepoWatcher, Suppression};
 pub type RepoId = u32;
 
 /// Called (from a background thread) when a repository changed on disk.
-pub type ChangeNotifier = Arc<dyn Fn(RepoId) + Send + Sync>;
+pub type ChangeNotifier = Arc<dyn Fn(RepoChanged) + Send + Sync>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -32,11 +34,17 @@ pub struct OpenedRepository {
     pub info: RepoInfo,
 }
 
-/// Emitted when an open repository's refs changed outside GitCRAFT.
-#[derive(Debug, Clone, Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
+/// Emitted when an open repository changed outside GitCRAFT.
+#[derive(
+    Debug, Clone, PartialEq, Eq, Serialize, serde::Deserialize, specta::Type, tauri_specta::Event,
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoChanged {
     pub id: RepoId,
+    /// HEAD, branches or tags moved: reload the graph.
+    pub refs: bool,
+    /// Files, the index or the merge state changed: reload the status.
+    pub worktree: bool,
 }
 
 /// Sent over the graph channel: pages in order, then `done`.
@@ -147,9 +155,15 @@ impl AppState {
             PathBuf::from(&info.git_dir),
             PathBuf::from(&info.common_dir),
         ];
-        RepoWatcher::start(&dirs, move || notify(id))
-            .inspect_err(|err| eprintln!("not watching {}: {err}", info.path))
-            .ok()
+        RepoWatcher::start(&dirs, Path::new(&info.path), move |change| {
+            notify(RepoChanged {
+                id,
+                refs: change.refs,
+                worktree: change.worktree,
+            });
+        })
+        .inspect_err(|err| eprintln!("not watching {}: {err}", info.path))
+        .ok()
     }
 
     /// Returns whether a session with that id existed. Cancels its work.
@@ -211,6 +225,13 @@ impl AppState {
         let repo = self.session_path(id)?;
         let cancel = CancellationToken::new();
         Ok(commit_file_diff(git, &repo, oid, path, old_path, full, &cancel).await?)
+    }
+
+    /// Working directory and index status of session `id`.
+    pub async fn working_status(&self, id: RepoId) -> Result<WorkingStatus, IpcError> {
+        let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
+        let path = self.session_path(id)?;
+        Ok(working_status(git, &path, &CancellationToken::new()).await?)
     }
 
     /// Streams the commit graph of session `id` to `send`. Starting a new
@@ -367,7 +388,7 @@ mod tests {
         let state = AppState::new(
             Git::discover().ok(),
             SettingsFile::new(&settings_path),
-            Arc::new(move |id| sink.lock().expect("lock").push(id)),
+            Arc::new(move |event: RepoChanged| sink.lock().expect("lock").push(event.id)),
         );
         Fixture {
             _config: config,
@@ -398,6 +419,17 @@ mod tests {
         repo.commit_file("y.txt", "y", "after closing").await;
         settle().await;
         assert_eq!(*f.changed.lock().expect("lock"), [id]);
+    }
+
+    #[tokio::test]
+    async fn reads_the_working_status_of_a_session() {
+        let f = fixture();
+        let (repo, _) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        assert!(f.state.working_status(id).await.expect("status").is_clean());
+        repo.write_file("new.txt", "x");
+        let status = f.state.working_status(id).await.expect("status");
+        assert_eq!(status.untracked.len(), 1);
     }
 
     #[tokio::test]

@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../i18n";
+import type { RepoChanged } from "../ipc";
 import { commandError, ipc, opened } from "../test/ipc";
 import { App } from "./App";
 
@@ -151,7 +152,7 @@ describe("App", () => {
 
   it("refreshes the graph when the repository changes outside the app", async () => {
     const user = userEvent.setup();
-    let notify: ((id: number) => void) | undefined;
+    let notify: ((change: RepoChanged) => void) | undefined;
     ipc.onRepoChanged.mockImplementation(async (handler) => {
       notify = handler;
       return () => {};
@@ -168,8 +169,20 @@ describe("App", () => {
     await screen.findByText("0 commits");
     expect(ipc.streamGraph).toHaveBeenCalledTimes(1);
 
-    act(() => notify?.(1));
+    const statusCalls = ipc.workingStatus.mock.calls.length;
+    act(() => notify?.({ id: 1, refs: true, worktree: true }));
     await waitFor(() => expect(ipc.streamGraph).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(ipc.workingStatus.mock.calls.length).toBeGreaterThan(statusCalls),
+    );
+
+    // A file edit only refreshes the status, not the history.
+    const before = ipc.workingStatus.mock.calls.length;
+    act(() => notify?.({ id: 1, refs: false, worktree: true }));
+    await waitFor(() =>
+      expect(ipc.workingStatus.mock.calls.length).toBeGreaterThan(before),
+    );
+    expect(ipc.streamGraph).toHaveBeenCalledTimes(2);
   });
 
   it("switches language", async () => {

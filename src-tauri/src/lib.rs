@@ -31,6 +31,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::commit_details,
             commands::commit_changes,
             commands::commit_file_diff,
+            commands::working_status,
         ])
 }
 
@@ -47,8 +48,8 @@ pub fn run() {
             app.manage(AppState::new(
                 Git::discover().ok(),
                 SettingsFile::new(settings),
-                Arc::new(move |id| {
-                    let _ = RepoChanged { id }.emit(&handle);
+                Arc::new(move |event: RepoChanged| {
+                    let _ = event.emit(&handle);
                 }),
             ));
             Ok(())

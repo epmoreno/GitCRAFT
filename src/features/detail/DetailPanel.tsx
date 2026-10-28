@@ -10,7 +10,8 @@ import { laneColor } from "../graph/geometry";
 import { RefChips } from "../graph/RefChips";
 import { labelsByCommit } from "../graph/refLabels";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
-import { useGraphStore } from "../graph/store";
+import { useGraphStore, WORKTREE } from "../graph/store";
+import { WorkingDirPanel } from "../workdir/WorkingDirPanel";
 import { FileList } from "./FileList";
 import { reflowMessage } from "./reflow";
 import styles from "./detail.module.css";
@@ -29,7 +30,9 @@ export function DetailPanel({ repoId }: { repoId: number | null }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   useEffect(() => {
-    if (repoId === null || selectedOid === null) return;
+    if (repoId === null || selectedOid === null || selectedOid === WORKTREE) {
+      return;
+    }
     let stale = false;
     void commands.commitDetails(repoId, selectedOid).then((result) => {
       if (stale) return;
@@ -50,6 +53,8 @@ export function DetailPanel({ repoId }: { repoId: number | null }) {
     <aside className={styles.panel} aria-label={t("zones.detail")}>
       {selectedOid === null || repoId === null ? (
         <p className={styles.muted}>{t("detail.empty")}</p>
+      ) : selectedOid === WORKTREE ? (
+        <WorkingDirPanel repoId={repoId} />
       ) : !current ? (
         <p className={styles.muted}>{t("detail.loading")}</p>
       ) : current.error ? (

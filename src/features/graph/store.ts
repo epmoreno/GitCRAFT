@@ -7,6 +7,9 @@ import {
   type RepoRefs,
 } from "../../ipc";
 
+/** Selection id of the "uncommitted changes" entry (never a commit id). */
+export const WORKTREE = "worktree";
+
 /** A file of a commit whose diff is shown over the history. */
 export type OpenFile = { oid: string; path: string; oldPath: string | null };
 
