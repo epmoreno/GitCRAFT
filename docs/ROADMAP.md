@@ -70,6 +70,8 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 ### 3. Detalle de commit
 - [x] **3.1 Metadatos.** Autor, committer, fechas, mensaje completo, padres
       navegables y refs.
+      *Verificado manualmente:* el hash completo se muestra en una línea,
+      recortado con «…».
 - [x] **3.2 Archivos cambiados.** `git diff-tree -r -z --name-status -M` con
       estado A/M/D/R/C y contadores +/−. *Tests:* renombrados, binarios y commit
       raíz.
@@ -81,7 +83,11 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 - [x] **4.1 Estado.** `git status --porcelain=v2 -z --branch` se parsea a
       unstaged, staged, untracked y conflictos, además de ahead/behind. *Tests
       unitarios.*
+      *Verificado manualmente* en un repo de prueba: «Cambios sin confirmar»
+      con contadores y actualización al editar desde la terminal.
 - [x] **4.2 Stage/unstage por archivo** (también todos a la vez).
+      *Verificado manualmente* en un repo de prueba: Preparar/Quitar por
+      archivo y doble clic.
 - [ ] **4.3 Stage/unstage por hunk y por línea.** Se genera un parche y se aplica
       con `git apply --cached` (con `-R` para unstage). *Tests:* hunks
       parciales, líneas sueltas y finales de archivo.
@@ -89,6 +95,9 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 - [x] **4.5 Commit.** Resumen + descripción, contador de caracteres; amend
       precarga el último mensaje. Respeta hooks (`pre-commit`, `commit-msg`) y
       muestra su salida si fallan.
+      *Verificado manualmente* en un repo de prueba: commit con resumen y
+      descripción (coincide con `git log --oneline`) y amend con el mensaje
+      precargado.
 
 ### 5. Ramas
 - [~] **5.1 Barra lateral.** Ramas locales, remotas (agrupadas por remoto), tags y
