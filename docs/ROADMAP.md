@@ -134,6 +134,12 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
       *Tests:* integración (nombres, crear con seguimiento, renombrar la
       actual, commits sin rama, borrado con rama movida, cambio bloqueado sin
       tocar nada, stash y cambiar byte a byte) y de interfaz.
+      *Verificado manualmente* en un repo de prueba, al completo: cambiar de
+      rama (doble clic y menú contextual); cambio bloqueado («Cancelar» no
+      toca nada, «Guardar en el stash y cambiar» funciona); crear (rechaza
+      nombres inválidos y repetidos); renombrar; borrar (avisa de los commits
+      sin rama y muestra cómo recuperarla) y no borrar una rama que cambió con
+      el diálogo abierto.
 
 ### 6. Remotos
 Las pruebas usan un repo bare local como remoto (p. ej.
@@ -153,10 +159,17 @@ Las pruebas usan un repo bare local como remoto (p. ej.
 Nunca se borran stashes automáticamente; borrar uno siempre pide
 confirmación.
 
-- [ ] **7.1 Guardar** (con mensaje, opción de incluir untracked), **aplicar**,
-      **pop** y **borrar** (con confirmación). La barra lateral muestra todas
-      las entradas, con las de «GitCRAFT: descarte de …» diferenciadas.
-- [ ] **7.2 Ver contenido** de un stash con la vista de diff.
+- [ ] **7.1 Lista, guardar, aplicar, pop y borrar.** La barra lateral muestra
+      todas las entradas con mensaje, rama de origen y fecha; las creadas por
+      GitCRAFT («descarte de …», «antes de cambiar a …») se distinguen. Guardar
+      desde el botón «Stash» con mensaje opcional y opción de incluir archivos
+      sin seguimiento. Aplicar y pop nunca fuerzan: si hay conflictos o cambios
+      que se sobrescribirían se explica y se ofrecen alternativas; pop solo
+      borra la entrada si se aplicó sin conflictos. Borrar siempre con
+      confirmación, mostrando el hash para recuperarla
+      (`git stash store <hash>`).
+- [ ] **7.2 Ver contenido** de un stash en el panel de detalle, con diff por
+      archivo (incluidos los archivos sin seguimiento guardados con `-u`).
 - [ ] **7.3 Recuperar archivo** en las entradas «GitCRAFT: descarte de …»:
       `git restore --source=<stash> --worktree -- <ruta>`. Si el archivo cambió
       desde el descarte, pide confirmación mostrando qué se sobrescribiría.
