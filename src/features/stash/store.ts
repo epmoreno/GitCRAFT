@@ -6,7 +6,7 @@ import {
   type CommandError,
   type StashEntry,
 } from "../../ipc";
-import { useGraphStore } from "../graph/store";
+import { stashSelection, useGraphStore } from "../graph/store";
 import { useWorkdirStore } from "../workdir/store";
 
 export type RepoStashes = {
@@ -97,6 +97,14 @@ export const useStashStore = create<StashState>()((set, get) => {
     void useGraphStore.getState().refresh(repoId);
   };
 
+  /** An entry that is gone stops being shown in the detail panel. */
+  const deselect = (repoId: number, oid: string) => {
+    const graph = useGraphStore.getState();
+    if (graph.graphs[repoId]?.selectedOid === stashSelection(oid)) {
+      graph.select(repoId, null);
+    }
+  };
+
   const fail = (repoId: number, error: CommandError) =>
     set({ notice: { kind: "error", repoId, error } });
 
@@ -108,6 +116,7 @@ export const useStashStore = create<StashState>()((set, get) => {
   ) => {
     switch (outcome.type) {
       case "applied":
+        if (outcome.dropped) deselect(repoId, entry.oid);
         set({
           notice: {
             kind: "applied",
@@ -231,7 +240,10 @@ export const useStashStore = create<StashState>()((set, get) => {
       set({ busy: false });
       afterWrite(repoId);
       if (result.status === "error") fail(repoId, result.error);
-      else set({ notice: { kind: "dropped", repoId, entry } });
+      else {
+        deselect(repoId, entry.oid);
+        set({ notice: { kind: "dropped", repoId, entry } });
+      }
     },
 
     closeDialog: () => set({ dialog: null }),

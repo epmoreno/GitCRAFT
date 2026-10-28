@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { GitRef, RepoRefs, StashEntry } from "../../ipc";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
 import { useBranchStore } from "../branches/store";
-import { useGraphStore } from "../graph/store";
+import { selectedStash, stashSelection, useGraphStore } from "../graph/store";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
 import { useStashStore } from "../stash/store";
 import styles from "./sidebar.module.css";
@@ -277,6 +277,12 @@ function Stashes({ repoId, onMenu }: ListProps) {
     repoId === null ? null : (s.stashes[repoId]?.entries ?? null),
   );
   const apply = useStashStore((s) => s.apply);
+  const select = useGraphStore((s) => s.select);
+  const selected = useGraphStore((s) =>
+    repoId === null
+      ? null
+      : selectedStash(s.graphs[repoId]?.selectedOid ?? null),
+  );
   const requestDrop = useStashStore((s) => s.requestDrop);
   const now = useStashStore((s) =>
     repoId === null ? 0 : (s.stashes[repoId]?.readAt ?? 0),
@@ -331,7 +337,8 @@ function Stashes({ repoId, onMenu }: ListProps) {
                   selector: `stash@{${entry.index}}`,
                 })}
                 stacked
-                onClick={() => {}}
+                selected={entry.oid === selected}
+                onClick={() => select(repoId, stashSelection(entry.oid))}
                 onContextMenu={(event) =>
                   onMenu(event, entry.message, menuFor(repoId, entry))
                 }
@@ -390,6 +397,7 @@ function Item({
   badge,
   title,
   stacked = false,
+  selected = false,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -402,6 +410,8 @@ function Item({
   title?: string;
   /** Hint on its own line, under the label. */
   stacked?: boolean;
+  /** Shown in the detail panel. */
+  selected?: boolean;
   onClick: () => void;
   onDoubleClick?: () => void;
   onContextMenu?: (event: MouseEvent) => void;
@@ -416,10 +426,12 @@ function Item({
           current && styles.current,
           stacked && styles.stacked,
           badge && styles.ours,
+          selected && styles.selected,
         ]
           .filter(Boolean)
           .join(" ")}
         aria-current={current || undefined}
+        aria-pressed={stacked ? selected : undefined}
         title={
           title ??
           (current ? t("sidebar.currentBranch", { name: label }) : label)

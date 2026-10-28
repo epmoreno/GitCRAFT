@@ -176,8 +176,12 @@ confirmación.
       *Tests:* integración (fixture de `stash list`, crear, aplicar y pop por
       id, bloqueo sin tocar nada, conflictos previstos, borrar y recuperar con
       `stash store`) y de interfaz.
-- [ ] **7.2 Ver contenido** de un stash en el panel de detalle, con diff por
+- [x] **7.2 Ver contenido** de un stash en el panel de detalle, con diff por
       archivo (incluidos los archivos sin seguimiento guardados con `-u`).
+      *Estado:* al pulsar una entrada, el panel muestra mensaje, origen, rama,
+      fecha, `stash@{n}` y hash, los botones aplicar/pop/borrar y dos listas:
+      cambios (contra `<stash>^1`) y archivos sin seguimiento (el commit
+      `<stash>^3`); cada archivo abre su diff.
 - [ ] **7.3 Recuperar archivo** en las entradas «GitCRAFT: descarte de …»:
       `git restore --source=<stash> --worktree -- <ruta>`. Si el archivo cambió
       desde el descarte, pide confirmación mostrando qué se sobrescribiría.

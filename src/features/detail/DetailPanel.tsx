@@ -10,7 +10,8 @@ import { laneColor } from "../graph/geometry";
 import { RefChips } from "../graph/RefChips";
 import { labelsByCommit } from "../graph/refLabels";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
-import { useGraphStore, WORKTREE } from "../graph/store";
+import { selectedStash, useGraphStore, WORKTREE } from "../graph/store";
+import { StashPanel } from "../stash/StashPanel";
 import { WorkingDirPanel } from "../workdir/WorkingDirPanel";
 import { FileList } from "./FileList";
 import { reflowMessage } from "./reflow";
@@ -30,7 +31,12 @@ export function DetailPanel({ repoId }: { repoId: number | null }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   useEffect(() => {
-    if (repoId === null || selectedOid === null || selectedOid === WORKTREE) {
+    if (
+      repoId === null ||
+      selectedOid === null ||
+      selectedOid === WORKTREE ||
+      selectedStash(selectedOid) !== null
+    ) {
       return;
     }
     let stale = false;
@@ -55,6 +61,8 @@ export function DetailPanel({ repoId }: { repoId: number | null }) {
         <p className={styles.muted}>{t("detail.empty")}</p>
       ) : selectedOid === WORKTREE ? (
         <WorkingDirPanel repoId={repoId} />
+      ) : selectedStash(selectedOid) !== null ? (
+        <StashPanel repoId={repoId} oid={selectedStash(selectedOid) ?? ""} />
       ) : !current ? (
         <p className={styles.muted}>{t("detail.loading")}</p>
       ) : current.error ? (

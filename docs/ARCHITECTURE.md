@@ -244,6 +244,11 @@ GitCRAFT se reconocen por su mensaje («GitCRAFT: descarte de …»,
      esa entrada.
 - **Borrar** siempre tras confirmación, que muestra el hash y
   `git stash store -m "<mensaje>" <hash>` para recuperarla.
+- **Contenido:** una entrada es un commit cuyo primer padre es el commit
+  sobre el que se creó; su diff contra él son los cambios guardados. Los
+  archivos sin seguimiento están en su tercer padre (un commit raíz), así que
+  el panel reutiliza los comandos de commits (`commit_changes`,
+  `commit_file_diff`). La selección del grafo usa el id `stash:<hash>`.
 - **Vigilante:** los cambios en `refs/stash` y `logs/refs/stash` se notifican
   como `stash` (borrar una entrada que no es la última solo reescribe el
   reflog) y la barra lateral recarga la lista.

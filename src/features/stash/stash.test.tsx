@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
 import type { StashEntry, WorkingStatus } from "../../ipc";
@@ -6,6 +6,7 @@ import { cleanStatus, ipc, oid, opened, sampleRefs } from "../../test/ipc";
 import { Toolbar } from "../../app/Toolbar";
 import { useGraphStore } from "../graph/store";
 import { useRepoStore } from "../repo/store";
+import { DetailPanel } from "../detail/DetailPanel";
 import { Sidebar } from "../sidebar/Sidebar";
 import { useWorkdirStore } from "../workdir/store";
 import { StashDialogs, StashToast } from "./StashDialogs";
@@ -19,7 +20,7 @@ const entry = (overrides: Partial<StashEntry>): StashEntry => ({
   message: "mi trabajo",
   branch: "main",
   time: now - 2 * 3600,
-  untracked: false,
+  untracked: null,
   origin: "user",
   ...overrides,
 });
@@ -42,7 +43,7 @@ const entries = (): StashEntry[] => [
     oid: oid("3"),
     message: "mi trabajo",
     branch: "feature",
-    untracked: true,
+    untracked: oid("4"),
   }),
 ];
 
@@ -302,6 +303,80 @@ describe("stash", () => {
     expect(ipc.createStash).toHaveBeenCalledWith(1, "a medias", true);
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Cambios guardados en el stash.",
+    );
+  });
+
+  it("shows an entry's files, untracked ones included, and their diffs", async () => {
+    const user = userEvent.setup();
+    ipc.commitChanges.mockImplementation(async (_id, commit) => ({
+      status: "ok",
+      data: {
+        base: oid("0"),
+        files:
+          commit === oid("4")
+            ? [
+                {
+                  path: "notas/nuevo.md",
+                  oldPath: null,
+                  similarity: null,
+                  status: "added",
+                  additions: 1,
+                  deletions: 0,
+                },
+              ]
+            : [
+                {
+                  path: "f.txt",
+                  oldPath: null,
+                  similarity: null,
+                  status: "modified",
+                  additions: 2,
+                  deletions: 1,
+                },
+              ],
+      },
+    }));
+    renderSidebar();
+    render(<DetailPanel repoId={1} />);
+    await user.click(item(/^mi trabajo/));
+    expect(item(/^mi trabajo/)).toHaveAttribute("aria-pressed", "true");
+
+    const panel = screen.getByRole("complementary", { name: "Detalle" });
+    expect(
+      within(panel).getByRole("heading", { name: "mi trabajo" }),
+    ).toBeVisible();
+    expect(within(panel).getByText("feature")).toBeVisible();
+    expect(within(panel).getByText("stash@{2}")).toBeVisible();
+    expect(await within(panel).findByText("1 archivo cambiado")).toBeVisible();
+    expect(
+      await within(panel).findByText("1 archivo sin seguimiento"),
+    ).toBeVisible();
+    expect(ipc.commitChanges).toHaveBeenCalledWith(1, oid("3"));
+    expect(ipc.commitChanges).toHaveBeenCalledWith(1, oid("4"));
+
+    await user.click(within(panel).getByRole("button", { name: /nuevo\.md/ }));
+    expect(useGraphStore.getState().graphs[1]?.openFile).toEqual({
+      kind: "commit",
+      oid: oid("4"),
+      path: "notas/nuevo.md",
+      oldPath: null,
+    });
+
+    // Popping it from the panel stops showing it.
+    ipc.applyStash.mockResolvedValueOnce({
+      status: "ok",
+      data: { type: "applied", dropped: true },
+    });
+    await user.click(within(panel).getByRole("button", { name: /pop/ }));
+    expect(ipc.applyStash).toHaveBeenCalledWith(
+      1,
+      oid("3"),
+      true,
+      false,
+      false,
+    );
+    await waitFor(() =>
+      expect(useGraphStore.getState().graphs[1]?.selectedOid).toBeNull(),
     );
   });
 });

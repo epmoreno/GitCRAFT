@@ -4,9 +4,12 @@
 use std::path::PathBuf;
 
 use gitcraft_core::ops::branch::BlockingFile;
+use gitcraft_core::ops::commit::{commit_changes, commit_file_diff};
 use gitcraft_core::ops::stash::{
     ApplyOutcome, apply_stash, create_stash, drop_stash, list_stashes, stash_and_apply,
 };
+use gitcraft_core::parse::diff::LineKind;
+use gitcraft_core::parse::diff_tree::FileStatus;
 use gitcraft_core::parse::stash::{STASH_FORMAT, StashOrigin, parse_stash_list};
 use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, ErrorKind, Git};
@@ -107,7 +110,7 @@ fn parses_the_stash_fixture() {
                 e.message.as_str(),
                 e.branch.as_deref(),
                 e.origin,
-                e.untracked,
+                e.untracked.is_some(),
             )
         })
         .collect();
@@ -152,7 +155,7 @@ async fn creates_entries_with_a_message_and_untracked_files() {
     assert_eq!(list.len(), 1);
     assert_eq!(list[0].oid, oid);
     assert_eq!(list[0].message, "probando");
-    assert!(list[0].untracked);
+    assert!(list[0].untracked.is_some());
     assert_eq!(read(&repo, "f.txt"), b"base\n");
     assert!(!repo.path().join("new.txt").exists());
 
@@ -251,7 +254,7 @@ async fn never_overwrites_uncommitted_changes() {
     let list = list_stashes(&git(), repo.path(), &c()).await.expect("list");
     assert_eq!(list.len(), 1);
     assert!(list[0].message.starts_with("GitCRAFT: antes de aplicar "));
-    assert!(list[0].untracked);
+    assert!(list[0].untracked.is_some());
     assert_eq!(
         repo.run(&["show", &format!("{}:f.txt", list[0].oid)]).await,
         "local edit"
@@ -332,4 +335,60 @@ async fn drops_only_the_named_entry_and_it_can_be_stored_back() {
     let list = list_stashes(&git(), repo.path(), &c()).await.expect("list");
     assert_eq!(list[0].oid, discard.oid);
     assert_eq!(list[0].origin, StashOrigin::Discard);
+}
+
+/// What the detail panel shows: the entry against its base, and its
+/// untracked files as additions.
+#[tokio::test]
+async fn shows_an_entry_with_its_untracked_files() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("f.txt", "one\n", "base").await;
+    repo.write_file("f.txt", "one\ntwo\n");
+    repo.write_file("notes/new.md", "nuevo\n");
+    create_stash(&git(), repo.path(), "con nuevos", true, &c())
+        .await
+        .expect("stash");
+    let entry = list_stashes(&git(), repo.path(), &c())
+        .await
+        .expect("list")
+        .remove(0);
+
+    let tracked = commit_changes(&git(), repo.path(), &entry.oid, &c())
+        .await
+        .expect("changes");
+    let paths: Vec<_> = tracked
+        .files
+        .iter()
+        .map(|f| (f.path.as_str(), f.status))
+        .collect();
+    assert_eq!(paths, [("f.txt", FileStatus::Modified)]);
+
+    let untracked = entry.untracked.expect("untracked part");
+    let added = commit_changes(&git(), repo.path(), &untracked, &c())
+        .await
+        .expect("untracked changes");
+    let paths: Vec<_> = added
+        .files
+        .iter()
+        .map(|f| (f.path.as_str(), f.status))
+        .collect();
+    assert_eq!(paths, [("notes/new.md", FileStatus::Added)]);
+
+    let diff = commit_file_diff(
+        &git(),
+        repo.path(),
+        &untracked,
+        "notes/new.md",
+        None,
+        false,
+        &c(),
+    )
+    .await
+    .expect("diff");
+    let lines: Vec<_> = diff.hunks[0]
+        .lines
+        .iter()
+        .map(|l| (l.kind, l.content.as_str()))
+        .collect();
+    assert_eq!(lines, [(LineKind::Added, "nuevo")]);
 }

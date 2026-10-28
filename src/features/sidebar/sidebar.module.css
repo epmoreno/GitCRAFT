@@ -174,3 +174,8 @@
   font-size: var(--font-size-small);
   font-weight: 600;
 }
+
+.selected,
+.selected:hover {
+  background: var(--surface-3);
+}

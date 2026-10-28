@@ -11,6 +11,17 @@ import {
 /** Selection id of the "uncommitted changes" entry (never a commit id). */
 export const WORKTREE = "worktree";
 
+const STASH_PREFIX = "stash:";
+
+/** Selection id of a stash entry (shown in the detail panel). */
+export const stashSelection = (oid: string) => `${STASH_PREFIX}${oid}`;
+
+/** The stash entry a selection id names, if it names one. */
+export const selectedStash = (selection: string | null) =>
+  selection?.startsWith(STASH_PREFIX)
+    ? selection.slice(STASH_PREFIX.length)
+    : null;
+
 /** A file of a commit whose diff is shown over the history. */
 export type OpenFile =
   | { kind: "commit"; oid: string; path: string; oldPath: string | null }

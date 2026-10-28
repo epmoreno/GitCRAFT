@@ -31,10 +31,13 @@ export function FileList({
   repoId,
   oid,
   isMerge,
+  untracked = false,
 }: {
   repoId: number;
   oid: string;
   isMerge: boolean;
+  /** The untracked files saved in a stash entry (all additions). */
+  untracked?: boolean;
 }) {
   const { t } = useTranslation();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -76,7 +79,9 @@ export function FileList({
   return (
     <section className={styles.files} aria-label={t("files.title")}>
       <h3 className={styles.filesTitle}>
-        {t("files.count", { count: files.length })}
+        {t(untracked ? "files.untrackedCount" : "files.count", {
+          count: files.length,
+        })}
         <span className={styles.added}>+{added}</span>
         <span className={styles.removed}>−{removed}</span>
       </h3>

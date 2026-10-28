@@ -131,7 +131,9 @@
       "unknown": "Unknown",
       "untracked": "Untracked"
     },
-    "openDiff": "Show the diff of {{path}}"
+    "openDiff": "Show the diff of {{path}}",
+    "untrackedCount_one": "{{count}} untracked file",
+    "untrackedCount_other": "{{count}} untracked files"
   },
   "diff": {
     "label": "Diff of {{path}}",
@@ -348,6 +350,15 @@
     "localSaved": "Your previous changes are in the stash as “GitCRAFT: antes de aplicar …”.",
     "conflicted_one": "Entry applied with conflicts in 1 file; resolve and stage it. The entry is still in the stash.",
     "conflicted_other": "Entry applied with conflicts in {{count}} files; resolve and stage them. The entry is still in the stash.",
-    "dropped": "Entry deleted. To recover it:"
+    "dropped": "Entry deleted. To recover it:",
+    "gone": "This entry is no longer in the stash.",
+    "popShort": "Apply and delete (pop)",
+    "branch": "Branch",
+    "date": "Date",
+    "entry": "Entry",
+    "originLong": {
+      "discard": "Backup GitCRAFT saved before discarding changes.",
+      "beforeSwitch": "Changes GitCRAFT saved before switching branches."
+    }
   }
 }

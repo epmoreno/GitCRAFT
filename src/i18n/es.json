@@ -131,7 +131,9 @@
       "unknown": "Desconocido",
       "untracked": "Sin seguimiento"
     },
-    "openDiff": "Ver el diff de {{path}}"
+    "openDiff": "Ver el diff de {{path}}",
+    "untrackedCount_one": "{{count}} archivo sin seguimiento",
+    "untrackedCount_other": "{{count}} archivos sin seguimiento"
   },
   "diff": {
     "label": "Diff de {{path}}",
@@ -348,6 +350,15 @@
     "localSaved": "Tus cambios anteriores están en el stash como «GitCRAFT: antes de aplicar …».",
     "conflicted_one": "Entrada aplicada con conflictos en 1 archivo; resuélvelo y prepáralo. La entrada sigue en el stash.",
     "conflicted_other": "Entrada aplicada con conflictos en {{count}} archivos; resuélvelos y prepáralos. La entrada sigue en el stash.",
-    "dropped": "Entrada borrada. Para recuperarla:"
+    "dropped": "Entrada borrada. Para recuperarla:",
+    "gone": "Esta entrada ya no está en el stash.",
+    "popShort": "Aplicar y borrar (pop)",
+    "branch": "Rama",
+    "date": "Fecha",
+    "entry": "Entrada",
+    "originLong": {
+      "discard": "Copia de seguridad que GitCRAFT guardó antes de descartar cambios.",
+      "beforeSwitch": "Cambios que GitCRAFT guardó antes de cambiar de rama."
+    }
   }
 }

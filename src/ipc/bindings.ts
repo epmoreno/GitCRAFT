@@ -670,8 +670,11 @@ export type StashEntry_Deserialize = {
 	branch?: string | null,
 	/**  Unix seconds. */
 	time: number,
-	/**  Also holds untracked files (`--include-untracked`). */
-	untracked: boolean,
+	/**
+	 *  The commit holding its untracked files (`--include-untracked`), if
+	 *  any: its third parent, a root commit with just those files.
+	 */
+	untracked?: string | null,
 	origin: StashOrigin,
 };
 
@@ -688,8 +691,11 @@ export type StashEntry_Serialize = {
 	branch: string | null,
 	/**  Unix seconds. */
 	time: number,
-	/**  Also holds untracked files (`--include-untracked`). */
-	untracked: boolean,
+	/**
+	 *  The commit holding its untracked files (`--include-untracked`), if
+	 *  any: its third parent, a root commit with just those files.
+	 */
+	untracked: string | null,
 	origin: StashOrigin,
 };
 

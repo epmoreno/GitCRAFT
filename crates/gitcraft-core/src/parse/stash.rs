@@ -41,8 +41,9 @@ pub struct StashEntry {
     /// Unix seconds.
     #[cfg_attr(feature = "specta", specta(type = i32))]
     pub time: i64,
-    /// Also holds untracked files (`--include-untracked`).
-    pub untracked: bool,
+    /// The commit holding its untracked files (`--include-untracked`), if
+    /// any: its third parent, a root commit with just those files.
+    pub untracked: Option<String>,
     pub origin: StashOrigin,
 }
 
@@ -92,7 +93,7 @@ pub fn parse_stash_list(stdout: &str) -> Result<Vec<StashEntry>> {
                 message: message.to_owned(),
                 branch: branch.map(str::to_owned),
                 time: time.trim().parse().unwrap_or(0),
-                untracked: parents.split_whitespace().count() == 3,
+                untracked: parents.split_whitespace().nth(2).map(str::to_owned),
                 origin,
             })
         })
@@ -151,12 +152,12 @@ mod tests {
         assert_eq!(list[0].origin, StashOrigin::BeforeSwitch);
         assert_eq!(list[0].message, "GitCRAFT: antes de cambiar a feature");
         assert_eq!(list[0].branch.as_deref(), Some("main"));
-        assert!(list[0].untracked);
+        assert_eq!(list[0].untracked.as_deref(), Some("p3"));
 
         assert_eq!(list[1].origin, StashOrigin::Discard);
         assert_eq!(list[1].message, "GitCRAFT: descarte de c.txt");
         assert_eq!(list[1].branch.as_deref(), Some("feature/x"));
-        assert!(!list[1].untracked);
+        assert_eq!(list[1].untracked, None);
 
         assert_eq!(list[2].origin, StashOrigin::User);
         assert_eq!(list[2].branch, None);
