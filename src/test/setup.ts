@@ -25,6 +25,9 @@ vi.mock("../ipc", () => ({
     amendInfo: vi.fn(),
     worktreeFileDiff: vi.fn(),
     applySelection: vi.fn(),
+    discardPreview: vi.fn(),
+    discardChanges: vi.fn(),
+    undoDiscard: vi.fn(),
   },
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
@@ -49,5 +52,10 @@ beforeEach(() => {
   resetIpcMock();
   useRepoStore.setState(initialRepoState);
   useGraphStore.setState({ graphs: {} });
-  useWorkdirStore.setState({ statuses: {}, drafts: {} });
+  useWorkdirStore.setState({
+    statuses: {},
+    drafts: {},
+    pendingDiscard: null,
+    lastDiscard: null,
+  });
 });

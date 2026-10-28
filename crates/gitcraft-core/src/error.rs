@@ -43,6 +43,11 @@ pub enum GitError {
     /// The file changed since its diff was shown; the request was not applied.
     #[error("the diff changed since it was shown")]
     StaleDiff,
+
+    /// A discard cannot be undone because the file changed (or reappeared)
+    /// since; nothing was modified.
+    #[error("cannot undo the discard of {0}: it changed since")]
+    UndoConflict(String),
 }
 
 /// What went wrong, in terms the UI can explain. Each kind has a translated
@@ -61,6 +66,7 @@ pub enum ErrorKind {
     NothingToCommit,
     EmptyMessage,
     StaleDiff,
+    UndoConflict,
     Cancelled,
     TimedOut,
     Unknown,
@@ -79,6 +85,7 @@ impl GitError {
                 ..
             } => classify_output(stderr, stdout_tail),
             Self::StaleDiff => ErrorKind::StaleDiff,
+            Self::UndoConflict(_) => ErrorKind::UndoConflict,
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
     }
@@ -107,6 +114,7 @@ impl GitError {
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) | Self::TimedOut(_) => {
                 Some(self.to_string())
             }
+            Self::UndoConflict(_) => Some(self.to_string()),
             Self::GitNotFound | Self::PathNotFound(_) | Self::Cancelled | Self::StaleDiff => None,
         }
     }

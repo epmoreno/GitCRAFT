@@ -162,7 +162,31 @@ cabeceras `@@`) y lo aplica con
 `git apply --cached --whitespace=nowarn -` por stdin (con `-R`
 para unstage). Esta lógica es pura y se cubre con tests unitarios exhaustivos.
 
-## 6. Persistencia
+## 5b. Descartar cambios (la única operación que destruye trabajo)
+
+`gitcraft-core/src/ops/discard.rs`. Solo afecta a cambios **sin preparar**; el
+índice nunca se toca.
+
+1. **Confirmación siempre**, con lo que se pierde archivo por archivo
+   (`discard_preview`: +/− líneas, líneas de los archivos sin seguimiento,
+   archivos de los directorios).
+2. **Copia antes de tocar nada:**
+   - Archivos con seguimiento: blobs exactos (`hash-object -w --no-filters`,
+     más el modo y los enlaces simbólicos) para un «Deshacer» byte a byte, y una
+     entrada de stash «GitCRAFT: descarte de …» (`stash create` + `stash
+     store`) que sigue en `git stash list` aunque se cierre la app. Si todavía
+     no hay commits, git no puede crear el stash y quedan solo los blobs.
+   - Archivos sin seguimiento: se mueven a la Papelera (`NSFileManager
+     trashItemAtURL`, que devuelve dónde quedan); nunca se borran.
+3. **Descarte:** `git restore --worktree` para archivos completos y
+   `git apply -R` con el mismo generador de parches que el stage parcial para
+   hunks y líneas (con la misma comprobación de huella del diff).
+4. **Deshacer** (aviso de 10 s): restaura los blobs y devuelve los archivos de
+   la Papelera, pero solo si ninguno cambió desde el descarte; si no, no toca
+   nada (`UndoConflict`). Tras deshacer se elimina la entrada de stash, que ya
+   es redundante.
+
+
 
 `settings.json` en el `app_config_dir` de Tauri (en macOS,
 `~/Library/Application Support/dev.gitcraft.app/`) guarda:

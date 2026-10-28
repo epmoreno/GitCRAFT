@@ -46,6 +46,15 @@ export const commands = {
 	 *  one of the diff shown; a changed file is reported as `staleDiff`.
 	 */
 	applySelection: (id: number, path: string, oldPath: string | null, area: WorktreeArea, fingerprint: string, selection: HunkSelection_Deserialize[], action: SelectionAction) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("apply_selection", { id, path, oldPath, area, fingerprint, selection, action })),
+	/**  What discarding `target` would lose, to show before confirming. */
+	discardPreview: (id: number, target: DiscardTarget_Deserialize) => typedError<DiscardedFile_Serialize[], IpcError_Serialize>(__TAURI_INVOKE("discard_preview", { id, target })),
+	/**
+	 *  Discards unstaged changes (tracked files are backed up first; untracked
+	 *  files go to the Trash). Returns an id to undo it.
+	 */
+	discardChanges: (id: number, target: DiscardTarget_Deserialize) => typedError<DiscardResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("discard_changes", { id, target })),
+	/**  Puts back what a discard removed, if the files did not change since. */
+	undoDiscard: (id: number, undoId: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("undo_discard", { id, undoId })),
 };
 
 /** Events */
@@ -152,13 +161,92 @@ export type DiffLine_Serialize = {
 	noNewline: boolean,
 };
 
+/**  The outcome of a discard, with the id to undo it. */
+export type DiscardResult = DiscardResult_Serialize | DiscardResult_Deserialize;
+
+/**  The outcome of a discard, with the id to undo it. */
+export type DiscardResult_Deserialize = {
+	undoId: number,
+	files: DiscardedFile_Deserialize[],
+	/**  A stash entry "GitCRAFT: descarte de …" holds a copy. */
+	stashed: boolean,
+};
+
+/**  The outcome of a discard, with the id to undo it. */
+export type DiscardResult_Serialize = {
+	undoId: number,
+	files: DiscardedFile_Serialize[],
+	/**  A stash entry "GitCRAFT: descarte de …" holds a copy. */
+	stashed: boolean,
+};
+
+/**  What to discard. */
+export type DiscardTarget = DiscardTarget_Serialize | DiscardTarget_Deserialize;
+
+/**  What to discard. */
+export type DiscardTarget_Deserialize = 
+/**
+ *  Whole files: unstaged changes of tracked files, or untracked files
+ *  and directories (paths ending in `/`).
+ */
+{ kind: "files"; paths: string[] } | 
+/**  Selected hunks/lines of one tracked file's unstaged diff. */
+{ kind: "selection"; path: string; fingerprint: string; selection: HunkSelection_Deserialize[] };
+
+/**  What to discard. */
+export type DiscardTarget_Serialize = 
+/**
+ *  Whole files: unstaged changes of tracked files, or untracked files
+ *  and directories (paths ending in `/`).
+ */
+{ kind: "files"; paths: string[] } | 
+/**  Selected hunks/lines of one tracked file's unstaged diff. */
+{ kind: "selection"; path: string; fingerprint: string; selection: HunkSelection_Serialize[] };
+
+/**  What a discard loses, file by file (shown before confirming). */
+export type DiscardedFile = DiscardedFile_Serialize | DiscardedFile_Deserialize;
+
+/**  What a discard loses, file by file (shown before confirming). */
+export type DiscardedFile_Deserialize = {
+	path: string,
+	/**  Moved to the Trash instead of reverted. */
+	untracked: boolean,
+	/**
+	 *  Tracked: added lines that disappear and removed lines that come back
+	 *  (`None` for binary files).
+	 */
+	added?: number | null,
+	removed?: number | null,
+	/**  Untracked file: its number of lines (`None` if binary). */
+	lines?: number | null,
+	/**  Untracked directory: how many files it contains. */
+	fileCount?: number | null,
+};
+
+/**  What a discard loses, file by file (shown before confirming). */
+export type DiscardedFile_Serialize = {
+	path: string,
+	/**  Moved to the Trash instead of reverted. */
+	untracked: boolean,
+	/**
+	 *  Tracked: added lines that disappear and removed lines that come back
+	 *  (`None` for binary files).
+	 */
+	added: number | null,
+	removed: number | null,
+	/**  Untracked file: its number of lines (`None` if binary). */
+	lines: number | null,
+	/**  Untracked directory: how many files it contains. */
+	fileCount: number | null,
+};
+
 /**
  *  What went wrong, in terms the UI can explain. Each kind has a translated
  *  message (`errors.<kind>` in the i18n files).
  */
 export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | 
 /**  No user.name / user.email configured. */
-"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "cancelled" | "timedOut" | "unknown";
+"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "cancelled" | "timedOut" | "unknown";
 
 export type FileChange = FileChange_Serialize | FileChange_Deserialize;
 

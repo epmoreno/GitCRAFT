@@ -7,6 +7,7 @@ use tauri::ipc::Channel;
 
 use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
+use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
 use gitcraft_core::parse::commit::CommitDetails;
@@ -16,7 +17,7 @@ use gitcraft_core::patch::HunkSelection;
 
 use crate::error::IpcError;
 use crate::settings::RecentRepository;
-use crate::state::{AppState, GraphEvent, OpenedRepository, RepoId};
+use crate::state::{AppState, DiscardResult, GraphEvent, OpenedRepository, RepoId};
 
 #[tauri::command]
 #[specta::specta]
@@ -221,4 +222,38 @@ pub async fn apply_selection(
     state
         .apply_selection(id, path, old_path, area, fingerprint, selection, action)
         .await
+}
+
+/// What discarding `target` would lose, to show before confirming.
+#[tauri::command]
+#[specta::specta]
+pub async fn discard_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    target: DiscardTarget,
+) -> Result<Vec<DiscardedFile>, IpcError> {
+    state.discard_preview(id, target).await
+}
+
+/// Discards unstaged changes (tracked files are backed up first; untracked
+/// files go to the Trash). Returns an id to undo it.
+#[tauri::command]
+#[specta::specta]
+pub async fn discard_changes(
+    state: State<'_, AppState>,
+    id: RepoId,
+    target: DiscardTarget,
+) -> Result<DiscardResult, IpcError> {
+    state.discard(id, target).await
+}
+
+/// Puts back what a discard removed, if the files did not change since.
+#[tauri::command]
+#[specta::specta]
+pub async fn undo_discard(
+    state: State<'_, AppState>,
+    id: RepoId,
+    undo_id: u32,
+) -> Result<(), IpcError> {
+    state.undo_discard(id, undo_id).await
 }

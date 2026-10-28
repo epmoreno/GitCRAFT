@@ -143,6 +143,7 @@ function DiffBody({
 }) {
   const { t } = useTranslation();
   const applySelection = useWorkdirStore((s) => s.applySelection);
+  const requestDiscard = useWorkdirStore((s) => s.requestDiscard);
   const busy = useWorkdirStore((s) => s.statuses[repoId]?.busy ?? false);
   const [selection, setSelection] = useState<Selection>(new Map());
   const [anchor, setAnchor] = useState<{ hunk: number; line: number } | null>(
@@ -153,6 +154,21 @@ function DiffBody({
   const action =
     file.kind === "worktree" && file.area === "staged" ? "unstage" : "stage";
   const selectedCount = [...selection.values()].reduce((n, s) => n + s.size, 0);
+  // Only tracked files' unstaged changes can be discarded by hunk/line
+  // (untracked files go to the Trash whole, from the panel).
+  const discardable =
+    editable && file.kind === "worktree" && file.area === "unstaged";
+
+  const discard = (hunks: HunkSelection[]) => {
+    if (file.kind !== "worktree" || hunks.length === 0) return;
+    setSelection(new Map());
+    void requestDiscard(repoId, {
+      kind: "selection",
+      path: file.path,
+      fingerprint: diff.fingerprint,
+      selection: hunks,
+    });
+  };
 
   const submit = (hunks: HunkSelection[]) => {
     if (file.kind !== "worktree" || hunks.length === 0) return;
@@ -218,6 +234,16 @@ function DiffBody({
                   { count: selectedCount },
                 )}
               </button>
+              {discardable && (
+                <button
+                  type="button"
+                  className={styles.dangerButton}
+                  disabled={busy}
+                  onClick={() => discard(selectedHunks())}
+                >
+                  {t("diff.discardLines", { count: selectedCount })}
+                </button>
+              )}
               <button
                 type="button"
                 className={styles.showAll}
@@ -271,6 +297,16 @@ function DiffBody({
                           ? "diff.stageHunk"
                           : "diff.unstageHunk",
                       )}
+                    </button>
+                  )}
+                  {discardable && (
+                    <button
+                      type="button"
+                      className={`${styles.hunkAction} ${styles.hunkDanger}`}
+                      disabled={busy}
+                      onClick={() => discard([{ hunk: h, lines: null }])}
+                    >
+                      {t("diff.discardHunk")}
                     </button>
                   )}
                 </td>

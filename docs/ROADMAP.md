@@ -91,7 +91,10 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 - [x] **4.3 Stage/unstage por hunk y por línea.** Se genera un parche y se aplica
       con `git apply --cached` (con `-R` para unstage). *Tests:* hunks
       parciales, líneas sueltas y finales de archivo.
-- [ ] **4.4 Descartar cambios** con confirmación.
+- [x] **4.4 Descartar cambios** con confirmación.
+      Por archivo, hunk y línea. Copia previa en el stash y en blobs; los
+      archivos sin seguimiento van a la Papelera; «Deshacer» durante 10 s.
+      *Tests:* descartar + deshacer deja el contenido idéntico byte a byte.
 - [x] **4.5 Commit.** Resumen + descripción, contador de caracteres; amend
       precarga el último mensaje. Respeta hooks (`pre-commit`, `commit-msg`) y
       muestra su salida si fallan.

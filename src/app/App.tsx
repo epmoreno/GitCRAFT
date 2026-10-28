@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { DetailPanel } from "../features/detail/DetailPanel";
 import { GraphView } from "../features/graph/GraphView";
 import { useGraphStore } from "../features/graph/store";
+import { DiscardDialog, UndoToast } from "../features/workdir/Discard";
 import { useWorkdirStore } from "../features/workdir/store";
 import { onRepoChanged } from "../ipc";
 import { OpenErrorBanner } from "../features/repo/OpenErrorBanner";
@@ -58,8 +59,10 @@ export function App() {
           ) : (
             <StartPage />
           )}
+          <UndoToast />
         </main>
         <DetailPanel repoId={active?.id ?? null} />
+        <DiscardDialog />
       </div>
     </div>
   );

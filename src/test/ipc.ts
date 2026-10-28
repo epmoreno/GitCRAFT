@@ -36,6 +36,9 @@ export const ipc = {
   amendInfo: vi.mocked(commands.amendInfo),
   worktreeFileDiff: vi.mocked(commands.worktreeFileDiff),
   applySelection: vi.mocked(commands.applySelection),
+  discardPreview: vi.mocked(commands.discardPreview),
+  discardChanges: vi.mocked(commands.discardChanges),
+  undoDiscard: vi.mocked(commands.undoDiscard),
 };
 
 export function resetIpcMock() {
@@ -50,6 +53,7 @@ export function resetIpcMock() {
   ipc.createCommit.mockResolvedValue({ status: "ok", data: oid("9") });
   ipc.amendInfo.mockResolvedValue({ status: "ok", data: null });
   ipc.applySelection.mockResolvedValue({ status: "ok", data: null });
+  ipc.undoDiscard.mockResolvedValue({ status: "ok", data: null });
   ipc.commitChanges.mockResolvedValue({
     status: "ok",
     data: { base: null, files: [] },

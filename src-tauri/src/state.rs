@@ -7,6 +7,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use gitcraft_core::graph::{GraphLine, load_graph};
 use gitcraft_core::ops::commit::{CommitChanges, commit_changes, commit_details, commit_file_diff};
 use gitcraft_core::ops::commit_write::{AmendInfo, amend_info, compose_message, create_commit};
+use gitcraft_core::ops::discard::{
+    DiscardRecord, DiscardTarget, DiscardedFile, SystemTrash, Trash, discard, preview_discard,
+    undo_discard,
+};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
@@ -83,6 +87,8 @@ struct RepoSession {
     operation: Option<CancellationToken>,
     /// Reports external ref changes; `None` if watching failed.
     watcher: Option<RepoWatcher>,
+    /// Recent discards that can be undone, by id.
+    discards: Vec<(u32, DiscardRecord)>,
     /// Serializes this repository's writes (git's index.lock allows one).
     write_lock: Arc<tokio::sync::Mutex<()>>,
 }
@@ -90,6 +96,7 @@ struct RepoSession {
 #[derive(Default)]
 struct Inner {
     next_id: RepoId,
+    next_discard: u32,
     sessions: Vec<RepoSession>,
     settings: Settings,
 }
@@ -99,7 +106,22 @@ pub struct AppState {
     git: Option<Git>,
     settings_file: SettingsFile,
     notify_change: ChangeNotifier,
+    /// Where discarded untracked files go (the system Trash).
+    trash: Arc<dyn Trash>,
     inner: Mutex<Inner>,
+}
+
+/// Discards that can still be undone, newest last (per session).
+const UNDOABLE_DISCARDS: usize = 20;
+
+/// The outcome of a discard, with the id to undo it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscardResult {
+    pub undo_id: u32,
+    pub files: Vec<DiscardedFile>,
+    /// A stash entry "GitCRAFT: descarte de …" holds a copy.
+    pub stashed: bool,
 }
 
 impl AppState {
@@ -113,6 +135,7 @@ impl AppState {
             git,
             settings_file,
             notify_change,
+            trash: Arc::new(SystemTrash),
             inner: Mutex::new(Inner {
                 settings,
                 ..Inner::default()
@@ -154,6 +177,7 @@ impl AppState {
             operation: None,
             watcher: self.watch(id, &info),
             write_lock: Arc::default(),
+            discards: Vec::new(),
         });
         Ok(OpenedRepository { id, info })
     }
@@ -365,6 +389,81 @@ impl AppState {
             .await
         })
         .await
+    }
+
+    /// What discarding `target` would lose (shown before confirming).
+    pub async fn discard_preview(
+        &self,
+        id: RepoId,
+        target: DiscardTarget,
+    ) -> Result<Vec<DiscardedFile>, IpcError> {
+        let git = self.git()?;
+        let path = self.session_path(id)?;
+        Ok(preview_discard(git, &path, &target, &CancellationToken::new()).await?)
+    }
+
+    /// Discards `target` after backing it up; returns an id for `undo_discard`.
+    pub async fn discard(
+        &self,
+        id: RepoId,
+        target: DiscardTarget,
+    ) -> Result<DiscardResult, IpcError> {
+        let git = self.git()?;
+        let trash = Arc::clone(&self.trash);
+        let cancel = CancellationToken::new();
+        let (files, record) = self
+            .write(id, |repo| async move {
+                discard(git, &repo, &target, trash.as_ref(), &cancel).await
+            })
+            .await?;
+        let stashed = record.stash.is_some();
+        let mut inner = self.lock();
+        inner.next_discard += 1;
+        let undo_id = inner.next_discard;
+        let session = inner
+            .sessions
+            .iter_mut()
+            .find(|s| s.id == id)
+            .ok_or(GitError::Cancelled)?;
+        session.discards.push((undo_id, record));
+        if session.discards.len() > UNDOABLE_DISCARDS {
+            session.discards.remove(0);
+        }
+        Ok(DiscardResult {
+            undo_id,
+            files,
+            stashed,
+        })
+    }
+
+    /// Restores what discard `undo_id` removed, byte for byte.
+    pub async fn undo_discard(&self, id: RepoId, undo_id: u32) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let record = {
+            let inner = self.lock();
+            inner
+                .sessions
+                .iter()
+                .find(|s| s.id == id)
+                .and_then(|s| s.discards.iter().find(|(d, _)| *d == undo_id))
+                .map(|(_, r)| r.clone())
+                .ok_or(GitError::Cancelled)?
+        };
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            undo_discard(git, &repo, &record, &cancel).await
+        })
+        .await?;
+        if let Some(session) = self.lock().sessions.iter_mut().find(|s| s.id == id) {
+            session.discards.retain(|(d, _)| *d != undo_id);
+        }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    fn with_trash(mut self, trash: Arc<dyn Trash>) -> Self {
+        self.trash = trash;
+        self
     }
 
     /// Working directory and index status of session `id`.
@@ -679,6 +778,56 @@ mod tests {
         let status = f.state.working_status(id).await.expect("status");
         assert_eq!(status.staged.len(), 1);
         assert!(status.unstaged.is_empty());
+    }
+
+    /// Moves "trashed" files into a temporary directory.
+    struct TempTrash(tempfile::TempDir, std::sync::atomic::AtomicU32);
+
+    impl Trash for TempTrash {
+        fn trash(&self, path: &Path) -> std::io::Result<PathBuf> {
+            let n = self.1.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let to = self.0.path().join(n.to_string());
+            std::fs::rename(path, &to)?;
+            Ok(to)
+        }
+    }
+
+    #[tokio::test]
+    async fn discards_and_undoes_once() {
+        let mut f = fixture();
+        f.state = f.state.with_trash(Arc::new(TempTrash(
+            tempfile::tempdir().expect("tempdir"),
+            Default::default(),
+        )));
+        let (repo, _) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        repo.write_file("main.txt", "b\ne\nlocal edit\n");
+        repo.write_file("scratch.txt", "x");
+        let target = DiscardTarget::Files {
+            paths: vec!["main.txt".into(), "scratch.txt".into()],
+        };
+        let preview = f
+            .state
+            .discard_preview(id, target.clone())
+            .await
+            .expect("preview");
+        assert_eq!(preview.len(), 2);
+
+        let result = f.state.discard(id, target).await.expect("discard");
+        assert!(result.stashed);
+        assert!(f.state.working_status(id).await.expect("status").is_clean());
+
+        f.state
+            .undo_discard(id, result.undo_id)
+            .await
+            .expect("undo");
+        assert_eq!(
+            std::fs::read_to_string(repo.path().join("main.txt")).expect("read"),
+            "b\ne\nlocal edit\n"
+        );
+        assert!(repo.path().join("scratch.txt").exists());
+        // Each discard can be undone once.
+        assert!(f.state.undo_discard(id, result.undo_id).await.is_err());
     }
 
     #[tokio::test]

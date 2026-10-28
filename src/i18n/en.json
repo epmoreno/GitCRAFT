@@ -68,7 +68,8 @@
     "identityUnknown": "Git doesn't know who you are. Set your name and email with “git config --global user.name \"Your Name\"” and “git config --global user.email you@example.com”.",
     "nothingToCommit": "There are no staged changes to commit.",
     "emptyMessage": "The commit message is empty.",
-    "staleDiff": "The file changed since its diff was shown. It has been refreshed: select again what you want."
+    "staleDiff": "The file changed since its diff was shown. It has been refreshed: select again what you want.",
+    "undoConflict": "A file changed since the discard, so nothing was touched. The copy is still in the stash (git stash list) and untracked files are in the Trash."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -151,7 +152,10 @@
     "unstageLines_other": "Unstage {{count}} lines",
     "clearSelection": "Clear selection",
     "selectLine": "Select line {{line}}",
-    "selectionHint": "Tick lines to stage them on their own (Shift+click for a range)."
+    "selectionHint": "Tick lines to stage them on their own (Shift+click for a range).",
+    "discardHunk": "Discard hunk",
+    "discardLines_one": "Discard {{count}} line",
+    "discardLines_other": "Discard {{count}} lines"
   },
   "workdir": {
     "row": "Uncommitted changes",
@@ -183,7 +187,10 @@
     "stageFile": "Stage {{path}}",
     "unstageFile": "Unstage {{path}}",
     "opFailed": "The operation couldn't be completed.",
-    "viewChanges": "Show changes of {{path}}"
+    "viewChanges": "Show changes of {{path}}",
+    "discard": "Discard",
+    "discardAll": "Discard all",
+    "discardFile": "Discard the changes of {{path}}"
   },
   "commit": {
     "label": "Create commit",
@@ -207,5 +214,31 @@
     "publishedRecovery": "The original commit is not lost: it remains reachable in the reflog.",
     "publishedConfirm": "Amend anyway",
     "cancel": "Cancel"
+  },
+  "discard": {
+    "title": "Discard changes?",
+    "titleLines": "Discard lines?",
+    "tracked_one": "The unstaged changes of {{count}} file will be lost (+{{added}} −{{removed}} lines).",
+    "tracked_other": "The unstaged changes of {{count}} files will be lost (+{{added}} −{{removed}} lines).",
+    "lines_one": "{{count}} selected line of {{path}} will be discarded (+{{added}} −{{removed}}).",
+    "lines_other": "{{count}} selected lines of {{path}} will be discarded (+{{added}} −{{removed}}).",
+    "untracked_one": "{{count}} untracked file will go to the Trash.",
+    "untracked_other": "{{count}} untracked items will go to the Trash.",
+    "fileCount_one": "{{count}} file",
+    "fileCount_other": "{{count}} files",
+    "lineCount_one": "{{count}} line",
+    "lineCount_other": "{{count}} lines",
+    "more_one": "and {{count}} more",
+    "more_other": "and {{count}} more",
+    "backup": "A copy is saved in the stash first (“GitCRAFT: descarte de …”) and you can undo it for {{seconds}} seconds.",
+    "trashRecovery": "Untracked files can be recovered from the Trash.",
+    "stagedKept": "Staged changes are not touched.",
+    "confirm": "Discard",
+    "cancel": "Cancel",
+    "done_one": "Discarded changes in {{count}} file.",
+    "done_other": "Discarded changes in {{count}} files.",
+    "inStash": "A copy is in the stash.",
+    "undo": "Undo",
+    "undoFailed": "Couldn't undo the discard."
   }
 }

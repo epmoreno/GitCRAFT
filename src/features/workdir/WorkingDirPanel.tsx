@@ -12,6 +12,7 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
   const entry = useWorkdirStore((s) => s.statuses[repoId]);
   const stage = useWorkdirStore((s) => s.stage);
   const unstage = useWorkdirStore((s) => s.unstage);
+  const requestDiscard = useWorkdirStore((s) => s.requestDiscard);
   const dismissError = useWorkdirStore((s) => s.dismissError);
   const status = entry?.status ?? null;
   const busy = entry?.busy ?? false;
@@ -65,14 +66,29 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
         title={t("workdir.unstaged")}
         count={unstaged.length}
         action={
-          <button
-            type="button"
-            className={styles.action}
-            disabled={busy}
-            onClick={() => void stage(repoId, null)}
-          >
-            {t("workdir.stageAll")}
-          </button>
+          <>
+            <button
+              type="button"
+              className={`${styles.action} ${styles.danger}`}
+              disabled={busy}
+              onClick={() =>
+                void requestDiscard(repoId, {
+                  kind: "files",
+                  paths: unstaged.map((e) => e.path),
+                })
+              }
+            >
+              {t("workdir.discardAll")}
+            </button>
+            <button
+              type="button"
+              className={styles.action}
+              disabled={busy}
+              onClick={() => void stage(repoId, null)}
+            >
+              {t("workdir.stageAll")}
+            </button>
+          </>
         }
       >
         {unstaged.map((e) => (
@@ -85,6 +101,9 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
             actionTitle={t("workdir.stageFile", { path: e.path })}
             disabled={busy}
             onAction={() => void stage(repoId, [e.path])}
+            onDiscard={() =>
+              void requestDiscard(repoId, { kind: "files", paths: [e.path] })
+            }
           />
         ))}
       </Section>
@@ -185,6 +204,7 @@ function FileRow({
   actionTitle,
   disabled,
   onAction,
+  onDiscard,
 }: {
   repoId: number;
   area: WorktreeArea;
@@ -193,6 +213,8 @@ function FileRow({
   actionTitle: string;
   disabled: boolean;
   onAction: () => void;
+  /** Unstaged and untracked files only. */
+  onDiscard?: () => void;
 }) {
   const { t } = useTranslation();
   const open = useGraphStore((s) => s.openFileDiff);
@@ -227,6 +249,18 @@ function FileRow({
         </button>
       ) : (
         <PathLabel path={entry.path} oldPath={entry.oldPath} />
+      )}
+      {onDiscard && (
+        <button
+          type="button"
+          className={`${styles.rowAction} ${styles.danger}`}
+          aria-label={t("workdir.discardFile", { path: entry.path })}
+          title={t("workdir.discardFile", { path: entry.path })}
+          disabled={disabled}
+          onClick={onDiscard}
+        >
+          {t("workdir.discard")}
+        </button>
       )}
       <button
         type="button"

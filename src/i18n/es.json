@@ -68,7 +68,8 @@
     "identityUnknown": "Git no sabe quién eres. Configura tu nombre y tu email con «git config --global user.name \"Tu nombre\"» y «git config --global user.email tu@email».",
     "nothingToCommit": "No hay cambios preparados para el commit.",
     "emptyMessage": "El mensaje del commit está vacío.",
-    "staleDiff": "El archivo cambió desde que se mostró el diff. Se ha actualizado: vuelve a seleccionar lo que quieras."
+    "staleDiff": "El archivo cambió desde que se mostró el diff. Se ha actualizado: vuelve a seleccionar lo que quieras.",
+    "undoConflict": "Algún archivo ha cambiado desde el descarte, así que no se ha tocado nada. La copia sigue en el stash (git stash list) y los archivos sin seguimiento, en la Papelera."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",
@@ -151,7 +152,10 @@
     "unstageLines_other": "Quitar {{count}} líneas del stage",
     "clearSelection": "Deseleccionar",
     "selectLine": "Seleccionar la línea {{line}}",
-    "selectionHint": "Marca líneas para prepararlas por separado (Mayús+clic para un rango)."
+    "selectionHint": "Marca líneas para prepararlas por separado (Mayús+clic para un rango).",
+    "discardHunk": "Descartar hunk",
+    "discardLines_one": "Descartar {{count}} línea",
+    "discardLines_other": "Descartar {{count}} líneas"
   },
   "workdir": {
     "row": "Cambios sin confirmar",
@@ -183,7 +187,10 @@
     "stageFile": "Preparar {{path}}",
     "unstageFile": "Quitar {{path}} del stage",
     "opFailed": "No se pudo completar la operación.",
-    "viewChanges": "Ver cambios de {{path}}"
+    "viewChanges": "Ver cambios de {{path}}",
+    "discard": "Descartar",
+    "discardAll": "Descartar todo",
+    "discardFile": "Descartar los cambios de {{path}}"
   },
   "commit": {
     "label": "Crear commit",
@@ -207,5 +214,31 @@
     "publishedRecovery": "El commit original no se pierde: sigue accesible en el reflog.",
     "publishedConfirm": "Modificar de todos modos",
     "cancel": "Cancelar"
+  },
+  "discard": {
+    "title": "¿Descartar cambios?",
+    "titleLines": "¿Descartar líneas?",
+    "tracked_one": "Se perderán los cambios sin preparar de {{count}} archivo (+{{added}} −{{removed}} líneas).",
+    "tracked_other": "Se perderán los cambios sin preparar de {{count}} archivos (+{{added}} −{{removed}} líneas).",
+    "lines_one": "Se descartará {{count}} línea seleccionada de {{path}} (+{{added}} −{{removed}}).",
+    "lines_other": "Se descartarán {{count}} líneas seleccionadas de {{path}} (+{{added}} −{{removed}}).",
+    "untracked_one": "{{count}} archivo sin seguimiento irá a la Papelera.",
+    "untracked_other": "{{count}} elementos sin seguimiento irán a la Papelera.",
+    "fileCount_one": "{{count}} archivo",
+    "fileCount_other": "{{count}} archivos",
+    "lineCount_one": "{{count}} línea",
+    "lineCount_other": "{{count}} líneas",
+    "more_one": "y {{count}} más",
+    "more_other": "y {{count}} más",
+    "backup": "Antes de descartar se guarda una copia en el stash («GitCRAFT: descarte de …») y podrás deshacerlo durante {{seconds}} segundos.",
+    "trashRecovery": "Los archivos sin seguimiento se pueden recuperar desde la Papelera.",
+    "stagedKept": "Los cambios preparados no se tocan.",
+    "confirm": "Descartar",
+    "cancel": "Cancelar",
+    "done_one": "Cambios descartados en {{count}} archivo.",
+    "done_other": "Cambios descartados en {{count}} archivos.",
+    "inStash": "Copia guardada en el stash.",
+    "undo": "Deshacer",
+    "undoFailed": "No se pudo deshacer el descarte."
   }
 }

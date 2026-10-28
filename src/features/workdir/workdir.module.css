@@ -334,3 +334,94 @@
 .fileOpen {
   background: color-mix(in srgb, var(--accent) 16%, var(--surface-1));
 }
+
+.danger {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  color: var(--danger);
+}
+
+/* Discard confirmation */
+.lossList {
+  max-height: 180px;
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2);
+  overflow-y: auto;
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  list-style: none;
+}
+
+.lossItem {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+}
+
+.lossPath {
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+
+.lossDetail {
+  flex: none;
+  color: var(--text-faint);
+}
+
+.lossMore {
+  color: var(--text-faint);
+  font-size: var(--font-size-small);
+}
+
+/* "Discarded — Undo" toast */
+.toast {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  max-width: min(560px, 100% - 32px);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-3);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+  transform: translateX(-50%);
+}
+
+.toast p {
+  margin: 0;
+}
+
+.toast pre {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+}
+
+.toastNote {
+  color: var(--text-faint);
+  font-size: var(--font-size-small);
+}
+
+.toastUndo {
+  height: 26px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.toastClose {
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 16px;
+}

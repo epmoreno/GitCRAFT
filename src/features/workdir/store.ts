@@ -2,6 +2,8 @@ import { create } from "zustand";
 import {
   commands,
   type CommandError,
+  type DiscardedFile,
+  type DiscardTarget,
   type HunkSelection,
   type SelectionAction,
   type WorkingStatus,
@@ -34,8 +36,32 @@ export type Draft = { summary: string; description: string; amend: boolean };
 
 const EMPTY_DRAFT: Draft = { summary: "", description: "", amend: false };
 
+/** A discard waiting for the user's confirmation. */
+export type PendingDiscard = {
+  repoId: number;
+  target: DiscardTarget;
+  files: DiscardedFile[];
+};
+
+/** The last discard, undoable for a few seconds. */
+export type LastDiscard = {
+  repoId: number;
+  undoId: number;
+  files: DiscardedFile[];
+  stashed: boolean;
+  error: CommandError | null;
+};
+
 type WorkdirState = {
   statuses: Record<number, RepoStatus>;
+  pendingDiscard: PendingDiscard | null;
+  lastDiscard: LastDiscard | null;
+  /** Shows what discarding `target` would lose and asks to confirm. */
+  requestDiscard: (repoId: number, target: DiscardTarget) => Promise<void>;
+  cancelDiscard: () => void;
+  confirmDiscard: () => Promise<void>;
+  undoLastDiscard: () => Promise<void>;
+  dismissLastDiscard: () => void;
   drafts: Record<number, Draft>;
   /** Re-reads the working directory status (cheap; safe to call often). */
   refresh: (repoId: number) => Promise<void>;
@@ -89,6 +115,58 @@ export const useWorkdirStore = create<WorkdirState>()((set, get) => {
   return {
     statuses: {},
     drafts: {},
+    pendingDiscard: null,
+    lastDiscard: null,
+
+    requestDiscard: async (repoId, target) => {
+      const result = await commands.discardPreview(repoId, target);
+      if (result.status === "ok") {
+        set({ pendingDiscard: { repoId, target, files: result.data } });
+      } else {
+        update(repoId, { opError: result.error });
+        await get().refresh(repoId);
+      }
+    },
+
+    cancelDiscard: () => set({ pendingDiscard: null }),
+
+    confirmDiscard: async () => {
+      const pending = get().pendingDiscard;
+      if (!pending) return;
+      const { repoId, target } = pending;
+      set({ pendingDiscard: null });
+      update(repoId, { busy: true, opError: null });
+      const result = await commands.discardChanges(repoId, target);
+      update(repoId, {
+        busy: false,
+        opError: result.status === "error" ? result.error : null,
+      });
+      if (result.status === "ok") {
+        set({
+          lastDiscard: {
+            repoId,
+            undoId: result.data.undoId,
+            files: result.data.files,
+            stashed: result.data.stashed,
+            error: null,
+          },
+        });
+      }
+      await get().refresh(repoId);
+    },
+
+    undoLastDiscard: async () => {
+      const last = get().lastDiscard;
+      if (!last) return;
+      const result = await commands.undoDiscard(last.repoId, last.undoId);
+      set({
+        lastDiscard:
+          result.status === "ok" ? null : { ...last, error: result.error },
+      });
+      await get().refresh(last.repoId);
+    },
+
+    dismissLastDiscard: () => set({ lastDiscard: null }),
 
     stage: (repoId, paths) =>
       run(repoId, () => commands.stageFiles(repoId, paths)),
