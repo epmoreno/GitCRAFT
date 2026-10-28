@@ -24,6 +24,7 @@ specta-typescript = "=0.0.13"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
+tokio.workspace = true
 
 [dev-dependencies]
 gitcraft-core = { workspace = true, features = ["specta", "testing"] }

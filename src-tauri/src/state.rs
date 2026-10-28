@@ -11,6 +11,7 @@ use gitcraft_core::ops::maintenance::{
 };
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::repo::{self, RepoInfo};
+use gitcraft_core::ops::stage;
 use gitcraft_core::ops::status::working_status;
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
@@ -77,6 +78,8 @@ struct RepoSession {
     operation: Option<CancellationToken>,
     /// Reports external ref changes; `None` if watching failed.
     watcher: Option<RepoWatcher>,
+    /// Serializes this repository's writes (git's index.lock allows one).
+    write_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 #[derive(Default)]
@@ -145,6 +148,7 @@ impl AppState {
             graph_load: None,
             operation: None,
             watcher: self.watch(id, &info),
+            write_lock: Arc::default(),
         });
         Ok(OpenedRepository { id, info })
     }
@@ -225,6 +229,66 @@ impl AppState {
         let repo = self.session_path(id)?;
         let cancel = CancellationToken::new();
         Ok(commit_file_diff(git, &repo, oid, path, old_path, full, &cancel).await?)
+    }
+
+    /// Runs a write in session `id`'s repository: one at a time, with the
+    /// watcher held back until it ends (it then reports the change once).
+    async fn write<T, Fut>(
+        &self,
+        id: RepoId,
+        op: impl FnOnce(PathBuf) -> Fut,
+    ) -> Result<T, IpcError>
+    where
+        Fut: std::future::Future<Output = gitcraft_core::Result<T>>,
+    {
+        let (path, lock, quiet) = {
+            let inner = self.lock();
+            let session = inner
+                .sessions
+                .iter()
+                .find(|s| s.id == id)
+                .ok_or(GitError::Cancelled)?;
+            (
+                PathBuf::from(&session.info.path),
+                Arc::clone(&session.write_lock),
+                session.watcher.as_ref().map(RepoWatcher::suppress),
+            )
+        };
+        let _turn = lock.lock().await;
+        let result = op(path).await;
+        drop(quiet);
+        Ok(result?)
+    }
+
+    fn git(&self) -> Result<&Git, IpcError> {
+        Ok(self.git.as_ref().ok_or(GitError::GitNotFound)?)
+    }
+
+    /// Stages files (all changes when `paths` is `None`).
+    pub async fn stage(&self, id: RepoId, paths: Option<Vec<String>>) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            match paths {
+                Some(paths) => stage::stage(git, &repo, &paths, &cancel).await,
+                None => stage::stage_all(git, &repo, &cancel).await,
+            }
+        })
+        .await
+    }
+
+    /// Unstages files (everything when `paths` is `None`). The working tree
+    /// is not touched.
+    pub async fn unstage(&self, id: RepoId, paths: Option<Vec<String>>) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            match paths {
+                Some(paths) => stage::unstage(git, &repo, &paths, &cancel).await,
+                None => stage::unstage_all(git, &repo, &cancel).await,
+            }
+        })
+        .await
     }
 
     /// Working directory and index status of session `id`.
@@ -419,6 +483,64 @@ mod tests {
         repo.commit_file("y.txt", "y", "after closing").await;
         settle().await;
         assert_eq!(*f.changed.lock().expect("lock"), [id]);
+    }
+
+    #[tokio::test]
+    async fn stages_and_unstages_files_of_a_session() {
+        let f = fixture();
+        let (repo, _) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        repo.write_file("a.txt", "a");
+        repo.write_file("b.txt", "b");
+
+        f.state
+            .stage(id, Some(vec!["a.txt".into()]))
+            .await
+            .expect("stage");
+        let s = f.state.working_status(id).await.expect("status");
+        assert_eq!(s.staged.len(), 1);
+        assert_eq!(s.untracked.len(), 1);
+
+        f.state.stage(id, None).await.expect("stage all");
+        assert_eq!(
+            f.state
+                .working_status(id)
+                .await
+                .expect("status")
+                .staged
+                .len(),
+            2
+        );
+
+        f.state.unstage(id, None).await.expect("unstage all");
+        let s = f.state.working_status(id).await.expect("status");
+        assert!(s.staged.is_empty());
+        assert_eq!(s.untracked.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn concurrent_writes_wait_for_each_other() {
+        let f = fixture();
+        let (repo, _) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        for i in 0..4 {
+            repo.write_file(&format!("f{i}.txt"), "x");
+        }
+        // Without the write queue these would race for index.lock.
+        let stage = |i: usize| f.state.stage(id, Some(vec![format!("f{i}.txt")]));
+        let (a, b, c, d) = tokio::join!(stage(0), stage(1), stage(2), stage(3));
+        for result in [a, b, c, d] {
+            result.expect("stage");
+        }
+        assert_eq!(
+            f.state
+                .working_status(id)
+                .await
+                .expect("status")
+                .staged
+                .len(),
+            4
+        );
     }
 
     #[tokio::test]

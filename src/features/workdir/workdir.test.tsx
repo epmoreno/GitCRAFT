@@ -13,6 +13,7 @@ import { DetailPanel } from "../detail/DetailPanel";
 import { GraphView } from "../graph/GraphView";
 import { useGraphStore, WORKTREE } from "../graph/store";
 import { changeCounts, useWorkdirStore } from "./store";
+import { WorkingDirPanel } from "./WorkingDirPanel";
 
 const info = {
   path: "/src/sample",
@@ -128,5 +129,107 @@ describe("uncommitted changes", () => {
       within(unstaged).getByLabelText("Sin seguimiento"),
     ).toHaveTextContent("?");
     expect(within(unstaged).getByLabelText("Modificado")).toBeVisible();
+  });
+});
+
+describe("staging files", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+    // Re-reads after each action keep returning the same busy status.
+    ipc.workingStatus.mockResolvedValue({ status: "ok", data: busyStatus() });
+    useWorkdirStore.setState({
+      statuses: { 1: { status: busyStatus(), error: null } },
+    });
+  });
+
+  const panel = () => {
+    render(<WorkingDirPanel repoId={1} />);
+    return {
+      unstaged: screen.getByRole("region", { name: "Sin preparar" }),
+      staged: screen.getByRole("region", { name: "Preparados" }),
+    };
+  };
+
+  it("stages and unstages single files, then re-reads the status", async () => {
+    const user = userEvent.setup();
+    const { unstaged, staged } = panel();
+    const reads = ipc.workingStatus.mock.calls.length;
+
+    await user.click(
+      within(unstaged).getByRole("button", { name: "Preparar README.md" }),
+    );
+    expect(ipc.stageFiles).toHaveBeenCalledWith(1, ["README.md"]);
+    expect(ipc.workingStatus.mock.calls.length).toBe(reads + 1);
+
+    await user.click(
+      within(unstaged).getByRole("button", { name: "Preparar notes/" }),
+    );
+    expect(ipc.stageFiles).toHaveBeenLastCalledWith(1, ["notes/"]);
+
+    await user.click(
+      within(staged).getByRole("button", {
+        name: "Quitar src/app.ts del stage",
+      }),
+    );
+    expect(ipc.unstageFiles).toHaveBeenCalledWith(1, ["src/app.ts"]);
+  });
+
+  it("unstages a rename under both names", async () => {
+    const user = userEvent.setup();
+    const { staged } = panel();
+    await user.click(
+      within(staged).getByRole("button", {
+        name: "Quitar docs/new name.md del stage",
+      }),
+    );
+    expect(ipc.unstageFiles).toHaveBeenCalledWith(1, [
+      "docs/new name.md",
+      "docs/old.md",
+    ]);
+  });
+
+  it("stages or unstages everything at once", async () => {
+    const user = userEvent.setup();
+    const { unstaged, staged } = panel();
+    await user.click(
+      within(unstaged).getByRole("button", { name: "Preparar todo" }),
+    );
+    expect(ipc.stageFiles).toHaveBeenCalledWith(1, null);
+    await user.click(
+      within(staged).getByRole("button", { name: "Quitar todo" }),
+    );
+    expect(ipc.unstageFiles).toHaveBeenCalledWith(1, null);
+  });
+
+  it("stages a file on double click", async () => {
+    const user = userEvent.setup();
+    const { unstaged } = panel();
+    await user.dblClick(within(unstaged).getByText("README.md"));
+    expect(ipc.stageFiles).toHaveBeenCalledWith(1, ["README.md"]);
+  });
+
+  it("does not offer staging for conflicts", () => {
+    panel();
+    const conflicts = screen.getByRole("region", { name: "Conflictos" });
+    expect(within(conflicts).queryByRole("button")).toBeNull();
+  });
+
+  it("shows failures with git's output until dismissed", async () => {
+    const user = userEvent.setup();
+    ipc.stageFiles.mockResolvedValue({
+      status: "error",
+      error: commandError(
+        "unknown",
+        "$ git add\nfatal: Unable to create index.lock",
+      ),
+    });
+    const { unstaged } = panel();
+    await user.click(
+      within(unstaged).getByRole("button", { name: "Preparar README.md" }),
+    );
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).getByText(/index.lock/)).toHaveClass("selectable");
+    await user.click(within(alert).getByRole("button", { name: "Cerrar" }));
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

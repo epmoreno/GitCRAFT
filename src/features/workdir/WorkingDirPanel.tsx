@@ -8,7 +8,11 @@ import styles from "./workdir.module.css";
 export function WorkingDirPanel({ repoId }: { repoId: number }) {
   const { t } = useTranslation();
   const entry = useWorkdirStore((s) => s.statuses[repoId]);
+  const stage = useWorkdirStore((s) => s.stage);
+  const unstage = useWorkdirStore((s) => s.unstage);
+  const dismissError = useWorkdirStore((s) => s.dismissError);
   const status = entry?.status ?? null;
+  const busy = entry?.busy ?? false;
 
   if (!status) {
     return entry?.error ? (
@@ -27,6 +31,24 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
   return (
     <div className={styles.panel}>
       <h2 className={styles.title}>{t("workdir.row")}</h2>
+      {entry?.opError && (
+        <div className={styles.opError} role="alert">
+          <p>
+            {t("workdir.opFailed")}{" "}
+            {t(`errors.${entry.opError.kind}`, { path: "" })}
+          </p>
+          {entry.opError.details && (
+            <pre className="selectable">{entry.opError.details}</pre>
+          )}
+          <button
+            type="button"
+            className={styles.action}
+            onClick={() => dismissError(repoId)}
+          >
+            {t("errors.dismiss")}
+          </button>
+        </div>
+      )}
       {status.conflicted.length > 0 && (
         <Section
           title={t("workdir.conflicts")}
@@ -37,14 +59,57 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
           ))}
         </Section>
       )}
-      <Section title={t("workdir.unstaged")} count={unstaged.length}>
+      <Section
+        title={t("workdir.unstaged")}
+        count={unstaged.length}
+        action={
+          <button
+            type="button"
+            className={styles.action}
+            disabled={busy}
+            onClick={() => void stage(repoId, null)}
+          >
+            {t("workdir.stageAll")}
+          </button>
+        }
+      >
         {unstaged.map((e) => (
-          <FileRow key={`u:${e.path}`} entry={e} />
+          <FileRow
+            key={`u:${e.path}`}
+            entry={e}
+            actionLabel={t("workdir.stage")}
+            actionTitle={t("workdir.stageFile", { path: e.path })}
+            disabled={busy}
+            onAction={() => void stage(repoId, [e.path])}
+          />
         ))}
       </Section>
-      <Section title={t("workdir.staged")} count={status.staged.length}>
+      <Section
+        title={t("workdir.staged")}
+        count={status.staged.length}
+        action={
+          <button
+            type="button"
+            className={styles.action}
+            disabled={busy}
+            onClick={() => void unstage(repoId, null)}
+          >
+            {t("workdir.unstageAll")}
+          </button>
+        }
+      >
         {status.staged.map((e) => (
-          <FileRow key={`s:${e.path}`} entry={e} />
+          <FileRow
+            key={`s:${e.path}`}
+            entry={e}
+            actionLabel={t("workdir.unstage")}
+            actionTitle={t("workdir.unstageFile", { path: e.path })}
+            disabled={busy}
+            // A staged rename lives under both names in the index.
+            onAction={() =>
+              void unstage(repoId, e.oldPath ? [e.path, e.oldPath] : [e.path])
+            }
+          />
         ))}
       </Section>
     </div>
@@ -54,10 +119,12 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
 function Section({
   title,
   count,
+  action,
   children,
 }: {
   title: string;
   count: number;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
@@ -65,6 +132,9 @@ function Section({
     <section className={styles.section} aria-label={title}>
       <h3 className={styles.sectionTitle}>
         {title} <span className={styles.count}>{count}</span>
+        {count > 0 && action && (
+          <span className={styles.sectionAction}>{action}</span>
+        )}
       </h3>
       {count === 0 ? (
         <p className={styles.muted}>{t("workdir.none")}</p>
@@ -100,11 +170,33 @@ export function PathLabel({
   );
 }
 
-function FileRow({ entry }: { entry: StatusEntry }) {
+function FileRow({
+  entry,
+  actionLabel,
+  actionTitle,
+  disabled,
+  onAction,
+}: {
+  entry: StatusEntry;
+  actionLabel: string;
+  actionTitle: string;
+  disabled: boolean;
+  onAction: () => void;
+}) {
   return (
-    <li className={styles.file}>
+    <li className={styles.file} onDoubleClick={disabled ? undefined : onAction}>
       <StatusLetter status={entry.status} />
       <PathLabel path={entry.path} oldPath={entry.oldPath} />
+      <button
+        type="button"
+        className={styles.rowAction}
+        aria-label={actionTitle}
+        title={actionTitle}
+        disabled={disabled}
+        onClick={onAction}
+      >
+        {actionLabel}
+      </button>
     </li>
   );
 }

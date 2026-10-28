@@ -157,6 +157,13 @@
       "addedByThem": "added by them",
       "deletedByUs": "deleted by us",
       "deletedByThem": "deleted by them"
-    }
+    },
+    "stage": "Stage",
+    "unstage": "Unstage",
+    "stageAll": "Stage all",
+    "unstageAll": "Unstage all",
+    "stageFile": "Stage {{path}}",
+    "unstageFile": "Unstage {{path}}",
+    "opFailed": "The operation couldn't be completed."
   }
 }

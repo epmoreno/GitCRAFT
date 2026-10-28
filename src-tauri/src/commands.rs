@@ -134,3 +134,26 @@ pub async fn working_status(
 ) -> Result<WorkingStatus, IpcError> {
     state.working_status(id).await
 }
+
+/// Stages files; `paths: null` stages every change.
+#[tauri::command]
+#[specta::specta]
+pub async fn stage_files(
+    state: State<'_, AppState>,
+    id: RepoId,
+    paths: Option<Vec<String>>,
+) -> Result<(), IpcError> {
+    state.stage(id, paths).await
+}
+
+/// Unstages files; `paths: null` unstages everything. Never touches the
+/// working tree.
+#[tauri::command]
+#[specta::specta]
+pub async fn unstage_files(
+    state: State<'_, AppState>,
+    id: RepoId,
+    paths: Option<Vec<String>>,
+) -> Result<(), IpcError> {
+    state.unstage(id, paths).await
+}

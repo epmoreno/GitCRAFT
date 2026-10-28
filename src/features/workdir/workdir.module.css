@@ -170,3 +170,58 @@
   font-size: var(--font-size-small);
   white-space: nowrap;
 }
+
+.sectionAction {
+  margin-left: auto;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.action,
+.rowAction {
+  padding: 1px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: transparent;
+  font-size: var(--font-size-small);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.action:hover:not(:disabled),
+.rowAction:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+
+.action:disabled,
+.rowAction:disabled {
+  opacity: 0.5;
+}
+
+/* Row actions appear on hover or keyboard focus to keep the list calm. */
+.rowAction {
+  opacity: 0;
+}
+
+.file:hover .rowAction,
+.rowAction:focus-visible {
+  opacity: 1;
+}
+
+.opError {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.opError p {
+  margin: 0 0 var(--space-2);
+}
+
+.opError pre {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+}

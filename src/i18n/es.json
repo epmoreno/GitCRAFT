@@ -157,6 +157,13 @@
       "addedByThem": "añadido por ellos",
       "deletedByUs": "eliminado por nosotros",
       "deletedByThem": "eliminado por ellos"
-    }
+    },
+    "stage": "Preparar",
+    "unstage": "Quitar",
+    "stageAll": "Preparar todo",
+    "unstageAll": "Quitar todo",
+    "stageFile": "Preparar {{path}}",
+    "unstageFile": "Quitar {{path}} del stage",
+    "opFailed": "No se pudo completar la operación."
   }
 }

@@ -29,6 +29,8 @@ export const ipc = {
   commitChanges: vi.mocked(commands.commitChanges),
   commitFileDiff: vi.mocked(commands.commitFileDiff),
   workingStatus: vi.mocked(commands.workingStatus),
+  stageFiles: vi.mocked(commands.stageFiles),
+  unstageFiles: vi.mocked(commands.unstageFiles),
 };
 
 export function resetIpcMock() {
@@ -38,6 +40,8 @@ export function resetIpcMock() {
   ipc.pickFolder.mockResolvedValue(null);
   ipc.onRepoChanged.mockResolvedValue(() => {});
   ipc.workingStatus.mockResolvedValue({ status: "ok", data: cleanStatus() });
+  ipc.stageFiles.mockResolvedValue({ status: "ok", data: null });
+  ipc.unstageFiles.mockResolvedValue({ status: "ok", data: null });
   ipc.commitChanges.mockResolvedValue({
     status: "ok",
     data: { base: null, files: [] },

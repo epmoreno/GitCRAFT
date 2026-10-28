@@ -19,6 +19,13 @@ export const commands = {
 	commitChanges: (id: number, oid: string) => typedError<CommitChanges_Serialize, IpcError_Serialize>(__TAURI_INVOKE("commit_changes", { id, oid })),
 	commitFileDiff: (id: number, oid: string, path: string, oldPath: string | null, full: boolean) => typedError<FileDiff_Serialize, IpcError_Serialize>(__TAURI_INVOKE("commit_file_diff", { id, oid, path, oldPath, full })),
 	workingStatus: (id: number) => typedError<WorkingStatus_Serialize, IpcError_Serialize>(__TAURI_INVOKE("working_status", { id })),
+	/**  Stages files; `paths: null` stages every change. */
+	stageFiles: (id: number, paths: string[] | null) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("stage_files", { id, paths })),
+	/**
+	 *  Unstages files; `paths: null` unstages everything. Never touches the
+	 *  working tree.
+	 */
+	unstageFiles: (id: number, paths: string[] | null) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("unstage_files", { id, paths })),
 };
 
 /** Events */

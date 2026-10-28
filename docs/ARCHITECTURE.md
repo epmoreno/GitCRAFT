@@ -104,7 +104,8 @@ GitCRAFT/
     del panel de operaciones.
 - **Concurrencia por repo:** las lecturas (log, status, diff) van en paralelo y
   las escrituras (commit, checkout, fetch…) pasan por una cola serial por
-  `RepoSession` para evitar choques con `index.lock`.
+  `RepoSession` (un `tokio::sync::Mutex` por repo, `AppState::write`) para
+  evitar choques con `index.lock`; mientras duran, el vigilante se silencia.
 - **Vigilante de `.git` y del worktree** (`src-tauri/src/watcher.rs`, crate
   `notify`). Clasifica cada cambio como `refs` (HEAD, `packed-refs`,
   `refs/**` del git dir y del common dir → se recarga el grafo) o `worktree`
