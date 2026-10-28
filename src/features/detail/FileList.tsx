@@ -7,6 +7,7 @@ import {
   type FileChange,
   type FileStatus,
 } from "../../ipc";
+import { useGraphStore } from "../graph/store";
 import styles from "./detail.module.css";
 
 const STATUS_LETTER: Record<FileStatus, string> = {
@@ -88,7 +89,7 @@ export function FileList({
       ) : (
         <ul className={styles.fileList}>
           {files.map((file) => (
-            <FileRow key={file.path} file={file} />
+            <FileRow key={file.path} repoId={repoId} oid={oid} file={file} />
           ))}
         </ul>
       )}
@@ -96,37 +97,60 @@ export function FileList({
   );
 }
 
-function FileRow({ file }: { file: FileChange }) {
+function FileRow({
+  repoId,
+  oid,
+  file,
+}: {
+  repoId: number;
+  oid: string;
+  file: FileChange;
+}) {
   const { t } = useTranslation();
+  const open = useGraphStore((s) => s.openFileDiff);
+  const isOpen = useGraphStore((s) => {
+    const current = s.graphs[repoId]?.openFile;
+    return current?.oid === oid && current.path === file.path;
+  });
   const slash = file.path.lastIndexOf("/");
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const name = file.path.slice(slash + 1);
   return (
-    <li className={styles.file} title={file.path}>
-      <span
-        className={`${styles.status} ${styles[`status-${file.status}`] ?? ""}`}
-        title={t(`files.status.${file.status}`)}
-        aria-label={t(`files.status.${file.status}`)}
+    <li>
+      <button
+        type="button"
+        className={styles.file}
+        title={t("files.openDiff", { path: file.path })}
+        aria-current={isOpen || undefined}
+        onClick={() =>
+          open(repoId, { oid, path: file.path, oldPath: file.oldPath })
+        }
       >
-        {STATUS_LETTER[file.status]}
-      </span>
-      <span className={styles.path}>
-        {dir && <span className={styles.dir}>{dir}</span>}
-        <span>{name}</span>
-        {file.oldPath && (
-          <span className={styles.oldPath}>
-            {t("files.renamedFrom", { path: file.oldPath })}
+        <span
+          className={`${styles.status} ${styles[`status-${file.status}`] ?? ""}`}
+          title={t(`files.status.${file.status}`)}
+          aria-label={t(`files.status.${file.status}`)}
+        >
+          {STATUS_LETTER[file.status]}
+        </span>
+        <span className={styles.path}>
+          {dir && <span className={styles.dir}>{dir}</span>}
+          <span>{name}</span>
+          {file.oldPath && (
+            <span className={styles.oldPath}>
+              {t("files.renamedFrom", { path: file.oldPath })}
+            </span>
+          )}
+        </span>
+        {file.additions === null ? (
+          <span className={styles.binary}>{t("files.binary")}</span>
+        ) : (
+          <span className={styles.counts}>
+            <span className={styles.added}>+{file.additions}</span>
+            <span className={styles.removed}>−{file.deletions}</span>
           </span>
         )}
-      </span>
-      {file.additions === null ? (
-        <span className={styles.binary}>{t("files.binary")}</span>
-      ) : (
-        <span className={styles.counts}>
-          <span className={styles.added}>+{file.additions}</span>
-          <span className={styles.removed}>−{file.deletions}</span>
-        </span>
-      )}
+      </button>
     </li>
   );
 }

@@ -16,6 +16,7 @@ function withRefs(refs: RepoGraph["refs"]) {
         error: null,
         selectedOid: null,
         suggestOptimize: false,
+        openFile: null,
         loadId: 1,
       },
     },

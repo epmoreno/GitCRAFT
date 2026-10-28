@@ -17,6 +17,7 @@ export const commands = {
 	dismissOptimizeNotice: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("dismiss_optimize_notice", { id })),
 	commitDetails: (id: number, oid: string) => typedError<CommitDetails, IpcError_Serialize>(__TAURI_INVOKE("commit_details", { id, oid })),
 	commitChanges: (id: number, oid: string) => typedError<CommitChanges_Serialize, IpcError_Serialize>(__TAURI_INVOKE("commit_changes", { id, oid })),
+	commitFileDiff: (id: number, oid: string, path: string, oldPath: string | null, full: boolean) => typedError<FileDiff_Serialize, IpcError_Serialize>(__TAURI_INVOKE("commit_file_diff", { id, oid, path, oldPath, full })),
 };
 
 /** Events */
@@ -59,6 +60,28 @@ export type CommitDetails = {
 	body: string,
 };
 
+export type DiffLine = DiffLine_Serialize | DiffLine_Deserialize;
+
+export type DiffLine_Deserialize = {
+	kind: LineKind,
+	/**  The line without its +/-/space prefix and newline. */
+	content: string,
+	oldLine?: number | null,
+	newLine?: number | null,
+	/**  Followed by "\ No newline at end of file". */
+	noNewline: boolean,
+};
+
+export type DiffLine_Serialize = {
+	kind: LineKind,
+	/**  The line without its +/-/space prefix and newline. */
+	content: string,
+	oldLine: number | null,
+	newLine: number | null,
+	/**  Followed by "\ No newline at end of file". */
+	noNewline: boolean,
+};
+
 /**
  *  What went wrong, in terms the UI can explain. Each kind has a translated
  *  message (`errors.<kind>` in the i18n files).
@@ -89,6 +112,30 @@ export type FileChange_Serialize = {
 	/**  Lines added/removed; `None` for binary files. */
 	additions: number | null,
 	deletions: number | null,
+};
+
+export type FileDiff = FileDiff_Serialize | FileDiff_Deserialize;
+
+export type FileDiff_Deserialize = {
+	binary: boolean,
+	/**  Not sent because it is too big; ask again with `full`. */
+	tooLarge: boolean,
+	/**  Diff lines (added, removed and context) in the whole diff. */
+	lineCount: number,
+	/**  Header lines such as "new file mode 100644" or "similarity index 90%". */
+	notes: string[],
+	hunks: Hunk_Deserialize[],
+};
+
+export type FileDiff_Serialize = {
+	binary: boolean,
+	/**  Not sent because it is too big; ask again with `full`. */
+	tooLarge: boolean,
+	/**  Diff lines (added, removed and context) in the whole diff. */
+	lineCount: number,
+	/**  Header lines such as "new file mode 100644" or "similarity index 90%". */
+	notes: string[],
+	hunks: Hunk_Serialize[],
 };
 
 export type FileStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | 
@@ -167,6 +214,28 @@ export type Head_Serialize =
 /**  On a branch. `oid` is `None` while the branch has no commits yet. */
 { type: "branch"; name: string; oid: string | null } | { type: "detached"; oid: string };
 
+export type Hunk = Hunk_Serialize | Hunk_Deserialize;
+
+export type Hunk_Deserialize = {
+	oldStart: number,
+	oldLines: number,
+	newStart: number,
+	newLines: number,
+	/**  Text after the second `@@` (usually the enclosing function). */
+	section: string,
+	lines: DiffLine_Deserialize[],
+};
+
+export type Hunk_Serialize = {
+	oldStart: number,
+	oldLines: number,
+	newStart: number,
+	newLines: number,
+	/**  Text after the second `@@` (usually the enclosing function). */
+	section: string,
+	lines: DiffLine_Serialize[],
+};
+
 /**
  *  Error returned by every command. The UI shows a translated message for
  *  `kind` and offers `details` (git's original output) on demand.
@@ -194,6 +263,8 @@ export type IpcError_Serialize = {
 	message: string,
 	details: string | null,
 };
+
+export type LineKind = "context" | "added" | "removed";
 
 export type OpenedRepository = {
 	id: number,

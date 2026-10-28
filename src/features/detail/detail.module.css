@@ -134,6 +134,10 @@
 }
 
 .file {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;
   gap: var(--space-2);
@@ -143,6 +147,10 @@
 
 .file:hover {
   background: var(--surface-2);
+}
+
+.file[aria-current="true"] {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-1));
 }
 
 .status {

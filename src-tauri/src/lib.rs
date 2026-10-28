@@ -30,6 +30,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::dismiss_optimize_notice,
             commands::commit_details,
             commands::commit_changes,
+            commands::commit_file_diff,
         ])
 }
 

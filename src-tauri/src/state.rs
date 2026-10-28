@@ -5,13 +5,14 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gitcraft_core::graph::{GraphLine, load_graph};
-use gitcraft_core::ops::commit::{CommitChanges, commit_changes, commit_details};
+use gitcraft_core::ops::commit::{CommitChanges, commit_changes, commit_details, commit_file_diff};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::parse::commit::CommitDetails;
+use gitcraft_core::parse::diff::FileDiff;
 use gitcraft_core::{CancellationToken, Git, GitError};
 use serde::Serialize;
 
@@ -195,6 +196,21 @@ impl AppState {
         let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
         let path = self.session_path(id)?;
         Ok(commit_changes(git, &path, oid, &CancellationToken::new()).await?)
+    }
+
+    /// Diff of one file in a commit (large diffs only when `full`).
+    pub async fn commit_file_diff(
+        &self,
+        id: RepoId,
+        oid: &str,
+        path: &str,
+        old_path: Option<&str>,
+        full: bool,
+    ) -> Result<FileDiff, IpcError> {
+        let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
+        let repo = self.session_path(id)?;
+        let cancel = CancellationToken::new();
+        Ok(commit_file_diff(git, &repo, oid, path, old_path, full, &cancel).await?)
     }
 
     /// Streams the commit graph of session `id` to `send`. Starting a new
@@ -584,6 +600,12 @@ mod tests {
             .expect("changes");
         assert_eq!(changes.base.as_deref(), Some(ids["C"].as_str()));
         assert_eq!(changes.files.len(), 1);
+        let diff = f
+            .state
+            .commit_file_diff(id, &ids["D"], "feature.txt", None, false)
+            .await
+            .expect("diff");
+        assert_eq!(diff.hunks.len(), 1);
     }
 
     #[tokio::test]

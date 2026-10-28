@@ -8,6 +8,7 @@ export type {
   CommitDetails,
   ErrorKind,
   FileChange_Serialize as FileChange,
+  FileDiff_Serialize as FileDiff,
   FileStatus,
   GraphEvent,
   GraphLine,

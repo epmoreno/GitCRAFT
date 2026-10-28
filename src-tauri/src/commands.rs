@@ -8,6 +8,7 @@ use tauri::ipc::Channel;
 use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::parse::commit::CommitDetails;
+use gitcraft_core::parse::diff::FileDiff;
 
 use crate::error::IpcError;
 use crate::settings::RecentRepository;
@@ -107,4 +108,19 @@ pub async fn commit_changes(
     oid: String,
 ) -> Result<CommitChanges, IpcError> {
     state.commit_changes(id, &oid).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn commit_file_diff(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+    path: String,
+    old_path: Option<String>,
+    full: bool,
+) -> Result<FileDiff, IpcError> {
+    state
+        .commit_file_diff(id, &oid, &path, old_path.as_deref(), full)
+        .await
 }

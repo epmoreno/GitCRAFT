@@ -7,6 +7,9 @@ import {
   type RepoRefs,
 } from "../../ipc";
 
+/** A file of a commit whose diff is shown over the history. */
+export type OpenFile = { oid: string; path: string; oldPath: string | null };
+
 export type RepoGraph = {
   status: "loading" | "done" | "error";
   lines: GraphLine[];
@@ -15,6 +18,8 @@ export type RepoGraph = {
   refs: RepoRefs | null;
   error: CommandError | null;
   selectedOid: string | null;
+  /** The file whose diff is open, if any. */
+  openFile: OpenFile | null;
   /** Offer to write a commit-graph (large repo without one). */
   suggestOptimize: boolean;
   /** Identifies the load in progress; events from older loads are ignored. */
@@ -29,6 +34,8 @@ type GraphState = {
   refresh: (repoId: number) => Promise<void>;
   select: (repoId: number, oid: string | null) => void;
   hideOptimizeNotice: (repoId: number) => void;
+  openFileDiff: (repoId: number, file: OpenFile) => void;
+  closeFile: (repoId: number) => void;
   forget: (repoId: number) => void;
 };
 
@@ -42,6 +49,7 @@ const emptyGraph = (loadId: number): RepoGraph => ({
   error: null,
   selectedOid: null,
   suggestOptimize: false,
+  openFile: null,
   loadId,
 });
 
@@ -139,7 +147,23 @@ export const useGraphStore = create<GraphState>()((set, get) => {
 
     select: (repoId, oid) => {
       const graph = get().graphs[repoId];
-      if (graph) patch(repoId, graph.loadId, () => ({ selectedOid: oid }));
+      if (graph) {
+        // Picking another commit closes the diff of the previous one.
+        patch(repoId, graph.loadId, (g) => ({
+          selectedOid: oid,
+          openFile: g.selectedOid === oid ? g.openFile : null,
+        }));
+      }
+    },
+
+    openFileDiff: (repoId, file) => {
+      const graph = get().graphs[repoId];
+      if (graph) patch(repoId, graph.loadId, () => ({ openFile: file }));
+    },
+
+    closeFile: (repoId) => {
+      const graph = get().graphs[repoId];
+      if (graph) patch(repoId, graph.loadId, () => ({ openFile: null }));
     },
 
     hideOptimizeNotice: (repoId) => {

@@ -26,6 +26,7 @@ export const ipc = {
   dismissOptimizeNotice: vi.mocked(commands.dismissOptimizeNotice),
   commitDetails: vi.mocked(commands.commitDetails),
   commitChanges: vi.mocked(commands.commitChanges),
+  commitFileDiff: vi.mocked(commands.commitFileDiff),
 };
 
 export function resetIpcMock() {

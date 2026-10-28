@@ -73,7 +73,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 - [x] **3.2 Archivos cambiados.** `git diff-tree -r -z --name-status -M` con
       estado A/M/D/R/C y contadores +/−. *Tests:* renombrados, binarios y commit
       raíz.
-- [ ] **3.3 Diff.** Parser de diff unificado (hunks, líneas, no-newline-at-EOF,
+- [x] **3.3 Diff.** Parser de diff unificado (hunks, líneas, no-newline-at-EOF,
       binarios) y vista con números de línea y resaltado. Los archivos grandes
       se cargan bajo demanda.
 

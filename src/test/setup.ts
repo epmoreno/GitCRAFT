@@ -16,6 +16,7 @@ vi.mock("../ipc", () => ({
     dismissOptimizeNotice: vi.fn(),
     commitDetails: vi.fn(),
     commitChanges: vi.fn(),
+    commitFileDiff: vi.fn(),
   },
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),

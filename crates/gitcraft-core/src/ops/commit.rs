@@ -5,6 +5,7 @@ use std::path::Path;
 use serde::Serialize;
 
 use crate::parse::commit::{CommitDetails, DETAILS_FORMAT, parse_commit_details};
+use crate::parse::diff::{FileDiff, parse_diff};
 use crate::parse::diff_tree::{FileChange, merge_counts, parse_name_status, parse_numstat};
 use crate::parse::log::is_object_id;
 use crate::{CancellationToken, Git, GitError, Result};
@@ -102,4 +103,64 @@ pub async fn commit_changes(
         &parse_numstat(&counts.stdout)?,
     );
     Ok(CommitChanges { base, files })
+}
+
+/// Diffs longer than this are only sent when explicitly requested.
+pub const DIFF_LINE_LIMIT: u32 = 5_000;
+/// Output bigger than this is not even parsed unless requested.
+const DIFF_BYTE_LIMIT: usize = 4 * 1024 * 1024;
+
+/// The diff of one file in `oid` (against its first parent, or the empty
+/// tree for a root commit). `old_path` is the previous name of a renamed or
+/// copied file. Unless `full`, large diffs come back as `too_large` without
+/// hunks.
+pub async fn commit_file_diff(
+    git: &Git,
+    repo: &Path,
+    oid: &str,
+    path: &str,
+    old_path: Option<&str>,
+    full: bool,
+    cancel: &CancellationToken,
+) -> Result<FileDiff> {
+    let oid = checked_oid(oid)?;
+    if path.is_empty() {
+        return Err(GitError::Parse("empty path".into()));
+    }
+    let base = first_parent(git, repo, oid, cancel).await?;
+    let out = git
+        .read(repo)
+        // Paths come from the UI: never treat them as pathspec magic or globs.
+        .env("GIT_LITERAL_PATHSPECS", "1")
+        .args([
+            "diff-tree",
+            "-p",
+            "-M",
+            "-U3",
+            "--no-ext-diff",
+            "--no-commit-id",
+        ])
+        .args(diff_tree_range(oid, base.as_deref()))
+        .arg("--")
+        .args(old_path)
+        .arg(path)
+        .output(cancel)
+        .await?;
+
+    if !full && out.stdout.len() > DIFF_BYTE_LIMIT {
+        let lines = out.stdout.iter().filter(|&&b| b == b'\n').count();
+        return Ok(FileDiff {
+            binary: false,
+            too_large: true,
+            line_count: u32::try_from(lines).unwrap_or(u32::MAX),
+            notes: Vec::new(),
+            hunks: Vec::new(),
+        });
+    }
+    let mut diff = parse_diff(&out.stdout)?;
+    if !full && diff.line_count > DIFF_LINE_LIMIT {
+        diff.hunks.clear();
+        diff.too_large = true;
+    }
+    Ok(diff)
 }

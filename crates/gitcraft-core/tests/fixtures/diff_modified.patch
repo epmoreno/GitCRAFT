@@ -1,0 +1,14 @@
+diff --git a/f.rs b/f.rs
+index 076b66d..7947ff0 100644
+--- a/f.rs
++++ b/f.rs
+@@ -1,6 +1,6 @@
+ fn main() {
+     a();
+-    b();
++    c();
+ }
+ 
+-fn tail() {}
+\ No newline at end of file
++fn tail() { done() }

@@ -38,6 +38,7 @@ function withSelection(selectedOid: string | null) {
         error: null,
         selectedOid,
         suggestOptimize: false,
+        openFile: null,
         loadId: 1,
       },
     },

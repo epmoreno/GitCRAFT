@@ -118,6 +118,20 @@
       "typeChanged": "Type changed",
       "unmerged": "Unmerged",
       "unknown": "Unknown"
-    }
+    },
+    "openDiff": "Show the diff of {{path}}"
+  },
+  "diff": {
+    "label": "Diff of {{path}}",
+    "back": "Back to history",
+    "backHint": "Back to history (Esc)",
+    "loading": "Loading diff…",
+    "failed": "Couldn't load the diff.",
+    "binary": "Binary file: its diff can't be shown.",
+    "tooLarge_one": "This diff has {{count}} line.",
+    "tooLarge_other": "This diff has {{count}} lines; showing it all may be slow.",
+    "showAnyway": "Show anyway",
+    "noChanges": "There are no text changes in this file.",
+    "noNewline": "No newline at end of file"
   }
 }

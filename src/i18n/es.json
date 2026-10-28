@@ -118,6 +118,20 @@
       "typeChanged": "Cambio de tipo",
       "unmerged": "Sin fusionar",
       "unknown": "Desconocido"
-    }
+    },
+    "openDiff": "Ver el diff de {{path}}"
+  },
+  "diff": {
+    "label": "Diff de {{path}}",
+    "back": "Volver al historial",
+    "backHint": "Volver al historial (Esc)",
+    "loading": "Cargando diff…",
+    "failed": "No se pudo cargar el diff.",
+    "binary": "Archivo binario: no se puede mostrar su diff.",
+    "tooLarge_one": "Este diff tiene {{count}} línea.",
+    "tooLarge_other": "Este diff tiene {{count}} líneas; mostrarlo entero puede ir lento.",
+    "showAnyway": "Mostrar de todos modos",
+    "noChanges": "No hay cambios de texto en este archivo.",
+    "noNewline": "Sin salto de línea al final del archivo"
   }
 }
