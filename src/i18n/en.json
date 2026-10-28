@@ -69,7 +69,7 @@
     "nothingToCommit": "There are no staged changes to commit.",
     "emptyMessage": "The commit message is empty.",
     "staleDiff": "The file changed since its diff was shown. It has been refreshed: select again what you want.",
-    "undoConflict": "A file changed since the discard, so nothing was touched. The copy is still in the stash (git stash list) and untracked files are in the Trash."
+    "undoConflict": "A file changed since the discard, so nothing was touched. The copy is still in the stash (“GitCRAFT: descarte de …” in git stash list): recover each file with “git restore --source=stash@{N} --worktree -- <path>”. Untracked files are in the Trash."
   },
   "graph": {
     "listLabel": "History of {{name}}",

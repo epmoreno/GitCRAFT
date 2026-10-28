@@ -326,6 +326,88 @@ async fn discarding_a_hunk_or_lines_is_just_as_recoverable() {
     assert_eq!(snapshot(repo.path()), before);
 }
 
+/// After the undo window: a file with staged and unstaged changes, part of
+/// it discarded, is recovered from the stash backup with
+/// `git restore --source=<stash> --worktree -- <path>` (`stash apply` refuses
+/// here because the file still has other changes).
+#[tokio::test]
+async fn a_partial_discard_is_recoverable_from_the_stash_later() {
+    let repo = TestRepo::new().await;
+    let base: String = (1..=15).map(|i| format!("{i}\n")).collect();
+    repo.commit_file("f.txt", &base, "base").await;
+    // A staged change at the top…
+    repo.write_file("f.txt", &base.replacen("2\n", "staged\n", 1));
+    repo.run(&["add", "f.txt"]).await;
+    // …and unstaged changes in two other places.
+    repo.write_file(
+        "f.txt",
+        "1\nstaged\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\nDOCE\n14\n15\nnuevo\n",
+    );
+    let before = std::fs::read(repo.path().join("f.txt")).expect("read");
+    let index_before = index_tree(&repo).await;
+    let trash = FakeTrash::new();
+
+    let diff = worktree_file_diff(
+        &git(),
+        repo.path(),
+        "f.txt",
+        None,
+        WorktreeArea::Unstaged,
+        false,
+        &c(),
+    )
+    .await
+    .expect("diff");
+    let line = diff.hunks[0]
+        .lines
+        .iter()
+        .position(|l| l.kind == LineKind::Added && l.content == "nuevo")
+        .expect("line") as u32;
+    let target = DiscardTarget::Selection {
+        path: "f.txt".into(),
+        fingerprint: diff.fingerprint,
+        selection: vec![HunkSelection {
+            hunk: 0,
+            lines: Some(vec![line]),
+        }],
+    };
+    discard(&git(), repo.path(), &target, &trash, &c())
+        .await
+        .expect("discard line");
+    let after = std::fs::read(repo.path().join("f.txt")).expect("read");
+    assert_ne!(after, before);
+    // The undo window passes; the file is still modified and staged.
+
+    let apply = repo
+        .write()
+        .args(["stash", "apply", "stash@{0}"])
+        .output(&c())
+        .await;
+    assert!(apply.is_err(), "stash apply refuses over local changes");
+    assert_eq!(
+        std::fs::read(repo.path().join("f.txt")).expect("read"),
+        after
+    );
+
+    repo.run(&["restore", "--source=stash@{0}", "--worktree", "--", "f.txt"])
+        .await;
+    assert_eq!(
+        std::fs::read(repo.path().join("f.txt")).expect("read"),
+        before,
+        "identical byte for byte"
+    );
+    assert_eq!(
+        index_tree(&repo).await,
+        index_before,
+        "the index is untouched"
+    );
+    assert_eq!(
+        repo.run(&["diff", "--cached", "--name-only"]).await,
+        "f.txt",
+        "the staged change is still staged"
+    );
+}
+
 #[tokio::test]
 async fn staged_changes_are_never_discarded() {
     let repo = TestRepo::new().await;

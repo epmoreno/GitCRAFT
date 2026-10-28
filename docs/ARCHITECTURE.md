@@ -185,8 +185,16 @@ para unstage). Esta lógica es pura y se cubre con tests unitarios exhaustivos.
    la Papelera, pero solo si ninguno cambió desde el descarte; si no, no toca
    nada (`UndoConflict`). Tras deshacer se elimina la entrada de stash, que ya
    es redundante.
+5. **Recuperación tardía** (pasado el aviso): siempre **por archivo**, con
+   `git restore --source=<stash> --worktree -- <ruta>`, que devuelve el
+   contenido que tenía el archivo justo antes del descarte y no toca el índice.
+   **Nunca** `git stash apply`: aborta si el archivo tiene otros cambios
+   (por ejemplo, partes preparadas), que es lo normal tras descartar un hunk o
+   unas líneas. La 7.x lo ofrecerá como «Recuperar archivo» en las entradas
+   «GitCRAFT: descarte de …», con confirmación si el archivo cambió desde el
+   descarte. *Test:* `a_partial_discard_is_recoverable_from_the_stash_later`.
 
-
+## 6. Persistencia
 
 `settings.json` en el `app_config_dir` de Tauri (en macOS,
 `~/Library/Application Support/dev.gitcraft.app/`) guarda:

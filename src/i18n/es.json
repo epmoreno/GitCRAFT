@@ -69,7 +69,7 @@
     "nothingToCommit": "No hay cambios preparados para el commit.",
     "emptyMessage": "El mensaje del commit está vacío.",
     "staleDiff": "El archivo cambió desde que se mostró el diff. Se ha actualizado: vuelve a seleccionar lo que quieras.",
-    "undoConflict": "Algún archivo ha cambiado desde el descarte, así que no se ha tocado nada. La copia sigue en el stash (git stash list) y los archivos sin seguimiento, en la Papelera."
+    "undoConflict": "Algún archivo ha cambiado desde el descarte, así que no se ha tocado nada. La copia sigue en el stash («GitCRAFT: descarte de …» en git stash list): cada archivo se recupera con «git restore --source=stash@{N} --worktree -- <ruta>». Los archivos sin seguimiento están en la Papelera."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",
