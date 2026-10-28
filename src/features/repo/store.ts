@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { useGraphStore } from "../graph/store";
+import { useStashStore } from "../stash/store";
 import { useWorkdirStore } from "../workdir/store";
 import {
   commands,
@@ -85,6 +86,7 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
     set({ tabs: remaining, activeId: nextActive });
     useGraphStore.getState().forget(id);
     useWorkdirStore.getState().forget(id);
+    useStashStore.getState().forget(id);
     await commands.closeRepository(id);
   },
 

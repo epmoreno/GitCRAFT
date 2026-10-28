@@ -46,6 +46,10 @@ export const ipc = {
   deleteBranch: vi.mocked(commands.deleteBranch),
   checkoutBranch: vi.mocked(commands.checkoutBranch),
   stashAndCheckout: vi.mocked(commands.stashAndCheckout),
+  listStashes: vi.mocked(commands.listStashes),
+  createStash: vi.mocked(commands.createStash),
+  applyStash: vi.mocked(commands.applyStash),
+  dropStash: vi.mocked(commands.dropStash),
 };
 
 export function resetIpcMock() {
@@ -62,6 +66,13 @@ export function resetIpcMock() {
   ipc.applySelection.mockResolvedValue({ status: "ok", data: null });
   ipc.undoDiscard.mockResolvedValue({ status: "ok", data: null });
   ipc.checkBranchName.mockResolvedValue({ status: "ok", data: "valid" });
+  ipc.listStashes.mockResolvedValue({ status: "ok", data: [] });
+  ipc.createStash.mockResolvedValue({ status: "ok", data: oid("5") });
+  ipc.applyStash.mockResolvedValue({
+    status: "ok",
+    data: { type: "applied", dropped: false },
+  });
+  ipc.dropStash.mockResolvedValue({ status: "ok", data: null });
   ipc.createBranch.mockResolvedValue({ status: "ok", data: null });
   ipc.renameBranch.mockResolvedValue({ status: "ok", data: null });
   ipc.deleteBranch.mockResolvedValue({ status: "ok", data: null });

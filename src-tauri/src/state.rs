@@ -21,12 +21,14 @@ use gitcraft_core::ops::maintenance::{
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::ops::stage;
+use gitcraft_core::ops::stash::{self, ApplyOutcome};
 use gitcraft_core::ops::status::working_status;
 use gitcraft_core::ops::worktree::{
     SelectionAction, WorktreeArea, apply_selection, worktree_file_diff,
 };
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
+use gitcraft_core::parse::stash::StashEntry;
 use gitcraft_core::parse::status::WorkingStatus;
 use gitcraft_core::patch::HunkSelection;
 use gitcraft_core::{CancellationToken, Git, GitError};
@@ -59,6 +61,8 @@ pub struct RepoChanged {
     pub refs: bool,
     /// Files, the index or the merge state changed: reload the status.
     pub worktree: bool,
+    /// Stash entries were added or dropped: reload the stash list.
+    pub stash: bool,
 }
 
 /// Sent over the graph channel: pages in order, then `done`.
@@ -197,6 +201,7 @@ impl AppState {
                 id,
                 refs: change.refs,
                 worktree: change.worktree,
+                stash: change.stash,
             });
         })
         .inspect_err(|err| eprintln!("not watching {}: {err}", info.path))
@@ -564,6 +569,60 @@ impl AppState {
         let cancel = CancellationToken::new();
         self.write(id, |repo| async move {
             branch::stash_and_checkout(git, &repo, &name, include_untracked, &cancel).await
+        })
+        .await
+    }
+
+    /// Every stash entry, newest first.
+    pub async fn stashes(&self, id: RepoId) -> Result<Vec<StashEntry>, IpcError> {
+        let git = self.git()?;
+        let path = self.session_path(id)?;
+        Ok(stash::list_stashes(git, &path, &CancellationToken::new()).await?)
+    }
+
+    /// Saves the uncommitted changes in a new entry; returns its id.
+    pub async fn create_stash(
+        &self,
+        id: RepoId,
+        message: String,
+        include_untracked: bool,
+    ) -> Result<String, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            stash::create_stash(git, &repo, &message, include_untracked, &cancel).await
+        })
+        .await
+    }
+
+    /// Applies (or pops) entry `oid`, never forcing; with `save_local` the
+    /// current changes are stashed first.
+    pub async fn apply_stash(
+        &self,
+        id: RepoId,
+        oid: String,
+        pop: bool,
+        allow_conflicts: bool,
+        save_local: bool,
+    ) -> Result<ApplyOutcome, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            if save_local {
+                stash::stash_and_apply(git, &repo, &oid, pop, allow_conflicts, &cancel).await
+            } else {
+                stash::apply_stash(git, &repo, &oid, pop, allow_conflicts, &cancel).await
+            }
+        })
+        .await
+    }
+
+    /// Deletes entry `oid` (after the user confirmed it).
+    pub async fn drop_stash(&self, id: RepoId, oid: String) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            stash::drop_stash(git, &repo, &oid, &cancel).await
         })
         .await
     }

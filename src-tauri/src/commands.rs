@@ -10,9 +10,11 @@ use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::refs::RepoRefs;
+use gitcraft_core::ops::stash::ApplyOutcome;
 use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
+use gitcraft_core::parse::stash::StashEntry;
 use gitcraft_core::parse::status::WorkingStatus;
 use gitcraft_core::patch::HunkSelection;
 
@@ -341,4 +343,57 @@ pub async fn stash_and_checkout(
     include_untracked: bool,
 ) -> Result<CheckoutOutcome, IpcError> {
     state.stash_and_checkout(id, name, include_untracked).await
+}
+
+/// Every stash entry, newest first.
+#[tauri::command]
+#[specta::specta]
+pub async fn list_stashes(
+    state: State<'_, AppState>,
+    id: RepoId,
+) -> Result<Vec<StashEntry>, IpcError> {
+    state.stashes(id).await
+}
+
+/// Saves the uncommitted changes (optionally with untracked files) in a new
+/// stash entry; `message` may be empty. Returns the entry's id.
+#[tauri::command]
+#[specta::specta]
+pub async fn create_stash(
+    state: State<'_, AppState>,
+    id: RepoId,
+    message: String,
+    include_untracked: bool,
+) -> Result<String, IpcError> {
+    state.create_stash(id, message, include_untracked).await
+}
+
+/// Applies (`pop`: and then drops, only if clean) stash entry `oid`. Never
+/// forces: blocking changes and predicted conflicts are reported unless
+/// `allow_conflicts`. With `save_local` the current changes are stashed
+/// first.
+#[tauri::command]
+#[specta::specta]
+pub async fn apply_stash(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+    pop: bool,
+    allow_conflicts: bool,
+    save_local: bool,
+) -> Result<ApplyOutcome, IpcError> {
+    state
+        .apply_stash(id, oid, pop, allow_conflicts, save_local)
+        .await
+}
+
+/// Deletes stash entry `oid` (the UI confirms first).
+#[tauri::command]
+#[specta::specta]
+pub async fn drop_stash(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+) -> Result<(), IpcError> {
+    state.drop_stash(id, oid).await
 }

@@ -48,6 +48,10 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::delete_branch,
             commands::checkout_branch,
             commands::stash_and_checkout,
+            commands::list_stashes,
+            commands::create_stash,
+            commands::apply_stash,
+            commands::drop_stash,
         ])
 }
 

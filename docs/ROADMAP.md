@@ -119,8 +119,8 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
 ### 5. Ramas
 - [~] **5.1 Barra lateral.** Ramas locales, remotas (agrupadas por remoto), tags y
       stashes, con filtro.
-      *Estado:* ramas locales, remotos y tags hechos (clic → commit en el
-      grafo); faltan stashes (7.x) y el filtro.
+      *Estado:* ramas locales, remotos, tags y stashes hechos (clic → commit
+      en el grafo); falta el filtro.
 - [x] **5.2 Crear, checkout, renombrar y borrar.** Borrar una rama no fusionada
       pide confirmación y explica qué commits quedarían sin rama; nunca se usa
       `branch -D` sin esa confirmación. Cambiar de rama con cambios sin
@@ -159,7 +159,7 @@ Las pruebas usan un repo bare local como remoto (p. ej.
 Nunca se borran stashes automáticamente; borrar uno siempre pide
 confirmación.
 
-- [ ] **7.1 Lista, guardar, aplicar, pop y borrar.** La barra lateral muestra
+- [x] **7.1 Lista, guardar, aplicar, pop y borrar.** La barra lateral muestra
       todas las entradas con mensaje, rama de origen y fecha; las creadas por
       GitCRAFT («descarte de …», «antes de cambiar a …») se distinguen. Guardar
       desde el botón «Stash» con mensaje opcional y opción de incluir archivos
@@ -168,6 +168,14 @@ confirmación.
       borra la entrada si se aplicó sin conflictos. Borrar siempre con
       confirmación, mostrando el hash para recuperarla
       (`git stash store <hash>`).
+      *Estado:* sección «Stashes» de la barra lateral (etiquetas «descarte» y
+      «cambio de rama»; rama y fecha), menú contextual (aplicar, pop, borrar),
+      botón «Stash» de la barra superior. Si algo estorba, «Guardar mis
+      cambios y aplicar»; si habrá conflictos (previstos con
+      `git merge-tree`), «Aplicar con conflictos» o cancelar.
+      *Tests:* integración (fixture de `stash list`, crear, aplicar y pop por
+      id, bloqueo sin tocar nada, conflictos previstos, borrar y recuperar con
+      `stash store`) y de interfaz.
 - [ ] **7.2 Ver contenido** de un stash en el panel de detalle, con diff por
       archivo (incluidos los archivos sin seguimiento guardados con `-u`).
 - [ ] **7.3 Recuperar archivo** en las entradas «GitCRAFT: descarte de …»:

@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { BranchDialogs, BranchToast } from "../features/branches/BranchDialogs";
 import { DetailPanel } from "../features/detail/DetailPanel";
+import { StashDialogs, StashToast } from "../features/stash/StashDialogs";
+import { useStashStore } from "../features/stash/store";
 import { GraphView } from "../features/graph/GraphView";
 import { useGraphStore } from "../features/graph/store";
 import { DiscardDialog, UndoToast } from "../features/workdir/Discard";
@@ -27,9 +29,10 @@ export function App() {
 
   // Changes made outside GitCRAFT (terminal, editor, another client).
   useEffect(() => {
-    const unlisten = onRepoChanged(({ id, refs, worktree }) => {
+    const unlisten = onRepoChanged(({ id, refs, worktree, stash }) => {
       if (refs) void useGraphStore.getState().refresh(id);
       if (worktree) void useWorkdirStore.getState().refresh(id);
+      if (stash) void useStashStore.getState().refresh(id);
     });
     return () => {
       void unlisten.then((stop) => stop());
@@ -43,6 +46,7 @@ export function App() {
     if (activeId === null) return;
     const refresh = () => void useWorkdirStore.getState().refresh(activeId);
     refresh();
+    void useStashStore.getState().refresh(activeId);
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
   }, [activeId]);
@@ -62,10 +66,12 @@ export function App() {
           )}
           <UndoToast />
           <BranchToast />
+          <StashToast />
         </main>
         <DetailPanel repoId={active?.id ?? null} />
         <DiscardDialog />
         <BranchDialogs />
+        <StashDialogs />
       </div>
     </div>
   );

@@ -58,6 +58,13 @@ pub enum GitError {
     /// The branch moved or disappeared since it was shown; nothing was done.
     #[error("branch {0:?} changed since it was shown")]
     BranchChanged(String),
+
+    /// The stash entry is no longer listed (dropped or popped elsewhere).
+    #[error("stash entry {0} is no longer in the stash list")]
+    StashChanged(String),
+
+    #[error("there are no local changes to save")]
+    NothingToStash,
 }
 
 /// What went wrong, in terms the UI can explain. Each kind has a translated
@@ -82,6 +89,8 @@ pub enum ErrorKind {
     BranchChanged,
     /// The branch is checked out in another worktree.
     BranchInWorktree,
+    StashChanged,
+    NothingToStash,
     Cancelled,
     TimedOut,
     Unknown,
@@ -104,6 +113,8 @@ impl GitError {
             Self::InvalidBranchName(_) => ErrorKind::InvalidBranchName,
             Self::BranchExists(_) => ErrorKind::BranchExists,
             Self::BranchChanged(_) => ErrorKind::BranchChanged,
+            Self::StashChanged(_) => ErrorKind::StashChanged,
+            Self::NothingToStash => ErrorKind::NothingToStash,
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
     }
@@ -139,7 +150,9 @@ impl GitError {
             | Self::StaleDiff
             | Self::InvalidBranchName(_)
             | Self::BranchExists(_)
-            | Self::BranchChanged(_) => None,
+            | Self::BranchChanged(_)
+            | Self::StashChanged(_)
+            | Self::NothingToStash => None,
         }
     }
 }
@@ -168,6 +181,7 @@ pub fn classify_output(stderr: &str, stdout: &str) -> ErrorKind {
         ("nothing added to commit", ErrorKind::NothingToCommit),
         ("no changes added to commit", ErrorKind::NothingToCommit),
         ("is not a valid branch name", ErrorKind::InvalidBranchName),
+        ("No local changes to save", ErrorKind::NothingToStash),
         ("already exists", ErrorKind::BranchExists),
         ("is already checked out at", ErrorKind::BranchInWorktree),
         ("is already used by worktree", ErrorKind::BranchInWorktree),

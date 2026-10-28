@@ -1,9 +1,11 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { GitRef, RepoRefs } from "../../ipc";
+import type { GitRef, RepoRefs, StashEntry } from "../../ipc";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
 import { useBranchStore } from "../branches/store";
 import { useGraphStore } from "../graph/store";
+import { absoluteTime, relativeTime } from "../graph/relativeTime";
+import { useStashStore } from "../stash/store";
 import styles from "./sidebar.module.css";
 
 type Props = { repoId: number | null };
@@ -34,12 +36,7 @@ export function Sidebar({ repoId }: Props) {
       <LocalBranches {...props} />
       <Remotes {...props} />
       <Tags {...props} />
-      <Section title={t("sidebar.stashes")} count={null}>
-        {/* Stashes are not read yet (roadmap 7.x). */}
-        <p className={styles.empty}>
-          {repoId === null ? t("sidebar.empty") : t("sidebar.comingSoon")}
-        </p>
-      </Section>
+      <Stashes {...props} />
       {menu && (
         <ContextMenu
           x={menu.x}
@@ -274,6 +271,79 @@ function Tags({ refs, repoId, onSelect, onMenu }: ListProps) {
   );
 }
 
+function Stashes({ repoId, onMenu }: ListProps) {
+  const { t, i18n } = useTranslation();
+  const entries = useStashStore((s) =>
+    repoId === null ? null : (s.stashes[repoId]?.entries ?? null),
+  );
+  const apply = useStashStore((s) => s.apply);
+  const requestDrop = useStashStore((s) => s.requestDrop);
+  const now = useStashStore((s) =>
+    repoId === null ? 0 : (s.stashes[repoId]?.readAt ?? 0),
+  );
+
+  const menuFor = (repoId: number, entry: StashEntry): MenuItem[] => [
+    {
+      label: t("stash.apply"),
+      onSelect: () =>
+        void apply(repoId, entry, { pop: false, saveLocal: false }),
+    },
+    {
+      label: t("stash.pop"),
+      onSelect: () =>
+        void apply(repoId, entry, { pop: true, saveLocal: false }),
+    },
+    {
+      label: t("stash.dropMenu"),
+      onSelect: () => requestDrop(repoId, entry),
+      danger: true,
+    },
+  ];
+
+  return (
+    <Section
+      title={t("sidebar.stashes")}
+      count={entries ? entries.length : null}
+    >
+      {repoId === null || !entries ? (
+        <p className={styles.empty}>{t("sidebar.empty")}</p>
+      ) : entries.length === 0 ? (
+        <p className={styles.empty}>{t("sidebar.noStashes")}</p>
+      ) : (
+        <ul className={styles.list}>
+          {entries.map((entry) => {
+            const where = entry.branch ?? t("sidebar.detachedHead");
+            const when = relativeTime(entry.time, now, i18n.language);
+            return (
+              <Item
+                key={entry.oid}
+                label={entry.message}
+                hint={`${where} · ${when}`}
+                badge={
+                  entry.origin === "user"
+                    ? undefined
+                    : t(`stash.origin.${entry.origin}`)
+                }
+                title={t("stash.tooltip", {
+                  message: entry.message,
+                  branch: where,
+                  date: absoluteTime(entry.time, i18n.language),
+                  selector: `stash@{${entry.index}}`,
+                })}
+                stacked
+                onClick={() => {}}
+                onContextMenu={(event) =>
+                  onMenu(event, entry.message, menuFor(repoId, entry))
+                }
+              />
+            );
+          })}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
 function Section({
   title,
   count,
@@ -317,6 +387,9 @@ function Item({
   label,
   current = false,
   hint,
+  badge,
+  title,
+  stacked = false,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -324,6 +397,11 @@ function Item({
   label: string;
   current?: boolean;
   hint?: string;
+  /** Marks entries GitCRAFT made itself. */
+  badge?: string;
+  title?: string;
+  /** Hint on its own line, under the label. */
+  stacked?: boolean;
   onClick: () => void;
   onDoubleClick?: () => void;
   onContextMenu?: (event: MouseEvent) => void;
@@ -333,14 +411,27 @@ function Item({
     <li>
       <button
         type="button"
-        className={current ? `${styles.item} ${styles.current}` : styles.item}
+        className={[
+          styles.item,
+          current && styles.current,
+          stacked && styles.stacked,
+          badge && styles.ours,
+        ]
+          .filter(Boolean)
+          .join(" ")}
         aria-current={current || undefined}
-        title={current ? t("sidebar.currentBranch", { name: label }) : label}
+        title={
+          title ??
+          (current ? t("sidebar.currentBranch", { name: label }) : label)
+        }
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
       >
-        <span className={styles.label}>{label}</span>
+        <span className={styles.label}>
+          {badge && <span className={styles.badge}>{badge}</span>}
+          {label}
+        </span>
         {hint && <span className={styles.hint}>{hint}</span>}
       </button>
     </li>

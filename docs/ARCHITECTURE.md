@@ -220,6 +220,34 @@ siempre detrás de `--`; los puntos de partida son ids o nombres completos
   confirmación y si la rama sigue en la punta confirmada (si no,
   `BranchChanged` y no se hace nada).
 
+## 5d. Stash
+
+`gitcraft-core/src/ops/stash.rs` y `parse/stash.rs`. Las entradas se
+identifican por su commit, no por `stash@{n}` (que cambia al añadir o borrar
+entradas): cada operación busca antes el índice actual de ese commit y, si ya
+no está, devuelve `StashChanged` sin hacer nada. Las entradas que crea
+GitCRAFT se reconocen por su mensaje («GitCRAFT: descarte de …»,
+«GitCRAFT: antes de cambiar a …», «GitCRAFT: antes de aplicar …»).
+
+- **Aplicar / pop nunca fuerza.** Antes de `git stash apply`:
+  1. Se calculan los archivos que tocaría (`diff` contra `<stash>^1`, índice
+     incluido, y los sin seguimiento de `<stash>^3`) y se cruzan con los
+     cambios sin confirmar y los archivos existentes. Si coinciden: `Blocked`,
+     sin tocar nada. Alternativa: «Guardar mis cambios y aplicar» (stash de lo
+     actual, que nunca se borra, y luego aplicar).
+  2. Se predicen los conflictos con
+     `git merge-tree --write-tree --merge-base=<stash>^1 HEAD <stash>`, que no
+     toca nada (Git ≥ 2.40; con versiones anteriores, aproximación por los
+     archivos cambiados en ambos lados). Si hay: `WouldConflict`, y solo se
+     aplica si el usuario lo acepta (quedan marcas de conflicto).
+  3. Pop = aplicar y, **solo si terminó sin conflictos**, `git stash drop` de
+     esa entrada.
+- **Borrar** siempre tras confirmación, que muestra el hash y
+  `git stash store -m "<mensaje>" <hash>` para recuperarla.
+- **Vigilante:** los cambios en `refs/stash` y `logs/refs/stash` se notifican
+  como `stash` (borrar una entrada que no es la última solo reescribe el
+  reflog) y la barra lateral recarga la lista.
+
 ## 6. Persistencia
 
 `settings.json` en el `app_config_dir` de Tauri (en macOS,

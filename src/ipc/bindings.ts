@@ -72,6 +72,22 @@ export const commands = {
 	checkoutBranch: (id: number, name: string) => typedError<CheckoutOutcome, IpcError_Serialize>(__TAURI_INVOKE("checkout_branch", { id, name })),
 	/**  Saves every uncommitted change in a stash entry, then switches. */
 	stashAndCheckout: (id: number, name: string, includeUntracked: boolean) => typedError<CheckoutOutcome, IpcError_Serialize>(__TAURI_INVOKE("stash_and_checkout", { id, name, includeUntracked })),
+	/**  Every stash entry, newest first. */
+	listStashes: (id: number) => typedError<StashEntry_Serialize[], IpcError_Serialize>(__TAURI_INVOKE("list_stashes", { id })),
+	/**
+	 *  Saves the uncommitted changes (optionally with untracked files) in a new
+	 *  stash entry; `message` may be empty. Returns the entry's id.
+	 */
+	createStash: (id: number, message: string, includeUntracked: boolean) => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("create_stash", { id, message, includeUntracked })),
+	/**
+	 *  Applies (`pop`: and then drops, only if clean) stash entry `oid`. Never
+	 *  forces: blocking changes and predicted conflicts are reported unless
+	 *  `allow_conflicts`. With `save_local` the current changes are stashed
+	 *  first.
+	 */
+	applyStash: (id: number, oid: string, pop: boolean, allowConflicts: boolean, saveLocal: boolean) => typedError<ApplyOutcome, IpcError_Serialize>(__TAURI_INVOKE("apply_stash", { id, oid, pop, allowConflicts, saveLocal })),
+	/**  Deletes stash entry `oid` (the UI confirms first). */
+	dropStash: (id: number, oid: string) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("drop_stash", { id, oid })),
 };
 
 /** Events */
@@ -91,6 +107,26 @@ export type AmendInfo = {
 	 */
 	publishedIn: string[],
 };
+
+export type ApplyOutcome = 
+/**  Applied cleanly. `dropped`: it was a pop and the entry is gone. */
+{ type: "applied"; dropped: boolean } | 
+/**
+ *  Uncommitted changes (or untracked files) would be overwritten;
+ *  nothing was touched.
+ */
+{ type: "blocked"; files: BlockingFile[] } | 
+/**
+ *  These files changed on the current branch too and would conflict;
+ *  nothing was touched. `exact`: git's merge said so (otherwise they
+ *  only might, with git older than 2.40).
+ */
+{ type: "wouldConflict"; files: string[]; exact: boolean } | 
+/**
+ *  Applied with conflict markers in these files (only when the user
+ *  accepted that); the entry is kept, even for a pop.
+ */
+{ type: "conflicted"; files: string[] };
 
 /**  A file whose uncommitted change blocks switching branches. */
 export type BlockingFile = {
@@ -324,7 +360,7 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 /**  No user.name / user.email configured. */
 "identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "invalidBranchName" | "branchExists" | "branchChanged" | 
 /**  The branch is checked out in another worktree. */
-"branchInWorktree" | "cancelled" | "timedOut" | "unknown";
+"branchInWorktree" | "stashChanged" | "nothingToStash" | "cancelled" | "timedOut" | "unknown";
 
 export type FileChange = FileChange_Serialize | FileChange_Deserialize;
 
@@ -572,6 +608,8 @@ export type RepoChanged = {
 	refs: boolean,
 	/**  Files, the index or the merge state changed: reload the status. */
 	worktree: boolean,
+	/**  Stash entries were added or dropped: reload the stash list. */
+	stash: boolean,
 };
 
 /**  A repository with a working tree, identified by its top-level directory. */
@@ -616,6 +654,53 @@ export type Signature = {
 	/**  Unix seconds. */
 	time: number,
 };
+
+export type StashEntry = StashEntry_Serialize | StashEntry_Deserialize;
+
+export type StashEntry_Deserialize = {
+	/**
+	 *  Position in the list (`stash@{index}`); changes as entries come and
+	 *  go, so operations identify entries by `oid`.
+	 */
+	index: number,
+	oid: string,
+	/**  The message, without git's "On <branch>: " prefix. */
+	message: string,
+	/**  Branch it was made on (`None` when HEAD was detached or unknown). */
+	branch?: string | null,
+	/**  Unix seconds. */
+	time: number,
+	/**  Also holds untracked files (`--include-untracked`). */
+	untracked: boolean,
+	origin: StashOrigin,
+};
+
+export type StashEntry_Serialize = {
+	/**
+	 *  Position in the list (`stash@{index}`); changes as entries come and
+	 *  go, so operations identify entries by `oid`.
+	 */
+	index: number,
+	oid: string,
+	/**  The message, without git's "On <branch>: " prefix. */
+	message: string,
+	/**  Branch it was made on (`None` when HEAD was detached or unknown). */
+	branch: string | null,
+	/**  Unix seconds. */
+	time: number,
+	/**  Also holds untracked files (`--include-untracked`). */
+	untracked: boolean,
+	origin: StashOrigin,
+};
+
+/**  Who made a stash entry. */
+export type StashOrigin = 
+/**  The user (in GitCRAFT or elsewhere). */
+"user" | 
+/**  GitCRAFT's backup before discarding changes. */
+"discard" | 
+/**  GitCRAFT, saving changes before switching branches. */
+"beforeSwitch";
 
 export type StatusEntry = StatusEntry_Serialize | StatusEntry_Deserialize;
 

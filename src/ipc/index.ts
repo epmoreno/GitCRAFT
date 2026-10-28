@@ -10,6 +10,7 @@ import {
 export { commands } from "./bindings";
 export type {
   AmendInfo,
+  ApplyOutcome,
   BlockingFile,
   BranchDeletion_Serialize as BranchDeletion,
   BranchNameCheck,
@@ -38,6 +39,8 @@ export type {
   RepoChanged,
   RepoRefs_Serialize as RepoRefs,
   Signature,
+  StashEntry_Serialize as StashEntry,
+  StashOrigin,
   StatusEntry_Serialize as StatusEntry,
   WorkingStatus_Serialize as WorkingStatus,
   WorktreeArea,

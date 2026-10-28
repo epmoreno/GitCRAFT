@@ -2,10 +2,12 @@ import { useTranslation } from "react-i18next";
 import { useBranchStore } from "../features/branches/store";
 import { useGraphStore } from "../features/graph/store";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
+import { useStashStore } from "../features/stash/store";
+import { useWorkdirStore } from "../features/workdir/store";
 import { Tooltip } from "../ui/Tooltip";
 import styles from "./App.module.css";
 
-const PENDING = ["pull", "push", "stash", "undo"] as const;
+const PENDING = ["pull", "push", "undo"] as const;
 
 /**
  * Top bar. Doubles as the window title bar on macOS (overlay title bar),
@@ -20,6 +22,24 @@ export function Toolbar() {
   const head = useGraphStore((s) =>
     active ? (s.graphs[active.id]?.refs?.head ?? null) : null,
   );
+  const requestStash = useStashStore((s) => s.requestCreate);
+  const status = useWorkdirStore((s) =>
+    active ? (s.statuses[active.id]?.status ?? null) : null,
+  );
+  const hasChanges =
+    !!status &&
+    status.staged.length + status.unstaged.length + status.untracked.length > 0;
+  const stashReason = !active
+    ? t("toolbar.needsRepo")
+    : !head?.oid
+      ? t("stash.needsCommit")
+      : status && status.conflicted.length > 0
+        ? t("stash.resolveFirst")
+        : hasChanges
+          ? t("stash.createHint")
+          : t("stash.noChanges");
+  const canStash =
+    !!active && !!head?.oid && hasChanges && status?.conflicted.length === 0;
 
   // The other actions do not exist yet; explain why they are disabled.
   const disabledReason = active
@@ -63,6 +83,18 @@ export function Toolbar() {
             }}
           >
             {t("toolbar.branch")}
+          </button>
+        </Tooltip>
+        <Tooltip label={stashReason}>
+          <button
+            type="button"
+            className={styles.toolButton}
+            disabled={!canStash}
+            onClick={() => {
+              if (active && canStash) requestStash(active.id);
+            }}
+          >
+            {t("toolbar.stash")}
           </button>
         </Tooltip>
         {PENDING.map((action) => (

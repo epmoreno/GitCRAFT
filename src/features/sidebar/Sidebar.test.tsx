@@ -1,8 +1,9 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
 import { emptyRefs, oid, sampleRefs } from "../../test/ipc";
 import { useGraphStore, type RepoGraph } from "../graph/store";
+import { useStashStore } from "../stash/store";
 import { Sidebar } from "./Sidebar";
 
 function withRefs(refs: RepoGraph["refs"]) {
@@ -87,7 +88,13 @@ describe("Sidebar", () => {
     ).toBeVisible();
     expect(screen.getByText("Sin remotos")).toBeVisible();
     expect(screen.getByText("Sin tags")).toBeVisible();
-    // Stashes are not read yet: say so instead of a bare dash.
-    expect(screen.getByText("Próximamente")).toBeVisible();
+    // Not read yet: a dash; read and empty: said so.
+    expect(screen.getAllByText("—")).toHaveLength(1);
+    act(() =>
+      useStashStore.setState({
+        stashes: { 1: { entries: [], error: null, readAt: 0 } },
+      }),
+    );
+    expect(screen.getByText("Sin entradas")).toBeVisible();
   });
 });

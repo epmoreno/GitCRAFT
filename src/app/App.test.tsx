@@ -171,7 +171,7 @@ describe("App", () => {
 
     const statusCalls = ipc.workingStatus.mock.calls.length;
     ipc.getRefs.mockResolvedValue({ status: "ok", data: sampleRefs() });
-    act(() => notify?.({ id: 1, refs: true, worktree: true }));
+    act(() => notify?.({ id: 1, refs: true, worktree: true, stash: false }));
     await waitFor(() => expect(ipc.streamGraph).toHaveBeenCalledTimes(2));
     await waitFor(() =>
       expect(ipc.workingStatus.mock.calls.length).toBeGreaterThan(statusCalls),
@@ -179,7 +179,7 @@ describe("App", () => {
 
     // A file edit only refreshes the status, not the history.
     const before = ipc.workingStatus.mock.calls.length;
-    act(() => notify?.({ id: 1, refs: false, worktree: true }));
+    act(() => notify?.({ id: 1, refs: false, worktree: true, stash: false }));
     await waitFor(() =>
       expect(ipc.workingStatus.mock.calls.length).toBeGreaterThan(before),
     );

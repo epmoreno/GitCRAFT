@@ -29,7 +29,7 @@
     "noTags": "Sin tags",
     "detachedHead": "HEAD desacoplado",
     "currentBranch": "Rama actual: {{name}}",
-    "comingSoon": "Próximamente"
+    "noStashes": "Sin entradas"
   },
   "start": {
     "title": "Ningún repositorio abierto",
@@ -73,7 +73,9 @@
     "invalidBranchName": "Ese nombre no es válido para una rama.",
     "branchExists": "Ya existe una rama con ese nombre.",
     "branchChanged": "La rama ha cambiado desde que se mostró (alguien la movió, la renombró o la borró). No se ha hecho nada; revisa la barra lateral y vuelve a intentarlo.",
-    "branchInWorktree": "Esa rama está en uso en otro worktree de este repositorio."
+    "branchInWorktree": "Esa rama está en uso en otro worktree de este repositorio.",
+    "stashChanged": "Esa entrada ya no está en el stash (se aplicó o borró desde otro sitio). No se ha hecho nada.",
+    "nothingToStash": "No hay cambios sin confirmar que guardar."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",
@@ -291,5 +293,61 @@
     "deleted": "Rama «{{name}}» borrada. Para volver a crearla:",
     "failed": "No se pudo completar la operación con ramas.",
     "failedAfterStash": "Si llegaron a guardarse, tus cambios están en el stash como «GitCRAFT: antes de cambiar a {{name}}» (git stash list)."
+  },
+  "stash": {
+    "apply": "Aplicar",
+    "pop": "Aplicar y borrar la entrada (pop)",
+    "dropMenu": "Borrar…",
+    "origin": {
+      "discard": "descarte",
+      "beforeSwitch": "cambio de rama"
+    },
+    "tooltip": "{{message}}\nRama: {{branch}}\nFecha: {{date}}\n{{selector}}",
+    "needsCommit": "Haz el primer commit antes de usar el stash",
+    "resolveFirst": "Resuelve primero los conflictos",
+    "createHint": "Guardar tus cambios sin confirmar en el stash",
+    "noChanges": "No hay cambios sin confirmar que guardar",
+    "createTitle": "Guardar en el stash",
+    "createExplained": "Tus cambios sin confirmar se guardan en una entrada nueva del stash y el directorio de trabajo vuelve al último commit. Podrás aplicarlos después.",
+    "message": "Mensaje (opcional)",
+    "messagePlaceholder": "Por ejemplo: arreglo a medias del login",
+    "messageHint": "Sin mensaje, Git la nombra a partir del último commit.",
+    "includeUntracked_one": "Incluir el archivo sin seguimiento (1)",
+    "includeUntracked_other": "Incluir los archivos sin seguimiento ({{count}})",
+    "willSave_one": "Se guardará 1 archivo.",
+    "willSave_other": "Se guardarán {{count}} archivos.",
+    "nothingToSave": "No hay nada que guardar con estas opciones.",
+    "create": "Guardar en el stash",
+    "cancel": "Cancelar",
+    "moreFiles_one": "y 1 más",
+    "moreFiles_other": "y {{count}} más",
+    "blockedTitle": "No se puede aplicar todavía",
+    "blocked_one": "La entrada cambia 1 archivo en el que tienes cambios sin confirmar (o que ya existe), y Git no lo sobrescribe:",
+    "blocked_other": "La entrada cambia {{count}} archivos en los que tienes cambios sin confirmar (o que ya existen), y Git no los sobrescribe:",
+    "notForced": "No se ha tocado nada.",
+    "saveLocalExplained": "Alternativa: guardar primero tus cambios actuales en el stash (como «GitCRAFT: antes de aplicar …», sin borrarse nunca) y aplicar después. O cancela, confirma o descarta tus cambios, y vuelve a intentarlo.",
+    "saveLocalAndApply": "Guardar mis cambios y aplicar",
+    "conflictTitle": "Aplicarla produciría conflictos",
+    "conflicts_one": "1 archivo ha cambiado también en la rama actual desde que se creó la entrada y chocaría:",
+    "conflicts_other": "{{count}} archivos han cambiado también en la rama actual desde que se creó la entrada y chocarían:",
+    "mayConflict_one": "1 archivo ha cambiado también en la rama actual desde que se creó la entrada y podría chocar:",
+    "mayConflict_other": "{{count}} archivos han cambiado también en la rama actual desde que se creó la entrada y podrían chocar:",
+    "conflictExplained": "Si aplicas igualmente, esos archivos quedarán con marcas de conflicto (<<<<<<< … >>>>>>>) para que los resuelvas a mano. La entrada no se borra. Alternativa: cancela y aplícala en la rama en la que se creó.",
+    "popKeeps": "Aunque pediste «pop», la entrada no se borrará porque habrá conflictos.",
+    "applyWithConflicts": "Aplicar con conflictos",
+    "dropTitle": "¿Borrar esta entrada del stash?",
+    "dropLoses": "Se perderán los cambios guardados en ella, salvo que la recuperes antes de que Git limpie los objetos sueltos (normalmente semanas).",
+    "dropLosesUntracked": "Se perderán los cambios guardados en ella, incluidos sus archivos sin seguimiento, salvo que la recuperes antes de que Git limpie los objetos sueltos (normalmente semanas).",
+    "hash": "Su hash:",
+    "recover": "Para recuperarla:",
+    "drop": "Borrar entrada",
+    "failed": "No se pudo completar la operación con el stash.",
+    "created": "Cambios guardados en el stash.",
+    "applied": "Entrada aplicada. Sigue en el stash.",
+    "popped": "Entrada aplicada y borrada del stash.",
+    "localSaved": "Tus cambios anteriores están en el stash como «GitCRAFT: antes de aplicar …».",
+    "conflicted_one": "Entrada aplicada con conflictos en 1 archivo; resuélvelo y prepáralo. La entrada sigue en el stash.",
+    "conflicted_other": "Entrada aplicada con conflictos en {{count}} archivos; resuélvelos y prepáralos. La entrada sigue en el stash.",
+    "dropped": "Entrada borrada. Para recuperarla:"
   }
 }

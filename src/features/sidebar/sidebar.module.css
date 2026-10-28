@@ -143,3 +143,34 @@
   color: var(--text-faint);
   list-style: none;
 }
+
+/* Stash entries: message, then branch and date */
+.stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.stacked .label,
+.stacked .hint {
+  max-width: 100%;
+}
+
+.stacked .hint {
+  margin-left: 0;
+}
+
+/* Entries GitCRAFT made (discard backups, "before switching") */
+.ours {
+  border-left: 2px solid var(--accent);
+}
+
+.badge {
+  margin-right: var(--space-1);
+  padding: 0 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}

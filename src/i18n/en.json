@@ -29,7 +29,7 @@
     "noTags": "No tags",
     "detachedHead": "Detached HEAD",
     "currentBranch": "Current branch: {{name}}",
-    "comingSoon": "Coming soon"
+    "noStashes": "No entries"
   },
   "start": {
     "title": "No repository open",
@@ -73,7 +73,9 @@
     "invalidBranchName": "That is not a valid branch name.",
     "branchExists": "A branch with that name already exists.",
     "branchChanged": "The branch changed since it was shown (it was moved, renamed or deleted). Nothing was done; check the sidebar and try again.",
-    "branchInWorktree": "That branch is in use in another worktree of this repository."
+    "branchInWorktree": "That branch is in use in another worktree of this repository.",
+    "stashChanged": "That entry is no longer in the stash (it was applied or deleted elsewhere). Nothing was done.",
+    "nothingToStash": "There are no uncommitted changes to save."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -291,5 +293,61 @@
     "deleted": "Branch “{{name}}” deleted. To create it again:",
     "failed": "The branch operation could not be completed.",
     "failedAfterStash": "If they were saved, your changes are in the stash as “GitCRAFT: antes de cambiar a {{name}}” (git stash list)."
+  },
+  "stash": {
+    "apply": "Apply",
+    "pop": "Apply and delete the entry (pop)",
+    "dropMenu": "Delete…",
+    "origin": {
+      "discard": "discard",
+      "beforeSwitch": "branch switch"
+    },
+    "tooltip": "{{message}}\nBranch: {{branch}}\nDate: {{date}}\n{{selector}}",
+    "needsCommit": "Make the first commit before using the stash",
+    "resolveFirst": "Resolve the conflicts first",
+    "createHint": "Save your uncommitted changes in the stash",
+    "noChanges": "There are no uncommitted changes to save",
+    "createTitle": "Save in the stash",
+    "createExplained": "Your uncommitted changes are saved in a new stash entry and the working directory goes back to the last commit. You can apply them later.",
+    "message": "Message (optional)",
+    "messagePlaceholder": "For example: half-done login fix",
+    "messageHint": "Without a message, Git names it after the last commit.",
+    "includeUntracked_one": "Include the untracked file (1)",
+    "includeUntracked_other": "Include the untracked files ({{count}})",
+    "willSave_one": "1 file will be saved.",
+    "willSave_other": "{{count}} files will be saved.",
+    "nothingToSave": "Nothing to save with these options.",
+    "create": "Save in the stash",
+    "cancel": "Cancel",
+    "moreFiles_one": "and 1 more",
+    "moreFiles_other": "and {{count}} more",
+    "blockedTitle": "Cannot apply yet",
+    "blocked_one": "The entry changes 1 file where you have uncommitted changes (or that already exists), and Git does not overwrite it:",
+    "blocked_other": "The entry changes {{count}} files where you have uncommitted changes (or that already exist), and Git does not overwrite them:",
+    "notForced": "Nothing was touched.",
+    "saveLocalExplained": "Alternative: first save your current changes in the stash (as “GitCRAFT: antes de aplicar …”, never deleted) and then apply. Or cancel, commit or discard your changes, and try again.",
+    "saveLocalAndApply": "Save my changes and apply",
+    "conflictTitle": "Applying it would cause conflicts",
+    "conflicts_one": "1 file also changed on the current branch since the entry was made and would conflict:",
+    "conflicts_other": "{{count}} files also changed on the current branch since the entry was made and would conflict:",
+    "mayConflict_one": "1 file also changed on the current branch since the entry was made and might conflict:",
+    "mayConflict_other": "{{count}} files also changed on the current branch since the entry was made and might conflict:",
+    "conflictExplained": "If you apply anyway, those files get conflict markers (<<<<<<< … >>>>>>>) for you to resolve by hand. The entry is not deleted. Alternative: cancel and apply it on the branch it was made on.",
+    "popKeeps": "Although you asked for “pop”, the entry will not be deleted because there will be conflicts.",
+    "applyWithConflicts": "Apply with conflicts",
+    "dropTitle": "Delete this stash entry?",
+    "dropLoses": "The changes saved in it are lost, unless you recover it before Git cleans up loose objects (usually weeks).",
+    "dropLosesUntracked": "The changes saved in it, including its untracked files, are lost unless you recover it before Git cleans up loose objects (usually weeks).",
+    "hash": "Its hash:",
+    "recover": "To recover it:",
+    "drop": "Delete entry",
+    "failed": "The stash operation could not be completed.",
+    "created": "Changes saved in the stash.",
+    "applied": "Entry applied. It is still in the stash.",
+    "popped": "Entry applied and deleted from the stash.",
+    "localSaved": "Your previous changes are in the stash as “GitCRAFT: antes de aplicar …”.",
+    "conflicted_one": "Entry applied with conflicts in 1 file; resolve and stage it. The entry is still in the stash.",
+    "conflicted_other": "Entry applied with conflicts in {{count}} files; resolve and stage them. The entry is still in the stash.",
+    "dropped": "Entry deleted. To recover it:"
   }
 }

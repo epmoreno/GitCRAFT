@@ -3,7 +3,8 @@
 //!
 //! - Changes are classified: `refs` (HEAD, `packed-refs`, `refs/**`: the
 //!   graph must reload) and `worktree` (files, the index and merge state:
-//!   the working directory status must reload). Lock files, objects and
+//!   the working directory status must reload) and `stash` (`refs/stash` and
+//!   its reflog: the stash list must reload). Lock files, objects and
 //!   other repositories' `.git` internals are ignored.
 //! - Events are debounced: a burst (one `git commit` touches several files)
 //!   produces a single notification after [`DEBOUNCE`] of quiet.
@@ -26,16 +27,18 @@ pub const DEBOUNCE: Duration = Duration::from_millis(300);
 pub struct Change {
     pub refs: bool,
     pub worktree: bool,
+    pub stash: bool,
 }
 
 impl Change {
     fn any(self) -> bool {
-        self.refs || self.worktree
+        self.refs || self.worktree || self.stash
     }
 
     fn merge(&mut self, other: Change) {
         self.refs |= other.refs;
         self.worktree |= other.worktree;
+        self.stash |= other.stash;
     }
 }
 
@@ -171,10 +174,19 @@ fn classify(roots: &Roots, path: &Path) -> Change {
             if name.ends_with(".lock") {
                 return Change::default();
             }
-            let refs = name == "HEAD" || name == "packed-refs" || relative.starts_with("refs");
-            // A moved HEAD also changes what counts as staged.
+            // Dropping an entry other than the newest only rewrites the reflog.
+            let stash =
+                relative == Path::new("refs/stash") || relative == Path::new("logs/refs/stash");
+            let refs =
+                !stash && (name == "HEAD" || name == "packed-refs" || relative.starts_with("refs"));
+            // A moved HEAD also changes what counts as staged; a stash push
+            // or pop changes the working tree too, which reports on its own.
             let worktree = refs || STATUS_FILES.contains(&name.as_ref());
-            return Change { refs, worktree };
+            return Change {
+                refs,
+                worktree,
+                stash,
+            };
         }
     }
     match path.strip_prefix(&roots.worktree) {
@@ -189,6 +201,7 @@ fn classify(roots: &Roots, path: &Path) -> Change {
         Ok(_) => Change {
             refs: false,
             worktree: true,
+            stash: false,
         },
         Err(_) => Change::default(),
     }
@@ -205,14 +218,22 @@ mod tests {
     const REFS: Change = Change {
         refs: true,
         worktree: true,
+        stash: false,
     };
     const WORKTREE: Change = Change {
         refs: false,
         worktree: true,
+        stash: false,
+    };
+    const STASH: Change = Change {
+        refs: false,
+        worktree: false,
+        stash: true,
     };
     const NOTHING: Change = Change {
         refs: false,
         worktree: false,
+        stash: false,
     };
 
     #[test]
@@ -234,6 +255,9 @@ mod tests {
             ("/r/.git/objects/ab/cdef", NOTHING),
             ("/r/.git/objects/info/commit-graph", NOTHING),
             ("/r/.git/logs/HEAD", NOTHING),
+            ("/r/.git/refs/stash", STASH),
+            ("/r/.git/logs/refs/stash", STASH),
+            ("/r/.git/logs/refs/heads/main", NOTHING),
             ("/r/vendor/lib/.git/HEAD", NOTHING),
             ("/elsewhere/file", NOTHING),
         ];
