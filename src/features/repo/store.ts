@@ -45,6 +45,8 @@ type RepoState = {
   /** Shows the folder picker and opens the chosen folder. */
   pickAndOpen: (dialogTitle: string) => Promise<void>;
   activate: (id: number) => void;
+  /** Shows a repository opened elsewhere (e.g. just created) in a tab. */
+  adopt: (opened: OpenedRepository) => Promise<void>;
   closeTab: (id: number) => Promise<void>;
   dismissError: () => void;
 };
@@ -91,6 +93,17 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
   },
 
   activate: (id) => set({ activeId: id }),
+
+  adopt: async (opened) => {
+    set((s) => ({
+      tabs: s.tabs.some((t) => t.id === opened.id)
+        ? s.tabs
+        : [...s.tabs, opened],
+      activeId: opened.id,
+      openError: null,
+    }));
+    await get().loadRecents();
+  },
 
   restoreSession: async () => {
     const result = await commands.restoreSession();

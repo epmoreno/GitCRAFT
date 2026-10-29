@@ -63,6 +63,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::force_push_preview,
             commands::save_session,
             commands::restore_session,
+            commands::check_init,
+            commands::valid_branch_name,
+            commands::init_repository,
         ])
 }
 

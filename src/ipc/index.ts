@@ -48,6 +48,7 @@ export type {
   WorkingStatus_Serialize as WorkingStatus,
   WorktreeArea,
   HunkSelection_Deserialize as HunkSelection,
+  InitCheck_Serialize as InitCheck,
   InProgress,
   PullBlock,
   PullMode,

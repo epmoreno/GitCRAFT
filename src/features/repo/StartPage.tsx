@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useCreateStore } from "../create/store";
 import { useRepoStore } from "./store";
 import styles from "./repo.module.css";
 
@@ -9,6 +10,7 @@ export function StartPage() {
   const opening = useRepoStore((s) => s.opening);
   const pickAndOpen = useRepoStore((s) => s.pickAndOpen);
   const openRepository = useRepoStore((s) => s.openRepository);
+  const requestInit = useCreateStore((s) => s.requestInit);
 
   return (
     <div className={styles.startScroll}>
@@ -23,6 +25,16 @@ export function StartPage() {
         >
           {t("start.open")}
         </button>
+        <div className={styles.startSecondary}>
+          <button
+            type="button"
+            className={styles.startLink}
+            disabled={opening}
+            onClick={() => void requestInit(t("init.pickerTitle"))}
+          >
+            {t("start.init")}
+          </button>
+        </div>
 
         <section className={styles.recent} aria-labelledby="recent-title">
           <h2 id="recent-title" className={styles.recentTitle}>

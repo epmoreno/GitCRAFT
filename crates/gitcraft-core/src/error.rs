@@ -68,6 +68,9 @@ pub enum GitError {
 
     #[error("HEAD is detached: not on any branch")]
     DetachedHead,
+
+    #[error("{} already is a git repository", .0.display())]
+    AlreadyARepository(PathBuf),
 }
 
 /// What went wrong, in terms the UI can explain. Each kind has a translated
@@ -98,6 +101,7 @@ pub enum ErrorKind {
     /// credential helper / SSH key): git cannot prompt.
     AuthFailed,
     DetachedHead,
+    AlreadyARepository,
     /// The remote could not be reached (network, host, path).
     RemoteUnreachable,
     Cancelled,
@@ -125,6 +129,7 @@ impl GitError {
             Self::StashChanged(_) => ErrorKind::StashChanged,
             Self::NothingToStash => ErrorKind::NothingToStash,
             Self::DetachedHead => ErrorKind::DetachedHead,
+            Self::AlreadyARepository(_) => ErrorKind::AlreadyARepository,
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
     }
@@ -163,7 +168,8 @@ impl GitError {
             | Self::BranchChanged(_)
             | Self::StashChanged(_)
             | Self::NothingToStash
-            | Self::DetachedHead => None,
+            | Self::DetachedHead
+            | Self::AlreadyARepository(_) => None,
         }
     }
 }

@@ -134,6 +134,12 @@ export const commands = {
 	 *  and forgotten.
 	 */
 	restoreSession: () => typedError<RestoredSession_Serialize, IpcError_Serialize>(__TAURI_INVOKE("restore_session")),
+	/**  What `git init` would do in `path` (shown before doing it). */
+	checkInit: (path: string) => typedError<InitCheck_Serialize, IpcError_Serialize>(__TAURI_INVOKE("check_init", { path })),
+	/**  Whether `name` can be the first branch of a new repository. */
+	validBranchName: (path: string, name: string) => typedError<boolean, IpcError_Serialize>(__TAURI_INVOKE("valid_branch_name", { path, name })),
+	/**  Creates a repository in `path` with first branch `branch` and opens it. */
+	initRepository: (path: string, branch: string) => typedError<OpenedRepository, IpcError_Serialize>(__TAURI_INVOKE("init_repository", { path, branch })),
 };
 
 /** Events */
@@ -411,7 +417,7 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
  *  The remote rejected the credentials, or none were available (no
  *  credential helper / SSH key): git cannot prompt.
  */
-"authFailed" | "detachedHead" | 
+"authFailed" | "detachedHead" | "alreadyARepository" | 
 /**  The remote could not be reached (network, host, path). */
 "remoteUnreachable" | "cancelled" | "timedOut" | "unknown";
 
@@ -661,6 +667,39 @@ export type Hunk_Serialize = {
  *  (or to be aborted).
  */
 export type InProgress = "merge" | "rebase" | "cherryPick" | "revert";
+
+/**  What `git init` would do in a folder, shown before doing it. */
+export type InitCheck = InitCheck_Serialize | InitCheck_Deserialize;
+
+/**  What `git init` would do in a folder, shown before doing it. */
+export type InitCheck_Deserialize = {
+	/**  Initial branch suggested: the user's `init.defaultBranch`, or "main". */
+	defaultBranch: string,
+	/**  The folder already is the top of a repository (nothing to create). */
+	alreadyRepository: boolean,
+	/**
+	 *  The folder is inside another repository's working tree: the new one
+	 *  would be nested in it.
+	 */
+	inside?: string | null,
+	/**  The folder has no files (hidden ones count). */
+	empty: boolean,
+};
+
+/**  What `git init` would do in a folder, shown before doing it. */
+export type InitCheck_Serialize = {
+	/**  Initial branch suggested: the user's `init.defaultBranch`, or "main". */
+	defaultBranch: string,
+	/**  The folder already is the top of a repository (nothing to create). */
+	alreadyRepository: boolean,
+	/**
+	 *  The folder is inside another repository's working tree: the new one
+	 *  would be nested in it.
+	 */
+	inside: string | null,
+	/**  The folder has no files (hidden ones count). */
+	empty: boolean,
+};
 
 /**
  *  Error returned by every command. The UI shows a translated message for

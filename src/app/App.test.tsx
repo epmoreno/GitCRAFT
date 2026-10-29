@@ -42,9 +42,9 @@ describe("App", () => {
     expect(
       await within(main).findByText("Aún no has abierto ningún repositorio."),
     ).toBeVisible();
-    // Clone and init are not implemented yet, so they are not offered.
-    expect(within(main).queryByText(/clon/i)).toBeNull();
-    expect(within(main).queryByText(/inicializ/i)).toBeNull();
+    expect(
+      within(main).getByRole("button", { name: "Inicializar repositorio…" }),
+    ).toBeEnabled();
   });
 
   it("opens a recent repository in a tab", async () => {

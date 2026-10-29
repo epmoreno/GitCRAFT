@@ -9,6 +9,7 @@ use gitcraft_core::ops::branch::{BranchDeletion, BranchNameCheck, CheckoutOutcom
 use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
+use gitcraft_core::ops::init::InitCheck;
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::ops::remote::{ForcePushPreview, PullMode, PullOutcome, PushOutcome};
 use gitcraft_core::ops::stash::{ApplyOutcome, RecoverPreview};
@@ -547,4 +548,33 @@ pub async fn save_session(
 #[specta::specta]
 pub async fn restore_session(state: State<'_, AppState>) -> Result<RestoredSession, IpcError> {
     Ok(state.restore_session().await)
+}
+
+/// What `git init` would do in `path` (shown before doing it).
+#[tauri::command]
+#[specta::specta]
+pub async fn check_init(state: State<'_, AppState>, path: String) -> Result<InitCheck, IpcError> {
+    state.check_init(&PathBuf::from(path)).await
+}
+
+/// Whether `name` can be the first branch of a new repository.
+#[tauri::command]
+#[specta::specta]
+pub async fn valid_branch_name(
+    state: State<'_, AppState>,
+    path: String,
+    name: String,
+) -> Result<bool, IpcError> {
+    state.valid_branch_name(&PathBuf::from(path), &name).await
+}
+
+/// Creates a repository in `path` with first branch `branch` and opens it.
+#[tauri::command]
+#[specta::specta]
+pub async fn init_repository(
+    state: State<'_, AppState>,
+    path: String,
+    branch: String,
+) -> Result<OpenedRepository, IpcError> {
+    state.init_repository(&PathBuf::from(path), &branch).await
 }

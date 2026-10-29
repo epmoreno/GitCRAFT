@@ -36,6 +36,9 @@ export const ipc = {
   abortInProgress: vi.mocked(commands.abortInProgress),
   saveSession: vi.mocked(commands.saveSession),
   restoreSession: vi.mocked(commands.restoreSession),
+  checkInit: vi.mocked(commands.checkInit),
+  validBranchName: vi.mocked(commands.validBranchName),
+  initRepository: vi.mocked(commands.initRepository),
   onRepoChanged: vi.mocked(onRepoChanged),
   cancelOperation: vi.mocked(commands.cancelOperation),
   dismissOptimizeNotice: vi.mocked(commands.dismissOptimizeNotice),
@@ -113,6 +116,7 @@ export function resetIpcMock() {
   ipc.setPullMode.mockResolvedValue({ status: "ok", data: null });
   ipc.abortInProgress.mockResolvedValue({ status: "ok", data: null });
   ipc.saveSession.mockResolvedValue({ status: "ok", data: null });
+  ipc.validBranchName.mockResolvedValue({ status: "ok", data: true });
   ipc.restoreSession.mockResolvedValue({
     status: "ok",
     data: { opened: [], active: null, failed: [] },

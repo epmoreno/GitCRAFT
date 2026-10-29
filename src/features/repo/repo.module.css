@@ -246,3 +246,22 @@
   margin: var(--space-1) 0;
   padding-left: var(--space-4);
 }
+
+.startSecondary {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  margin-top: var(--space-2);
+}
+
+.startLink {
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--accent);
+}
+
+.startLink:hover:not(:disabled) {
+  background: var(--surface-2);
+}

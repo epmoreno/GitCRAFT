@@ -15,6 +15,7 @@ use gitcraft_core::ops::discard::{
     DiscardRecord, DiscardTarget, DiscardedFile, SystemTrash, Trash, discard, preview_discard,
     undo_discard,
 };
+use gitcraft_core::ops::init::{self, InitCheck};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
@@ -977,6 +978,29 @@ impl AppState {
 
     /// Recent repositories, most recent first, without entries whose folder
     /// has disappeared.
+    /// What `git init` would do in `path`.
+    pub async fn check_init(&self, path: &Path) -> Result<InitCheck, IpcError> {
+        let git = self.git()?;
+        Ok(init::check_init(git, path, &CancellationToken::new()).await?)
+    }
+
+    /// Whether `name` can be a first branch (checked in `path`).
+    pub async fn valid_branch_name(&self, path: &Path, name: &str) -> Result<bool, IpcError> {
+        let git = self.git()?;
+        Ok(init::valid_branch_name(git, path, name, &CancellationToken::new()).await?)
+    }
+
+    /// Creates a repository in `path` and opens it.
+    pub async fn init_repository(
+        &self,
+        path: &Path,
+        branch: &str,
+    ) -> Result<OpenedRepository, IpcError> {
+        let git = self.git()?;
+        init::init_repository(git, path, branch, &CancellationToken::new()).await?;
+        self.open_repository(path).await
+    }
+
     /// Remembers the open tabs (paths in order) and the active one.
     pub fn save_session(&self, tabs: Vec<String>, active: Option<String>) {
         let mut inner = self.lock();

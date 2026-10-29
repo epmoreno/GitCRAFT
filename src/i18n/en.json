@@ -13,7 +13,8 @@
     "openRepo": "Open repository",
     "needsRepo": "Open a repository first",
     "notYetAvailable": "Not available yet",
-    "fetch": "Fetch"
+    "fetch": "Fetch",
+    "newRepository": "More ways to open a repository"
   },
   "tabs": {
     "empty": "No open repositories",
@@ -51,7 +52,8 @@
     "open": "Open repository…",
     "dialogTitle": "Open repository",
     "recent": "Recent",
-    "recentEmpty": "You haven't opened any repositories yet."
+    "recentEmpty": "You haven't opened any repositories yet.",
+    "init": "Initialize repository…"
   },
   "detail": {
     "empty": "Select a commit to see its details.",
@@ -92,7 +94,8 @@
     "nothingToStash": "There are no uncommitted changes to save.",
     "authFailed": "Git could not authenticate with the remote. GitCRAFT never stores or asks for passwords: set up a credential helper (osxkeychain on macOS) or add your SSH key to the agent, and check that “git fetch” works in a terminal.",
     "remoteUnreachable": "Could not connect to the remote. Check your connection and the remote's URL (git remote -v).",
-    "detachedHead": "HEAD is detached (not on a branch): switch to a branch first."
+    "detachedHead": "HEAD is detached (not on a branch): switch to a branch first.",
+    "alreadyARepository": "“{{path}}” already is a Git repository."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -563,5 +566,19 @@
     "edit": "Edit",
     "window": "Window",
     "closeTab": "Close tab"
+  },
+  "init": {
+    "pickerTitle": "Folder for the new repository",
+    "title": "Initialize repository",
+    "branch": "Initial branch",
+    "branchHint": "The repository's first branch. Your Git configuration's (init.defaultBranch) or “main” is suggested.",
+    "nested": "This folder is inside the repository “{{parent}}”: the new one would be nested in it and the outer one would see it as just another folder. If that is not what you want, cancel and open that repository.",
+    "empty": "The folder is empty.",
+    "notEmpty": "Files already in the folder are not changed: they stay untracked, ready to be staged and committed.",
+    "create": "Create repository",
+    "cancel": "Cancel",
+    "alreadyTitle": "Already a repository",
+    "already": "This folder already is a Git repository, so there is nothing to initialize.",
+    "open": "Open it"
   }
 }

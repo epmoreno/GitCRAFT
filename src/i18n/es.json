@@ -13,7 +13,8 @@
     "openRepo": "Abrir repositorio",
     "needsRepo": "Abre un repositorio primero",
     "notYetAvailable": "Todavía no disponible",
-    "fetch": "Fetch"
+    "fetch": "Fetch",
+    "newRepository": "Más formas de abrir un repositorio"
   },
   "tabs": {
     "empty": "Sin repositorios abiertos",
@@ -51,7 +52,8 @@
     "open": "Abrir repositorio…",
     "dialogTitle": "Abrir repositorio",
     "recent": "Recientes",
-    "recentEmpty": "Aún no has abierto ningún repositorio."
+    "recentEmpty": "Aún no has abierto ningún repositorio.",
+    "init": "Inicializar repositorio…"
   },
   "detail": {
     "empty": "Selecciona un commit para ver sus detalles.",
@@ -92,7 +94,8 @@
     "nothingToStash": "No hay cambios sin confirmar que guardar.",
     "authFailed": "Git no pudo autenticarse con el remoto. GitCRAFT no guarda ni pide contraseñas: configura un credential helper (en macOS, osxkeychain) o añade tu clave SSH al agente, y comprueba que «git fetch» funciona desde la terminal.",
     "remoteUnreachable": "No se pudo conectar con el remoto. Comprueba la conexión y la URL del remoto (git remote -v).",
-    "detachedHead": "Estás en HEAD desacoplado (no en una rama): cambia a una rama primero."
+    "detachedHead": "Estás en HEAD desacoplado (no en una rama): cambia a una rama primero.",
+    "alreadyARepository": "«{{path}}» ya es un repositorio Git."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",
@@ -563,5 +566,19 @@
     "edit": "Edición",
     "window": "Ventana",
     "closeTab": "Cerrar pestaña"
+  },
+  "init": {
+    "pickerTitle": "Carpeta para el nuevo repositorio",
+    "title": "Inicializar repositorio",
+    "branch": "Rama inicial",
+    "branchHint": "La primera rama del repositorio. Se propone la de tu configuración de Git (init.defaultBranch) o «main».",
+    "nested": "Esta carpeta está dentro del repositorio «{{parent}}»: el nuevo quedaría anidado en él y el de fuera lo vería como una carpeta más. Si no es lo que quieres, cancela y abre ese repositorio.",
+    "empty": "La carpeta está vacía.",
+    "notEmpty": "Los archivos que ya hay en la carpeta no se modifican: quedarán como archivos sin seguimiento, listos para preparar y confirmar.",
+    "create": "Crear repositorio",
+    "cancel": "Cancelar",
+    "alreadyTitle": "Ya es un repositorio",
+    "already": "Esta carpeta ya es un repositorio Git, así que no hay nada que inicializar.",
+    "open": "Abrirlo"
   }
 }

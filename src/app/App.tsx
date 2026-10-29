@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { BranchDialogs, BranchToast } from "../features/branches/BranchDialogs";
+import { CreateDialogs } from "../features/create/CreateDialogs";
 import { DetailPanel } from "../features/detail/DetailPanel";
 import {
   InProgressBanner,
@@ -121,6 +122,7 @@ export function App() {
         <BranchDialogs />
         <StashDialogs />
         <RemoteDialogs />
+        <CreateDialogs />
       </div>
     </div>
   );

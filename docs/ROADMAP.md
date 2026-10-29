@@ -61,7 +61,17 @@ T.2 → T.4.
       ⌘W cierra solo la pestaña y bloqueados con un diálogo abierto; menú de
       la app y copiar/pegar; restaurar orden y pestaña activa tras ⌘Q; repo
       movido: aviso una sola vez y pestaña no abierta.
-- [ ] **1.4 Inicializar repo.** `git init` con rama inicial configurable.
+- [x] **1.4 Inicializar repo.** `git init` con rama inicial configurable.
+      *Estado:* «Inicializar repositorio…» en la página de inicio y en el menú
+      ▾ junto a «Abrir repositorio». Tras elegir la carpeta, un diálogo
+      propone la rama inicial (`init.defaultBranch` o «main»), la valida al
+      escribir, avisa si la carpeta está dentro de otro repositorio (quedaría
+      anidado) y de que los archivos existentes no se tocan. Si ya es un
+      repositorio, no lo reinicializa: ofrece abrirlo. El nuevo se abre en una
+      pestaña.
+      *Tests:* integración (rama elegida, archivos existentes sin tocar, ya es
+      un repositorio, anidado, nombres no válidos, carpeta inexistente) y de
+      interfaz.
 - [ ] **1.5 Clonar.** URL + destino, progreso (`--progress`) y cancelación; la
       autenticación la gestiona el credential helper. *Test:* clonar un repo
       local `file://`.

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useBranchStore } from "../features/branches/store";
+import { NewRepositoryMenu } from "../features/create/NewRepositoryMenu";
 import { useGraphStore } from "../features/graph/store";
 import {
   CurrentBranch,
@@ -65,6 +66,7 @@ export function Toolbar() {
       >
         {t("toolbar.openRepo")}
       </button>
+      <NewRepositoryMenu />
       <div className={styles.toolbarActions} data-tauri-drag-region>
         <CurrentBranch repoId={active?.id ?? null} />
         <FetchButton repoId={active?.id ?? null} />

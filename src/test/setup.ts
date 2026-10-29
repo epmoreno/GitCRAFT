@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import i18n from "../i18n";
 import { initialBranchState, useBranchStore } from "../features/branches/store";
+import { initialCreateState, useCreateStore } from "../features/create/store";
 import { useGraphStore } from "../features/graph/store";
 import { initialRemoteState, useRemoteStore } from "../features/remote/store";
 import { initialStashState, useStashStore } from "../features/stash/store";
@@ -55,6 +56,9 @@ vi.mock("../ipc", () => ({
     abortInProgress: vi.fn(),
     saveSession: vi.fn(),
     restoreSession: vi.fn(),
+    checkInit: vi.fn(),
+    validBranchName: vi.fn(),
+    initRepository: vi.fn(),
   },
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
@@ -86,6 +90,7 @@ beforeEach(() => {
   useBranchStore.setState(initialBranchState);
   useStashStore.setState(initialStashState);
   useRemoteStore.setState(initialRemoteState);
+  useCreateStore.setState(initialCreateState);
   useGraphStore.setState({ graphs: {} });
   useWorkdirStore.setState({
     statuses: {},
