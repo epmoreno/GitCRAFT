@@ -331,11 +331,17 @@ diálogo y con confirmación, con el índice intacto.
       `diskFull`, `filePermission`. Dejan de ser silenciosos: activar amend,
       leer la sesión anterior, guardar el modo de pull, comprobar el destino
       del clon y push sin remotos.
+      *Verificado manualmente:* aviso con salida desplegable y «Copiar la
+      salida»; `index.lock` bloqueado; credenciales redactadas en el error del
+      clon; amend sin commits y push sin remoto.
 - [x] **T.2 Panel de operaciones.** Muestra las operaciones en curso con progreso
       y botón de cancelar, y un historial de comandos ejecutados.
       *Estado:* botón «Operaciones» → panel inferior. El historial muestra
       el comando exacto, su duración y su resultado, con las credenciales de
       las URLs redactadas (`***`). Detalles en ARCHITECTURE.md (sección 6).
+      *Verificado manualmente:* comando exacto y duración, etiqueta
+      «escritura», filtros y limpiar historial; URL redactada en el
+      historial.
 - [x] **T.3 i18n.** Todos los textos de la UI están en `es` y `en`; hay un test
       que falla si falta una clave.
       *Estado:* `src/i18n/i18n.test.ts` (desde la 0.3) falla si una clave
@@ -350,6 +356,11 @@ diálogo y con confirmación, con el índice intacto.
       notarizar, macOS ≥ 11). Instalar, primer arranque con Gatekeeper sin
       desactivarlo, y desinstalar: `docs/INSTALACION.md`. Detalles en
       ARCHITECTURE.md (sección 6, «Empaquetado»).
+      *Verificado manualmente:* `.dmg` instalado en Aplicaciones, arranca
+      desde Finder sin problemas, y Fetch y Push funcionan desde la app
+      instalada.
+
+**MVP (fase 1) completo y verificado manualmente** — versión `v0.1.0`.
 
 ## Fase 2
 
