@@ -72,6 +72,8 @@ T.2 → T.4.
       *Tests:* integración (rama elegida, archivos existentes sin tocar, ya es
       un repositorio, anidado, nombres no válidos, carpeta inexistente) y de
       interfaz.
+      *Verificado manualmente:* rama «trunk», nombre no válido, carpeta con
+      archivos, aviso de anidado y carpeta que ya es un repositorio.
 - [x] **1.5 Clonar.** URL + destino, progreso (`--progress`) y cancelación; la
       autenticación la gestiona el credential helper. *Test:* clonar un repo
       local `file://`.
@@ -86,6 +88,8 @@ T.2 → T.4.
       clonar con upstream y ramas remotas, carpeta vacía, nunca encima de una
       carpeta con archivos, nombres y URLs no válidos, remoto inexistente,
       cancelación; e interfaz.
+      *Verificado manualmente:* clon normal con upstream, destino con
+      contenido bloqueado, carpeta vacía y remoto inexistente.
 
 ### 2. Grafo de commits
 - [x] **2.1 Parser de log.** `git log --topo-order -z --format=<campos separados
@@ -174,6 +178,8 @@ T.2 → T.4.
       muestra todas las suyas), tags y stashes (mensaje y rama). Cada sección
       muestra «visibles/total» y se abre mientras se filtra; Esc borra el
       filtro. Se recuerda por pestaña.
+      *Verificado manualmente:* filtrar por «feat», por «origin» y stashes;
+      secciones plegadas; Esc; filtro por pestaña.
 - [x] **5.2 Crear, checkout, renombrar y borrar.** Borrar una rama no fusionada
       pide confirmación y explica qué commits quedarían sin rama; nunca se usa
       `branch -D` sin esa confirmación. Cambiar de rama con cambios sin
