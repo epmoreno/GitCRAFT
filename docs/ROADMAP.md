@@ -145,10 +145,14 @@ T.2 → T.4.
       precargado.
 
 ### 5. Ramas
-- [~] **5.1 Barra lateral.** Ramas locales, remotas (agrupadas por remoto), tags y
+- [x] **5.1 Barra lateral.** Ramas locales, remotas (agrupadas por remoto), tags y
       stashes, con filtro.
-      *Estado:* ramas locales, remotos, tags y stashes hechos (clic → commit
-      en el grafo); falta el filtro.
+      *Estado:* ramas locales, remotos, tags y stashes (clic → commit en el
+      grafo). Filtro arriba de la barra lateral, sin distinguir mayúsculas:
+      ramas (también por su upstream), ramas remotas (el nombre del remoto
+      muestra todas las suyas), tags y stashes (mensaje y rama). Cada sección
+      muestra «visibles/total» y se abre mientras se filtra; Esc borra el
+      filtro. Se recuerda por pestaña.
 - [x] **5.2 Crear, checkout, renombrar y borrar.** Borrar una rama no fusionada
       pide confirmación y explica qué commits quedarían sin rama; nunca se usa
       `branch -D` sin esa confirmación. Cambiar de rama con cambios sin

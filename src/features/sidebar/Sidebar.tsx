@@ -23,12 +23,17 @@ export function Sidebar({ repoId }: Props) {
   const [menu, setMenu] = useState<Menu | null>(null);
   const scroller = useRef<HTMLElement>(null);
   useRememberedScroll(scroller, repoId === null ? null : `${repoId}:sidebar`);
+  const filter = useViewStore((s) =>
+    repoId === null ? "" : (s.filters[repoId] ?? ""),
+  );
+  const setFilter = useViewStore((s) => s.setFilter);
   const goTo = (oid: string) => {
     if (repoId !== null) select(repoId, oid);
   };
   const props = {
     refs,
     repoId,
+    filter: filter.trim().toLowerCase(),
     onSelect: goTo,
     onMenu: (event: MouseEvent, label: string, items: MenuItem[]) => {
       event.preventDefault();
@@ -42,6 +47,28 @@ export function Sidebar({ repoId }: Props) {
       className={styles.sidebar}
       aria-label={t("zones.sidebar")}
     >
+      {repoId !== null && (
+        <div className={styles.filter}>
+          <input
+            type="search"
+            className={styles.filterInput}
+            value={filter}
+            placeholder={t("sidebar.filterPlaceholder")}
+            aria-label={t("sidebar.filterLabel")}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
+            onChange={(event) => setFilter(repoId, event.target.value)}
+            onKeyDown={(event) => {
+              // Esc clears the filter (and does nothing else, e.g. close a diff).
+              if (event.key === "Escape" && filter !== "") {
+                event.nativeEvent.stopPropagation();
+                setFilter(repoId, "");
+              }
+            }}
+          />
+        </div>
+      )}
       <LocalBranches {...props} />
       <Remotes {...props} />
       <Tags {...props} />
@@ -64,15 +91,34 @@ type Menu = { x: number; y: number; label: string; items: MenuItem[] };
 type ListProps = {
   refs: RepoRefs | null;
   repoId: number | null;
+  /** Lower-cased filter text ("" shows everything). */
+  filter: string;
   onSelect: (oid: string) => void;
   onMenu: (event: MouseEvent, label: string, items: MenuItem[]) => void;
 };
 
-function LocalBranches({ refs, repoId, onSelect, onMenu }: ListProps) {
+/** Whether any of `texts` contains the (lower-cased) filter. */
+function matches(filter: string, ...texts: (string | null | undefined)[]) {
+  return (
+    filter === "" || texts.some((text) => text?.toLowerCase().includes(filter))
+  );
+}
+
+/** "3" or, while filtering, "1/3". */
+function shownCount(shown: number, total: number, filter: string) {
+  return filter === "" ? String(total) : `${shown}/${total}`;
+}
+
+function LocalBranches({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
   const { t } = useTranslation();
   const branch = useBranchStore();
-  const branches = refs?.refs.filter((r) => r.kind === "local") ?? [];
-  const detached = refs?.head.type === "detached" ? refs.head : null;
+  const all = refs?.refs.filter((r) => r.kind === "local") ?? [];
+  const branches = all.filter((r) => matches(filter, r.shortName, r.upstream));
+  const detached =
+    refs?.head.type === "detached" &&
+    matches(filter, t("sidebar.detachedHead"), "HEAD")
+      ? refs.head
+      : null;
   const headOid = refs?.head.oid ?? null;
   const headLabel =
     refs?.head.type === "branch" ? refs.head.name : headOid?.slice(0, 7);
@@ -126,7 +172,8 @@ function LocalBranches({ refs, repoId, onSelect, onMenu }: ListProps) {
       repoId={repoId}
       id="local"
       title={t("sidebar.local")}
-      count={refs ? branches.length : null}
+      count={refs ? shownCount(branches.length, all.length, filter) : null}
+      filtering={filter !== ""}
       action={newBranch}
     >
       {!refs ? (
@@ -186,7 +233,11 @@ function LocalBranches({ refs, repoId, onSelect, onMenu }: ListProps) {
             />
           ))}
           {branches.length === 0 && !detached && (
-            <li className={styles.empty}>{t("sidebar.noBranches")}</li>
+            <li className={styles.empty}>
+              {all.length > 0 && filter !== ""
+                ? t("sidebar.noMatches")
+                : t("sidebar.noBranches")}
+            </li>
           )}
         </ul>
       )}
@@ -194,7 +245,7 @@ function LocalBranches({ refs, repoId, onSelect, onMenu }: ListProps) {
   );
 }
 
-function Remotes({ refs, repoId, onSelect, onMenu }: ListProps) {
+function Remotes({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
   const { t } = useTranslation();
   const branch = useBranchStore();
   const fetch = useRemoteStore((s) => s.fetch);
@@ -202,20 +253,36 @@ function Remotes({ refs, repoId, onSelect, onMenu }: ListProps) {
   const checkoutRemote = (ref: GitRef) => {
     if (repoId !== null && refs) void branch.checkoutRemote(repoId, ref, refs);
   };
-  const remotes = refs?.remotes ?? [];
+  const allRemotes = refs?.remotes ?? [];
+  const all = refs?.refs.filter((r) => r.kind === "remote") ?? [];
+  // A remote whose name matches shows all its branches.
   const byRemote = (remote: string): GitRef[] =>
-    refs?.refs.filter((r) => r.kind === "remote" && r.remote === remote) ?? [];
+    all.filter(
+      (r) =>
+        r.remote === remote &&
+        (matches(filter, remote) || matches(filter, r.shortName)),
+    );
+  const remotes = allRemotes.filter(
+    (remote) => matches(filter, remote) || byRemote(remote).length > 0,
+  );
   return (
     <Section
       repoId={repoId}
       id="remote"
       title={t("sidebar.remote")}
-      count={refs ? remotes.length : null}
+      count={
+        refs ? shownCount(remotes.length, allRemotes.length, filter) : null
+      }
+      filtering={filter !== ""}
     >
       {!refs ? (
         <p className={styles.empty}>{t("sidebar.empty")}</p>
       ) : remotes.length === 0 ? (
-        <p className={styles.empty}>{t("sidebar.noRemotes")}</p>
+        <p className={styles.empty}>
+          {allRemotes.length > 0 && filter !== ""
+            ? t("sidebar.noMatches")
+            : t("sidebar.noRemotes")}
+        </p>
       ) : (
         remotes.map((remote) => (
           <div key={remote} className={styles.group}>
@@ -285,24 +352,30 @@ function Remotes({ refs, repoId, onSelect, onMenu }: ListProps) {
   );
 }
 
-function Tags({ refs, repoId, onSelect, onMenu }: ListProps) {
+function Tags({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
   const { t } = useTranslation();
   const requestCreate = useBranchStore((s) => s.requestCreate);
   // Newest-looking versions first: v10 before v9.
-  const tags = (refs?.refs.filter((r) => r.kind === "tag") ?? []).sort((a, b) =>
+  const all = (refs?.refs.filter((r) => r.kind === "tag") ?? []).sort((a, b) =>
     b.shortName.localeCompare(a.shortName, undefined, { numeric: true }),
   );
+  const tags = all.filter((r) => matches(filter, r.shortName));
   return (
     <Section
       repoId={repoId}
       id="tags"
       title={t("sidebar.tags")}
-      count={refs ? tags.length : null}
+      count={refs ? shownCount(tags.length, all.length, filter) : null}
+      filtering={filter !== ""}
     >
       {!refs ? (
         <p className={styles.empty}>{t("sidebar.empty")}</p>
       ) : tags.length === 0 ? (
-        <p className={styles.empty}>{t("sidebar.noTags")}</p>
+        <p className={styles.empty}>
+          {all.length > 0 && filter !== ""
+            ? t("sidebar.noMatches")
+            : t("sidebar.noTags")}
+        </p>
       ) : (
         <ul className={styles.list}>
           {tags.map((ref) => (
@@ -330,11 +403,13 @@ function Tags({ refs, repoId, onSelect, onMenu }: ListProps) {
   );
 }
 
-function Stashes({ repoId, onMenu }: ListProps) {
+function Stashes({ repoId, filter, onMenu }: ListProps) {
   const { t, i18n } = useTranslation();
-  const entries = useStashStore((s) =>
+  const all = useStashStore((s) =>
     repoId === null ? null : (s.stashes[repoId]?.entries ?? null),
   );
+  const entries =
+    all?.filter((e) => matches(filter, e.message, e.branch)) ?? null;
   const apply = useStashStore((s) => s.apply);
   const select = useGraphStore((s) => s.select);
   const selected = useGraphStore((s) =>
@@ -370,12 +445,19 @@ function Stashes({ repoId, onMenu }: ListProps) {
       repoId={repoId}
       id="stashes"
       title={t("sidebar.stashes")}
-      count={entries ? entries.length : null}
+      count={
+        all && entries ? shownCount(entries.length, all.length, filter) : null
+      }
+      filtering={filter !== ""}
     >
-      {repoId === null || !entries ? (
+      {repoId === null || !all || !entries ? (
         <p className={styles.empty}>{t("sidebar.empty")}</p>
       ) : entries.length === 0 ? (
-        <p className={styles.empty}>{t("sidebar.noStashes")}</p>
+        <p className={styles.empty}>
+          {all.length > 0 && filter !== ""
+            ? t("sidebar.noMatches")
+            : t("sidebar.noStashes")}
+        </p>
       ) : (
         <ul className={styles.list}>
           {entries.map((entry) => {
@@ -417,6 +499,7 @@ function Section({
   id,
   title,
   count,
+  filtering = false,
   action,
   children,
 }: {
@@ -424,13 +507,15 @@ function Section({
   /** Remembers the section's collapsed state per tab. */
   id: string;
   title: string;
-  count: number | null;
+  count: string | null;
+  /** While filtering every section is open, so matches are never hidden. */
+  filtering?: boolean;
   /** A button next to the title (e.g. "new branch"). */
   action?: ReactNode;
   children: ReactNode;
 }) {
   const key = `${repoId ?? "none"}:${id}`;
-  const open = useViewStore((s) => !s.collapsed[key]);
+  const open = useViewStore((s) => filtering || !s.collapsed[key]);
   const toggle = useViewStore((s) => s.toggleSection);
   return (
     <section className={styles.section}>
@@ -443,6 +528,7 @@ function Section({
           type="button"
           className={styles.toggle}
           aria-expanded={open}
+          disabled={filtering}
           onClick={() => toggle(key)}
         >
           <span className={styles.chevron} aria-hidden="true">

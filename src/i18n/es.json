@@ -40,7 +40,10 @@
     "noTags": "Sin tags",
     "detachedHead": "HEAD desacoplado",
     "currentBranch": "Rama actual: {{name}}",
-    "noStashes": "Sin entradas"
+    "noStashes": "Sin entradas",
+    "filterPlaceholder": "Filtrar ramas, tags y stashes",
+    "filterLabel": "Filtrar la barra lateral",
+    "noMatches": "Nada coincide con el filtro"
   },
   "start": {
     "title": "Ningún repositorio abierto",

@@ -40,7 +40,10 @@
     "noTags": "No tags",
     "detachedHead": "Detached HEAD",
     "currentBranch": "Current branch: {{name}}",
-    "noStashes": "No entries"
+    "noStashes": "No entries",
+    "filterPlaceholder": "Filter branches, tags and stashes",
+    "filterLabel": "Filter the sidebar",
+    "noMatches": "Nothing matches the filter"
   },
   "start": {
     "title": "No repository open",

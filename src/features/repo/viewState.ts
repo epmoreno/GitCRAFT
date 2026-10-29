@@ -63,10 +63,16 @@ type ViewState = {
   /** Collapsed sidebar sections, by `<repoId>:<section>`. */
   collapsed: Record<string, true>;
   toggleSection: (key: string) => void;
+  /** Sidebar filter text, per repository. */
+  filters: Record<number, string>;
+  setFilter: (repoId: number, text: string) => void;
 };
 
 export const useViewStore = create<ViewState>()((set) => ({
   collapsed: {},
+  filters: {},
+  setFilter: (repoId, text) =>
+    set((s) => ({ filters: { ...s.filters, [repoId]: text } })),
   toggleSection: (key) =>
     set((s) => {
       const collapsed = { ...s.collapsed };
@@ -83,6 +89,9 @@ export function forgetView(repoId: number) {
     if (key.startsWith(prefix)) scrolls.delete(key);
   }
   useViewStore.setState((s) => ({
+    filters: Object.fromEntries(
+      Object.entries(s.filters).filter(([id]) => Number(id) !== repoId),
+    ),
     collapsed: Object.fromEntries(
       Object.entries(s.collapsed).filter(([key]) => !key.startsWith(prefix)),
     ) as Record<string, true>,

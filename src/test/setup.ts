@@ -82,7 +82,7 @@ HTMLCanvasElement.prototype.getContext = (() =>
 beforeEach(() => {
   resetIpcMock();
   useRepoStore.setState(initialRepoState);
-  useViewStore.setState({ collapsed: {} });
+  useViewStore.setState({ collapsed: {}, filters: {} });
   useBranchStore.setState(initialBranchState);
   useStashStore.setState(initialStashState);
   useRemoteStore.setState(initialRemoteState);
