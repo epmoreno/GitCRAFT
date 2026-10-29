@@ -10,6 +10,7 @@ use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::refs::RepoRefs;
+use gitcraft_core::ops::remote::{PullMode, PullOutcome};
 use gitcraft_core::ops::stash::{ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
 use gitcraft_core::parse::commit::CommitDetails;
@@ -20,7 +21,7 @@ use gitcraft_core::patch::HunkSelection;
 
 use crate::error::IpcError;
 use crate::settings::RecentRepository;
-use crate::state::{AppState, DiscardResult, GraphEvent, OpenedRepository, RepoId};
+use crate::state::{AppState, DiscardResult, GraphEvent, OpenedRepository, PullModeInfo, RepoId};
 
 #[tauri::command]
 #[specta::specta]
@@ -441,4 +442,52 @@ pub async fn fetch_remote(
             let _ = on_progress.send(line.to_owned());
         })
         .await
+}
+
+/// The pull mode in effect (chosen here, else git's configuration).
+#[tauri::command]
+#[specta::specta]
+pub async fn get_pull_mode(
+    state: State<'_, AppState>,
+    id: RepoId,
+) -> Result<PullModeInfo, IpcError> {
+    state.pull_mode(id).await
+}
+
+/// Chooses merge or rebase for this repository's pulls; `null` follows
+/// git's configuration again.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_pull_mode(
+    state: State<'_, AppState>,
+    id: RepoId,
+    mode: Option<PullMode>,
+) -> Result<(), IpcError> {
+    state.set_pull_mode(id, mode)
+}
+
+/// Pulls the current branch. Never forces: uncommitted changes in the way
+/// and predicted conflicts are reported first (unless `allow_conflicts`);
+/// `save_local` stashes uncommitted changes before pulling.
+#[tauri::command]
+#[specta::specta]
+pub async fn pull_branch(
+    state: State<'_, AppState>,
+    id: RepoId,
+    allow_conflicts: bool,
+    save_local: bool,
+    on_progress: Channel<String>,
+) -> Result<PullOutcome, IpcError> {
+    state
+        .pull(id, allow_conflicts, save_local, |line| {
+            let _ = on_progress.send(line.to_owned());
+        })
+        .await
+}
+
+/// Aborts the merge/rebase/cherry-pick/revert waiting on conflicts.
+#[tauri::command]
+#[specta::specta]
+pub async fn abort_in_progress(state: State<'_, AppState>, id: RepoId) -> Result<(), IpcError> {
+    state.abort_in_progress(id).await
 }

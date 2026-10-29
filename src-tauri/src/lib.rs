@@ -55,6 +55,10 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::recover_preview,
             commands::recover_file,
             commands::fetch_remote,
+            commands::get_pull_mode,
+            commands::set_pull_mode,
+            commands::pull_branch,
+            commands::abort_in_progress,
         ])
 }
 

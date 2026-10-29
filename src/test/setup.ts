@@ -44,11 +44,15 @@ vi.mock("../ipc", () => ({
     dropStash: vi.fn(),
     recoverPreview: vi.fn(),
     recoverFile: vi.fn(),
+    getPullMode: vi.fn(),
+    setPullMode: vi.fn(),
+    abortInProgress: vi.fn(),
   },
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
   optimizeRepository: vi.fn(),
   fetchRemote: vi.fn(),
+  pullBranch: vi.fn(),
   onRepoChanged: vi.fn(),
 }));
 

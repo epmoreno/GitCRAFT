@@ -50,6 +50,18 @@ pub struct BranchStatus {
     pub behind: u32,
 }
 
+/// An operation git left half done, waiting for conflicts to be resolved
+/// (or to be aborted).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum InProgress {
+    Merge,
+    Rebase,
+    CherryPick,
+    Revert,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
@@ -61,6 +73,8 @@ pub struct WorkingStatus {
     pub unstaged: Vec<StatusEntry>,
     pub untracked: Vec<StatusEntry>,
     pub conflicted: Vec<ConflictEntry>,
+    /// Set by `ops::status::working_status` (not part of git's output).
+    pub in_progress: Option<InProgress>,
 }
 
 impl WorkingStatus {

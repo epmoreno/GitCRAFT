@@ -101,6 +101,21 @@ export const commands = {
 	 *  asked, streaming git's progress lines. Cancel with `cancel_operation`.
 	 */
 	fetchRemote: (id: number, remote: string | null, prune: boolean, onProgress: Channel<string>) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("fetch_remote", { id, remote, prune, onProgress })),
+	/**  The pull mode in effect (chosen here, else git's configuration). */
+	getPullMode: (id: number) => typedError<PullModeInfo, IpcError_Serialize>(__TAURI_INVOKE("get_pull_mode", { id })),
+	/**
+	 *  Chooses merge or rebase for this repository's pulls; `null` follows
+	 *  git's configuration again.
+	 */
+	setPullMode: (id: number, mode: PullMode | null) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("set_pull_mode", { id, mode })),
+	/**
+	 *  Pulls the current branch. Never forces: uncommitted changes in the way
+	 *  and predicted conflicts are reported first (unless `allow_conflicts`);
+	 *  `save_local` stashes uncommitted changes before pulling.
+	 */
+	pullBranch: (id: number, allowConflicts: boolean, saveLocal: boolean, onProgress: Channel<string>) => typedError<PullOutcome, IpcError_Serialize>(__TAURI_INVOKE("pull_branch", { id, allowConflicts, saveLocal, onProgress })),
+	/**  Aborts the merge/rebase/cherry-pick/revert waiting on conflicts. */
+	abortInProgress: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("abort_in_progress", { id })),
 };
 
 /** Events */
@@ -378,7 +393,7 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
  *  The remote rejected the credentials, or none were available (no
  *  credential helper / SSH key): git cannot prompt.
  */
-"authFailed" | 
+"authFailed" | "detachedHead" | 
 /**  The remote could not be reached (network, host, path). */
 "remoteUnreachable" | "cancelled" | "timedOut" | "unknown";
 
@@ -593,6 +608,12 @@ export type Hunk_Serialize = {
 };
 
 /**
+ *  An operation git left half done, waiting for conflicts to be resolved
+ *  (or to be aborted).
+ */
+export type InProgress = "merge" | "rebase" | "cherryPick" | "revert";
+
+/**
  *  Error returned by every command. The UI shows a translated message for
  *  `kind` and offers `details` (git's original output) on demand.
  */
@@ -635,6 +656,56 @@ export type OrphanCommit = {
 	/**  Author date, Unix seconds. */
 	time: number,
 };
+
+/**  Why uncommitted changes stop a pull. */
+export type PullBlock = 
+/**  The incoming commits change these files, which have local changes. */
+"overwrite" | 
+/**  A rebase needs no uncommitted changes in tracked files at all. */
+"rebaseNeedsClean" | 
+/**  A merge or rebase is already waiting for its conflicts. */
+"unresolved";
+
+/**  How pull integrates the upstream's commits. */
+export type PullMode = 
+/**  A merge commit when both sides have commits (fast-forward otherwise). */
+"merge" | 
+/**  Local commits are replayed on top of the upstream. */
+"rebase";
+
+/**  The pull mode in effect for a repository. */
+export type PullModeInfo = {
+	mode: PullMode,
+	/**  What git's configuration says (`branch.<name>.rebase`, `pull.rebase`). */
+	configured: PullMode,
+	/**  `mode` was chosen in GitCRAFT for this repository. */
+	chosen: boolean,
+};
+
+export type PullOutcome = 
+/**  Nothing new on the upstream. */
+{ type: "upToDate"; upstream: string } | 
+/**  Brought `commits` commits in. */
+{ type: "pulled"; upstream: string; commits: number; mode: PullMode; 
+/**  It was a fast-forward (no merge commit, nothing replayed). */
+fastForward: boolean } | 
+/**  The branch has no upstream: nothing to pull from. */
+{ type: "noUpstream"; branch: string } | 
+/**  The upstream's remote branch no longer exists. */
+{ type: "upstreamGone"; upstream: string } | 
+/**  Uncommitted changes are in the way; nothing was touched. */
+{ type: "blocked"; files: BlockingFile[]; reason: PullBlock } | 
+/**
+ *  These files changed on both sides and would conflict; nothing was
+ *  touched. `exact`: git's merge said so (for a rebase, or with git
+ *  older than 2.38, it is an estimate).
+ */
+{ type: "wouldConflict"; upstream: string; files: string[]; exact: boolean } | 
+/**
+ *  Started anyway at the user's request and stopped on conflicts in
+ *  these files: a merge or rebase is waiting (see `InProgress`).
+ */
+{ type: "conflicted"; files: string[]; mode: PullMode };
 
 export type RecentRepository = {
 	path: string,
@@ -837,6 +908,8 @@ export type WorkingStatus_Deserialize = {
 	unstaged: StatusEntry_Deserialize[],
 	untracked: StatusEntry_Deserialize[],
 	conflicted: ConflictEntry[],
+	/**  Set by `ops::status::working_status` (not part of git's output). */
+	inProgress?: InProgress | null,
 };
 
 export type WorkingStatus_Serialize = {
@@ -847,6 +920,8 @@ export type WorkingStatus_Serialize = {
 	unstaged: StatusEntry_Serialize[],
 	untracked: StatusEntry_Serialize[],
 	conflicted: ConflictEntry[],
+	/**  Set by `ops::status::working_status` (not part of git's output). */
+	inProgress: InProgress | null,
 };
 
 /**  Which uncommitted change of a file to diff. */

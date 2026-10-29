@@ -3,6 +3,7 @@ import {
   onRepoChanged,
   fetchRemote,
   optimizeRepository,
+  pullBranch,
   pickFolder,
   streamGraph,
   type CommandError,
@@ -25,6 +26,10 @@ export const ipc = {
   streamGraph: vi.mocked(streamGraph),
   optimizeRepository: vi.mocked(optimizeRepository),
   fetchRemote: vi.mocked(fetchRemote),
+  pullBranch: vi.mocked(pullBranch),
+  getPullMode: vi.mocked(commands.getPullMode),
+  setPullMode: vi.mocked(commands.setPullMode),
+  abortInProgress: vi.mocked(commands.abortInProgress),
   onRepoChanged: vi.mocked(onRepoChanged),
   cancelOperation: vi.mocked(commands.cancelOperation),
   dismissOptimizeNotice: vi.mocked(commands.dismissOptimizeNotice),
@@ -95,6 +100,22 @@ export function resetIpcMock() {
   });
   ipc.cancelOperation.mockResolvedValue({ status: "ok", data: null });
   ipc.fetchRemote.mockResolvedValue({ status: "ok", data: null });
+  ipc.getPullMode.mockResolvedValue({
+    status: "ok",
+    data: { mode: "merge", configured: "merge", chosen: false },
+  });
+  ipc.setPullMode.mockResolvedValue({ status: "ok", data: null });
+  ipc.abortInProgress.mockResolvedValue({ status: "ok", data: null });
+  ipc.pullBranch.mockResolvedValue({
+    status: "ok",
+    data: {
+      type: "pulled",
+      upstream: "origin/main",
+      commits: 1,
+      mode: "merge",
+      fastForward: true,
+    },
+  });
   ipc.dismissOptimizeNotice.mockResolvedValue({ status: "ok", data: null });
   ipc.getRefs.mockResolvedValue({ status: "ok", data: emptyRefs() });
   ipc.streamGraph.mockImplementation(async (_id, onEvent) => {
@@ -139,6 +160,7 @@ export function cleanStatus(): WorkingStatus {
     unstaged: [],
     untracked: [],
     conflicted: [],
+    inProgress: null,
   };
 }
 

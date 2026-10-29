@@ -3,11 +3,19 @@ import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
 import { Toolbar } from "../../app/Toolbar";
 import type { RepoRefs } from "../../ipc";
-import { commandError, ipc, opened, sampleRefs } from "../../test/ipc";
+import {
+  cleanStatus,
+  commandError,
+  ipc,
+  opened,
+  sampleRefs,
+} from "../../test/ipc";
 import { useGraphStore } from "../graph/store";
 import { useRepoStore } from "../repo/store";
 import { Sidebar } from "../sidebar/Sidebar";
+import { InProgressBanner, RemoteDialogs } from "./RemoteDialogs";
 import { RemoteProgress, RemoteToast } from "./RemoteStatus";
+import { useWorkdirStore } from "../workdir/store";
 
 function renderToolbar(refs: RepoRefs = sampleRefs()) {
   useRepoStore.setState({ tabs: [opened(1, "/src/sample")], activeId: 1 });
@@ -31,8 +39,10 @@ function renderToolbar(refs: RepoRefs = sampleRefs()) {
     <>
       <Toolbar />
       <Sidebar repoId={1} />
+      <InProgressBanner repoId={1} />
       <RemoteProgress />
       <RemoteToast />
+      <RemoteDialogs />
     </>,
   );
 }
@@ -176,5 +186,140 @@ describe("ahead/behind", () => {
     expect(screen.getByLabelText(/^feature\. /)).toHaveTextContent(
       "featuresin upstream",
     );
+  });
+});
+
+describe("pull", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+  });
+
+  const options = (allowConflicts: boolean, saveLocal: boolean) =>
+    [1, { allowConflicts, saveLocal }, expect.any(Function)] as const;
+
+  it("pulls and says how", async () => {
+    const user = userEvent.setup();
+    renderToolbar();
+    await user.click(screen.getByRole("button", { name: "Pull" }));
+    expect(ipc.pullBranch).toHaveBeenCalledWith(...options(false, false));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Pull completado: 1 commit de «origin/main» (avance rápido, sin commit de merge).",
+    );
+  });
+
+  it("never overwrites uncommitted changes: explains and offers to stash them", async () => {
+    const user = userEvent.setup();
+    ipc.pullBranch.mockResolvedValueOnce({
+      status: "ok",
+      data: {
+        type: "blocked",
+        files: [{ path: "lista.txt", untracked: false }],
+        reason: "overwrite",
+      },
+    });
+    renderToolbar();
+    await user.click(screen.getByRole("button", { name: "Pull" }));
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "No se puede hacer pull todavía",
+    });
+    expect(within(dialog).getByText("lista.txt")).toBeVisible();
+    expect(within(dialog).getByText("No se ha tocado nada.")).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: "Cancelar" }),
+    ).toHaveFocus();
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "Guardar mis cambios y hacer pull",
+      }),
+    );
+    expect(ipc.pullBranch).toHaveBeenLastCalledWith(...options(false, true));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /GitCRAFT: antes de hacer pull/,
+    );
+  });
+
+  it("reports conflicts before pulling and only goes on if asked", async () => {
+    const user = userEvent.setup();
+    ipc.pullBranch.mockResolvedValueOnce({
+      status: "ok",
+      data: {
+        type: "wouldConflict",
+        upstream: "origin/main",
+        files: ["lista.txt"],
+        exact: true,
+      },
+    });
+    ipc.pullBranch.mockResolvedValueOnce({
+      status: "ok",
+      data: { type: "conflicted", files: ["lista.txt"], mode: "merge" },
+    });
+    renderToolbar();
+    await user.click(screen.getByRole("button", { name: "Pull" }));
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "El pull produciría conflictos",
+    });
+    expect(
+      within(dialog).getByText(/1 archivo ha cambiado tanto en tu rama/),
+    ).toBeVisible();
+    expect(within(dialog).getByText(/Podrás abortarlo/)).toBeVisible();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Hacer pull con conflictos" }),
+    );
+    expect(ipc.pullBranch).toHaveBeenLastCalledWith(...options(true, false));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "El merge se ha detenido con conflictos en 1 archivo:",
+    );
+  });
+
+  it("chooses merge or rebase per repository", async () => {
+    const user = userEvent.setup();
+    renderToolbar();
+    await user.click(
+      screen.getByRole("button", { name: "Estrategia de pull" }),
+    );
+    expect(
+      screen.getByRole("menuitem", {
+        name: /configuración de Git \(ahora: merge\)/,
+      }),
+    ).toHaveTextContent("✓");
+    ipc.getPullMode.mockResolvedValue({
+      status: "ok",
+      data: { mode: "rebase", configured: "merge", chosen: true },
+    });
+    await user.click(
+      screen.getByRole("menuitem", { name: /Rebase para este repositorio/ }),
+    );
+    expect(ipc.setPullMode).toHaveBeenCalledWith(1, "rebase");
+    expect(
+      await screen.findByRole("button", { name: /^Pull\s*\(rebase\)$/ }),
+    ).toBeVisible();
+  });
+
+  it("offers to abort a merge left waiting on conflicts", async () => {
+    const user = userEvent.setup();
+    useWorkdirStore.setState({
+      statuses: {
+        1: {
+          status: {
+            ...cleanStatus(),
+            inProgress: "merge",
+            conflicted: [{ path: "lista.txt", kind: "bothModified" }],
+          },
+          error: null,
+        },
+      },
+    });
+    renderToolbar();
+    const banner = screen.getByText(/Hay un merge a medias/);
+    expect(banner).toHaveTextContent("Queda 1 archivo con conflictos");
+    await user.click(screen.getByRole("button", { name: "Abortar…" }));
+    const dialog = screen.getByRole("alertdialog", {
+      name: "¿Abortar el merge?",
+    });
+    expect(ipc.abortInProgress).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole("button", { name: "Abortar" }));
+    expect(ipc.abortInProgress).toHaveBeenCalledWith(1);
+    expect(await screen.findByText(/Merge abortado/)).toBeVisible();
   });
 });

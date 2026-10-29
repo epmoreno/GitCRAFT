@@ -78,7 +78,8 @@
     "stashChanged": "Esa entrada ya no está en el stash (se aplicó o borró desde otro sitio). No se ha hecho nada.",
     "nothingToStash": "No hay cambios sin confirmar que guardar.",
     "authFailed": "Git no pudo autenticarse con el remoto. GitCRAFT no guarda ni pide contraseñas: configura un credential helper (en macOS, osxkeychain) o añade tu clave SSH al agente, y comprueba que «git fetch» funciona desde la terminal.",
-    "remoteUnreachable": "No se pudo conectar con el remoto. Comprueba la conexión y la URL del remoto (git remote -v)."
+    "remoteUnreachable": "No se pudo conectar con el remoto. Comprueba la conexión y la URL del remoto (git remote -v).",
+    "detachedHead": "Estás en HEAD desacoplado (no en una rama): cambia a una rama primero."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",
@@ -399,6 +400,19 @@
       "fetch": "No se pudo hacer fetch.",
       "pull": "No se pudo hacer pull.",
       "push": "No se pudo hacer push."
+    },
+    "pullNeedsBranch": "Cambia a una rama para hacer pull",
+    "pullHint": {
+      "merge": "Traer los commits nuevos del upstream con merge",
+      "rebase": "Traer los commits nuevos del upstream con rebase"
+    },
+    "pullOptions": "Estrategia de pull",
+    "pullMerge": "Merge para este repositorio",
+    "pullRebase": "Rebase para este repositorio",
+    "pullFromConfig": "Lo que diga la configuración de Git (ahora: {{mode}})",
+    "mode": {
+      "merge": "merge",
+      "rebase": "rebase"
     }
   },
   "tracking": {
@@ -414,5 +428,79 @@
     "behind_other": "{{count}} commits por bajar (pull)",
     "detached": "HEAD desacoplado: no estás en ninguna rama",
     "unborn": "Rama sin commits todavía"
+  },
+  "pull": {
+    "cancel": "Cancelar",
+    "ok": "Entendido",
+    "blockedTitle": "No se puede hacer pull todavía",
+    "blocked": {
+      "overwrite_one": "Los commits que llegan cambian 1 archivo en el que tienes cambios sin confirmar (o que ya existe sin seguimiento), y Git no lo sobrescribe:",
+      "overwrite_other": "Los commits que llegan cambian {{count}} archivos en los que tienes cambios sin confirmar (o que ya existen sin seguimiento), y Git no los sobrescribe:",
+      "rebaseNeedsClean_one": "Un pull con rebase necesita que no haya cambios sin confirmar en archivos con seguimiento, y tienes 1:",
+      "rebaseNeedsClean_other": "Un pull con rebase necesita que no haya cambios sin confirmar en archivos con seguimiento, y tienes {{count}}:"
+    },
+    "unresolved": "Hay un merge o rebase a medias con conflictos. Resuélvelo o abórtalo (aviso de arriba) antes de hacer otro pull.",
+    "notForced": "No se ha tocado nada.",
+    "alternatives": {
+      "overwrite": "Alternativa: guardar primero tus cambios en el stash (como «GitCRAFT: antes de hacer pull», sin borrarse nunca) y hacer pull. Después puedes aplicarlos desde la barra lateral. O cancela y confirma o descarta tus cambios.",
+      "rebaseNeedsClean": "Alternativas: guardar primero tus cambios en el stash (como «GitCRAFT: antes de hacer pull», sin borrarse nunca) y hacer pull; o cancelar y cambiar la estrategia a merge (menú ▾ de Pull), que solo se detiene si los cambios chocan."
+    },
+    "saveLocalAndPull": "Guardar mis cambios y hacer pull",
+    "conflictTitle": "El pull produciría conflictos",
+    "conflicts_one": "1 archivo ha cambiado tanto en tu rama como en «{{upstream}}» y chocaría:",
+    "conflicts_other": "{{count}} archivos han cambiado tanto en tu rama como en «{{upstream}}» y chocarían:",
+    "mayConflict_one": "1 archivo ha cambiado tanto en tu rama como en «{{upstream}}» y podría chocar:",
+    "mayConflict_other": "{{count}} archivos han cambiado tanto en tu rama como en «{{upstream}}» y podrían chocar:",
+    "conflictExplained": {
+      "merge": "Si sigues, el merge se detendrá con marcas de conflicto (<<<<<<< … >>>>>>>) en esos archivos: resuélvelos en tu editor, prepáralos y haz commit. Podrás abortarlo en cualquier momento y volver a como estás ahora.",
+      "rebase": "Si sigues, el rebase se detendrá en el primer commit que choque: resuelve los archivos, prepáralos y continúa con «git rebase --continue» desde la terminal. Podrás abortarlo en cualquier momento y volver a como estás ahora."
+    },
+    "pullWithConflicts": "Hacer pull con conflictos",
+    "abortTitle": {
+      "merge": "¿Abortar el merge?",
+      "rebase": "¿Abortar el rebase?",
+      "cherryPick": "¿Abortar el cherry-pick?",
+      "revert": "¿Abortar el revert?"
+    },
+    "abortExplained": "La rama vuelve al estado de antes de empezar y se pierden las resoluciones de conflictos que hayas hecho desde entonces. Los cambios sin confirmar que tenías antes en otros archivos se mantienen.",
+    "abort": "Abortar",
+    "abortButton": "Abortar…",
+    "inProgress": {
+      "merge": "Hay un merge a medias.",
+      "rebase": "Hay un rebase a medias.",
+      "cherryPick": "Hay un cherry-pick a medias.",
+      "revert": "Hay un revert a medias."
+    },
+    "inProgressConflicts_one": "Queda 1 archivo con conflictos: resuélvelo en tu editor y prepáralo.",
+    "inProgressConflicts_other": "Quedan {{count}} archivos con conflictos: resuélvelos en tu editor y prepáralos.",
+    "inProgressNext": {
+      "merge": "Ya no quedan conflictos: haz commit para terminarlo.",
+      "rebase": "Ya no quedan conflictos: continúa con «git rebase --continue» desde la terminal.",
+      "cherryPick": "Ya no quedan conflictos: haz commit para terminarlo.",
+      "revert": "Ya no quedan conflictos: haz commit para terminarlo."
+    },
+    "done_one": "Pull completado: 1 commit de «{{upstream}}»",
+    "done_other": "Pull completado: {{count}} commits de «{{upstream}}»",
+    "how": {
+      "fastForward": "(avance rápido, sin commit de merge).",
+      "merge": "(con un commit de merge).",
+      "rebase": "(tus commits, reaplicados encima con rebase)."
+    },
+    "upToDate": "Ya estás al día con «{{upstream}}».",
+    "noUpstream": "La rama «{{branch}}» no tiene upstream, así que no hay de dónde hacer pull. Publícala con Push para crearlo.",
+    "upstreamGone": "«{{upstream}}» ya no existe en el remoto (se borró allí). No hay de dónde hacer pull.",
+    "conflicted": {
+      "merge_one": "El merge se ha detenido con conflictos en 1 archivo:",
+      "merge_other": "El merge se ha detenido con conflictos en {{count}} archivos:",
+      "rebase_one": "El rebase se ha detenido con conflictos en 1 archivo:",
+      "rebase_other": "El rebase se ha detenido con conflictos en {{count}} archivos:"
+    },
+    "aborted": {
+      "merge": "Merge abortado: todo está como antes del pull.",
+      "rebase": "Rebase abortado: todo está como antes del pull.",
+      "cherryPick": "Cherry-pick abortado.",
+      "revert": "Revert abortado."
+    },
+    "savedLocal": "Tus cambios anteriores están en el stash como «GitCRAFT: antes de hacer pull»; aplícalos desde la barra lateral cuando quieras."
   }
 }

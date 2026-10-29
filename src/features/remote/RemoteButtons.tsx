@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import appStyles from "../../app/App.module.css";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
@@ -132,6 +132,96 @@ export function CurrentBranch({ repoId }: { repoId: number | null }) {
       {ref?.upstreamGone && (
         <span className={styles.noUpstream}>{t("tracking.goneShort")}</span>
       )}
+    </span>
+  );
+}
+
+/** "Pull" in the toolbar, with the merge/rebase choice in its menu. */
+export function PullButton({ repoId }: { repoId: number | null }) {
+  const { t } = useTranslation();
+  const running = useRemoteStore((s) => s.running);
+  const pull = useRemoteStore((s) => s.pull);
+  const info = useRemoteStore((s) =>
+    repoId === null ? null : (s.pullModes[repoId] ?? null),
+  );
+  const loadPullMode = useRemoteStore((s) => s.loadPullMode);
+  const setPullMode = useRemoteStore((s) => s.setPullMode);
+  const head = useGraphStore((s) =>
+    repoId === null ? null : (s.graphs[repoId]?.refs?.head ?? null),
+  );
+  const menu = useButtonMenu();
+
+  useEffect(() => {
+    if (repoId !== null) void loadPullMode(repoId);
+  }, [repoId, loadPullMode]);
+
+  const onBranch = head?.type === "branch" && head.oid !== null;
+  const disabled = repoId === null || !onBranch || running !== null;
+  const mode = info?.mode ?? "merge";
+  const reason =
+    repoId === null
+      ? t("toolbar.needsRepo")
+      : !onBranch
+        ? t("remote.pullNeedsBranch")
+        : running
+          ? t("remote.busy")
+          : t(`remote.pullHint.${mode}`);
+
+  const items = (id: number): MenuItem[] => {
+    const check = (on: boolean) => (on ? "✓ " : "   ");
+    return [
+      {
+        label: `${check(info?.chosen === true && mode === "merge")}${t("remote.pullMerge")}`,
+        onSelect: () => void setPullMode(id, "merge"),
+      },
+      {
+        label: `${check(info?.chosen === true && mode === "rebase")}${t("remote.pullRebase")}`,
+        onSelect: () => void setPullMode(id, "rebase"),
+      },
+      {
+        label: `${check(info?.chosen === false)}${t("remote.pullFromConfig", {
+          mode: t(`remote.mode.${info?.configured ?? "merge"}`),
+        })}`,
+        onSelect: () => void setPullMode(id, null),
+      },
+    ];
+  };
+
+  return (
+    <span className={styles.split}>
+      <Tooltip label={reason}>
+        <button
+          type="button"
+          className={appStyles.toolButton}
+          disabled={disabled}
+          onClick={() => {
+            if (repoId !== null) void pull(repoId);
+          }}
+        >
+          {t("toolbar.pull")}
+          {mode === "rebase" && (
+            <span className={styles.mode}> ({t("remote.mode.rebase")})</span>
+          )}
+        </button>
+      </Tooltip>
+      <button
+        type="button"
+        className={`${appStyles.toolButton} ${styles.menuButton}`}
+        aria-label={t("remote.pullOptions")}
+        aria-haspopup="menu"
+        disabled={repoId === null || running !== null}
+        onClick={(event) => {
+          if (repoId !== null)
+            menu.open(
+              event.currentTarget,
+              t("remote.pullOptions"),
+              items(repoId),
+            );
+        }}
+      >
+        ▾
+      </button>
+      {menu.element}
     </span>
   );
 }

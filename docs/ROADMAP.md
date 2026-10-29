@@ -161,10 +161,24 @@ un mensaje claro. Fetch, pull y push muestran progreso y se pueden cancelar.
       *Tests:* integración (fetch sin tocar ramas locales, `--prune` solo si
       se pide, remotos desconocidos o inalcanzables, cancelación) y de
       interfaz.
-- [ ] **6.2 Pull** con modo merge o rebase configurable por repo (por defecto,
+- [x] **6.2 Pull** con modo merge o rebase configurable por repo (por defecto,
       lo que diga `pull.rebase`). Si hay cambios sin confirmar que lo impiden o
       conflictos, se explica el motivo y se ofrecen alternativas; nunca se
       fuerza.
+      *Estado:* botón «Pull» con menú ▾ (merge o rebase para este repositorio,
+      o lo que diga la configuración de Git). Primero hace fetch del remoto
+      del upstream; antes de tocar nada comprueba los cambios sin confirmar
+      que chocarían (con rebase, cualquiera en archivos con seguimiento) y
+      predice los conflictos con `git merge-tree`. Si algo estorba: «Guardar
+      mis cambios y hacer pull» (stash que nunca se borra) o cancelar. Si
+      habrá conflictos: «Hacer pull con conflictos» o cancelar. Un merge o
+      rebase a medias se muestra en un aviso con «Abortar…» (con
+      confirmación). Sin upstream, upstream borrado y HEAD desacoplado se
+      explican.
+      *Tests:* integración (fast-forward, merge, rebase, bloqueos por cambios
+      y por archivos sin seguimiento, conflictos previstos con merge y rebase,
+      abortar, guardar y hacer pull, sin upstream, upstream borrado,
+      configuración de Git) y de interfaz.
 - [ ] **6.3 Push** y push con `--set-upstream`: si la rama no tiene upstream,
       se ofrece crearlo. Si el remoto tiene commits nuevos (non fast-forward)
       se explica que hay que hacer pull primero. El force push usa solo

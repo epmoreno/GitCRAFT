@@ -2,9 +2,11 @@
 //!
 //! Never stores credentials.
 
+use std::collections::BTreeMap;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use gitcraft_core::ops::remote::PullMode;
 use serde::{Deserialize, Serialize};
 
 pub const MAX_RECENT_REPOSITORIES: usize = 20;
@@ -27,6 +29,9 @@ pub struct Settings {
     pub recent_repositories: Vec<RecentRepository>,
     /// Repositories (by path) whose "optimize repository" notice was dismissed.
     pub optimize_notice_dismissed: Vec<String>,
+    /// Pull mode chosen in GitCRAFT per repository (by path); without one,
+    /// git's own configuration decides.
+    pub pull_modes: BTreeMap<String, PullMode>,
 }
 
 impl Settings {

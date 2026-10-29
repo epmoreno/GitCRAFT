@@ -19,7 +19,7 @@ use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
-use gitcraft_core::ops::remote;
+use gitcraft_core::ops::remote::{self, PullMode, PullOutcome};
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::ops::stage;
 use gitcraft_core::ops::stash::{self, ApplyOutcome, RecoverPreview};
@@ -49,6 +49,17 @@ pub type ChangeNotifier = Arc<dyn Fn(RepoChanged) + Send + Sync>;
 pub struct OpenedRepository {
     pub id: RepoId,
     pub info: RepoInfo,
+}
+
+/// The pull mode in effect for a repository.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PullModeInfo {
+    pub mode: PullMode,
+    /// What git's configuration says (`branch.<name>.rebase`, `pull.rebase`).
+    pub configured: PullMode,
+    /// `mode` was chosen in GitCRAFT for this repository.
+    pub chosen: bool,
 }
 
 /// Emitted when an open repository changed outside GitCRAFT.
@@ -345,6 +356,79 @@ impl AppState {
                 on_progress,
             )
             .await
+        })
+        .await
+    }
+
+    fn session_repo_path(&self, id: RepoId) -> Result<String, IpcError> {
+        Ok(self
+            .lock()
+            .sessions
+            .iter()
+            .find(|s| s.id == id)
+            .map(|s| s.info.path.clone())
+            .ok_or(GitError::Cancelled)?)
+    }
+
+    /// The pull mode in effect: the one chosen in GitCRAFT for this
+    /// repository, else git's configuration for the current branch.
+    pub async fn pull_mode(&self, id: RepoId) -> Result<PullModeInfo, IpcError> {
+        let git = self.git()?;
+        let path = self.session_repo_path(id)?;
+        let chosen = self.lock().settings.pull_modes.get(&path).copied();
+        let cancel = CancellationToken::new();
+        let repo = PathBuf::from(&path);
+        let branch = remote::current_branch(git, &repo, &cancel).await.ok();
+        let configured =
+            remote::configured_pull_mode(git, &repo, branch.as_deref(), &cancel).await?;
+        Ok(PullModeInfo {
+            mode: chosen.unwrap_or(configured),
+            configured,
+            chosen: chosen.is_some(),
+        })
+    }
+
+    /// Chooses the pull mode for this repository (`None`: follow git's
+    /// configuration again).
+    pub fn set_pull_mode(&self, id: RepoId, mode: Option<PullMode>) -> Result<(), IpcError> {
+        let path = self.session_repo_path(id)?;
+        let mut inner = self.lock();
+        match mode {
+            Some(mode) => inner.settings.pull_modes.insert(path, mode),
+            None => inner.settings.pull_modes.remove(&path),
+        };
+        self.persist(&inner.settings);
+        Ok(())
+    }
+
+    /// Pulls the current branch with the pull mode in effect. With
+    /// `save_local`, uncommitted changes are stashed first.
+    pub async fn pull(
+        &self,
+        id: RepoId,
+        allow_conflicts: bool,
+        save_local: bool,
+        on_progress: impl FnMut(&str),
+    ) -> Result<PullOutcome, IpcError> {
+        let git = self.git()?;
+        let mode = self.pull_mode(id).await?.mode;
+        self.remote_operation(id, |repo, cancel| async move {
+            if save_local {
+                remote::stash_and_pull(git, &repo, mode, allow_conflicts, &cancel, on_progress)
+                    .await
+            } else {
+                remote::pull(git, &repo, mode, allow_conflicts, &cancel, on_progress).await
+            }
+        })
+        .await
+    }
+
+    /// Aborts the merge/rebase a pull left waiting on conflicts.
+    pub async fn abort_in_progress(&self, id: RepoId) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            remote::abort_in_progress(git, &repo, &cancel).await
         })
         .await
     }

@@ -78,7 +78,8 @@
     "stashChanged": "That entry is no longer in the stash (it was applied or deleted elsewhere). Nothing was done.",
     "nothingToStash": "There are no uncommitted changes to save.",
     "authFailed": "Git could not authenticate with the remote. GitCRAFT never stores or asks for passwords: set up a credential helper (osxkeychain on macOS) or add your SSH key to the agent, and check that “git fetch” works in a terminal.",
-    "remoteUnreachable": "Could not connect to the remote. Check your connection and the remote's URL (git remote -v)."
+    "remoteUnreachable": "Could not connect to the remote. Check your connection and the remote's URL (git remote -v).",
+    "detachedHead": "HEAD is detached (not on a branch): switch to a branch first."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -399,6 +400,19 @@
       "fetch": "Fetch failed.",
       "pull": "Pull failed.",
       "push": "Push failed."
+    },
+    "pullNeedsBranch": "Switch to a branch to pull",
+    "pullHint": {
+      "merge": "Bring the upstream's new commits in with a merge",
+      "rebase": "Bring the upstream's new commits in with a rebase"
+    },
+    "pullOptions": "Pull strategy",
+    "pullMerge": "Merge for this repository",
+    "pullRebase": "Rebase for this repository",
+    "pullFromConfig": "Whatever Git's configuration says (now: {{mode}})",
+    "mode": {
+      "merge": "merge",
+      "rebase": "rebase"
     }
   },
   "tracking": {
@@ -414,5 +428,79 @@
     "behind_other": "{{count}} commits to pull",
     "detached": "Detached HEAD: you are not on any branch",
     "unborn": "Branch without commits yet"
+  },
+  "pull": {
+    "cancel": "Cancel",
+    "ok": "OK",
+    "blockedTitle": "Cannot pull yet",
+    "blocked": {
+      "overwrite_one": "The incoming commits change 1 file where you have uncommitted changes (or that already exists untracked), and Git does not overwrite it:",
+      "overwrite_other": "The incoming commits change {{count}} files where you have uncommitted changes (or that already exist untracked), and Git does not overwrite them:",
+      "rebaseNeedsClean_one": "A pull with rebase needs no uncommitted changes in tracked files, and you have 1:",
+      "rebaseNeedsClean_other": "A pull with rebase needs no uncommitted changes in tracked files, and you have {{count}}:"
+    },
+    "unresolved": "A merge or rebase is waiting on conflicts. Resolve or abort it (banner above) before pulling again.",
+    "notForced": "Nothing was touched.",
+    "alternatives": {
+      "overwrite": "Alternative: first save your changes in the stash (as “GitCRAFT: antes de hacer pull”, never deleted) and pull. You can apply them later from the sidebar. Or cancel and commit or discard your changes.",
+      "rebaseNeedsClean": "Alternatives: first save your changes in the stash (as “GitCRAFT: antes de hacer pull”, never deleted) and pull; or cancel and switch the strategy to merge (Pull's ▾ menu), which only stops if the changes clash."
+    },
+    "saveLocalAndPull": "Save my changes and pull",
+    "conflictTitle": "The pull would cause conflicts",
+    "conflicts_one": "1 file changed both on your branch and on “{{upstream}}” and would conflict:",
+    "conflicts_other": "{{count}} files changed both on your branch and on “{{upstream}}” and would conflict:",
+    "mayConflict_one": "1 file changed both on your branch and on “{{upstream}}” and might conflict:",
+    "mayConflict_other": "{{count}} files changed both on your branch and on “{{upstream}}” and might conflict:",
+    "conflictExplained": {
+      "merge": "If you go on, the merge stops with conflict markers (<<<<<<< … >>>>>>>) in those files: resolve them in your editor, stage them and commit. You can abort it at any time and go back to how things are now.",
+      "rebase": "If you go on, the rebase stops at the first commit that clashes: resolve the files, stage them and continue with “git rebase --continue” in a terminal. You can abort it at any time and go back to how things are now."
+    },
+    "pullWithConflicts": "Pull with conflicts",
+    "abortTitle": {
+      "merge": "Abort the merge?",
+      "rebase": "Abort the rebase?",
+      "cherryPick": "Abort the cherry-pick?",
+      "revert": "Abort the revert?"
+    },
+    "abortExplained": "The branch goes back to how it was before it started, and any conflict resolutions made since are lost. Uncommitted changes you had before in other files are kept.",
+    "abort": "Abort",
+    "abortButton": "Abort…",
+    "inProgress": {
+      "merge": "A merge is in progress.",
+      "rebase": "A rebase is in progress.",
+      "cherryPick": "A cherry-pick is in progress.",
+      "revert": "A revert is in progress."
+    },
+    "inProgressConflicts_one": "1 file still has conflicts: resolve it in your editor and stage it.",
+    "inProgressConflicts_other": "{{count}} files still have conflicts: resolve them in your editor and stage them.",
+    "inProgressNext": {
+      "merge": "No conflicts left: commit to finish it.",
+      "rebase": "No conflicts left: continue with “git rebase --continue” in a terminal.",
+      "cherryPick": "No conflicts left: commit to finish it.",
+      "revert": "No conflicts left: commit to finish it."
+    },
+    "done_one": "Pulled 1 commit from “{{upstream}}”",
+    "done_other": "Pulled {{count}} commits from “{{upstream}}”",
+    "how": {
+      "fastForward": "(fast-forward, no merge commit).",
+      "merge": "(with a merge commit).",
+      "rebase": "(your commits replayed on top with rebase)."
+    },
+    "upToDate": "Already up to date with “{{upstream}}”.",
+    "noUpstream": "Branch “{{branch}}” has no upstream, so there is nowhere to pull from. Publish it with Push to create one.",
+    "upstreamGone": "“{{upstream}}” no longer exists on the remote (it was deleted there). There is nowhere to pull from.",
+    "conflicted": {
+      "merge_one": "The merge stopped with conflicts in 1 file:",
+      "merge_other": "The merge stopped with conflicts in {{count}} files:",
+      "rebase_one": "The rebase stopped with conflicts in 1 file:",
+      "rebase_other": "The rebase stopped with conflicts in {{count}} files:"
+    },
+    "aborted": {
+      "merge": "Merge aborted: everything is as before the pull.",
+      "rebase": "Rebase aborted: everything is as before the pull.",
+      "cherryPick": "Cherry-pick aborted.",
+      "revert": "Revert aborted."
+    },
+    "savedLocal": "Your previous changes are in the stash as “GitCRAFT: antes de hacer pull”; apply them from the sidebar whenever you want."
   }
 }

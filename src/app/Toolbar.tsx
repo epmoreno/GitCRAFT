@@ -1,14 +1,18 @@
 import { useTranslation } from "react-i18next";
 import { useBranchStore } from "../features/branches/store";
 import { useGraphStore } from "../features/graph/store";
-import { CurrentBranch, FetchButton } from "../features/remote/RemoteButtons";
+import {
+  CurrentBranch,
+  FetchButton,
+  PullButton,
+} from "../features/remote/RemoteButtons";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
 import { useStashStore } from "../features/stash/store";
 import { useWorkdirStore } from "../features/workdir/store";
 import { Tooltip } from "../ui/Tooltip";
 import styles from "./App.module.css";
 
-const PENDING = ["pull", "push", "undo"] as const;
+const PENDING = ["push", "undo"] as const;
 
 /**
  * Top bar. Doubles as the window title bar on macOS (overlay title bar),
@@ -63,6 +67,7 @@ export function Toolbar() {
       <div className={styles.toolbarActions} data-tauri-drag-region>
         <CurrentBranch repoId={active?.id ?? null} />
         <FetchButton repoId={active?.id ?? null} />
+        <PullButton repoId={active?.id ?? null} />
         <Tooltip
           label={
             !active

@@ -275,6 +275,19 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   explica, con la salida original desplegable.
 - **Nombres de remoto** que vienen de la UI: solo se aceptan los
   configurados (`git remote`).
+- **Pull nunca fuerza.** Modo: el elegido en GitCRAFT para el repositorio
+  (`settings.json`) o, si no, `branch.<rama>.rebase` / `pull.rebase`. Pasos:
+  fetch del remoto del upstream → si no hay nada nuevo, «al día» → cambios
+  sin confirmar que chocarían (archivos que llegan desde la base común ∩
+  cambios locales; con rebase, cualquier cambio en archivos con seguimiento;
+  archivos sin seguimiento que llegarían) → `Blocked` sin tocar nada →
+  conflictos previstos con `git merge-tree --write-tree HEAD <upstream>` →
+  `WouldConflict` sin tocar nada. Solo entonces `git merge --no-edit` o
+  `git rebase --no-autostash` (nunca se guarda nada a escondidas). Si el
+  usuario acepta los conflictos y git se detiene, el estado
+  `in_progress` (marcadores `MERGE_HEAD`, `rebase-merge`… del git dir) se
+  muestra en un aviso con «Abortar» (`git merge --abort` /
+  `git rebase --abort`).
 - **Pruebas:** `scripts/make-remote-sandbox.sh` crea un repo de trabajo, un
   remoto bare y un segundo clon («otra persona»); los tests de integración
   hacen lo mismo con `TestRepo::add_bare_remote` y `TestRepo::clone_of`.

@@ -46,6 +46,11 @@ export type {
   WorkingStatus_Serialize as WorkingStatus,
   WorktreeArea,
   HunkSelection_Deserialize as HunkSelection,
+  InProgress,
+  PullBlock,
+  PullMode,
+  PullModeInfo,
+  PullOutcome,
   SelectionAction,
 } from "./bindings";
 
@@ -86,6 +91,22 @@ export function fetchRemote(
   const channel = new Channel<string>();
   channel.onmessage = onProgress;
   return commands.fetchRemote(id, remote, prune, channel);
+}
+
+/** Pulls the current branch, reporting git's progress lines. */
+export function pullBranch(
+  id: number,
+  options: { allowConflicts: boolean; saveLocal: boolean },
+  onProgress: (line: string) => void,
+) {
+  const channel = new Channel<string>();
+  channel.onmessage = onProgress;
+  return commands.pullBranch(
+    id,
+    options.allowConflicts,
+    options.saveLocal,
+    channel,
+  );
 }
 
 /** Calls `handler` whenever an open repository changes outside GitCRAFT

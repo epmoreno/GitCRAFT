@@ -65,6 +65,9 @@ pub enum GitError {
 
     #[error("there are no local changes to save")]
     NothingToStash,
+
+    #[error("HEAD is detached: not on any branch")]
+    DetachedHead,
 }
 
 /// What went wrong, in terms the UI can explain. Each kind has a translated
@@ -94,6 +97,7 @@ pub enum ErrorKind {
     /// The remote rejected the credentials, or none were available (no
     /// credential helper / SSH key): git cannot prompt.
     AuthFailed,
+    DetachedHead,
     /// The remote could not be reached (network, host, path).
     RemoteUnreachable,
     Cancelled,
@@ -120,6 +124,7 @@ impl GitError {
             Self::BranchChanged(_) => ErrorKind::BranchChanged,
             Self::StashChanged(_) => ErrorKind::StashChanged,
             Self::NothingToStash => ErrorKind::NothingToStash,
+            Self::DetachedHead => ErrorKind::DetachedHead,
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
     }
@@ -157,7 +162,8 @@ impl GitError {
             | Self::BranchExists(_)
             | Self::BranchChanged(_)
             | Self::StashChanged(_)
-            | Self::NothingToStash => None,
+            | Self::NothingToStash
+            | Self::DetachedHead => None,
         }
     }
 }

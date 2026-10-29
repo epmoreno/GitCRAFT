@@ -2,6 +2,10 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { BranchDialogs, BranchToast } from "../features/branches/BranchDialogs";
 import { DetailPanel } from "../features/detail/DetailPanel";
+import {
+  InProgressBanner,
+  RemoteDialogs,
+} from "../features/remote/RemoteDialogs";
 import { RemoteProgress, RemoteToast } from "../features/remote/RemoteStatus";
 import { StashDialogs, StashToast } from "../features/stash/StashDialogs";
 import { useStashStore } from "../features/stash/store";
@@ -60,6 +64,7 @@ export function App() {
         <Sidebar repoId={active?.id ?? null} />
         <main className={styles.graph} aria-label={t("zones.graph")}>
           <OpenErrorBanner />
+          <InProgressBanner repoId={active?.id ?? null} />
           {active ? (
             <GraphView key={active.id} repoId={active.id} info={active.info} />
           ) : (
@@ -75,6 +80,7 @@ export function App() {
         <DiscardDialog />
         <BranchDialogs />
         <StashDialogs />
+        <RemoteDialogs />
       </div>
     </div>
   );
