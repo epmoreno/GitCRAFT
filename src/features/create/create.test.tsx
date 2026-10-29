@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
 import type { InitCheck } from "../../ipc";
@@ -137,5 +137,142 @@ describe("initialize repository", () => {
       "«/x» ya es un repositorio Git.",
     );
     expect(screen.getByRole("dialog")).toBeVisible();
+  });
+});
+
+describe("clone repository", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+  });
+
+  async function openClone() {
+    const user = userEvent.setup();
+    renderStart();
+    await user.click(
+      screen.getByRole("button", { name: "Clonar repositorio…" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Clonar repositorio",
+    });
+    return { user, dialog };
+  }
+
+  it("clones into a new folder named after the URL, with progress", async () => {
+    let report: (line: string) => void = () => {};
+    let finish: (
+      value: Awaited<ReturnType<typeof ipc.cloneRepository>>,
+    ) => void = () => {};
+    ipc.cloneRepository.mockImplementation(
+      (_url, _parent, _name, onProgress) => {
+        report = onProgress;
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      },
+    );
+    const { user, dialog } = await openClone();
+    expect(
+      within(dialog).getByRole("textbox", { name: "Carpeta donde se crea" }),
+    ).toHaveValue("/Users/ana");
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "URL del repositorio" }),
+      "file:///Users/ana/gitcraft-remoto.git",
+    );
+    expect(
+      await within(dialog).findByText(
+        "Se creará «/Users/ana/gitcraft-remoto».",
+      ),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByRole("textbox", { name: "Nombre de la carpeta" }),
+    ).toHaveValue("gitcraft-remoto");
+
+    await user.click(within(dialog).getByRole("button", { name: "Clonar" }));
+    expect(ipc.cloneRepository).toHaveBeenCalledWith(
+      "file:///Users/ana/gitcraft-remoto.git",
+      "/Users/ana",
+      "gitcraft-remoto",
+      expect.any(Function),
+    );
+    act(() => report("Receiving objects:  50% (5/10)"));
+    expect(within(dialog).getByRole("progressbar")).toHaveAttribute(
+      "value",
+      "50",
+    );
+    // Escape does not close the dialog while cloning.
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog")).toBeVisible();
+
+    await act(async () =>
+      finish({ status: "ok", data: opened(7, "/Users/ana/gitcraft-remoto") }),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(useRepoStore.getState().activeId).toBe(7);
+  });
+
+  it("never clones into a folder with files", async () => {
+    ipc.checkCloneDestination.mockResolvedValue({
+      status: "ok",
+      data: "notEmpty",
+    });
+    const { user, dialog } = await openClone();
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "URL del repositorio" }),
+      "/Users/ana/gitcraft-remoto.git",
+    );
+    expect(
+      await within(dialog).findByText(
+        /ya existe y tiene contenido. GitCRAFT nunca clona encima/,
+      ),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: "Clonar" }),
+    ).toBeDisabled();
+    expect(ipc.cloneRepository).not.toHaveBeenCalled();
+  });
+
+  it("keeps a name the user typed and can cancel a running clone", async () => {
+    ipc.cloneRepository.mockImplementation(() => new Promise(() => {}));
+    const { user, dialog } = await openClone();
+    const name = within(dialog).getByRole("textbox", {
+      name: "Nombre de la carpeta",
+    });
+    await user.type(name, "mi-copia");
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "URL del repositorio" }),
+      "/x/otro.git",
+    );
+    await waitFor(() => expect(ipc.defaultCloneName).toHaveBeenCalled());
+    expect(name).toHaveValue("mi-copia");
+    const clone = within(dialog).getByRole("button", { name: "Clonar" });
+    await waitFor(() => expect(clone).toBeEnabled());
+    await user.click(clone);
+    await user.click(
+      within(dialog).getByRole("button", { name: "Cancelar clonación" }),
+    );
+    expect(ipc.cancelClone).toHaveBeenCalled();
+  });
+
+  it("explains failures and keeps the dialog", async () => {
+    ipc.cloneRepository.mockResolvedValue({
+      status: "error",
+      error: commandError(
+        "remoteUnreachable",
+        "fatal: '/no' does not appear to be a git repository",
+      ),
+    });
+    const { user, dialog } = await openClone();
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "URL del repositorio" }),
+      "/no.git",
+    );
+    const clone = within(dialog).getByRole("button", { name: "Clonar" });
+    await waitFor(() => expect(clone).toBeEnabled());
+    await user.click(clone);
+    const alert = await within(dialog).findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "No se pudo clonar. No se pudo conectar con el remoto.",
+    );
+    expect(alert).toHaveTextContent("does not appear to be a git repository");
   });
 });

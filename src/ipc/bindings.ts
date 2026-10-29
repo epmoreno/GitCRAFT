@@ -140,6 +140,16 @@ export const commands = {
 	validBranchName: (path: string, name: string) => typedError<boolean, IpcError_Serialize>(__TAURI_INVOKE("valid_branch_name", { path, name })),
 	/**  Creates a repository in `path` with first branch `branch` and opens it. */
 	initRepository: (path: string, branch: string) => typedError<OpenedRepository, IpcError_Serialize>(__TAURI_INVOKE("init_repository", { path, branch })),
+	/**  Folder suggested for a new clone (the last one used, else home). */
+	cloneParent: () => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("clone_parent")),
+	/**  The folder name a clone of `url` gets by default. */
+	defaultCloneName: (url: string) => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("default_clone_name", { url })),
+	/**  Whether a clone can go to `parent/name` (never a folder with files). */
+	checkCloneDestination: (parent: string, name: string) => typedError<Destination, IpcError_Serialize>(__TAURI_INVOKE("check_clone_destination", { parent, name })),
+	/**  Clones `url` into `parent/name`, streaming git's progress, and opens it. */
+	cloneRepository: (url: string, parent: string, name: string, onProgress: Channel<string>) => typedError<OpenedRepository, IpcError_Serialize>(__TAURI_INVOKE("clone_repository", { url, parent, name, onProgress })),
+	/**  Cancels the clone in progress. */
+	cancelClone: () => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_clone")),
 };
 
 /** Events */
@@ -303,6 +313,19 @@ export type ConflictEntry = {
 /**  How a path conflicts during a merge, rebase, cherry-pick… */
 export type ConflictKind = "bothModified" | "bothAdded" | "bothDeleted" | "addedByUs" | "addedByThem" | "deletedByUs" | "deletedByThem";
 
+/**  Whether a clone could go to a destination, checked as it is typed. */
+export type Destination = 
+/**  Nothing there: the folder is created. */
+"free" | 
+/**  An empty folder: the clone goes inside. */
+"emptyFolder" | 
+/**  Something is there (a non-empty folder, or a file): refused. */
+"notEmpty" | 
+/**  The parent folder does not exist. */
+"parentMissing" | 
+/**  Not usable as a folder name (empty, ".", "..", contains "/"). */
+"invalidName";
+
 export type DiffLine = DiffLine_Serialize | DiffLine_Deserialize;
 
 export type DiffLine_Deserialize = {
@@ -417,7 +440,7 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
  *  The remote rejected the credentials, or none were available (no
  *  credential helper / SSH key): git cannot prompt.
  */
-"authFailed" | "detachedHead" | "alreadyARepository" | 
+"authFailed" | "detachedHead" | "alreadyARepository" | "destinationNotEmpty" | 
 /**  The remote could not be reached (network, host, path). */
 "remoteUnreachable" | "cancelled" | "timedOut" | "unknown";
 

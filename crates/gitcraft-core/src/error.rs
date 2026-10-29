@@ -71,6 +71,9 @@ pub enum GitError {
 
     #[error("{} already is a git repository", .0.display())]
     AlreadyARepository(PathBuf),
+
+    #[error("{} already exists and is not an empty folder", .0.display())]
+    DestinationNotEmpty(PathBuf),
 }
 
 /// What went wrong, in terms the UI can explain. Each kind has a translated
@@ -102,6 +105,7 @@ pub enum ErrorKind {
     AuthFailed,
     DetachedHead,
     AlreadyARepository,
+    DestinationNotEmpty,
     /// The remote could not be reached (network, host, path).
     RemoteUnreachable,
     Cancelled,
@@ -130,6 +134,7 @@ impl GitError {
             Self::NothingToStash => ErrorKind::NothingToStash,
             Self::DetachedHead => ErrorKind::DetachedHead,
             Self::AlreadyARepository(_) => ErrorKind::AlreadyARepository,
+            Self::DestinationNotEmpty(_) => ErrorKind::DestinationNotEmpty,
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
     }
@@ -169,7 +174,8 @@ impl GitError {
             | Self::StashChanged(_)
             | Self::NothingToStash
             | Self::DetachedHead
-            | Self::AlreadyARepository(_) => None,
+            | Self::AlreadyARepository(_)
+            | Self::DestinationNotEmpty(_) => None,
         }
     }
 }
@@ -221,6 +227,10 @@ pub fn classify_output(stderr: &str, stdout: &str) -> ErrorKind {
         ("no changes added to commit", ErrorKind::NothingToCommit),
         ("is not a valid branch name", ErrorKind::InvalidBranchName),
         ("No local changes to save", ErrorKind::NothingToStash),
+        (
+            "already exists and is not an empty directory",
+            ErrorKind::DestinationNotEmpty,
+        ),
         ("already exists", ErrorKind::BranchExists),
         ("is already checked out at", ErrorKind::BranchInWorktree),
         ("is already used by worktree", ErrorKind::BranchInWorktree),

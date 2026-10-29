@@ -59,6 +59,10 @@ vi.mock("../ipc", () => ({
     checkInit: vi.fn(),
     validBranchName: vi.fn(),
     initRepository: vi.fn(),
+    cloneParent: vi.fn(),
+    defaultCloneName: vi.fn(),
+    checkCloneDestination: vi.fn(),
+    cancelClone: vi.fn(),
   },
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
@@ -67,6 +71,7 @@ vi.mock("../ipc", () => ({
   pullBranch: vi.fn(),
   pushBranch: vi.fn(),
   forcePushPreview: vi.fn(),
+  cloneRepository: vi.fn(),
   onRepoChanged: vi.fn(),
 }));
 

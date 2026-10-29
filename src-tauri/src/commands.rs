@@ -6,6 +6,7 @@ use tauri::State;
 use tauri::ipc::Channel;
 
 use gitcraft_core::ops::branch::{BranchDeletion, BranchNameCheck, CheckoutOutcome};
+use gitcraft_core::ops::clone::{self, Destination};
 use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
@@ -577,4 +578,53 @@ pub async fn init_repository(
     branch: String,
 ) -> Result<OpenedRepository, IpcError> {
     state.init_repository(&PathBuf::from(path), &branch).await
+}
+
+/// Folder suggested for a new clone (the last one used, else home).
+#[tauri::command]
+#[specta::specta]
+pub async fn clone_parent(state: State<'_, AppState>) -> Result<String, IpcError> {
+    Ok(state.clone_parent())
+}
+
+/// The folder name a clone of `url` gets by default.
+#[tauri::command]
+#[specta::specta]
+pub async fn default_clone_name(url: String) -> Result<String, IpcError> {
+    Ok(clone::default_folder_name(&url))
+}
+
+/// Whether a clone can go to `parent/name` (never a folder with files).
+#[tauri::command]
+#[specta::specta]
+pub async fn check_clone_destination(
+    parent: String,
+    name: String,
+) -> Result<Destination, IpcError> {
+    Ok(clone::check_destination(&PathBuf::from(parent), &name))
+}
+
+/// Clones `url` into `parent/name`, streaming git's progress, and opens it.
+#[tauri::command]
+#[specta::specta]
+pub async fn clone_repository(
+    state: State<'_, AppState>,
+    url: String,
+    parent: String,
+    name: String,
+    on_progress: Channel<String>,
+) -> Result<OpenedRepository, IpcError> {
+    state
+        .clone_repository(&url, &PathBuf::from(parent), &name, |line| {
+            let _ = on_progress.send(line.to_owned());
+        })
+        .await
+}
+
+/// Cancels the clone in progress.
+#[tauri::command]
+#[specta::specta]
+pub async fn cancel_clone(state: State<'_, AppState>) -> Result<(), IpcError> {
+    state.cancel_clone();
+    Ok(())
 }

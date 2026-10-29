@@ -53,7 +53,8 @@
     "dialogTitle": "Open repository",
     "recent": "Recent",
     "recentEmpty": "You haven't opened any repositories yet.",
-    "init": "Initialize repository…"
+    "init": "Initialize repository…",
+    "clone": "Clone repository…"
   },
   "detail": {
     "empty": "Select a commit to see its details.",
@@ -95,7 +96,8 @@
     "authFailed": "Git could not authenticate with the remote. GitCRAFT never stores or asks for passwords: set up a credential helper (osxkeychain on macOS) or add your SSH key to the agent, and check that “git fetch” works in a terminal.",
     "remoteUnreachable": "Could not connect to the remote. Check your connection and the remote's URL (git remote -v).",
     "detachedHead": "HEAD is detached (not on a branch): switch to a branch first.",
-    "alreadyARepository": "“{{path}}” already is a Git repository."
+    "alreadyARepository": "“{{path}}” already is a Git repository.",
+    "destinationNotEmpty": "“{{path}}” already exists and is not empty: never cloning over a folder with files."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -580,5 +582,27 @@
     "alreadyTitle": "Already a repository",
     "already": "This folder already is a Git repository, so there is nothing to initialize.",
     "open": "Open it"
+  },
+  "clone": {
+    "title": "Clone repository",
+    "url": "Repository URL",
+    "urlPlaceholder": "https://…, git@…:… or file:///…",
+    "urlHint": "Authentication is done by your credential helper or SSH agent; GitCRAFT never asks for or stores passwords.",
+    "parent": "Folder to create it in",
+    "pickerTitle": "Folder to clone into",
+    "choose": "Choose…",
+    "name": "Folder name",
+    "destinationHint": "Type the URL and choose where to clone it.",
+    "destination": {
+      "free": "“{{path}}” will be created.",
+      "emptyFolder": "“{{path}}” already exists and is empty: the repository is cloned into it.",
+      "notEmpty": "“{{path}}” already exists and has content. GitCRAFT never clones over a folder with files: choose another name or folder.",
+      "parentMissing": "The folder it would be created in does not exist.",
+      "invalidName": "That is not a valid folder name (it cannot be empty, “.” or “..”, or contain “/”)."
+    },
+    "running": "Cloning…",
+    "cancelRunning": "Cancel clone",
+    "clone": "Clone",
+    "failed": "Could not clone."
   }
 }

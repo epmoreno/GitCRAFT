@@ -11,6 +11,7 @@ export function NewRepositoryMenu() {
   const { t } = useTranslation();
   const opening = useRepoStore((s) => s.opening);
   const requestInit = useCreateStore((s) => s.requestInit);
+  const requestClone = useCreateStore((s) => s.requestClone);
   const [at, setAt] = useState<{ x: number; y: number } | null>(null);
   return (
     <>
@@ -36,6 +37,10 @@ export function NewRepositoryMenu() {
             {
               label: t("start.init"),
               onSelect: () => void requestInit(t("init.pickerTitle")),
+            },
+            {
+              label: t("start.clone"),
+              onSelect: () => void requestClone(),
             },
           ]}
           onClose={() => setAt(null)}

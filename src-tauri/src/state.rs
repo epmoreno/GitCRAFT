@@ -9,6 +9,7 @@ use gitcraft_core::ops::branch::{
     self, BranchDeletion, BranchNameCheck, CheckoutOutcome, check_branch_name,
     preview_branch_deletion,
 };
+use gitcraft_core::ops::clone;
 use gitcraft_core::ops::commit::{CommitChanges, commit_changes, commit_details, commit_file_diff};
 use gitcraft_core::ops::commit_write::{AmendInfo, amend_info, compose_message, create_commit};
 use gitcraft_core::ops::discard::{
@@ -138,6 +139,8 @@ struct Inner {
     next_discard: u32,
     sessions: Vec<RepoSession>,
     settings: Settings,
+    /// The clone in progress (one at a time), to cancel it.
+    clone: Option<CancellationToken>,
 }
 
 pub struct AppState {
@@ -999,6 +1002,49 @@ impl AppState {
         let git = self.git()?;
         init::init_repository(git, path, branch, &CancellationToken::new()).await?;
         self.open_repository(path).await
+    }
+
+    /// Folder suggested for a new clone: the last one used, else home.
+    pub fn clone_parent(&self) -> String {
+        let last = self.lock().settings.last_clone_parent.clone();
+        last.filter(|p| Path::new(p).is_dir())
+            .or_else(|| std::env::var("HOME").ok())
+            .unwrap_or_default()
+    }
+
+    /// Clones `url` into `parent/name` and opens it. Cancel with
+    /// `cancel_clone`.
+    pub async fn clone_repository(
+        &self,
+        url: &str,
+        parent: &Path,
+        name: &str,
+        on_progress: impl FnMut(&str),
+    ) -> Result<OpenedRepository, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        {
+            let mut inner = self.lock();
+            if let Some(previous) = inner.clone.replace(cancel.clone()) {
+                previous.cancel();
+            }
+        }
+        let result = clone::clone_repository(git, url, parent, name, &cancel, on_progress).await;
+        {
+            let mut inner = self.lock();
+            inner.clone = None;
+            if result.is_ok() {
+                inner.settings.last_clone_parent = Some(parent.to_string_lossy().into_owned());
+                self.persist(&inner.settings);
+            }
+        }
+        self.open_repository(&result?).await
+    }
+
+    pub fn cancel_clone(&self) {
+        if let Some(token) = self.lock().clone.take() {
+            token.cancel();
+        }
     }
 
     /// Remembers the open tabs (paths in order) and the active one.

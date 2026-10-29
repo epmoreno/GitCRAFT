@@ -53,7 +53,8 @@
     "dialogTitle": "Abrir repositorio",
     "recent": "Recientes",
     "recentEmpty": "Aún no has abierto ningún repositorio.",
-    "init": "Inicializar repositorio…"
+    "init": "Inicializar repositorio…",
+    "clone": "Clonar repositorio…"
   },
   "detail": {
     "empty": "Selecciona un commit para ver sus detalles.",
@@ -95,7 +96,8 @@
     "authFailed": "Git no pudo autenticarse con el remoto. GitCRAFT no guarda ni pide contraseñas: configura un credential helper (en macOS, osxkeychain) o añade tu clave SSH al agente, y comprueba que «git fetch» funciona desde la terminal.",
     "remoteUnreachable": "No se pudo conectar con el remoto. Comprueba la conexión y la URL del remoto (git remote -v).",
     "detachedHead": "Estás en HEAD desacoplado (no en una rama): cambia a una rama primero.",
-    "alreadyARepository": "«{{path}}» ya es un repositorio Git."
+    "alreadyARepository": "«{{path}}» ya es un repositorio Git.",
+    "destinationNotEmpty": "«{{path}}» ya existe y no está vacía: no se clona encima de una carpeta con archivos."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",
@@ -580,5 +582,27 @@
     "alreadyTitle": "Ya es un repositorio",
     "already": "Esta carpeta ya es un repositorio Git, así que no hay nada que inicializar.",
     "open": "Abrirlo"
+  },
+  "clone": {
+    "title": "Clonar repositorio",
+    "url": "URL del repositorio",
+    "urlPlaceholder": "https://…, git@…:… o file:///…",
+    "urlHint": "La autenticación la hace tu credential helper o tu agente SSH; GitCRAFT no pide ni guarda contraseñas.",
+    "parent": "Carpeta donde se crea",
+    "pickerTitle": "Carpeta donde clonar",
+    "choose": "Elegir…",
+    "name": "Nombre de la carpeta",
+    "destinationHint": "Escribe la URL y elige dónde clonarlo.",
+    "destination": {
+      "free": "Se creará «{{path}}».",
+      "emptyFolder": "«{{path}}» ya existe y está vacía: el repositorio se clonará dentro.",
+      "notEmpty": "«{{path}}» ya existe y tiene contenido. GitCRAFT nunca clona encima de una carpeta con archivos: elige otro nombre u otra carpeta.",
+      "parentMissing": "La carpeta donde se crearía no existe.",
+      "invalidName": "Ese nombre no vale para una carpeta (no puede estar vacío, ser «.» o «..» ni llevar «/»)."
+    },
+    "running": "Clonando…",
+    "cancelRunning": "Cancelar clonación",
+    "clone": "Clonar",
+    "failed": "No se pudo clonar."
   }
 }

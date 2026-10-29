@@ -49,6 +49,7 @@ export type {
   WorktreeArea,
   HunkSelection_Deserialize as HunkSelection,
   InitCheck_Serialize as InitCheck,
+  Destination,
   InProgress,
   PullBlock,
   PullMode,
@@ -140,6 +141,19 @@ export function forcePushPreview(
   const channel = new Channel<string>();
   channel.onmessage = onProgress;
   return commands.forcePushPreview(id, channel);
+}
+
+/** Clones `url` into `parent/name` (and opens it), reporting git's progress.
+ * Cancel with `commands.cancelClone`. */
+export function cloneRepository(
+  url: string,
+  parent: string,
+  name: string,
+  onProgress: (line: string) => void,
+) {
+  const channel = new Channel<string>();
+  channel.onmessage = onProgress;
+  return commands.cloneRepository(url, parent, name, channel);
 }
 
 /** Calls `handler` whenever an open repository changes outside GitCRAFT

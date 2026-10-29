@@ -298,6 +298,17 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   remoto bare y un segundo clon («otra persona»); los tests de integración
   hacen lo mismo con `TestRepo::add_bare_remote` y `TestRepo::clone_of`.
 
+## 5f. Crear repositorios
+
+- **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama
+  propuesta `init.defaultBranch` o «main», si ya es un repositorio, si
+  quedaría anidado en otro, si la carpeta está vacía). Nunca reinicializa un
+  repositorio existente; los archivos que haya quedan sin seguimiento.
+- **Clonar** (`ops/clone.rs`): `git clone --progress -- <url> <destino>`. El
+  destino tiene que no existir o ser una carpeta vacía (`check_destination`,
+  también al escribir en la UI). La cancelación tiene su propio token en
+  `AppState` (no hay sesión todavía); git borra lo que hubiera creado.
+
 ## 6. Persistencia
 
 `settings.json` en el `app_config_dir` de Tauri (en macOS,

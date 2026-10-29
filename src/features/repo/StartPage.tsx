@@ -11,6 +11,7 @@ export function StartPage() {
   const pickAndOpen = useRepoStore((s) => s.pickAndOpen);
   const openRepository = useRepoStore((s) => s.openRepository);
   const requestInit = useCreateStore((s) => s.requestInit);
+  const requestClone = useCreateStore((s) => s.requestClone);
 
   return (
     <div className={styles.startScroll}>
@@ -33,6 +34,14 @@ export function StartPage() {
             onClick={() => void requestInit(t("init.pickerTitle"))}
           >
             {t("start.init")}
+          </button>
+          <button
+            type="button"
+            className={styles.startLink}
+            disabled={opening}
+            onClick={() => void requestClone()}
+          >
+            {t("start.clone")}
           </button>
         </div>
 

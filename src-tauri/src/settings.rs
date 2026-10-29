@@ -35,6 +35,8 @@ pub struct Settings {
     /// Open tabs (repository paths, in order) and the active one, restored
     /// on the next start.
     pub session: SavedSession,
+    /// Folder the last clone went into (suggested for the next one).
+    pub last_clone_parent: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

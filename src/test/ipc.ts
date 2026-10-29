@@ -6,6 +6,7 @@ import {
   pullBranch,
   pushBranch,
   forcePushPreview,
+  cloneRepository,
   pickFolder,
   streamGraph,
   type CommandError,
@@ -39,6 +40,11 @@ export const ipc = {
   checkInit: vi.mocked(commands.checkInit),
   validBranchName: vi.mocked(commands.validBranchName),
   initRepository: vi.mocked(commands.initRepository),
+  cloneRepository: vi.mocked(cloneRepository),
+  cloneParent: vi.mocked(commands.cloneParent),
+  defaultCloneName: vi.mocked(commands.defaultCloneName),
+  checkCloneDestination: vi.mocked(commands.checkCloneDestination),
+  cancelClone: vi.mocked(commands.cancelClone),
   onRepoChanged: vi.mocked(onRepoChanged),
   cancelOperation: vi.mocked(commands.cancelOperation),
   dismissOptimizeNotice: vi.mocked(commands.dismissOptimizeNotice),
@@ -117,6 +123,17 @@ export function resetIpcMock() {
   ipc.abortInProgress.mockResolvedValue({ status: "ok", data: null });
   ipc.saveSession.mockResolvedValue({ status: "ok", data: null });
   ipc.validBranchName.mockResolvedValue({ status: "ok", data: true });
+  ipc.cloneParent.mockResolvedValue({ status: "ok", data: "/Users/ana" });
+  ipc.defaultCloneName.mockImplementation(async (url) => ({
+    status: "ok",
+    data:
+      url
+        .split("/")
+        .pop()
+        ?.replace(/\.git$/, "") ?? "",
+  }));
+  ipc.checkCloneDestination.mockResolvedValue({ status: "ok", data: "free" });
+  ipc.cancelClone.mockResolvedValue({ status: "ok", data: null });
   ipc.restoreSession.mockResolvedValue({
     status: "ok",
     data: { opened: [], active: null, failed: [] },

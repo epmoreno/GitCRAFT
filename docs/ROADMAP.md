@@ -72,9 +72,20 @@ T.2 → T.4.
       *Tests:* integración (rama elegida, archivos existentes sin tocar, ya es
       un repositorio, anidado, nombres no válidos, carpeta inexistente) y de
       interfaz.
-- [ ] **1.5 Clonar.** URL + destino, progreso (`--progress`) y cancelación; la
+- [x] **1.5 Clonar.** URL + destino, progreso (`--progress`) y cancelación; la
       autenticación la gestiona el credential helper. *Test:* clonar un repo
       local `file://`.
+      *Estado:* «Clonar repositorio…» en la página de inicio y en el menú ▾
+      junto a «Abrir repositorio». URL, carpeta (la última usada o la de
+      inicio) y nombre (se deduce de la URL hasta que lo editas). El destino
+      se comprueba al escribir: si existe y no está vacío, se niega y se
+      explica; una carpeta vacía sí vale. Progreso de git y «Cancelar
+      clonación»; Esc no cierra el diálogo mientras clona. El clon se abre en
+      una pestaña. Las URLs que empiezan por «-» se rechazan.
+      *Tests:* integración solo con repos locales (`file://` y rutas):
+      clonar con upstream y ramas remotas, carpeta vacía, nunca encima de una
+      carpeta con archivos, nombres y URLs no válidos, remoto inexistente,
+      cancelación; e interfaz.
 
 ### 2. Grafo de commits
 - [x] **2.1 Parser de log.** `git log --topo-order -z --format=<campos separados

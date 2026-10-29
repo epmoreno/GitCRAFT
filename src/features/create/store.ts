@@ -8,7 +8,9 @@ import {
 import { useRepoStore } from "../repo/store";
 
 /** A "new repository" dialog on screen. */
-export type CreateDialog = { kind: "init"; path: string; check: InitCheck };
+export type CreateDialog =
+  | { kind: "init"; path: string; check: InitCheck }
+  | { kind: "clone"; parent: string };
 
 type CreateState = {
   dialog: CreateDialog | null;
@@ -17,6 +19,8 @@ type CreateState = {
   /** Asks for a folder, then shows what `git init` would do there. */
   requestInit: (pickerTitle: string) => Promise<void>;
   confirmInit: (branch: string) => Promise<void>;
+  /** Shows the clone dialog (URL, folder and name). */
+  requestClone: () => Promise<void>;
   /** The chosen folder already is a repository: open it instead. */
   openInstead: () => Promise<void>;
   closeDialog: () => void;
@@ -56,9 +60,20 @@ export const useCreateStore = create<CreateState>()((set, get) => ({
     }
   },
 
+  requestClone: async () => {
+    const result = await commands.cloneParent();
+    set({
+      dialog: {
+        kind: "clone",
+        parent: result.status === "ok" ? result.data : "",
+      },
+      error: null,
+    });
+  },
+
   openInstead: async () => {
     const dialog = get().dialog;
-    if (!dialog) return;
+    if (dialog?.kind !== "init") return;
     set({ dialog: null });
     await useRepoStore.getState().openRepository(dialog.path);
   },
