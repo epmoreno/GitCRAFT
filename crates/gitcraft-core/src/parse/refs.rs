@@ -38,6 +38,14 @@ pub struct GitRef {
     pub upstream: Option<String>,
     /// The branch HEAD points to.
     pub is_head: bool,
+    /// For local branches with an upstream: commits only on this branch
+    /// (to push) and only on the upstream (to pull). `None` when there is
+    /// no upstream, it is gone, or it was not counted.
+    pub ahead: Option<u32>,
+    pub behind: Option<u32>,
+    /// The upstream is configured but its remote branch no longer exists
+    /// (deleted on the remote and pruned).
+    pub upstream_gone: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -89,6 +97,9 @@ pub fn parse_refs(stdout: &str, remotes: &[String]) -> Result<Vec<GitRef>> {
             remote: (kind == RefKind::Remote).then(|| remote_of(short_name, remotes)),
             upstream: (!upstream.is_empty()).then(|| shorten(upstream)),
             is_head: head_marker == "*",
+            ahead: None,
+            behind: None,
+            upstream_gone: false,
         });
     }
     Ok(refs)

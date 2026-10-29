@@ -400,5 +400,19 @@
       "pull": "Pull failed.",
       "push": "Push failed."
     }
+  },
+  "tracking": {
+    "noUpstream": "Local branch without upstream (not published)",
+    "local": "no upstream",
+    "gone": "It tracked “{{upstream}}”, which no longer exists on the remote",
+    "goneShort": "(deleted on the remote)",
+    "tracks": "Tracks “{{upstream}}”",
+    "even": "Up to date with “{{upstream}}”",
+    "ahead_one": "1 commit to push",
+    "ahead_other": "{{count}} commits to push",
+    "behind_one": "1 commit to pull",
+    "behind_other": "{{count}} commits to pull",
+    "detached": "Detached HEAD: you are not on any branch",
+    "unborn": "Branch without commits yet"
   }
 }

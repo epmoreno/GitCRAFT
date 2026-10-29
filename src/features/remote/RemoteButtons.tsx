@@ -5,6 +5,7 @@ import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
 import { Tooltip } from "../../ui/Tooltip";
 import { useGraphStore } from "../graph/store";
 import { useRemoteStore } from "./store";
+import { arrows, trackingDescription } from "./tracking";
 import styles from "./remote.module.css";
 
 type Menu = { x: number; y: number; items: MenuItem[]; label: string };
@@ -95,6 +96,42 @@ export function FetchButton({ repoId }: { repoId: number | null }) {
         ▾
       </button>
       {menu.element}
+    </span>
+  );
+}
+
+/** The current branch and how far it is from its upstream. */
+export function CurrentBranch({ repoId }: { repoId: number | null }) {
+  const { t } = useTranslation();
+  const refs = useGraphStore((s) =>
+    repoId === null ? null : (s.graphs[repoId]?.refs ?? null),
+  );
+  if (!refs) return null;
+  if (refs.head.type === "detached") {
+    return (
+      <span className={styles.branch} title={t("tracking.detached")}>
+        {t("sidebar.detachedHead")}
+      </span>
+    );
+  }
+  const name = refs.head.name;
+  const ref = refs.refs.find((r) => r.kind === "local" && r.shortName === name);
+  const counts = ref && !ref.upstreamGone ? arrows(ref) : "";
+  const description = ref ? trackingDescription(ref, t) : t("tracking.unborn");
+  return (
+    <span
+      className={styles.branch}
+      title={description}
+      aria-label={`${name}. ${description}`}
+    >
+      <span className={styles.branchName}>{name}</span>
+      {counts && <span className={styles.counts}>{counts}</span>}
+      {ref && !ref.upstream && (
+        <span className={styles.noUpstream}>{t("tracking.local")}</span>
+      )}
+      {ref?.upstreamGone && (
+        <span className={styles.noUpstream}>{t("tracking.goneShort")}</span>
+      )}
     </span>
   );
 }

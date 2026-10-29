@@ -228,12 +228,20 @@ export function sampleRefs(): RepoRefs {
     remote: kind === "remote" ? "origin" : null,
     upstream: null,
     isHead: false,
+    ahead: null,
+    behind: null,
+    upstreamGone: false,
     ...extra,
   });
   return {
     head: { type: "branch", name: "main", oid: oid("e") },
     refs: [
-      ref("main", "local", "e", { isHead: true, upstream: "origin/main" }),
+      ref("main", "local", "e", {
+        isHead: true,
+        upstream: "origin/main",
+        ahead: 0,
+        behind: 0,
+      }),
       ref("feature", "local", "d"),
       ref("origin/main", "remote", "e"),
       ref("v1.0", "tag", "b"),

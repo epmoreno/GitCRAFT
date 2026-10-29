@@ -281,6 +281,9 @@ describe("branches", () => {
       remote: "origin",
       upstream: null,
       isHead: false,
+      ahead: null,
+      behind: null,
+      upstreamGone: false,
     });
     ipc.createBranch.mockResolvedValue({
       status: "ok",

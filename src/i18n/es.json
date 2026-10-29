@@ -400,5 +400,19 @@
       "pull": "No se pudo hacer pull.",
       "push": "No se pudo hacer push."
     }
+  },
+  "tracking": {
+    "noUpstream": "Rama local sin upstream (no está publicada)",
+    "local": "sin upstream",
+    "gone": "Seguía a «{{upstream}}», que ya no existe en el remoto",
+    "goneShort": "(borrada en el remoto)",
+    "tracks": "Sigue a «{{upstream}}»",
+    "even": "Al día con «{{upstream}}»",
+    "ahead_one": "1 commit por subir (push)",
+    "ahead_other": "{{count}} commits por subir (push)",
+    "behind_one": "1 commit por bajar (pull)",
+    "behind_other": "{{count}} commits por bajar (pull)",
+    "detached": "HEAD desacoplado: no estás en ninguna rama",
+    "unborn": "Rama sin commits todavía"
   }
 }

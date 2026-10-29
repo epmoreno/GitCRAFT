@@ -44,7 +44,10 @@ describe("Sidebar", () => {
     const local = section(/Ramas locales/);
     const main = within(local).getByRole("button", { name: /^main/ });
     expect(main).toHaveAttribute("aria-current", "true");
-    expect(main).toHaveAttribute("title", "Rama actual: main");
+    expect(main).toHaveAttribute(
+      "title",
+      "Rama actual: main\nAl día con «origin/main»",
+    );
     expect(within(main).getByText("origin/main")).toBeVisible(); // upstream
     expect(
       within(local).getByRole("button", { name: "feature" }),

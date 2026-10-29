@@ -170,8 +170,16 @@ un mensaje claro. Fetch, pull y push muestran progreso y se pueden cancelar.
       se explica que hay que hacer pull primero. El force push usa solo
       `--force-with-lease` y pide confirmación listando los commits del remoto
       que se sobrescribirían.
-- [ ] **6.4 Indicadores ahead/behind** en la rama (barra superior) y en la
+- [x] **6.4 Indicadores ahead/behind** en la rama (barra superior) y en la
       barra lateral.
+      *Estado:* la barra superior muestra la rama actual con «↑N ↓M» (o «sin
+      upstream» / «borrada en el remoto»), con la explicación completa al pasar
+      el ratón; cada rama local de la barra lateral, igual junto a su
+      upstream. Se cuentan con `rev-list --left-right --count` contra el
+      upstream (hasta 64 ramas) cada vez que se leen las refs, así que se
+      actualizan tras fetch, commits y cambios hechos desde la terminal.
+      *Tests:* integración (por delante, por detrás tras fetch, upstream
+      borrado) y de interfaz.
 
 ### 7. Stash
 Nunca se borran stashes automáticamente; borrar uno siempre pide

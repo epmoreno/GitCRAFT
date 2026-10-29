@@ -466,6 +466,18 @@ export type GitRef_Deserialize = {
 	upstream?: string | null,
 	/**  The branch HEAD points to. */
 	isHead: boolean,
+	/**
+	 *  For local branches with an upstream: commits only on this branch
+	 *  (to push) and only on the upstream (to pull). `None` when there is
+	 *  no upstream, it is gone, or it was not counted.
+	 */
+	ahead?: number | null,
+	behind?: number | null,
+	/**
+	 *  The upstream is configured but its remote branch no longer exists
+	 *  (deleted on the remote and pruned).
+	 */
+	upstreamGone: boolean,
 };
 
 export type GitRef_Serialize = {
@@ -482,6 +494,18 @@ export type GitRef_Serialize = {
 	upstream: string | null,
 	/**  The branch HEAD points to. */
 	isHead: boolean,
+	/**
+	 *  For local branches with an upstream: commits only on this branch
+	 *  (to push) and only on the upstream (to pull). `None` when there is
+	 *  no upstream, it is gone, or it was not counted.
+	 */
+	ahead: number | null,
+	behind: number | null,
+	/**
+	 *  The upstream is configured but its remote branch no longer exists
+	 *  (deleted on the remote and pruned).
+	 */
+	upstreamGone: boolean,
 };
 
 /**  Sent over the graph channel: pages in order, then `done`. */

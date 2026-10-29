@@ -64,3 +64,34 @@
   padding: 0;
   font-size: 10px;
 }
+
+/* Current branch in the toolbar */
+.branch {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  max-width: 260px;
+  margin-right: var(--space-2);
+  padding: 2px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: var(--font-size-small);
+}
+
+.branchName {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.counts {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.noUpstream {
+  color: var(--text-faint);
+  white-space: nowrap;
+}

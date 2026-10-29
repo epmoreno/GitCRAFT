@@ -2,13 +2,14 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
 import { Toolbar } from "../../app/Toolbar";
+import type { RepoRefs } from "../../ipc";
 import { commandError, ipc, opened, sampleRefs } from "../../test/ipc";
 import { useGraphStore } from "../graph/store";
 import { useRepoStore } from "../repo/store";
 import { Sidebar } from "../sidebar/Sidebar";
 import { RemoteProgress, RemoteToast } from "./RemoteStatus";
 
-function renderToolbar() {
+function renderToolbar(refs: RepoRefs = sampleRefs()) {
   useRepoStore.setState({ tabs: [opened(1, "/src/sample")], activeId: 1 });
   useGraphStore.setState({
     graphs: {
@@ -16,7 +17,7 @@ function renderToolbar() {
         status: "done",
         lines: [],
         maxColumn: 0,
-        refs: sampleRefs(),
+        refs,
         error: null,
         selectedOid: null,
         suggestOptimize: false,
@@ -25,7 +26,7 @@ function renderToolbar() {
       },
     },
   });
-  ipc.getRefs.mockResolvedValue({ status: "ok", data: sampleRefs() });
+  ipc.getRefs.mockResolvedValue({ status: "ok", data: refs });
   render(
     <>
       <Toolbar />
@@ -131,5 +132,49 @@ describe("fetch", () => {
     expect(alert).toHaveTextContent("No se pudo hacer fetch.");
     expect(alert).toHaveTextContent(/credential helper/);
     expect(alert).toHaveTextContent(/terminal prompts disabled/);
+  });
+});
+
+describe("ahead/behind", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+  });
+
+  it("shows commits to push and to pull on the branch and in the sidebar", () => {
+    const refs = sampleRefs();
+    const main = refs.refs[0]!;
+    main.ahead = 2;
+    main.behind = 1;
+    refs.refs[1] = {
+      ...refs.refs[1]!,
+      upstream: "origin/feature",
+      upstreamGone: true,
+    };
+    renderToolbar(refs);
+
+    const current = screen.getByLabelText(/^main\. /);
+    expect(current).toHaveTextContent("main↑2 ↓1");
+    expect(current).toHaveAccessibleName(
+      "main. Sigue a «origin/main» · 2 commits por subir (push) · 1 commit por bajar (pull)",
+    );
+
+    const local = screen
+      .getByRole("button", { name: /Ramas locales/ })
+      .closest("section") as HTMLElement;
+    expect(
+      within(local).getByRole("button", { name: /^main/ }),
+    ).toHaveTextContent("origin/main ↑2 ↓1");
+    const feature = within(local).getByRole("button", { name: /^feature/ });
+    expect(feature).toHaveTextContent("origin/feature (borrada en el remoto)");
+    expect(feature.title).toContain("ya no existe en el remoto");
+  });
+
+  it("says when the branch is not published", () => {
+    const refs = sampleRefs();
+    refs.head = { type: "branch", name: "feature", oid: refs.refs[1]!.target };
+    renderToolbar(refs);
+    expect(screen.getByLabelText(/^feature\. /)).toHaveTextContent(
+      "featuresin upstream",
+    );
   });
 });

@@ -6,6 +6,7 @@ import { useBranchStore } from "../branches/store";
 import { selectedStash, stashSelection, useGraphStore } from "../graph/store";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
 import { useRemoteStore } from "../remote/store";
+import { arrows, trackingDescription } from "../remote/tracking";
 import { useStashStore } from "../stash/store";
 import styles from "./sidebar.module.css";
 
@@ -149,7 +150,22 @@ function LocalBranches({ refs, repoId, onSelect, onMenu }: ListProps) {
               key={ref.name}
               label={ref.shortName}
               current={ref.isHead}
-              hint={ref.upstream ?? undefined}
+              hint={
+                ref.upstream
+                  ? [
+                      ref.upstream,
+                      ref.upstreamGone ? t("tracking.goneShort") : arrows(ref),
+                    ]
+                      .filter(Boolean)
+                      .join(" ")
+                  : undefined
+              }
+              title={[
+                ref.isHead
+                  ? t("sidebar.currentBranch", { name: ref.shortName })
+                  : ref.shortName,
+                trackingDescription(ref, t),
+              ].join("\n")}
               onClick={() => onSelect(ref.target)}
               onDoubleClick={() => {
                 if (repoId !== null && !ref.isHead)

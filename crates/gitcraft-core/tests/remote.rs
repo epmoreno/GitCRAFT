@@ -1,6 +1,8 @@
 //! Fetch, pull and push against local bare remotes (never a real server).
 
+use gitcraft_core::ops::refs::read_refs;
 use gitcraft_core::ops::remote::fetch;
+use gitcraft_core::parse::refs::{GitRef, RefKind};
 use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, ErrorKind, Git};
 
@@ -104,4 +106,55 @@ async fn can_be_cancelled() {
         .await
         .expect_err("cancelled");
     assert_eq!(err.kind(), ErrorKind::Cancelled);
+}
+
+async fn local(repo: &TestRepo, name: &str) -> GitRef {
+    read_refs(&git(), repo.path(), &c())
+        .await
+        .expect("refs")
+        .refs
+        .into_iter()
+        .find(|r| r.kind == RefKind::Local && r.short_name == name)
+        .expect("branch")
+}
+
+#[tokio::test]
+async fn counts_commits_ahead_and_behind_the_upstream() {
+    let (repo, other, _remote) = sandbox().await;
+    let main = local(&repo, "main").await;
+    assert_eq!((main.ahead, main.behind), (Some(0), Some(0)));
+    let feature = local(&repo, "feature").await;
+    assert_eq!(
+        (feature.ahead, feature.behind, feature.upstream_gone),
+        (None, None, false)
+    );
+
+    other_pushes(&other, "a.txt", "a\n").await;
+    other_pushes(&other, "b.txt", "b\n").await;
+    repo.commit_file("mio.txt", "mio\n", "local").await;
+    let main = local(&repo, "main").await;
+    assert_eq!(
+        (main.ahead, main.behind),
+        (Some(1), Some(0)),
+        "not fetched yet"
+    );
+
+    fetch(&git(), repo.path(), None, false, &c(), |_| {})
+        .await
+        .expect("fetch");
+    let main = local(&repo, "main").await;
+    assert_eq!((main.ahead, main.behind), (Some(1), Some(2)));
+
+    // Upstream deleted on the remote and pruned: "gone".
+    repo.run(&["push", "--quiet", "--set-upstream", "origin", "feature"])
+        .await;
+    other
+        .run(&["push", "--quiet", "origin", "--delete", "feature"])
+        .await;
+    fetch(&git(), repo.path(), None, true, &c(), |_| {})
+        .await
+        .expect("fetch --prune");
+    let feature = local(&repo, "feature").await;
+    assert!(feature.upstream_gone);
+    assert_eq!((feature.ahead, feature.behind), (None, None));
 }
