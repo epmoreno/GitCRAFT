@@ -13,6 +13,7 @@ import { headOid, labelsByCommit } from "./refLabels";
 import { absoluteTime, relativeTime } from "./relativeTime";
 import { useGraphStore } from "./store";
 import styles from "./graph.module.css";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 function cssVar(name: string, fallback: string): string {
   const value = getComputedStyle(document.documentElement)
@@ -135,15 +136,12 @@ export function GraphView({
       </div>
 
       {graph?.error && (
-        <div className={styles.loadError} role="alert">
-          <p>
-            {t("graph.loadFailed")}{" "}
-            {t(`errors.${graph.error.kind}`, { path: info.path })}
-          </p>
-          {graph.error.details && (
-            <pre className="selectable">{graph.error.details}</pre>
-          )}
-        </div>
+        <ErrorReport
+          className={styles.loadError}
+          error={graph.error}
+          lead={t("graph.loadFailed")}
+          path={info.path}
+        />
       )}
       {graph?.suggestOptimize && (
         <OptimizeNotice

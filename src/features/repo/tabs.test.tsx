@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import i18n from "../../i18n";
@@ -42,14 +42,15 @@ describe("tabs", () => {
     expect(store().restoreFailures).toHaveLength(1);
 
     render(<RestoreFailedBanner />);
-    const banner = screen.getByRole("alert");
-    expect(banner).toHaveTextContent(
-      "No se pudo reabrir 1 repositorio de la sesión anterior",
+    expect(
+      screen.getByText(
+        "No se pudo reabrir 1 repositorio de la sesión anterior",
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "La carpeta «/gone» no existe",
     );
-    expect(banner).toHaveTextContent("La carpeta «/gone» no existe");
-    await userEvent.click(
-      within(banner).getByRole("button", { name: "Cerrar" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Cerrar" }));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 

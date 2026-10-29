@@ -5,6 +5,7 @@ import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import dialog from "../../ui/ConfirmDialog.module.css";
 import { useBranchStore } from "./store";
 import styles from "./branches.module.css";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 /** How long typing pauses before the name is checked. */
 const CHECK_DELAY_MS = 150;
@@ -108,9 +109,11 @@ function NameDialog() {
                 current.repoId,
                 name,
               );
-              if (result.status !== "ok") return;
-              setCheck({ name, result: result.data });
-              if (result.data !== "valid") return;
+              // If the check itself fails, the operation reports why.
+              if (result.status === "ok") {
+                setCheck({ name, result: result.data });
+                if (result.data !== "valid") return;
+              }
             }
             if (isRename) void rename(name);
             else void create(name, checkout);
@@ -285,22 +288,15 @@ export function BranchToast() {
   return (
     <div
       className={styles.toast}
-      role={notice.kind === "error" ? "alert" : "status"}
+      role={notice.kind === "error" ? undefined : "status"}
     >
       <div className={styles.toastBody}>
         {notice.kind === "error" ? (
-          <>
-            <p>
-              {t("branches.failed")}{" "}
-              {t(`errors.${notice.error.kind}`, { path: "" })}
-            </p>
+          <ErrorReport error={notice.error} lead={t("branches.failed")}>
             {notice.stashFor && (
               <p>{t("branches.failedAfterStash", { name: notice.stashFor })}</p>
             )}
-            {notice.error.details && (
-              <pre className="selectable">{notice.error.details}</pre>
-            )}
-          </>
+          </ErrorReport>
         ) : notice.kind === "stashed" ? (
           <p>{t("branches.stashed", { name: notice.name })}</p>
         ) : (

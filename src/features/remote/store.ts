@@ -36,7 +36,8 @@ export type RemoteNotice =
   | {
       kind: "error";
       repoId: number;
-      operation: RemoteKind;
+      /** `pullMode`: saving the chosen pull mode. */
+      operation: RemoteKind | "pullMode";
       error: CommandError;
       /** Uncommitted changes were stashed before it failed. */
       savedLocal?: boolean;
@@ -70,7 +71,8 @@ export type RemoteNotice =
       setUpstream: boolean;
       forced: boolean;
     }
-  | { kind: "pushUpToDate"; repoId: number; upstream: string };
+  | { kind: "pushUpToDate"; repoId: number; upstream: string }
+  | { kind: "noRemotes"; repoId: number };
 
 /** A remote dialog waiting for the user. */
 export type RemoteDialog =
@@ -209,7 +211,15 @@ export const useRemoteStore = create<RemoteState>()((set, get) => {
     },
 
     setPullMode: async (repoId, mode) => {
-      await commands.setPullMode(repoId, mode);
+      const result = await commands.setPullMode(repoId, mode);
+      if (result.status === "error") {
+        notify({
+          kind: "error",
+          repoId,
+          operation: "pullMode",
+          error: result.error,
+        });
+      }
       await get().loadPullMode(repoId);
     },
 
@@ -348,16 +358,7 @@ export const useRemoteStore = create<RemoteState>()((set, get) => {
           break;
         case "noUpstream":
           if (outcome.remotes.length === 0) {
-            notify({
-              kind: "error",
-              repoId,
-              operation: "push",
-              error: {
-                kind: "remoteUnreachable",
-                message: "no remotes",
-                details: null,
-              },
-            });
+            notify({ kind: "noRemotes", repoId });
           } else {
             set({
               dialog: {

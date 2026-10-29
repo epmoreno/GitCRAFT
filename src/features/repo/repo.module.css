@@ -208,28 +208,6 @@
   line-height: 1.45;
 }
 
-.errorDetails {
-  margin-top: var(--space-2);
-  color: var(--text-muted);
-}
-
-.errorDetails summary {
-  font-size: var(--font-size-small);
-}
-
-.errorDetails pre {
-  max-height: 180px;
-  margin: var(--space-2) 0 0;
-  padding: var(--space-2);
-  overflow: auto;
-  border-radius: var(--radius);
-  background: var(--surface-0);
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-small);
-  white-space: pre-wrap;
-}
-
 .errorDismiss {
   height: 26px;
   padding: 0 var(--space-3);

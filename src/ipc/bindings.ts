@@ -442,7 +442,22 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
  */
 "authFailed" | "detachedHead" | "alreadyARepository" | "destinationNotEmpty" | 
 /**  The remote could not be reached (network, host, path). */
-"remoteUnreachable" | "cancelled" | "timedOut" | "unknown";
+"remoteUnreachable" | 
+/**
+ *  The remote answered that the repository does not exist (or that the
+ *  credentials in use cannot see it).
+ */
+"remoteNotFound" | 
+/**  `index.lock` exists: another git process is running, or one crashed. */
+"indexLocked" | 
+/**  Local changes would be overwritten by the operation; git did nothing. */
+"localChangesOverwritten" | 
+/**  The branches share no history; git refuses to merge them. */
+"unrelatedHistories" | 
+/**  The configuration only allows fast-forward and the branches diverged. */
+"notFastForward" | "diskFull" | 
+/**  The system denied access to a file or folder of the repository. */
+"filePermission" | "cancelled" | "timedOut" | "unknown";
 
 export type FailedRestore = FailedRestore_Serialize | FailedRestore_Deserialize;
 

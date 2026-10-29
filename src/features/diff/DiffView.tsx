@@ -10,6 +10,7 @@ import { useGraphStore, type OpenFile } from "../graph/store";
 import { useRememberedScroll } from "../repo/viewState";
 import { useWorkdirStore } from "../workdir/store";
 import styles from "./diff.module.css";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 type Loaded =
   | { key: string; diff: FileDiff; error?: undefined }
@@ -112,12 +113,11 @@ export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
         {!current ? (
           <p className={styles.message}>{t("diff.loading")}</p>
         ) : current.error ? (
-          <div className={styles.message} role="alert">
-            <p>{t("diff.failed")}</p>
-            {current.error.details && (
-              <pre className="selectable">{current.error.details}</pre>
-            )}
-          </div>
+          <ErrorReport
+            className={styles.message}
+            error={current.error}
+            lead={t("diff.failed")}
+          />
         ) : (
           <DiffBody
             // A new diff (other content) starts with an empty selection.

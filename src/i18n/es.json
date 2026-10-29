@@ -28,7 +28,8 @@
     "titleWithShortcut": "{{path}}\n⌘{{number}}",
     "restoreFailed_one": "No se pudo reabrir 1 repositorio de la sesión anterior",
     "restoreFailed_other": "No se pudieron reabrir {{count}} repositorios de la sesión anterior",
-    "restoreForgotten": "Se ha quitado de las pestañas guardadas; si vuelve a existir, ábrelo de nuevo desde «Abrir repositorio» o los recientes."
+    "restoreForgotten": "Se ha quitado de las pestañas guardadas; si vuelve a existir, ábrelo de nuevo desde «Abrir repositorio» o los recientes.",
+    "restoreError": "No se pudo leer la sesión anterior, así que GitCRAFT empieza sin pestañas."
   },
   "sidebar": {
     "local": "Ramas locales",
@@ -71,7 +72,7 @@
     "copied": "Copiado"
   },
   "errors": {
-    "openFailed": "No se pudo abrir el repositorio",
+    "openFailed": "No se pudo abrir el repositorio.",
     "showDetails": "Ver la salida original de Git",
     "dismiss": "Cerrar",
     "gitNotFound": "No se encontró Git en este equipo. Instálalo (por ejemplo, con Homebrew o con las Command Line Tools de Xcode) y vuelve a abrir GitCRAFT.",
@@ -81,7 +82,7 @@
     "dubiousOwnership": "Git se niega a abrir «{{path}}» porque la carpeta pertenece a otro usuario del sistema. Si confías en ella, márcala como segura con «git config --global --add safe.directory» seguido de la ruta.",
     "cancelled": "La operación se canceló.",
     "timedOut": "Git tardó demasiado en responder. Si el repositorio está en una unidad de red, comprueba la conexión.",
-    "unknown": "Git devolvió un error inesperado. Revisa la salida original de Git.",
+    "unknown": "Git devolvió un error que GitCRAFT no reconoce. La salida original de Git explica qué ocurrió.",
     "identityUnknown": "Git no sabe quién eres. Configura tu nombre y tu email con «git config --global user.name \"Tu nombre\"» y «git config --global user.email tu@email».",
     "nothingToCommit": "No hay cambios preparados para el commit.",
     "emptyMessage": "El mensaje del commit está vacío.",
@@ -97,7 +98,23 @@
     "remoteUnreachable": "No se pudo conectar con el remoto. Comprueba la conexión y la URL del remoto (git remote -v).",
     "detachedHead": "Estás en HEAD desacoplado (no en una rama): cambia a una rama primero.",
     "alreadyARepository": "«{{path}}» ya es un repositorio Git.",
-    "destinationNotEmpty": "«{{path}}» ya existe y no está vacía: no se clona encima de una carpeta con archivos."
+    "destinationNotEmpty": "«{{path}}» ya existe y no está vacía: no se clona encima de una carpeta con archivos.",
+    "copy": "Copiar la salida",
+    "copied": "Copiada",
+    "copyFailed": "No se pudo copiar",
+    "pathNotFound_noPath": "La carpeta no existe o ya no está disponible.",
+    "notARepository_noPath": "Esa carpeta no es un repositorio Git.",
+    "bareRepository_noPath": "Es un repositorio «bare» (sin directorio de trabajo). GitCRAFT todavía no admite este tipo de repositorio.",
+    "dubiousOwnership_noPath": "Git se niega a usar este repositorio porque la carpeta pertenece a otro usuario del sistema. Si confías en ella, márcala como segura con «git config --global --add safe.directory» seguido de la ruta.",
+    "alreadyARepository_noPath": "Esa carpeta ya es un repositorio Git.",
+    "destinationNotEmpty_noPath": "La carpeta de destino ya existe y no está vacía: no se clona encima de una carpeta con archivos.",
+    "remoteNotFound": "El remoto respondió que ese repositorio no existe. Comprueba la URL; si es privado, puede que tus credenciales no tengan acceso.",
+    "indexLocked": "Otro proceso de Git está trabajando en este repositorio (existe .git/index.lock). Espera a que termine y vuelve a intentarlo. Si no hay ninguno en marcha, el bloqueo quedó de un proceso que se interrumpió: cierra los demás programas de Git y borra ese archivo.",
+    "localChangesOverwritten": "Tienes cambios sin confirmar en archivos que esta operación modificaría, así que Git no ha hecho nada. Haz commit o guárdalos en el stash y vuelve a intentarlo.",
+    "unrelatedHistories": "Las dos ramas no tienen ningún commit en común, así que Git se niega a unirlas.",
+    "notFastForward": "Tu configuración solo permite avanzar la rama sin crear un merge (fast-forward), y las ramas se han separado. Elige merge o rebase para el pull.",
+    "diskFull": "No queda espacio en el disco. Libera espacio y vuelve a intentarlo.",
+    "filePermission": "El sistema denegó el acceso a un archivo o carpeta del repositorio. Comprueba los permisos (y que la carpeta no esté en una unidad de solo lectura)."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",
@@ -243,7 +260,9 @@
     "publishedConsequence": "Al modificarlo se crea un commit nuevo que lo sustituye en tu rama. Para publicarlo tendrás que hacer push forzado, y quien ya lo haya descargado tendrá que reconciliar su historial.",
     "publishedRecovery": "El commit original no se pierde: sigue accesible en el reflog.",
     "publishedConfirm": "Modificar de todos modos",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "nothingToAmend": "Todavía no hay ningún commit que corregir.",
+    "amendFailed": "No se pudo preparar la corrección del último commit."
   },
   "discard": {
     "title": "¿Descartar cambios?",
@@ -419,7 +438,8 @@
       "fetch": "No se pudo hacer fetch.",
       "pull": "No se pudo hacer pull.",
       "push": "No se pudo hacer push.",
-      "check": "No se pudo comprobar el remoto."
+      "check": "No se pudo comprobar el remoto.",
+      "pullMode": "No se pudo guardar el modo de pull."
     },
     "pullNeedsBranch": "Cambia a una rama para hacer pull",
     "pullHint": {
@@ -562,7 +582,8 @@
     "forced_one": "Push forzado completado: «{{upstream}}» apunta ahora a tu rama (1 commit subido).",
     "forced_other": "Push forzado completado: «{{upstream}}» apunta ahora a tu rama ({{count}} commits subidos).",
     "published": "Rama publicada en «{{upstream}}», que queda como su upstream.",
-    "upToDate": "No hay nada que subir: «{{upstream}}» ya tiene todos tus commits."
+    "upToDate": "No hay nada que subir: «{{upstream}}» ya tiene todos tus commits.",
+    "noRemotes": "Este repositorio no tiene ningún remoto al que subir la rama. Añade uno con «git remote add origin <URL>» y vuelve a intentarlo."
   },
   "menu": {
     "edit": "Edición",
@@ -581,7 +602,8 @@
     "cancel": "Cancelar",
     "alreadyTitle": "Ya es un repositorio",
     "already": "Esta carpeta ya es un repositorio Git, así que no hay nada que inicializar.",
-    "open": "Abrirlo"
+    "open": "Abrirlo",
+    "failed": "No se pudo crear el repositorio."
   },
   "clone": {
     "title": "Clonar repositorio",
@@ -603,6 +625,7 @@
     "running": "Clonando…",
     "cancelRunning": "Cancelar clonación",
     "clone": "Clonar",
-    "failed": "No se pudo clonar."
+    "failed": "No se pudo clonar.",
+    "checkFailed": "No se pudo comprobar la carpeta de destino."
   }
 }

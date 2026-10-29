@@ -115,12 +115,10 @@ GitCRAFT/
   se **ignoran**; al terminar la operación se emite un único `repo-changed`.
   Así se evitan los refrescos en bucle (por ejemplo, un `status` que toca el
   índice y vuelve a disparar el watcher).
-- **Errores:** `GitError { kind: ErrorKind, args, exit_code, stderr, stdout_tail }`.
-  Un clasificador con patrones (con `LC_ALL=C` los mensajes son estables) los
-  asigna a `AuthFailed`, `NonFastForward`, `MergeConflict`,
-  `WouldOverwriteLocalChanges`, `IndexLocked`, `NotARepository`, `HookFailed`,
-  `Unknown`… El frontend muestra `t("errors.<kind>")` y un desplegable con la
-  salida original.
+- **Errores:** `GitError::Failed { args, exit_code, stderr, stdout_tail }` y
+  variantes propias. Un clasificador con patrones (con `LC_ALL=C` los mensajes
+  son estables) los asigna a un `ErrorKind`; el catálogo completo está en
+  «Errores hacia la UI» (sección 6).
 - **Credenciales:** con `GIT_TERMINAL_PROMPT=0`, git usa el credential helper
   configurado (osxkeychain en macOS) o SSH. Si no hay credenciales disponibles,
   falla con `AuthFailed` y se explica cómo configurarlas. *(Más adelante, en
@@ -333,6 +331,47 @@ Los errores llegan como `IpcError { kind, message, details }`:
   `LC_ALL=C` es estable, y elige el mensaje traducido `errors.<kind>`.
 - `details` contiene el comando y la salida original de git, que la UI muestra
   bajo demanda.
+
+**Catálogo (`ErrorKind`).** Cada tipo tiene un mensaje en `errors.<kind>` que
+dice qué pasa y qué hacer:
+
+| Grupo | Tipos | Origen |
+|---|---|---|
+| Entorno | `gitNotFound`, `pathNotFound`, `timedOut`, `diskFull`, `filePermission`, `indexLocked` | Arranque del proceso, rutas, stderr |
+| Repositorio | `notARepository`, `bareRepository`, `dubiousOwnership`, `alreadyARepository`, `destinationNotEmpty` | stderr y comprobaciones propias |
+| Commit | `identityUnknown`, `nothingToCommit`, `emptyMessage` | stderr/stdout de `git commit` |
+| Cambios locales | `staleDiff`, `undoConflict`, `localChangesOverwritten`, `nothingToStash`, `stashChanged` | Comprobaciones propias y stderr |
+| Ramas | `invalidBranchName`, `branchExists`, `branchChanged`, `branchInWorktree`, `detachedHead` | `check-ref-format`, comprobaciones propias, stderr |
+| Remotos | `authFailed`, `remoteUnreachable`, `remoteNotFound`, `notFastForward`, `unrelatedHistories` | stderr de fetch/pull/push/clone |
+| Otros | `cancelled` (no se muestra como error), `unknown` | — |
+
+`unknown` también tiene explicación: dice que GitCRAFT no reconoce el error y
+remite a la salida original, que siempre existe (si git no la dio, se usa el
+mensaje técnico). Los mensajes que nombran una carpeta (`{{path}}`) tienen una
+variante `_noPath` para cuando no hay ruta que nombrar.
+
+**Un único componente: `src/ui/ErrorReport.tsx`.** Muestra qué se intentaba
+(`lead`), la explicación del catálogo, notas propias del contexto y, si hay
+salida, un desplegable «Ver la salida original de Git» con el texto
+seleccionable y el botón «Copiar la salida». Un test comprueba que todo
+`ErrorKind` tiene mensaje en cada idioma (la lista `ERROR_KINDS` la mantiene
+completa el compilador).
+
+Dónde se muestra:
+
+| Lugar | Errores |
+|---|---|
+| Banner superior (`OpenErrorBanner`) | Abrir repositorio, reabrir la sesión anterior (cada pestaña, o la sesión entera) |
+| Historial (`GraphView`, `OptimizeNotice`) | Cargar el historial, optimizar |
+| Panel de detalle (`DetailPanel`, `FileList`, `DiffView`) | Cargar commit, archivos, diff |
+| Cambios locales (`WorkingDirPanel`, `CommitBox`, `Discard`) | Leer el estado, stage/unstage/commit, activar amend, deshacer descarte |
+| Avisos de ramas, stash y remotos (`BranchToast`, `StashToast`, `RemoteToast`) | Toda operación de ramas, stash, fetch/pull/push, guardar el modo de pull |
+| Diálogos de crear (`CreateDialogs`) | Inicializar, comprobar el destino del clon, clonar |
+
+Solo se ignoran sin aviso fallos que no impiden nada y se reintentan solos
+(cargar la lista de recientes, recordar «no mostrar más» el aviso de
+optimizar, sugerir el nombre de la carpeta del clon); las comprobaciones
+previas que fallan dejan seguir y el error de la operación real se explica.
 
 ## 7. Estrategia de tests
 

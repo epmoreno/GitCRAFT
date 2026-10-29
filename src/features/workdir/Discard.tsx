@@ -4,6 +4,7 @@ import type { DiscardedFile } from "../../ipc";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { useWorkdirStore } from "./store";
 import styles from "./workdir.module.css";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 /** How long "Undo" stays on screen after a discard. */
 export const UNDO_SECONDS = 10;
@@ -104,17 +105,9 @@ export function UndoToast() {
 
   if (!last) return null;
   return (
-    <div className={styles.toast} role="status">
+    <div className={styles.toast} role={last.error ? undefined : "status"}>
       {last.error ? (
-        <div>
-          <p>
-            {t("discard.undoFailed")}{" "}
-            {t(`errors.${last.error.kind}`, { path: "" })}
-          </p>
-          {last.error.details && (
-            <pre className="selectable">{last.error.details}</pre>
-          )}
-        </div>
+        <ErrorReport error={last.error} lead={t("discard.undoFailed")} />
       ) : (
         <p>
           {t("discard.done", { count: last.files.length })}

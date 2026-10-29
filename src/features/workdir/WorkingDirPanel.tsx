@@ -5,6 +5,7 @@ import { useWorkdirStore } from "./store";
 import { CommitBox } from "./CommitBox";
 import { StatusLetter } from "./StatusLetter";
 import styles from "./workdir.module.css";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 /** Right-hand panel for the "uncommitted changes" entry. */
 export function WorkingDirPanel({ repoId }: { repoId: number }) {
@@ -19,12 +20,7 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
 
   if (!status) {
     return entry?.error ? (
-      <div role="alert">
-        <p>{t("workdir.failed")}</p>
-        {entry.error.details && (
-          <pre className="selectable">{entry.error.details}</pre>
-        )}
-      </div>
+      <ErrorReport error={entry.error} lead={t("workdir.failed")} />
     ) : (
       <p className={styles.muted}>{t("workdir.loading")}</p>
     );
@@ -35,14 +31,8 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
     <div className={styles.panel}>
       <h2 className={styles.title}>{t("workdir.row")}</h2>
       {entry?.opError && (
-        <div className={styles.opError} role="alert">
-          <p>
-            {t("workdir.opFailed")}{" "}
-            {t(`errors.${entry.opError.kind}`, { path: "" })}
-          </p>
-          {entry.opError.details && (
-            <pre className="selectable">{entry.opError.details}</pre>
-          )}
+        <div className={styles.opError}>
+          <ErrorReport error={entry.opError} lead={t("workdir.opFailed")} />
           <button
             type="button"
             className={styles.action}

@@ -257,6 +257,27 @@ describe("CommitBox", () => {
       const box = renderBox();
       await user.click(box.amend);
       expect(box.amend).not.toBeChecked();
+      expect(
+        screen.getByText("Todavía no hay ningún commit que corregir."),
+      ).toBeVisible();
+    });
+
+    it("explains why amend could not be turned on", async () => {
+      const user = userEvent.setup();
+      ipc.amendInfo.mockResolvedValue({
+        status: "error",
+        error: commandError(
+          "indexLocked",
+          "fatal: Unable to create index.lock",
+        ),
+      });
+      withStatus(staged());
+      const box = renderBox();
+      await user.click(box.amend);
+      expect(box.amend).not.toBeChecked();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /No se pudo preparar la corrección del último commit\. Otro proceso de Git/,
+      );
     });
   });
 });

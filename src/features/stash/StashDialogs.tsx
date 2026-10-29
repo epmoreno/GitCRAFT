@@ -6,6 +6,7 @@ import dialog from "../../ui/ConfirmDialog.module.css";
 import branches from "../branches/branches.module.css";
 import { useWorkdirStore } from "../workdir/store";
 import { storeCommand, useStashStore } from "./store";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 const MAX_LISTED = 12;
 
@@ -296,19 +297,11 @@ export function StashToast() {
   return (
     <div
       className={branches.toast}
-      role={notice.kind === "error" ? "alert" : "status"}
+      role={notice.kind === "error" ? undefined : "status"}
     >
       <div className={branches.toastBody}>
         {notice.kind === "error" ? (
-          <>
-            <p>
-              {t("stash.failed")}{" "}
-              {t(`errors.${notice.error.kind}`, { path: "" })}
-            </p>
-            {notice.error.details && (
-              <pre className="selectable">{notice.error.details}</pre>
-            )}
-          </>
+          <ErrorReport error={notice.error} lead={t("stash.failed")} />
         ) : notice.kind === "created" ? (
           <p>{t("stash.created")}</p>
         ) : notice.kind === "applied" ? (

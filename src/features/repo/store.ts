@@ -29,6 +29,8 @@ type RepoState = {
   restored: boolean;
   /** Saved tabs that could not be reopened at start (shown once). */
   restoreFailures: FailedRestore[];
+  /** The saved session itself could not be read. */
+  restoreError: CommandError | null;
 
   /** Reopens the tabs of the previous session, with its active tab. */
   restoreSession: () => Promise<void>;
@@ -59,6 +61,7 @@ export const initialRepoState = {
   openError: null,
   restored: false,
   restoreFailures: [],
+  restoreError: null,
 } satisfies Partial<RepoState>;
 
 export const useRepoStore = create<RepoState>()((set, get) => ({
@@ -118,11 +121,14 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
         activeId: s.activeId ?? active,
         restoreFailures: failed,
       }));
+    } else {
+      set({ restoreError: result.error });
     }
     set({ restored: true });
   },
 
-  dismissRestoreFailures: () => set({ restoreFailures: [] }),
+  dismissRestoreFailures: () =>
+    set({ restoreFailures: [], restoreError: null }),
 
   moveTab: (id, index) =>
     set((s) => {

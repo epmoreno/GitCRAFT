@@ -1,0 +1,51 @@
+.report {
+  min-width: 0;
+}
+
+.message {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.lead {
+  font-weight: 600;
+}
+
+.details {
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+}
+
+.details summary {
+  cursor: default;
+  font-size: var(--font-size-small);
+}
+
+.output {
+  max-height: 180px;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  overflow: auto;
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.copy {
+  height: 24px;
+  margin-top: var(--space-2);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--font-size-small);
+}
+
+.copy:hover {
+  background: var(--surface-3);
+}

@@ -229,7 +229,7 @@ describe("staging files", () => {
     );
     const alert = await screen.findByRole("alert");
     expect(within(alert).getByText(/index.lock/)).toHaveClass("selectable");
-    await user.click(within(alert).getByRole("button", { name: "Cerrar" }));
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });

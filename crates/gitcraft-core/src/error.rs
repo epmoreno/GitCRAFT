@@ -108,6 +108,20 @@ pub enum ErrorKind {
     DestinationNotEmpty,
     /// The remote could not be reached (network, host, path).
     RemoteUnreachable,
+    /// The remote answered that the repository does not exist (or that the
+    /// credentials in use cannot see it).
+    RemoteNotFound,
+    /// `index.lock` exists: another git process is running, or one crashed.
+    IndexLocked,
+    /// Local changes would be overwritten by the operation; git did nothing.
+    LocalChangesOverwritten,
+    /// The branches share no history; git refuses to merge them.
+    UnrelatedHistories,
+    /// The configuration only allows fast-forward and the branches diverged.
+    NotFastForward,
+    DiskFull,
+    /// The system denied access to a file or folder of the repository.
+    FilePermission,
     Cancelled,
     TimedOut,
     Unknown,
@@ -198,6 +212,9 @@ pub fn classify_output(stderr: &str, stdout: &str) -> ErrorKind {
         ("Invalid username or password", ErrorKind::AuthFailed),
         ("Permission denied (publickey", ErrorKind::AuthFailed),
         ("Host key verification failed", ErrorKind::AuthFailed),
+        ("Permission denied, please try again", ErrorKind::AuthFailed),
+        ("Repository not found", ErrorKind::RemoteNotFound),
+        ("fatal: repository '", ErrorKind::RemoteNotFound),
         ("Could not resolve host", ErrorKind::RemoteUnreachable),
         ("Connection refused", ErrorKind::RemoteUnreachable),
         ("Connection timed out", ErrorKind::RemoteUnreachable),
@@ -232,6 +249,24 @@ pub fn classify_output(stderr: &str, stdout: &str) -> ErrorKind {
             ErrorKind::DestinationNotEmpty,
         ),
         ("already exists", ErrorKind::BranchExists),
+        ("index.lock': File exists", ErrorKind::IndexLocked),
+        (
+            "Another git process seems to be running",
+            ErrorKind::IndexLocked,
+        ),
+        (
+            "would be overwritten by",
+            ErrorKind::LocalChangesOverwritten,
+        ),
+        (
+            "refusing to merge unrelated histories",
+            ErrorKind::UnrelatedHistories,
+        ),
+        ("Not possible to fast-forward", ErrorKind::NotFastForward),
+        ("No space left on device", ErrorKind::DiskFull),
+        ("insufficient permission", ErrorKind::FilePermission),
+        ("Permission denied", ErrorKind::FilePermission),
+        ("Operation not permitted", ErrorKind::FilePermission),
         ("is already checked out at", ErrorKind::BranchInWorktree),
         ("is already used by worktree", ErrorKind::BranchInWorktree),
         ("used by worktree at", ErrorKind::BranchInWorktree),
@@ -287,6 +322,48 @@ mod tests {
             (
                 "fatal: '/tmp/missing.git' does not appear to be a git repository\nfatal: Could not read from remote repository.\n",
                 ErrorKind::RemoteUnreachable,
+            ),
+            (
+                "ERROR: Repository not found.\nfatal: Could not read from remote repository.\n",
+                ErrorKind::RemoteNotFound,
+            ),
+            (
+                "remote: Repository not found.\nfatal: repository 'https://example.com/a/b.git/' not found\n",
+                ErrorKind::RemoteNotFound,
+            ),
+            (
+                "fatal: Unable to create '/r/.git/index.lock': File exists.\n\n\
+                 Another git process seems to be running in this repository, e.g.\n",
+                ErrorKind::IndexLocked,
+            ),
+            (
+                "error: Your local changes to the following files would be overwritten by checkout:\n\ta.txt\n\
+                 Please commit your changes or stash them before you switch branches.\nAborting\n",
+                ErrorKind::LocalChangesOverwritten,
+            ),
+            (
+                "fatal: refusing to merge unrelated histories\n",
+                ErrorKind::UnrelatedHistories,
+            ),
+            (
+                "fatal: Not possible to fast-forward, aborting.\n",
+                ErrorKind::NotFastForward,
+            ),
+            (
+                "error: unable to write file a.txt: No space left on device\n",
+                ErrorKind::DiskFull,
+            ),
+            (
+                "error: insufficient permission for adding an object to repository database .git/objects\n",
+                ErrorKind::FilePermission,
+            ),
+            (
+                "error: open(\"a.txt\"): Permission denied\n",
+                ErrorKind::FilePermission,
+            ),
+            (
+                "git@example.com: Permission denied, please try again.\n",
+                ErrorKind::AuthFailed,
             ),
             ("fatal: something new\n", ErrorKind::Unknown),
         ];

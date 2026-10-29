@@ -342,6 +342,19 @@ describe("push", () => {
     );
   });
 
+  it("explains that there is no remote to push to", async () => {
+    const user = userEvent.setup();
+    ipc.pushBranch.mockResolvedValueOnce({
+      status: "ok",
+      data: { type: "noUpstream", branch: "feature", remotes: [] },
+    });
+    renderToolbar();
+    await user.click(screen.getByRole("button", { name: "Push" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /no tiene ningún remoto.*git remote add origin/,
+    );
+  });
+
   it("offers to publish a branch without upstream", async () => {
     const user = userEvent.setup();
     ipc.pushBranch.mockResolvedValueOnce({

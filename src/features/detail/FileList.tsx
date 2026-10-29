@@ -9,6 +9,7 @@ import {
 } from "../../ipc";
 import { useGraphStore } from "../graph/store";
 import styles from "./detail.module.css";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 const STATUS_LETTER: Record<FileStatus, string> = {
   added: "A",
@@ -63,16 +64,7 @@ export function FileList({
   const current = loaded?.oid === oid ? loaded : null;
   if (!current) return <p className={styles.muted}>{t("files.loading")}</p>;
   if (current.error) {
-    return (
-      <div role="alert">
-        <p>{t("files.failed")}</p>
-        {current.error.details && (
-          <pre className={`${styles.raw} selectable`}>
-            {current.error.details}
-          </pre>
-        )}
-      </div>
-    );
+    return <ErrorReport error={current.error} lead={t("files.failed")} />;
   }
 
   const { files, base } = current.changes;

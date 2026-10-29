@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import branches from "../branches/branches.module.css";
 import { useRemoteStore } from "./store";
 import styles from "./remote.module.css";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 /** Progress of the running fetch/pull/push, with "Cancel". */
 export function RemoteProgress() {
@@ -49,20 +50,16 @@ export function RemoteToast() {
   return (
     <div
       className={branches.toast}
-      role={notice.kind === "error" ? "alert" : "status"}
+      role={notice.kind === "error" ? undefined : "status"}
     >
       <div className={branches.toastBody}>
         {notice.kind === "error" ? (
-          <>
-            <p>
-              {t(`remote.failed.${notice.operation}`)}{" "}
-              {t(`errors.${notice.error.kind}`, { path: "" })}
-            </p>
+          <ErrorReport
+            error={notice.error}
+            lead={t(`remote.failed.${notice.operation}`)}
+          >
             {notice.savedLocal && <p>{t("pull.savedLocal")}</p>}
-            {notice.error.details && (
-              <pre className="selectable">{notice.error.details}</pre>
-            )}
-          </>
+          </ErrorReport>
         ) : (
           <NoticeText />
         )}
@@ -150,5 +147,7 @@ function NoticeText() {
       );
     case "pushUpToDate":
       return <p>{t("push.upToDate", { upstream: notice.upstream })}</p>;
+    case "noRemotes":
+      return <p>{t("push.noRemotes")}</p>;
   }
 }

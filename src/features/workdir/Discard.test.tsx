@@ -208,7 +208,7 @@ describe("discarding changes", () => {
     );
     await user.click(screen.getByRole("button", { name: "Descartar" }));
     await user.click(await screen.findByRole("button", { name: "Deshacer" }));
-    const toast = screen.getByRole("status");
+    const toast = screen.getByRole("alert");
     expect(toast).toHaveTextContent(/no se ha tocado nada/);
     expect(toast).toHaveTextContent(/«Recuperar» en esa entrada/);
   });

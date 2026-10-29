@@ -17,6 +17,7 @@ import { WorkingDirPanel } from "../workdir/WorkingDirPanel";
 import { FileList } from "./FileList";
 import { reflowMessage } from "./reflow";
 import styles from "./detail.module.css";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 type Loaded =
   | { oid: string; details: CommitDetails; error?: undefined }
@@ -72,14 +73,7 @@ export function DetailPanel({ repoId }: { repoId: number | null }) {
       ) : !current ? (
         <p className={styles.muted}>{t("detail.loading")}</p>
       ) : current.error ? (
-        <div role="alert">
-          <p>{t("detail.failed")}</p>
-          {current.error.details && (
-            <pre className={`${styles.raw} selectable`}>
-              {current.error.details}
-            </pre>
-          )}
-        </div>
+        <ErrorReport error={current.error} lead={t("detail.failed")} />
       ) : (
         <CommitInfo repoId={repoId} details={current.details} />
       )}

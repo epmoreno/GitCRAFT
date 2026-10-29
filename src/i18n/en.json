@@ -28,7 +28,8 @@
     "titleWithShortcut": "{{path}}\n⌘{{number}}",
     "restoreFailed_one": "1 repository from the previous session could not be reopened",
     "restoreFailed_other": "{{count}} repositories from the previous session could not be reopened",
-    "restoreForgotten": "It was removed from the saved tabs; if it exists again, open it from “Open repository” or the recent list."
+    "restoreForgotten": "It was removed from the saved tabs; if it exists again, open it from “Open repository” or the recent list.",
+    "restoreError": "Couldn't read the previous session, so GitCRAFT starts with no tabs."
   },
   "sidebar": {
     "local": "Local branches",
@@ -71,7 +72,7 @@
     "copied": "Copied"
   },
   "errors": {
-    "openFailed": "Couldn't open the repository",
+    "openFailed": "Couldn't open the repository.",
     "showDetails": "Show Git's original output",
     "dismiss": "Dismiss",
     "gitNotFound": "Git wasn't found on this computer. Install it (for example with Homebrew or the Xcode Command Line Tools) and reopen GitCRAFT.",
@@ -81,7 +82,7 @@
     "dubiousOwnership": "Git refuses to open “{{path}}” because the folder belongs to another user on this system. If you trust it, mark it as safe with “git config --global --add safe.directory” followed by the path.",
     "cancelled": "The operation was cancelled.",
     "timedOut": "Git took too long to respond. If the repository is on a network drive, check the connection.",
-    "unknown": "Git returned an unexpected error. Check Git's original output.",
+    "unknown": "Git returned an error GitCRAFT doesn't recognise. Git's original output explains what happened.",
     "identityUnknown": "Git doesn't know who you are. Set your name and email with “git config --global user.name \"Your Name\"” and “git config --global user.email you@example.com”.",
     "nothingToCommit": "There are no staged changes to commit.",
     "emptyMessage": "The commit message is empty.",
@@ -97,7 +98,23 @@
     "remoteUnreachable": "Could not connect to the remote. Check your connection and the remote's URL (git remote -v).",
     "detachedHead": "HEAD is detached (not on a branch): switch to a branch first.",
     "alreadyARepository": "“{{path}}” already is a Git repository.",
-    "destinationNotEmpty": "“{{path}}” already exists and is not empty: never cloning over a folder with files."
+    "destinationNotEmpty": "“{{path}}” already exists and is not empty: never cloning over a folder with files.",
+    "copy": "Copy output",
+    "copied": "Copied",
+    "copyFailed": "Couldn't copy",
+    "pathNotFound_noPath": "The folder doesn't exist or is no longer available.",
+    "notARepository_noPath": "That folder is not a Git repository.",
+    "bareRepository_noPath": "It is a bare repository (it has no working directory). GitCRAFT doesn't support bare repositories yet.",
+    "dubiousOwnership_noPath": "Git refuses to use this repository because the folder belongs to another user on this system. If you trust it, mark it as safe with “git config --global --add safe.directory” followed by the path.",
+    "alreadyARepository_noPath": "That folder already is a Git repository.",
+    "destinationNotEmpty_noPath": "The destination folder already exists and is not empty: never cloning over a folder with files.",
+    "remoteNotFound": "The remote said that repository doesn't exist. Check the URL; if it is private, your credentials may not have access to it.",
+    "indexLocked": "Another Git process is working on this repository (.git/index.lock exists). Wait for it to finish and try again. If none is running, the lock was left by a process that was interrupted: close other Git programs and delete that file.",
+    "localChangesOverwritten": "You have uncommitted changes in files this operation would modify, so Git did nothing. Commit them or save them in the stash and try again.",
+    "unrelatedHistories": "The two branches have no commit in common, so Git refuses to join them.",
+    "notFastForward": "Your configuration only allows moving the branch forward without a merge (fast-forward), and the branches have diverged. Choose merge or rebase for the pull.",
+    "diskFull": "The disk is full. Free some space and try again.",
+    "filePermission": "The system denied access to a file or folder of the repository. Check its permissions (and that the folder isn't on a read-only drive)."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -243,7 +260,9 @@
     "publishedConsequence": "Amending creates a new commit that replaces it on your branch. To publish it you will need a force push, and anyone who already fetched it will have to reconcile their history.",
     "publishedRecovery": "The original commit is not lost: it remains reachable in the reflog.",
     "publishedConfirm": "Amend anyway",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "nothingToAmend": "There is no commit to amend yet.",
+    "amendFailed": "Couldn't prepare amending the last commit."
   },
   "discard": {
     "title": "Discard changes?",
@@ -419,7 +438,8 @@
       "fetch": "Fetch failed.",
       "pull": "Pull failed.",
       "push": "Push failed.",
-      "check": "Could not check the remote."
+      "check": "Could not check the remote.",
+      "pullMode": "Couldn't save the pull mode."
     },
     "pullNeedsBranch": "Switch to a branch to pull",
     "pullHint": {
@@ -562,7 +582,8 @@
     "forced_one": "Force push done: “{{upstream}}” now points to your branch (1 commit uploaded).",
     "forced_other": "Force push done: “{{upstream}}” now points to your branch ({{count}} commits uploaded).",
     "published": "Branch published to “{{upstream}}”, now its upstream.",
-    "upToDate": "Nothing to push: “{{upstream}}” already has all your commits."
+    "upToDate": "Nothing to push: “{{upstream}}” already has all your commits.",
+    "noRemotes": "This repository has no remote to push the branch to. Add one with “git remote add origin <URL>” and try again."
   },
   "menu": {
     "edit": "Edit",
@@ -581,7 +602,8 @@
     "cancel": "Cancel",
     "alreadyTitle": "Already a repository",
     "already": "This folder already is a Git repository, so there is nothing to initialize.",
-    "open": "Open it"
+    "open": "Open it",
+    "failed": "Couldn't create the repository."
   },
   "clone": {
     "title": "Clone repository",
@@ -603,6 +625,7 @@
     "running": "Cloning…",
     "cancelRunning": "Cancel clone",
     "clone": "Clone",
-    "failed": "Could not clone."
+    "failed": "Could not clone.",
+    "checkFailed": "Couldn't check the destination folder."
   }
 }

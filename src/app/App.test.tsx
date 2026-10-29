@@ -114,7 +114,7 @@ describe("App", () => {
 
     const alert = await screen.findByRole("alert");
     expect(
-      within(alert).getByText("No se pudo abrir el repositorio"),
+      within(alert).getByText("No se pudo abrir el repositorio."),
     ).toBeVisible();
     expect(
       within(alert).getByText(
@@ -128,7 +128,7 @@ describe("App", () => {
     expect(raw).toHaveClass("selectable");
 
     expect(screen.queryByRole("tab")).toBeNull();
-    await user.click(within(alert).getByRole("button", { name: "Cerrar" }));
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 

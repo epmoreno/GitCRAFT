@@ -321,8 +321,16 @@ recuperar con `git stash store`; recuperación tardía de un descarte, sin
 diálogo y con confirmación, con el índice intacto.
 
 ### Transversal del MVP
-- [ ] **T.1 Errores.** Un catálogo traduce los errores conocidos de git a
+- [x] **T.1 Errores.** Un catálogo traduce los errores conocidos de git a
       mensajes claros, con la salida original desplegable.
+      *Estado:* inventario y catálogo en ARCHITECTURE.md (sección 6, «Errores
+      hacia la UI»). Todos los errores se muestran con `ErrorReport`: qué se
+      intentaba, explicación, salida original desplegable y «Copiar la
+      salida». Nuevos tipos: `remoteNotFound`, `indexLocked`,
+      `localChangesOverwritten`, `unrelatedHistories`, `notFastForward`,
+      `diskFull`, `filePermission`. Dejan de ser silenciosos: activar amend,
+      leer la sesión anterior, guardar el modo de pull, comprobar el destino
+      del clon y push sin remotos.
 - [ ] **T.2 Panel de operaciones.** Muestra las operaciones en curso con progreso
       y botón de cancelar, y un historial de comandos ejecutados.
 - [x] **T.3 i18n.** Todos los textos de la UI están en `es` y `en`; hay un test

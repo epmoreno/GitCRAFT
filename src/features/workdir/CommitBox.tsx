@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { commands, type AmendInfo, type WorkingStatus } from "../../ipc";
+import {
+  commands,
+  type AmendInfo,
+  type CommandError,
+  type WorkingStatus,
+} from "../../ipc";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
+import { ErrorReport } from "../../ui/ErrorReport";
 import { useWorkdirStore } from "./store";
 import styles from "./workdir.module.css";
 
@@ -27,6 +33,10 @@ export function CommitBox({
   const commit = useWorkdirStore((s) => s.commit);
   const [amendInfo, setAmendInfo] = useState<AmendInfo | null>(null);
   const [confirming, setConfirming] = useState(false);
+  /** Why amend could not be turned on. */
+  const [amendProblem, setAmendProblem] = useState<
+    CommandError | "nothing" | null
+  >(null);
 
   const staged = status.staged.length;
   const blocked =
@@ -40,10 +50,12 @@ export function CommitBox({
 
   const toggleAmend = async (amend: boolean) => {
     setDraft(repoId, { amend });
+    setAmendProblem(null);
     if (!amend) return;
     const result = await commands.amendInfo(repoId);
     if (result.status !== "ok" || !result.data) {
       setDraft(repoId, { amend: false });
+      setAmendProblem(result.status === "ok" ? "nothing" : result.error);
       return;
     }
     setAmendInfo(result.data);
@@ -127,6 +139,13 @@ export function CommitBox({
         />
         {t("commit.amend")}
       </label>
+      {amendProblem === "nothing" ? (
+        <p className={styles.hint}>{t("commit.nothingToAmend")}</p>
+      ) : (
+        amendProblem && (
+          <ErrorReport error={amendProblem} lead={t("commit.amendFailed")} />
+        )
+      )}
       {blocked && <p className={styles.hint}>{blocked}</p>}
       <button
         type="submit"

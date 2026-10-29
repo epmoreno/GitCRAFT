@@ -13,6 +13,7 @@ import dialog from "../../ui/ConfirmDialog.module.css";
 import branches from "../branches/branches.module.css";
 import styles from "./create.module.css";
 import { useCreateStore } from "./store";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 /** How long typing pauses before a name is checked. */
 const CHECK_DELAY_MS = 150;
@@ -159,9 +160,12 @@ function InitDialog() {
           )}
           <p>{t(check.empty ? "init.empty" : "init.notEmpty")}</p>
           {error && (
-            <p className={branches.problem} role="alert">
-              {t(`errors.${error.kind}`, { path })}
-            </p>
+            <ErrorReport
+              className={branches.problem}
+              error={error}
+              lead={t("init.failed")}
+              path={path}
+            />
           )}
         </div>
         <div className={dialog.actions}>
@@ -196,7 +200,7 @@ function CloneDialog() {
   const [nameEdited, setNameEdited] = useState(false);
   const [destination, setDestination] = useState<{
     key: string;
-    state: Destination;
+    state: Destination | CommandError;
   } | null>(null);
   const [running, setRunning] = useState<{
     line: string;
@@ -230,8 +234,11 @@ function CloneDialog() {
     let stale = false;
     const timer = window.setTimeout(() => {
       void commands.checkCloneDestination(parent, name).then((result) => {
-        if (!stale && result.status === "ok") {
-          setDestination({ key, state: result.data });
+        if (!stale) {
+          setDestination({
+            key,
+            state: result.status === "ok" ? result.data : result.error,
+          });
         }
       });
     }, CHECK_DELAY_MS);
@@ -242,7 +249,9 @@ function CloneDialog() {
   }, [parent, name, key]);
 
   if (current?.kind !== "clone") return null;
-  const state = destination?.key === key ? destination.state : null;
+  const checked = destination?.key === key ? destination.state : null;
+  const state = typeof checked === "string" ? checked : null;
+  const checkError = typeof checked === "object" ? checked : null;
   const fullPath = parent && name ? `${parent.replace(/\/$/, "")}/${name}` : "";
   const ready =
     url.trim() !== "" && (state === "free" || state === "emptyFolder");
@@ -338,17 +347,26 @@ function CloneDialog() {
               }}
             />
           </label>
-          <p
-            className={
-              state === "free" || state === "emptyFolder" || state === null
-                ? branches.hint
-                : branches.problem
-            }
-          >
-            {state === null || !fullPath
-              ? t("clone.destinationHint")
-              : t(`clone.destination.${state}`, { path: fullPath })}
-          </p>
+          {checkError ? (
+            <ErrorReport
+              className={branches.problem}
+              error={checkError}
+              lead={t("clone.checkFailed")}
+              path={fullPath}
+            />
+          ) : (
+            <p
+              className={
+                state === "free" || state === "emptyFolder" || state === null
+                  ? branches.hint
+                  : branches.problem
+              }
+            >
+              {state === null || !fullPath
+                ? t("clone.destinationHint")
+                : t(`clone.destination.${state}`, { path: fullPath })}
+            </p>
+          )}
           {running && (
             <div role="status" aria-live="polite">
               <p>{t("clone.running")}</p>
@@ -362,17 +380,12 @@ function CloneDialog() {
             </div>
           )}
           {error && (
-            <div role="alert">
-              <p className={branches.problem}>
-                {t("clone.failed")}{" "}
-                {t(`errors.${error.kind}`, { path: fullPath })}
-              </p>
-              {error.details && (
-                <pre className={`${branches.command} selectable`}>
-                  {error.details}
-                </pre>
-              )}
-            </div>
+            <ErrorReport
+              className={branches.problem}
+              error={error}
+              lead={t("clone.failed")}
+              path={fullPath}
+            />
           )}
         </div>
         <div className={dialog.actions}>

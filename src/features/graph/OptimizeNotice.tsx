@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { commands, optimizeRepository, type CommandError } from "../../ipc";
 import { useGraphStore } from "./store";
 import styles from "./graph.module.css";
+import { ErrorReport } from "../../ui/ErrorReport";
 
 type Phase =
   | { name: "offer" }
@@ -106,12 +107,11 @@ export function OptimizeNotice({
       )}
       {phase.name === "error" && (
         <>
-          <p>
-            {t("optimize.failed")} {t(`errors.${phase.error.kind}`, { path })}
-          </p>
-          {phase.error.details && (
-            <pre className="selectable">{phase.error.details}</pre>
-          )}
+          <ErrorReport
+            error={phase.error}
+            lead={t("optimize.failed")}
+            path={path}
+          />
           <button
             type="button"
             className={styles.noticeButton}
