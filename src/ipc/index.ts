@@ -51,6 +51,9 @@ export type {
   PullMode,
   PullModeInfo,
   PullOutcome,
+  PushOutcome,
+  PushReject,
+  ForcePushPreview,
   SelectionAction,
 } from "./bindings";
 
@@ -107,6 +110,33 @@ export function pullBranch(
     options.saveLocal,
     channel,
   );
+}
+
+/** Pushes the current branch (or publishes it to `publishTo`); forced
+ * only with a lease (`forceLease`: the remote commit it must still be at). */
+export function pushBranch(
+  id: number,
+  options: { publishTo: string | null; forceLease: string | null },
+  onProgress: (line: string) => void,
+) {
+  const channel = new Channel<string>();
+  channel.onmessage = onProgress;
+  return commands.pushBranch(
+    id,
+    options.publishTo,
+    options.forceLease,
+    channel,
+  );
+}
+
+/** Fetches, then lists what a forced push would overwrite. */
+export function forcePushPreview(
+  id: number,
+  onProgress: (line: string) => void,
+) {
+  const channel = new Channel<string>();
+  channel.onmessage = onProgress;
+  return commands.forcePushPreview(id, channel);
 }
 
 /** Calls `handler` whenever an open repository changes outside GitCRAFT

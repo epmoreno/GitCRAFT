@@ -12,7 +12,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::ops::branch::BlockingFile;
+use crate::ops::branch::{BlockingFile, LISTED_COMMITS, OrphanCommit};
 use crate::ops::status::working_status;
 use crate::parse::status::InProgress;
 use crate::{CancellationToken, Git, GitError, Result};
@@ -530,4 +530,244 @@ pub async fn abort_in_progress(git: &Git, repo: &Path, cancel: &CancellationToke
     };
     git.write(repo).args(args).output(cancel).await?;
     Ok(())
+}
+
+/// Why the remote refused a push.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum PushReject {
+    /// The remote has commits this branch does not: pull first.
+    RemoteAhead,
+    /// `--force-with-lease`: the remote changed since it was checked.
+    Stale,
+    /// Refused by the remote itself (hooks, protected branch…).
+    Remote,
+    Other,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum PushOutcome {
+    Pushed {
+        upstream: String,
+        /// Commits the remote did not have.
+        commits: u32,
+        /// The upstream was created by this push.
+        set_upstream: bool,
+        forced: bool,
+    },
+    /// The remote already has every commit of the branch.
+    UpToDate { upstream: String },
+    /// The branch has no upstream: offer to publish it to one of `remotes`.
+    NoUpstream {
+        branch: String,
+        remotes: Vec<String>,
+    },
+    /// Refused; nothing changed on the remote. `detail` is git's summary.
+    Rejected {
+        upstream: String,
+        reason: PushReject,
+        detail: String,
+    },
+}
+
+/// The rejection in `git push --porcelain` output, if any: lines are
+/// `<flag>\t<from>:<to>\t<summary>`, flag `!` meaning rejected.
+pub fn parse_push_rejection(stdout: &str) -> Option<(PushReject, String)> {
+    stdout.lines().find_map(|line| {
+        let mut fields = line.split('\t');
+        let (Some("!"), Some(_), Some(summary)) = (fields.next(), fields.next(), fields.next())
+        else {
+            return None;
+        };
+        let reason = if summary.contains("stale info") {
+            PushReject::Stale
+        } else if summary.contains("fetch first") || summary.contains("non-fast-forward") {
+            PushReject::RemoteAhead
+        } else if summary.starts_with("[remote rejected]") {
+            PushReject::Remote
+        } else {
+            PushReject::Other
+        };
+        Some((reason, summary.to_owned()))
+    })
+}
+
+/// Pushes the current branch to its upstream, or publishes it to
+/// `publish_to` (creating the upstream). `force_lease`: overwrite the
+/// remote branch only if it still points to that commit
+/// (`--force-with-lease`); never a plain `--force`.
+pub async fn push(
+    git: &Git,
+    repo: &Path,
+    publish_to: Option<&str>,
+    force_lease: Option<&str>,
+    cancel: &CancellationToken,
+    on_progress: impl FnMut(&str),
+) -> Result<PushOutcome> {
+    let branch = current_branch(git, repo, cancel).await?;
+    let local = format!("refs/heads/{branch}");
+    let (remote, merge, tracking, set_upstream) = match publish_to {
+        Some(remote) => {
+            known_remote(git, repo, remote, cancel).await?;
+            let tracking = format!("refs/remotes/{remote}/{branch}");
+            (remote.to_owned(), local.clone(), tracking, true)
+        }
+        None => match upstream(git, repo, &branch, cancel).await? {
+            Some(up) => (up.remote, up.merge, up.tracking, false),
+            None => {
+                return Ok(PushOutcome::NoUpstream {
+                    branch,
+                    remotes: remotes(git, repo, cancel).await?,
+                });
+            }
+        },
+    };
+    let short = Upstream {
+        remote: remote.clone(),
+        merge: merge.clone(),
+        tracking: tracking.clone(),
+    }
+    .short();
+
+    // Commits the remote (as last fetched) does not have.
+    let commits = match resolve(git, repo, &tracking, cancel).await? {
+        Some(_) => ahead_behind(git, repo, "HEAD", &tracking, cancel).await?.0,
+        None => {
+            let out = git
+                .read(repo)
+                .args(["rev-list", "--count", "HEAD", "--not"])
+                .arg(format!("--remotes={remote}"))
+                .output(cancel)
+                .await?;
+            out.stdout_lossy().trim().parse().unwrap_or(0)
+        }
+    };
+    if commits == 0 && force_lease.is_none() && !set_upstream {
+        return Ok(PushOutcome::UpToDate { upstream: short });
+    }
+
+    let mut cmd = git
+        .write(repo)
+        .args(["push", "--porcelain", "--progress"])
+        .env("GIT_PROGRESS_DELAY", "0");
+    if set_upstream {
+        cmd = cmd.arg("--set-upstream");
+    }
+    if let Some(expected) = force_lease {
+        let expected = crate::ops::commit::checked_oid(expected)?;
+        cmd = cmd.arg(format!("--force-with-lease={merge}:{expected}"));
+    }
+    // Both sides are full ref names: never mistaken for options.
+    let out = cmd
+        .arg(&remote)
+        .arg(format!("{local}:{merge}"))
+        .accept_exit_code(1)
+        .output_with_progress(cancel, on_progress)
+        .await?;
+    let stdout = out.stdout_lossy();
+    if let Some((reason, detail)) = parse_push_rejection(&stdout) {
+        return Ok(PushOutcome::Rejected {
+            upstream: short,
+            reason,
+            detail,
+        });
+    }
+    if out.exit_code != Some(0) {
+        return Err(GitError::Failed {
+            args: vec!["push".into(), remote, format!("{local}:{merge}")],
+            exit_code: out.exit_code,
+            stdout_tail: stdout,
+            stderr: out.stderr,
+        });
+    }
+    Ok(PushOutcome::Pushed {
+        upstream: short,
+        commits,
+        set_upstream,
+        forced: force_lease.is_some(),
+    })
+}
+
+/// What a forced push would overwrite on the remote, checked right after a
+/// fetch: the commits only the remote branch has.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct ForcePushPreview {
+    pub upstream: String,
+    /// Where the remote branch is now: the lease (the push fails if it
+    /// moves before it happens).
+    pub expected: String,
+    /// Remote commits that would be lost from the branch.
+    pub overwritten: u32,
+    /// The newest of them (at most [`LISTED_COMMITS`]).
+    pub commits: Vec<OrphanCommit>,
+    /// Local commits that would be pushed.
+    pub ahead: u32,
+}
+
+/// Fetches the upstream's remote, then lists what forcing the push would
+/// overwrite. Errors if there is no upstream or it no longer exists (a
+/// normal push publishes it then).
+pub async fn force_push_preview(
+    git: &Git,
+    repo: &Path,
+    cancel: &CancellationToken,
+    on_progress: impl FnMut(&str),
+) -> Result<ForcePushPreview> {
+    let branch = current_branch(git, repo, cancel).await?;
+    let up = upstream(git, repo, &branch, cancel)
+        .await?
+        .ok_or_else(|| GitError::Parse(format!("{branch} has no upstream")))?;
+    if up.remote != "." {
+        fetch(git, repo, Some(&up.remote), false, cancel, on_progress).await?;
+    }
+    let expected = resolve(git, repo, &up.tracking, cancel)
+        .await?
+        .ok_or_else(|| GitError::Parse(format!("{} no longer exists", up.short())))?;
+    let (ahead, overwritten) = ahead_behind(git, repo, "HEAD", &expected, cancel).await?;
+    let listed = git
+        .read(repo)
+        .args([
+            "log",
+            "-z",
+            "--format=%H%x1f%s%x1f%an%x1f%at",
+            &format!("--max-count={LISTED_COMMITS}"),
+            &expected,
+            "--not",
+            "HEAD",
+        ])
+        .output(cancel)
+        .await?;
+    let commits = listed
+        .stdout_lossy()
+        .split('\0')
+        .filter(|r| !r.trim().is_empty())
+        .map(|record| {
+            let fields: Vec<&str> = record.split('\u{1f}').collect();
+            let [oid, summary, author, time] = fields[..] else {
+                return Err(GitError::Parse(format!("log record {record:?}")));
+            };
+            Ok(OrphanCommit {
+                oid: oid.to_owned(),
+                summary: summary.to_owned(),
+                author: author.to_owned(),
+                time: time.trim().parse().unwrap_or(0),
+            })
+        })
+        .collect::<Result<_>>()?;
+    Ok(ForcePushPreview {
+        upstream: up.short(),
+        expected,
+        overwritten,
+        commits,
+        ahead,
+    })
 }

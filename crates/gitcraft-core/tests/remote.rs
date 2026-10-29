@@ -3,7 +3,8 @@
 use gitcraft_core::ops::branch::BlockingFile;
 use gitcraft_core::ops::refs::read_refs;
 use gitcraft_core::ops::remote::{
-    PullBlock, PullMode, PullOutcome, abort_in_progress, configured_pull_mode, fetch, pull,
+    PullBlock, PullMode, PullOutcome, PushOutcome, PushReject, abort_in_progress,
+    configured_pull_mode, fetch, force_push_preview, parse_push_rejection, pull, push,
     stash_and_pull,
 };
 use gitcraft_core::ops::status::working_status;
@@ -406,4 +407,187 @@ async fn reads_the_configured_pull_mode() {
     repo.run(&["config", "branch.main.rebase", "false"]).await;
     assert_eq!(mode(Some("main")).await, PullMode::Merge);
     assert_eq!(mode(None).await, PullMode::Rebase);
+}
+
+async fn push_now(
+    repo: &TestRepo,
+    publish_to: Option<&str>,
+    force_lease: Option<&str>,
+) -> PushOutcome {
+    push(&git(), repo.path(), publish_to, force_lease, &c(), |_| {})
+        .await
+        .expect("push")
+}
+
+async fn remote_main(other: &TestRepo) -> String {
+    other.run(&["fetch", "--quiet", "origin"]).await;
+    other.rev_parse("origin/main").await
+}
+
+#[tokio::test]
+async fn pushes_to_the_upstream() {
+    let (repo, other, _remote) = sandbox().await;
+    assert_eq!(
+        push_now(&repo, None, None).await,
+        PushOutcome::UpToDate {
+            upstream: "origin/main".into()
+        }
+    );
+    repo.commit_file("a.txt", "a\n", "uno").await;
+    let head = repo.commit_file("b.txt", "b\n", "dos").await;
+    assert_eq!(
+        push_now(&repo, None, None).await,
+        PushOutcome::Pushed {
+            upstream: "origin/main".into(),
+            commits: 2,
+            set_upstream: false,
+            forced: false
+        }
+    );
+    assert_eq!(remote_main(&other).await, head);
+}
+
+#[tokio::test]
+async fn offers_to_publish_branches_without_upstream() {
+    let (repo, other, _remote) = sandbox().await;
+    repo.checkout("feature").await;
+    let head = repo.commit_file("f.txt", "f\n", "feature").await;
+    assert_eq!(
+        push_now(&repo, None, None).await,
+        PushOutcome::NoUpstream {
+            branch: "feature".into(),
+            remotes: vec!["origin".into()]
+        }
+    );
+    assert!(
+        push(&git(), repo.path(), Some("--mirror"), None, &c(), |_| {})
+            .await
+            .is_err()
+    );
+
+    let outcome = push_now(&repo, Some("origin"), None).await;
+    assert!(matches!(
+        outcome,
+        PushOutcome::Pushed {
+            set_upstream: true,
+            commits: 1,
+            ..
+        }
+    ));
+    assert_eq!(
+        repo.run(&["rev-parse", "--abbrev-ref", "feature@{upstream}"])
+            .await,
+        "origin/feature"
+    );
+    other.run(&["fetch", "--quiet", "origin"]).await;
+    assert_eq!(other.rev_parse("origin/feature").await, head);
+}
+
+#[tokio::test]
+async fn explains_that_the_remote_has_new_commits() {
+    let (repo, other, _remote) = sandbox().await;
+    let theirs = other_pushes(&other, "o.txt", "o\n").await;
+    repo.commit_file("mio.txt", "mio\n", "mio").await;
+    let outcome = push_now(&repo, None, None).await;
+    let PushOutcome::Rejected { reason, detail, .. } = outcome else {
+        panic!("{outcome:?}");
+    };
+    assert_eq!(reason, PushReject::RemoteAhead);
+    assert!(detail.contains("rejected"), "{detail}");
+    assert_eq!(remote_main(&other).await, theirs, "remote untouched");
+}
+
+#[tokio::test]
+async fn force_pushes_only_with_a_lease_on_what_was_shown() {
+    let (repo, other, _remote) = sandbox().await;
+    other_pushes(&other, "o.txt", "o\n").await;
+    let mine = repo.commit_file("mio.txt", "mio\n", "mio").await;
+
+    let preview = force_push_preview(&git(), repo.path(), &c(), |_| {})
+        .await
+        .expect("preview");
+    assert_eq!(preview.upstream, "origin/main");
+    assert_eq!((preview.overwritten, preview.ahead), (1, 1));
+    assert_eq!(preview.commits[0].summary, "otra persona");
+
+    // Someone pushes again after the preview: the lease refuses.
+    let newer = other_pushes(&other, "o2.txt", "o2\n").await;
+    let outcome = push_now(&repo, None, Some(&preview.expected)).await;
+    assert!(matches!(
+        outcome,
+        PushOutcome::Rejected {
+            reason: PushReject::Stale,
+            ..
+        }
+    ));
+    assert_eq!(remote_main(&other).await, newer, "remote untouched");
+
+    // With a fresh preview (two commits now), it goes through.
+    let preview = force_push_preview(&git(), repo.path(), &c(), |_| {})
+        .await
+        .expect("preview");
+    assert_eq!(preview.overwritten, 2);
+    let outcome = push_now(&repo, None, Some(&preview.expected)).await;
+    assert!(matches!(outcome, PushOutcome::Pushed { forced: true, .. }));
+    assert_eq!(remote_main(&other).await, mine);
+
+    assert!(
+        push(&git(), repo.path(), None, Some("--force"), &c(), |_| {})
+            .await
+            .is_err(),
+        "the lease must be a commit id"
+    );
+}
+
+fn push_fixture_path() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/push_porcelain_rejected.txt")
+}
+
+/// Regenerate with `UPDATE_FIXTURES=1 cargo test -p gitcraft-core --test remote`.
+#[tokio::test]
+async fn push_porcelain_fixture_matches_current_git_output() {
+    let (repo, other, remote) = sandbox().await;
+    other_pushes(&other, "o.txt", "o\n").await;
+    repo.commit_file("mio.txt", "mio\n", "mio").await;
+    let out = repo
+        .write()
+        .args([
+            "push",
+            "--porcelain",
+            "origin",
+            "refs/heads/main:refs/heads/main",
+        ])
+        .accept_exit_code(1)
+        .output(&c())
+        .await
+        .expect("push");
+    // The remote's path changes on every run.
+    let fresh = out
+        .stdout_lossy()
+        .replace(remote.path().to_str().expect("utf-8"), "<remote>");
+    if std::env::var_os("UPDATE_FIXTURES").is_some() {
+        std::fs::write(push_fixture_path(), &fresh).expect("write fixture");
+    }
+    let fixture = std::fs::read_to_string(push_fixture_path()).expect("read fixture");
+    assert!(
+        fixture == fresh,
+        "push --porcelain output changed; see UPDATE_FIXTURES"
+    );
+}
+
+#[test]
+fn parses_the_push_rejection_fixture() {
+    let raw = std::fs::read_to_string(push_fixture_path()).expect("read fixture");
+    let (reason, detail) = parse_push_rejection(&raw).expect("rejection");
+    assert_eq!(reason, PushReject::RemoteAhead);
+    assert_eq!(detail, "[rejected] (fetch first)");
+    assert_eq!(
+        parse_push_rejection("To x\n=\trefs/heads/a:refs/heads/a\t[up to date]\nDone\n"),
+        None
+    );
+    assert_eq!(
+        parse_push_rejection("!\trefs/heads/a:refs/heads/a\t[rejected] (stale info)\n"),
+        Some((PushReject::Stale, "[rejected] (stale info)".into()))
+    );
 }

@@ -137,5 +137,18 @@ function NoticeText() {
       );
     case "aborted":
       return <p>{t(`pull.aborted.${notice.operation}`)}</p>;
+    case "pushed":
+      return (
+        <p>
+          {notice.setUpstream
+            ? t("push.published", { upstream: notice.upstream })
+            : t(notice.forced ? "push.forced" : "push.done", {
+                count: notice.commits,
+                upstream: notice.upstream,
+              })}
+        </p>
+      );
+    case "pushUpToDate":
+      return <p>{t("push.upToDate", { upstream: notice.upstream })}</p>;
   }
 }

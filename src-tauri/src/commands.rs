@@ -10,7 +10,7 @@ use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::refs::RepoRefs;
-use gitcraft_core::ops::remote::{PullMode, PullOutcome};
+use gitcraft_core::ops::remote::{ForcePushPreview, PullMode, PullOutcome, PushOutcome};
 use gitcraft_core::ops::stash::{ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
 use gitcraft_core::parse::commit::CommitDetails;
@@ -490,4 +490,39 @@ pub async fn pull_branch(
 #[specta::specta]
 pub async fn abort_in_progress(state: State<'_, AppState>, id: RepoId) -> Result<(), IpcError> {
     state.abort_in_progress(id).await
+}
+
+/// Pushes the current branch to its upstream, or publishes it to
+/// `publish_to` creating the upstream. `force_lease`: force only if the
+/// remote branch still points there (`--force-with-lease`).
+#[tauri::command]
+#[specta::specta]
+pub async fn push_branch(
+    state: State<'_, AppState>,
+    id: RepoId,
+    publish_to: Option<String>,
+    force_lease: Option<String>,
+    on_progress: Channel<String>,
+) -> Result<PushOutcome, IpcError> {
+    state
+        .push(id, publish_to, force_lease, |line| {
+            let _ = on_progress.send(line.to_owned());
+        })
+        .await
+}
+
+/// Fetches the upstream, then lists the remote commits a forced push would
+/// overwrite (and the lease to use).
+#[tauri::command]
+#[specta::specta]
+pub async fn force_push_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    on_progress: Channel<String>,
+) -> Result<ForcePushPreview, IpcError> {
+    state
+        .force_push_preview(id, |line| {
+            let _ = on_progress.send(line.to_owned());
+        })
+        .await
 }

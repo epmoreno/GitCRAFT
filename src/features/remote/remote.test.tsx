@@ -323,3 +323,129 @@ describe("pull", () => {
     expect(await screen.findByText(/Merge abortado/)).toBeVisible();
   });
 });
+
+describe("push", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+  });
+
+  const pushed = (publishTo: string | null, forceLease: string | null) =>
+    [1, { publishTo, forceLease }, expect.any(Function)] as const;
+
+  it("pushes to the upstream", async () => {
+    const user = userEvent.setup();
+    renderToolbar();
+    await user.click(screen.getByRole("button", { name: "Push" }));
+    expect(ipc.pushBranch).toHaveBeenCalledWith(...pushed(null, null));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Push completado: 1 commit subido a «origin/main».",
+    );
+  });
+
+  it("offers to publish a branch without upstream", async () => {
+    const user = userEvent.setup();
+    ipc.pushBranch.mockResolvedValueOnce({
+      status: "ok",
+      data: { type: "noUpstream", branch: "feature", remotes: ["origin"] },
+    });
+    ipc.pushBranch.mockResolvedValueOnce({
+      status: "ok",
+      data: {
+        type: "pushed",
+        upstream: "origin/feature",
+        commits: 1,
+        setUpstream: true,
+        forced: false,
+      },
+    });
+    renderToolbar();
+    await user.click(screen.getByRole("button", { name: "Push" }));
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "¿Publicar «feature»?",
+    });
+    expect(
+      within(dialog).getByText(/Se creará «origin\/feature»/),
+    ).toBeVisible();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Publicar y crear upstream" }),
+    );
+    expect(ipc.pushBranch).toHaveBeenLastCalledWith(...pushed("origin", null));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Rama publicada en «origin/feature»",
+    );
+  });
+
+  it("explains that the remote has new commits and offers to pull", async () => {
+    const user = userEvent.setup();
+    ipc.pushBranch.mockResolvedValueOnce({
+      status: "ok",
+      data: {
+        type: "rejected",
+        upstream: "origin/main",
+        reason: "remoteAhead",
+        detail: "[rejected] (fetch first)",
+      },
+    });
+    renderToolbar();
+    await user.click(screen.getByRole("button", { name: "Push" }));
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "El remoto tiene commits nuevos",
+    });
+    expect(
+      within(dialog).getByText(/Hay que hacer pull primero/),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByText("No ha cambiado nada en el remoto."),
+    ).toBeVisible();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Hacer pull" }),
+    );
+    expect(ipc.pullBranch).toHaveBeenCalledWith(
+      1,
+      { allowConflicts: false, saveLocal: false },
+      expect.any(Function),
+    );
+  });
+
+  it("forces only with a lease, after listing what would be overwritten", async () => {
+    const user = userEvent.setup();
+    const expected = "a".repeat(40);
+    ipc.forcePushPreview.mockResolvedValue({
+      status: "ok",
+      data: {
+        upstream: "origin/main",
+        expected,
+        overwritten: 1,
+        ahead: 1,
+        commits: [
+          {
+            oid: expected,
+            summary: "Cambio de otra persona",
+            author: "Otra",
+            time: 0,
+          },
+        ],
+      },
+    });
+    renderToolbar();
+    await user.click(screen.getByRole("button", { name: "Opciones de push" }));
+    await user.click(
+      screen.getByRole("menuitem", { name: "Push forzado (con lease)…" }),
+    );
+    expect(ipc.forcePushPreview).toHaveBeenCalledWith(1, expect.any(Function));
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "¿Push forzado a «origin/main»?",
+    });
+    expect(within(dialog).getByText("Cambio de otra persona")).toBeVisible();
+    expect(within(dialog).getByText(/--force-with-lease/)).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: "Cancelar" }),
+    ).toHaveFocus();
+    expect(ipc.pushBranch).not.toHaveBeenCalled();
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Forzar push" }),
+    );
+    expect(ipc.pushBranch).toHaveBeenCalledWith(...pushed(null, expected));
+  });
+});

@@ -391,7 +391,8 @@
     "running": {
       "fetch": "Descargando de {{remote}}…",
       "pull": "Haciendo pull de {{remote}}…",
-      "push": "Subiendo a {{remote}}…"
+      "push": "Subiendo a {{remote}}…",
+      "check": "Comprobando el remoto…"
     },
     "progress": "Progreso",
     "cancel": "Cancelar",
@@ -399,7 +400,8 @@
     "failed": {
       "fetch": "No se pudo hacer fetch.",
       "pull": "No se pudo hacer pull.",
-      "push": "No se pudo hacer push."
+      "push": "No se pudo hacer push.",
+      "check": "No se pudo comprobar el remoto."
     },
     "pullNeedsBranch": "Cambia a una rama para hacer pull",
     "pullHint": {
@@ -502,5 +504,46 @@
       "revert": "Revert abortado."
     },
     "savedLocal": "Tus cambios anteriores están en el stash como «GitCRAFT: antes de hacer pull»; aplícalos desde la barra lateral cuando quieras."
+  },
+  "push": {
+    "needsBranch": "Cambia a una rama para hacer push",
+    "hint": "Subir los commits de esta rama a su upstream",
+    "options": "Opciones de push",
+    "forceMenu": "Push forzado (con lease)…",
+    "publishTitle": "¿Publicar «{{branch}}»?",
+    "noUpstream": "La rama «{{branch}}» no tiene upstream: todavía no está publicada en ningún remoto.",
+    "remote": "Remoto",
+    "publishExplained": "Se creará «{{remote}}/{{branch}}» y quedará como su upstream, así que los siguientes pull y push irán ahí.",
+    "publish": "Publicar y crear upstream",
+    "rejectedTitle": {
+      "remoteAhead": "El remoto tiene commits nuevos",
+      "stale": "El remoto cambió desde la comprobación",
+      "remote": "El remoto rechazó el push",
+      "other": "El remoto rechazó el push"
+    },
+    "rejected": {
+      "remoteAhead": "«{{upstream}}» tiene commits que tu rama no tiene. Hay que hacer pull primero para integrarlos y después volver a hacer push.",
+      "stale": "Alguien ha subido algo a «{{upstream}}» después de que se mostrara la confirmación, así que el push forzado no se ha hecho. Vuelve a intentarlo para ver qué se sobrescribiría ahora.",
+      "remote": "El servidor rechazó el push a «{{upstream}}» (por ejemplo, una rama protegida o un hook). Esta es su respuesta:",
+      "other": "Git rechazó el push a «{{upstream}}». Esta es su respuesta:"
+    },
+    "nothingChanged": "No ha cambiado nada en el remoto.",
+    "forceHint": "Si de verdad quieres sustituir esos commits, usa «Push forzado (con lease)…» del menú ▾ de Push: te mostrará antes cuáles se perderían.",
+    "pullFirst": "Hacer pull",
+    "forceNotNeededTitle": "No hace falta forzar",
+    "forceNotNeeded": "«{{upstream}}» no tiene commits que tu rama no tenga: un push normal basta y no sobrescribe nada.",
+    "forceTitle": "¿Push forzado a «{{upstream}}»?",
+    "forceOverwrites_one": "Se sobrescribiría 1 commit del remoto que tu rama no tiene. Desaparecería de «{{upstream}}» para todo el que la use:",
+    "forceOverwrites_other": "Se sobrescribirían {{count}} commits del remoto que tu rama no tiene. Desaparecerían de «{{upstream}}» para todo el que la use:",
+    "forceLease": "Se usa --force-with-lease: si alguien sube algo más antes de que se haga (el remoto ya no está en {{sha}}), el push se rechaza y no se pierde nada.",
+    "forceRecover": "Mientras tengas la rama remota descargada, puedes guardarlos en una rama con:",
+    "forceRecoverCommand": "git branch rescate {{sha}}",
+    "force": "Forzar push",
+    "done_one": "Push completado: 1 commit subido a «{{upstream}}».",
+    "done_other": "Push completado: {{count}} commits subidos a «{{upstream}}».",
+    "forced_one": "Push forzado completado: «{{upstream}}» apunta ahora a tu rama (1 commit subido).",
+    "forced_other": "Push forzado completado: «{{upstream}}» apunta ahora a tu rama ({{count}} commits subidos).",
+    "published": "Rama publicada en «{{upstream}}», que queda como su upstream.",
+    "upToDate": "No hay nada que subir: «{{upstream}}» ya tiene todos tus commits."
   }
 }

@@ -73,7 +73,7 @@ describe("App", () => {
     // The path is content the user may want to copy.
     expect(within(main).getByText("/src/gitcraft")).toHaveClass("selectable");
     expect(
-      screen.getByRole("button", { name: "Push" }),
+      screen.getByRole("button", { name: "Deshacer" }),
     ).toHaveAccessibleDescription("Todavía no disponible");
   });
 

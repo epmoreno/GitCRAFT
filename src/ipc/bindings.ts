@@ -116,6 +116,17 @@ export const commands = {
 	pullBranch: (id: number, allowConflicts: boolean, saveLocal: boolean, onProgress: Channel<string>) => typedError<PullOutcome, IpcError_Serialize>(__TAURI_INVOKE("pull_branch", { id, allowConflicts, saveLocal, onProgress })),
 	/**  Aborts the merge/rebase/cherry-pick/revert waiting on conflicts. */
 	abortInProgress: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("abort_in_progress", { id })),
+	/**
+	 *  Pushes the current branch to its upstream, or publishes it to
+	 *  `publish_to` creating the upstream. `force_lease`: force only if the
+	 *  remote branch still points there (`--force-with-lease`).
+	 */
+	pushBranch: (id: number, publishTo: string | null, forceLease: string | null, onProgress: Channel<string>) => typedError<PushOutcome, IpcError_Serialize>(__TAURI_INVOKE("push_branch", { id, publishTo, forceLease, onProgress })),
+	/**
+	 *  Fetches the upstream, then lists the remote commits a forced push would
+	 *  overwrite (and the lease to use).
+	 */
+	forcePushPreview: (id: number, onProgress: Channel<string>) => typedError<ForcePushPreview, IpcError_Serialize>(__TAURI_INVOKE("force_push_preview", { id, onProgress })),
 };
 
 /** Events */
@@ -465,6 +476,25 @@ export type FileStatus = "added" | "modified" | "deleted" | "renamed" | "copied"
 /**  Not tracked by git (working directory status only). */
 "untracked" | "unknown";
 
+/**
+ *  What a forced push would overwrite on the remote, checked right after a
+ *  fetch: the commits only the remote branch has.
+ */
+export type ForcePushPreview = {
+	upstream: string,
+	/**
+	 *  Where the remote branch is now: the lease (the push fails if it
+	 *  moves before it happens).
+	 */
+	expected: string,
+	/**  Remote commits that would be lost from the branch. */
+	overwritten: number,
+	/**  The newest of them (at most [`LISTED_COMMITS`]). */
+	commits: OrphanCommit[],
+	/**  Local commits that would be pushed. */
+	ahead: number,
+};
+
 export type GitRef = GitRef_Serialize | GitRef_Deserialize;
 
 export type GitRef_Deserialize = {
@@ -706,6 +736,27 @@ fastForward: boolean } |
  *  these files: a merge or rebase is waiting (see `InProgress`).
  */
 { type: "conflicted"; files: string[]; mode: PullMode };
+
+export type PushOutcome = { type: "pushed"; upstream: string; 
+/**  Commits the remote did not have. */
+commits: number; 
+/**  The upstream was created by this push. */
+setUpstream: boolean; forced: boolean } | 
+/**  The remote already has every commit of the branch. */
+{ type: "upToDate"; upstream: string } | 
+/**  The branch has no upstream: offer to publish it to one of `remotes`. */
+{ type: "noUpstream"; branch: string; remotes: string[] } | 
+/**  Refused; nothing changed on the remote. `detail` is git's summary. */
+{ type: "rejected"; upstream: string; reason: PushReject; detail: string };
+
+/**  Why the remote refused a push. */
+export type PushReject = 
+/**  The remote has commits this branch does not: pull first. */
+"remoteAhead" | 
+/**  `--force-with-lease`: the remote changed since it was checked. */
+"stale" | 
+/**  Refused by the remote itself (hooks, protected branch…). */
+"remote" | "other";
 
 export type RecentRepository = {
 	path: string,

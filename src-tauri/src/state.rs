@@ -19,7 +19,7 @@ use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
-use gitcraft_core::ops::remote::{self, PullMode, PullOutcome};
+use gitcraft_core::ops::remote::{self, ForcePushPreview, PullMode, PullOutcome, PushOutcome};
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::ops::stage;
 use gitcraft_core::ops::stash::{self, ApplyOutcome, RecoverPreview};
@@ -419,6 +419,43 @@ impl AppState {
             } else {
                 remote::pull(git, &repo, mode, allow_conflicts, &cancel, on_progress).await
             }
+        })
+        .await
+    }
+
+    /// Pushes the current branch (or publishes it to `publish_to`); forced
+    /// only with a lease on `force_lease`.
+    pub async fn push(
+        &self,
+        id: RepoId,
+        publish_to: Option<String>,
+        force_lease: Option<String>,
+        on_progress: impl FnMut(&str),
+    ) -> Result<PushOutcome, IpcError> {
+        let git = self.git()?;
+        self.remote_operation(id, |repo, cancel| async move {
+            remote::push(
+                git,
+                &repo,
+                publish_to.as_deref(),
+                force_lease.as_deref(),
+                &cancel,
+                on_progress,
+            )
+            .await
+        })
+        .await
+    }
+
+    /// Fetches, then lists what a forced push would overwrite.
+    pub async fn force_push_preview(
+        &self,
+        id: RepoId,
+        on_progress: impl FnMut(&str),
+    ) -> Result<ForcePushPreview, IpcError> {
+        let git = self.git()?;
+        self.remote_operation(id, |repo, cancel| async move {
+            remote::force_push_preview(git, &repo, &cancel, on_progress).await
         })
         .await
     }

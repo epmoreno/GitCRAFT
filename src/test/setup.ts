@@ -53,6 +53,8 @@ vi.mock("../ipc", () => ({
   optimizeRepository: vi.fn(),
   fetchRemote: vi.fn(),
   pullBranch: vi.fn(),
+  pushBranch: vi.fn(),
+  forcePushPreview: vi.fn(),
   onRepoChanged: vi.fn(),
 }));
 

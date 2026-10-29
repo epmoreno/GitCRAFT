@@ -2,19 +2,23 @@ import { create } from "zustand";
 import {
   commands,
   fetchRemote,
+  forcePushPreview,
   pullBranch,
+  pushBranch,
   type BlockingFile,
   type CommandError,
+  type ForcePushPreview,
   type InProgress,
   type PullBlock,
   type PullMode,
   type PullModeInfo,
+  type PushReject,
 } from "../../ipc";
 import { progressPercent } from "../graph/OptimizeNotice";
 import { useGraphStore } from "../graph/store";
 import { useWorkdirStore } from "../workdir/store";
 
-export type RemoteKind = "fetch" | "pull" | "push";
+export type RemoteKind = "fetch" | "pull" | "push" | "check";
 
 /** A remote operation in progress (one per window at a time). */
 export type RunningRemote = {
@@ -57,7 +61,16 @@ export type RemoteNotice =
       mode: PullMode;
       savedLocal: boolean;
     }
-  | { kind: "aborted"; repoId: number; operation: InProgress };
+  | { kind: "aborted"; repoId: number; operation: InProgress }
+  | {
+      kind: "pushed";
+      repoId: number;
+      upstream: string;
+      commits: number;
+      setUpstream: boolean;
+      forced: boolean;
+    }
+  | { kind: "pushUpToDate"; repoId: number; upstream: string };
 
 /** A remote dialog waiting for the user. */
 export type RemoteDialog =
@@ -74,7 +87,16 @@ export type RemoteDialog =
       files: string[];
       exact: boolean;
     }
-  | { kind: "abort"; repoId: number; operation: InProgress };
+  | { kind: "abort"; repoId: number; operation: InProgress }
+  | { kind: "publish"; repoId: number; branch: string; remotes: string[] }
+  | {
+      kind: "pushRejected";
+      repoId: number;
+      upstream: string;
+      reason: PushReject;
+      detail: string;
+    }
+  | { kind: "forcePush"; repoId: number; preview: ForcePushPreview };
 
 type RemoteState = {
   running: RunningRemote | null;
@@ -99,6 +121,18 @@ type RemoteState = {
   saveLocalAndPull: () => Promise<void>;
   /** From the "conflict" dialog: pull anyway, stopping on conflicts. */
   pullWithConflicts: () => Promise<void>;
+  /** Pushes the current branch; `publishTo` creates its upstream there and
+   * `forceLease` forces with a lease on that remote commit. */
+  push: (
+    repoId: number,
+    options?: { publishTo?: string; forceLease?: string },
+  ) => Promise<void>;
+  /** Checks the remote, then asks to confirm a forced push listing what
+   * it would overwrite. */
+  requestForcePush: (repoId: number) => Promise<void>;
+  confirmForcePush: () => Promise<void>;
+  /** From the "rejected" dialog: pull first. */
+  pullAfterRejection: () => Promise<void>;
   requestAbort: (repoId: number, operation: InProgress) => void;
   confirmAbort: () => Promise<void>;
   closeDialog: () => void;
@@ -272,6 +306,113 @@ export const useRemoteStore = create<RemoteState>()((set, get) => {
       const dialog = get().dialog;
       if (dialog?.kind !== "pullConflict") return;
       await get().pull(dialog.repoId, { allowConflicts: true });
+    },
+
+    push: async (repoId, options = {}) => {
+      const publishTo = options.publishTo ?? null;
+      const forceLease = options.forceLease ?? null;
+      if (!begin(repoId, "push", publishTo)) return;
+      const result = await pushBranch(
+        repoId,
+        { publishTo, forceLease },
+        progress,
+      );
+      set({ running: null });
+      refreshAfterRemote(repoId);
+      if (result.status === "error") {
+        if (result.error.kind !== "cancelled") {
+          notify({
+            kind: "error",
+            repoId,
+            operation: "push",
+            error: result.error,
+          });
+        }
+        return;
+      }
+      const outcome = result.data;
+      switch (outcome.type) {
+        case "pushed":
+          notify({
+            kind: "pushed",
+            repoId,
+            upstream: outcome.upstream,
+            commits: outcome.commits,
+            setUpstream: outcome.setUpstream,
+            forced: outcome.forced,
+          });
+          break;
+        case "upToDate":
+          notify({ kind: "pushUpToDate", repoId, upstream: outcome.upstream });
+          break;
+        case "noUpstream":
+          if (outcome.remotes.length === 0) {
+            notify({
+              kind: "error",
+              repoId,
+              operation: "push",
+              error: {
+                kind: "remoteUnreachable",
+                message: "no remotes",
+                details: null,
+              },
+            });
+          } else {
+            set({
+              dialog: {
+                kind: "publish",
+                repoId,
+                branch: outcome.branch,
+                remotes: outcome.remotes,
+              },
+            });
+          }
+          break;
+        case "rejected":
+          set({
+            dialog: {
+              kind: "pushRejected",
+              repoId,
+              upstream: outcome.upstream,
+              reason: outcome.reason,
+              detail: outcome.detail,
+            },
+          });
+          break;
+      }
+    },
+
+    requestForcePush: async (repoId) => {
+      if (!begin(repoId, "check", null)) return;
+      const result = await forcePushPreview(repoId, progress);
+      set({ running: null });
+      refreshAfterRemote(repoId);
+      if (result.status === "ok") {
+        set({ dialog: { kind: "forcePush", repoId, preview: result.data } });
+      } else if (result.error.kind !== "cancelled") {
+        notify({
+          kind: "error",
+          repoId,
+          operation: "push",
+          error: result.error,
+        });
+      }
+    },
+
+    confirmForcePush: async () => {
+      const dialog = get().dialog;
+      if (dialog?.kind !== "forcePush") return;
+      const { repoId, preview } = dialog;
+      await get().push(repoId, {
+        // Nothing to overwrite: a normal push is enough.
+        forceLease: preview.overwritten > 0 ? preview.expected : undefined,
+      });
+    },
+
+    pullAfterRejection: async () => {
+      const dialog = get().dialog;
+      if (dialog?.kind !== "pushRejected") return;
+      await get().pull(dialog.repoId);
     },
 
     requestAbort: (repoId, operation) =>

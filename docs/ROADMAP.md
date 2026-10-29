@@ -179,11 +179,21 @@ un mensaje claro. Fetch, pull y push muestran progreso y se pueden cancelar.
       y por archivos sin seguimiento, conflictos previstos con merge y rebase,
       abortar, guardar y hacer pull, sin upstream, upstream borrado,
       configuración de Git) y de interfaz.
-- [ ] **6.3 Push** y push con `--set-upstream`: si la rama no tiene upstream,
+- [x] **6.3 Push** y push con `--set-upstream`: si la rama no tiene upstream,
       se ofrece crearlo. Si el remoto tiene commits nuevos (non fast-forward)
       se explica que hay que hacer pull primero. El force push usa solo
       `--force-with-lease` y pide confirmación listando los commits del remoto
       que se sobrescribirían.
+      *Estado:* botón «Push» con menú ▾ («Push forzado (con lease)…»). Sin
+      upstream: diálogo para publicar la rama en un remoto y crearlo. Rechazos
+      leídos de `git push --porcelain`: si el remoto tiene commits nuevos se
+      explica y se ofrece «Hacer pull». El push forzado hace antes fetch,
+      lista los commits del remoto que se perderían y usa
+      `--force-with-lease=<rama>:<commit mostrado>`: si el remoto se movió
+      después, se rechaza y se explica.
+      *Tests:* integración (push, al día, publicar con upstream, remoto por
+      delante, lease caducado, forzado con lease, fixture de
+      `push --porcelain`) y de interfaz.
 - [x] **6.4 Indicadores ahead/behind** en la rama (barra superior) y en la
       barra lateral.
       *Estado:* la barra superior muestra la rama actual con «↑N ↓M» (o «sin

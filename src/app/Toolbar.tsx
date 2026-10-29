@@ -5,6 +5,7 @@ import {
   CurrentBranch,
   FetchButton,
   PullButton,
+  PushButton,
 } from "../features/remote/RemoteButtons";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
 import { useStashStore } from "../features/stash/store";
@@ -12,7 +13,7 @@ import { useWorkdirStore } from "../features/workdir/store";
 import { Tooltip } from "../ui/Tooltip";
 import styles from "./App.module.css";
 
-const PENDING = ["push", "undo"] as const;
+const PENDING = ["undo"] as const;
 
 /**
  * Top bar. Doubles as the window title bar on macOS (overlay title bar),
@@ -68,6 +69,7 @@ export function Toolbar() {
         <CurrentBranch repoId={active?.id ?? null} />
         <FetchButton repoId={active?.id ?? null} />
         <PullButton repoId={active?.id ?? null} />
+        <PushButton repoId={active?.id ?? null} />
         <Tooltip
           label={
             !active

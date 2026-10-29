@@ -391,7 +391,8 @@
     "running": {
       "fetch": "Downloading from {{remote}}…",
       "pull": "Pulling from {{remote}}…",
-      "push": "Pushing to {{remote}}…"
+      "push": "Pushing to {{remote}}…",
+      "check": "Checking the remote…"
     },
     "progress": "Progress",
     "cancel": "Cancel",
@@ -399,7 +400,8 @@
     "failed": {
       "fetch": "Fetch failed.",
       "pull": "Pull failed.",
-      "push": "Push failed."
+      "push": "Push failed.",
+      "check": "Could not check the remote."
     },
     "pullNeedsBranch": "Switch to a branch to pull",
     "pullHint": {
@@ -502,5 +504,46 @@
       "revert": "Revert aborted."
     },
     "savedLocal": "Your previous changes are in the stash as “GitCRAFT: antes de hacer pull”; apply them from the sidebar whenever you want."
+  },
+  "push": {
+    "needsBranch": "Switch to a branch to push",
+    "hint": "Upload this branch's commits to its upstream",
+    "options": "Push options",
+    "forceMenu": "Force push (with lease)…",
+    "publishTitle": "Publish “{{branch}}”?",
+    "noUpstream": "Branch “{{branch}}” has no upstream: it is not published on any remote yet.",
+    "remote": "Remote",
+    "publishExplained": "“{{remote}}/{{branch}}” will be created and become its upstream, so later pulls and pushes go there.",
+    "publish": "Publish and create upstream",
+    "rejectedTitle": {
+      "remoteAhead": "The remote has new commits",
+      "stale": "The remote changed since it was checked",
+      "remote": "The remote rejected the push",
+      "other": "The remote rejected the push"
+    },
+    "rejected": {
+      "remoteAhead": "“{{upstream}}” has commits your branch does not. Pull first to bring them in, then push again.",
+      "stale": "Someone pushed to “{{upstream}}” after the confirmation was shown, so the force push was not done. Try again to see what it would overwrite now.",
+      "remote": "The server rejected the push to “{{upstream}}” (for example a protected branch or a hook). Its answer:",
+      "other": "Git rejected the push to “{{upstream}}”. Its answer:"
+    },
+    "nothingChanged": "Nothing changed on the remote.",
+    "forceHint": "If you really want to replace those commits, use “Force push (with lease)…” in Push's ▾ menu: it shows first which ones would be lost.",
+    "pullFirst": "Pull",
+    "forceNotNeededTitle": "No need to force",
+    "forceNotNeeded": "“{{upstream}}” has no commits your branch lacks: a normal push is enough and overwrites nothing.",
+    "forceTitle": "Force push to “{{upstream}}”?",
+    "forceOverwrites_one": "1 remote commit your branch does not have would be overwritten. It would disappear from “{{upstream}}” for everyone using it:",
+    "forceOverwrites_other": "{{count}} remote commits your branch does not have would be overwritten. They would disappear from “{{upstream}}” for everyone using it:",
+    "forceLease": "Uses --force-with-lease: if someone pushes anything else before it happens (the remote is no longer at {{sha}}), the push is rejected and nothing is lost.",
+    "forceRecover": "While you have the remote branch downloaded, you can keep them in a branch with:",
+    "forceRecoverCommand": "git branch rescue {{sha}}",
+    "force": "Force push",
+    "done_one": "Pushed 1 commit to “{{upstream}}”.",
+    "done_other": "Pushed {{count}} commits to “{{upstream}}”.",
+    "forced_one": "Force push done: “{{upstream}}” now points to your branch (1 commit uploaded).",
+    "forced_other": "Force push done: “{{upstream}}” now points to your branch ({{count}} commits uploaded).",
+    "published": "Branch published to “{{upstream}}”, now its upstream.",
+    "upToDate": "Nothing to push: “{{upstream}}” already has all your commits."
   }
 }

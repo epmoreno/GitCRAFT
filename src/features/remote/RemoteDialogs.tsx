@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import branches from "../branches/branches.module.css";
@@ -37,6 +38,12 @@ export function RemoteDialogs() {
       return <PullConflictDialog />;
     case "abort":
       return <AbortDialog />;
+    case "publish":
+      return <PublishDialog />;
+    case "pushRejected":
+      return <PushRejectedDialog />;
+    case "forcePush":
+      return <ForcePushDialog />;
   }
 }
 
@@ -130,6 +137,133 @@ function AbortDialog() {
       onConfirm={() => void confirm()}
     >
       <p>{t("pull.abortExplained")}</p>
+    </ConfirmDialog>
+  );
+}
+
+/** The branch has no upstream: publish it (creating one). */
+function PublishDialog() {
+  const { t } = useTranslation();
+  const dialog = useRemoteStore((s) => s.dialog);
+  const close = useRemoteStore((s) => s.closeDialog);
+  const push = useRemoteStore((s) => s.push);
+  const remotes = dialog?.kind === "publish" ? dialog.remotes : [];
+  const [remote, setRemote] = useState(
+    remotes.includes("origin") ? "origin" : (remotes[0] ?? ""),
+  );
+  if (dialog?.kind !== "publish") return null;
+  return (
+    <ConfirmDialog
+      title={t("push.publishTitle", { branch: dialog.branch })}
+      confirmLabel={t("push.publish")}
+      cancelLabel={t("pull.cancel")}
+      onCancel={close}
+      onConfirm={() => void push(dialog.repoId, { publishTo: remote })}
+    >
+      <p>{t("push.noUpstream", { branch: dialog.branch })}</p>
+      {remotes.length > 1 && (
+        <label className={branches.field}>
+          <span>{t("push.remote")}</span>
+          <select
+            className={branches.input}
+            value={remote}
+            onChange={(event) => setRemote(event.target.value)}
+          >
+            {remotes.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <p>{t("push.publishExplained", { branch: dialog.branch, remote })}</p>
+    </ConfirmDialog>
+  );
+}
+
+/** The remote refused the push; nothing changed there. */
+function PushRejectedDialog() {
+  const { t } = useTranslation();
+  const dialog = useRemoteStore((s) => s.dialog);
+  const close = useRemoteStore((s) => s.closeDialog);
+  const pullAfterRejection = useRemoteStore((s) => s.pullAfterRejection);
+  if (dialog?.kind !== "pushRejected") return null;
+  const remoteAhead = dialog.reason === "remoteAhead";
+  return (
+    <ConfirmDialog
+      title={t(`push.rejectedTitle.${dialog.reason}`)}
+      confirmLabel={remoteAhead ? t("push.pullFirst") : t("pull.ok")}
+      cancelLabel={t("pull.cancel")}
+      onCancel={close}
+      onConfirm={remoteAhead ? () => void pullAfterRejection() : close}
+    >
+      <p>
+        {t(`push.rejected.${dialog.reason}`, { upstream: dialog.upstream })}
+      </p>
+      <p>{t("push.nothingChanged")}</p>
+      {remoteAhead && <p>{t("push.forceHint")}</p>}
+      <pre className={`${branches.command} selectable`}>{dialog.detail}</pre>
+    </ConfirmDialog>
+  );
+}
+
+/** Confirming a forced push: what would be lost on the remote. */
+function ForcePushDialog() {
+  const { t } = useTranslation();
+  const dialog = useRemoteStore((s) => s.dialog);
+  const close = useRemoteStore((s) => s.closeDialog);
+  const confirm = useRemoteStore((s) => s.confirmForcePush);
+  if (dialog?.kind !== "forcePush") return null;
+  const { preview } = dialog;
+  const more = preview.overwritten - preview.commits.length;
+  if (preview.overwritten === 0) {
+    return (
+      <ConfirmDialog
+        title={t("push.forceNotNeededTitle")}
+        confirmLabel={t("toolbar.push")}
+        cancelLabel={t("pull.cancel")}
+        onCancel={close}
+        onConfirm={() => void confirm()}
+      >
+        <p>{t("push.forceNotNeeded", { upstream: preview.upstream })}</p>
+      </ConfirmDialog>
+    );
+  }
+  return (
+    <ConfirmDialog
+      title={t("push.forceTitle", { upstream: preview.upstream })}
+      confirmLabel={t("push.force")}
+      cancelLabel={t("pull.cancel")}
+      danger
+      onCancel={close}
+      onConfirm={() => void confirm()}
+    >
+      <p>
+        {t("push.forceOverwrites", {
+          count: preview.overwritten,
+          upstream: preview.upstream,
+        })}
+      </p>
+      <ul className={branches.commitList}>
+        {preview.commits.map((commit) => (
+          <li key={commit.oid} className={branches.commit}>
+            <code className={branches.oid}>{commit.oid.slice(0, 7)}</code>
+            <span className={branches.summary}>{commit.summary}</span>
+            <span className={branches.author}>{commit.author}</span>
+          </li>
+        ))}
+        {more > 0 && (
+          <li className={branches.more}>
+            {t("branches.moreCommits", { count: more })}
+          </li>
+        )}
+      </ul>
+      <p>{t("push.forceLease", { sha: preview.expected.slice(0, 7) })}</p>
+      <p>{t("push.forceRecover")}</p>
+      <pre className={`${branches.command} selectable`}>
+        {t("push.forceRecoverCommand", { sha: preview.expected })}
+      </pre>
     </ConfirmDialog>
   );
 }

@@ -225,3 +225,63 @@ export function PullButton({ repoId }: { repoId: number | null }) {
     </span>
   );
 }
+
+/** "Push" in the toolbar; its menu has the (leased) forced push. */
+export function PushButton({ repoId }: { repoId: number | null }) {
+  const { t } = useTranslation();
+  const running = useRemoteStore((s) => s.running);
+  const push = useRemoteStore((s) => s.push);
+  const requestForcePush = useRemoteStore((s) => s.requestForcePush);
+  const head = useGraphStore((s) =>
+    repoId === null ? null : (s.graphs[repoId]?.refs?.head ?? null),
+  );
+  const menu = useButtonMenu();
+  const onBranch = head?.type === "branch" && head.oid !== null;
+  const disabled = repoId === null || !onBranch || running !== null;
+  const reason =
+    repoId === null
+      ? t("toolbar.needsRepo")
+      : !onBranch
+        ? t("push.needsBranch")
+        : running
+          ? t("remote.busy")
+          : t("push.hint");
+
+  return (
+    <span className={styles.split}>
+      <Tooltip label={reason}>
+        <button
+          type="button"
+          className={appStyles.toolButton}
+          disabled={disabled}
+          onClick={() => {
+            if (repoId !== null) void push(repoId);
+          }}
+        >
+          {t("toolbar.push")}
+        </button>
+      </Tooltip>
+      <button
+        type="button"
+        className={`${appStyles.toolButton} ${styles.menuButton}`}
+        aria-label={t("push.options")}
+        aria-haspopup="menu"
+        disabled={disabled}
+        onClick={(event) => {
+          if (repoId === null) return;
+          menu.open(event.currentTarget, t("push.options"), [
+            { label: t("toolbar.push"), onSelect: () => void push(repoId) },
+            {
+              label: t("push.forceMenu"),
+              onSelect: () => void requestForcePush(repoId),
+              danger: true,
+            },
+          ]);
+        }}
+      >
+        ▾
+      </button>
+      {menu.element}
+    </span>
+  );
+}

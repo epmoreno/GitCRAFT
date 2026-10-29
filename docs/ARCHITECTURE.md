@@ -288,6 +288,12 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   `in_progress` (marcadores `MERGE_HEAD`, `rebase-merge`… del git dir) se
   muestra en un aviso con «Abortar» (`git merge --abort` /
   `git rebase --abort`).
+- **Push:** `git push --porcelain --progress <remoto> refs/heads/<rama>:<rama
+  remota>` (refs completas, nunca opciones). El rechazo se lee de la salida
+  `--porcelain` (líneas con `!`): «fetch first» / «non-fast-forward» → hay
+  que hacer pull; «stale info» → el lease caducó. Nunca `--force`: el push
+  forzado es `--force-with-lease=<rama remota>:<commit>` con el commit que
+  mostró la confirmación (`force_push_preview`, tras un fetch).
 - **Pruebas:** `scripts/make-remote-sandbox.sh` crea un repo de trabajo, un
   remoto bare y un segundo clon («otra persona»); los tests de integración
   hacen lo mismo con `TestRepo::add_bare_remote` y `TestRepo::clone_of`.

@@ -1,0 +1,3 @@
+To <remote>
+!	refs/heads/main:refs/heads/main	[rejected] (fetch first)
+Done

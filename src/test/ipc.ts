@@ -4,6 +4,8 @@ import {
   fetchRemote,
   optimizeRepository,
   pullBranch,
+  pushBranch,
+  forcePushPreview,
   pickFolder,
   streamGraph,
   type CommandError,
@@ -27,6 +29,8 @@ export const ipc = {
   optimizeRepository: vi.mocked(optimizeRepository),
   fetchRemote: vi.mocked(fetchRemote),
   pullBranch: vi.mocked(pullBranch),
+  pushBranch: vi.mocked(pushBranch),
+  forcePushPreview: vi.mocked(forcePushPreview),
   getPullMode: vi.mocked(commands.getPullMode),
   setPullMode: vi.mocked(commands.setPullMode),
   abortInProgress: vi.mocked(commands.abortInProgress),
@@ -106,6 +110,16 @@ export function resetIpcMock() {
   });
   ipc.setPullMode.mockResolvedValue({ status: "ok", data: null });
   ipc.abortInProgress.mockResolvedValue({ status: "ok", data: null });
+  ipc.pushBranch.mockResolvedValue({
+    status: "ok",
+    data: {
+      type: "pushed",
+      upstream: "origin/main",
+      commits: 1,
+      setUpstream: false,
+      forced: false,
+    },
+  });
   ipc.pullBranch.mockResolvedValue({
     status: "ok",
     data: {
