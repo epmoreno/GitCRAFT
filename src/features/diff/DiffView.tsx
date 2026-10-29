@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commands,
@@ -7,6 +7,7 @@ import {
   type HunkSelection,
 } from "../../ipc";
 import { useGraphStore, type OpenFile } from "../graph/store";
+import { useRememberedScroll } from "../repo/viewState";
 import { useWorkdirStore } from "../workdir/store";
 import styles from "./diff.module.css";
 
@@ -44,6 +45,8 @@ export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
   const [full, setFull] = useState(false);
   const key = JSON.stringify({ file, full, version });
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const body = useRef<HTMLDivElement>(null);
+  useRememberedScroll(body, `${repoId}:diff:${JSON.stringify(file)}`);
 
   useEffect(() => {
     let stale = false;
@@ -105,7 +108,7 @@ export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
         )}
       </header>
 
-      <div className={styles.body}>
+      <div ref={body} className={styles.body}>
         {!current ? (
           <p className={styles.message}>{t("diff.loading")}</p>
         ) : current.error ? (

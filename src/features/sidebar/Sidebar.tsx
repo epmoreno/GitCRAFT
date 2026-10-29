@@ -1,4 +1,4 @@
-import { useState, type MouseEvent, type ReactNode } from "react";
+import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { GitRef, RepoRefs, StashEntry } from "../../ipc";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
@@ -6,6 +6,7 @@ import { useBranchStore } from "../branches/store";
 import { selectedStash, stashSelection, useGraphStore } from "../graph/store";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
 import { useRemoteStore } from "../remote/store";
+import { useRememberedScroll, useViewStore } from "../repo/viewState";
 import { arrows, trackingDescription } from "../remote/tracking";
 import { useStashStore } from "../stash/store";
 import styles from "./sidebar.module.css";
@@ -20,6 +21,8 @@ export function Sidebar({ repoId }: Props) {
   );
   const select = useGraphStore((s) => s.select);
   const [menu, setMenu] = useState<Menu | null>(null);
+  const scroller = useRef<HTMLElement>(null);
+  useRememberedScroll(scroller, repoId === null ? null : `${repoId}:sidebar`);
   const goTo = (oid: string) => {
     if (repoId !== null) select(repoId, oid);
   };
@@ -34,7 +37,11 @@ export function Sidebar({ repoId }: Props) {
   };
 
   return (
-    <aside className={styles.sidebar} aria-label={t("zones.sidebar")}>
+    <aside
+      ref={scroller}
+      className={styles.sidebar}
+      aria-label={t("zones.sidebar")}
+    >
       <LocalBranches {...props} />
       <Remotes {...props} />
       <Tags {...props} />
@@ -116,6 +123,8 @@ function LocalBranches({ refs, repoId, onSelect, onMenu }: ListProps) {
 
   return (
     <Section
+      repoId={repoId}
+      id="local"
       title={t("sidebar.local")}
       count={refs ? branches.length : null}
       action={newBranch}
@@ -197,7 +206,12 @@ function Remotes({ refs, repoId, onSelect, onMenu }: ListProps) {
   const byRemote = (remote: string): GitRef[] =>
     refs?.refs.filter((r) => r.kind === "remote" && r.remote === remote) ?? [];
   return (
-    <Section title={t("sidebar.remote")} count={refs ? remotes.length : null}>
+    <Section
+      repoId={repoId}
+      id="remote"
+      title={t("sidebar.remote")}
+      count={refs ? remotes.length : null}
+    >
       {!refs ? (
         <p className={styles.empty}>{t("sidebar.empty")}</p>
       ) : remotes.length === 0 ? (
@@ -279,7 +293,12 @@ function Tags({ refs, repoId, onSelect, onMenu }: ListProps) {
     b.shortName.localeCompare(a.shortName, undefined, { numeric: true }),
   );
   return (
-    <Section title={t("sidebar.tags")} count={refs ? tags.length : null}>
+    <Section
+      repoId={repoId}
+      id="tags"
+      title={t("sidebar.tags")}
+      count={refs ? tags.length : null}
+    >
       {!refs ? (
         <p className={styles.empty}>{t("sidebar.empty")}</p>
       ) : tags.length === 0 ? (
@@ -348,6 +367,8 @@ function Stashes({ repoId, onMenu }: ListProps) {
 
   return (
     <Section
+      repoId={repoId}
+      id="stashes"
       title={t("sidebar.stashes")}
       count={entries ? entries.length : null}
     >
@@ -392,18 +413,25 @@ function Stashes({ repoId, onMenu }: ListProps) {
 }
 
 function Section({
+  repoId,
+  id,
   title,
   count,
   action,
   children,
 }: {
+  repoId: number | null;
+  /** Remembers the section's collapsed state per tab. */
+  id: string;
   title: string;
   count: number | null;
   /** A button next to the title (e.g. "new branch"). */
   action?: ReactNode;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(true);
+  const key = `${repoId ?? "none"}:${id}`;
+  const open = useViewStore((s) => !s.collapsed[key]);
+  const toggle = useViewStore((s) => s.toggleSection);
   return (
     <section className={styles.section}>
       <h2
@@ -415,7 +443,7 @@ function Section({
           type="button"
           className={styles.toggle}
           aria-expanded={open}
-          onClick={() => setOpen(!open)}
+          onClick={() => toggle(key)}
         >
           <span className={styles.chevron} aria-hidden="true">
             {open ? "▾" : "▸"}

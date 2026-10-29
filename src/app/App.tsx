@@ -14,7 +14,11 @@ import { useGraphStore } from "../features/graph/store";
 import { DiscardDialog, UndoToast } from "../features/workdir/Discard";
 import { useWorkdirStore } from "../features/workdir/store";
 import { onRepoChanged } from "../ipc";
-import { OpenErrorBanner } from "../features/repo/OpenErrorBanner";
+import {
+  OpenErrorBanner,
+  RestoreFailedBanner,
+} from "../features/repo/OpenErrorBanner";
+import { installAppMenu } from "./menu";
 import { StartPage } from "../features/repo/StartPage";
 import { Sidebar } from "../features/sidebar/Sidebar";
 import { TabBar } from "../features/repo/TabBar";
@@ -27,10 +31,45 @@ export function App() {
   const { t } = useTranslation();
   const active = useActiveRepository();
   const loadRecents = useRepoStore((s) => s.loadRecents);
+  const restoreSession = useRepoStore((s) => s.restoreSession);
+  const restored = useRepoStore((s) => s.restored);
 
   useEffect(() => {
+    void restoreSession();
     void loadRecents();
-  }, [loadRecents]);
+  }, [restoreSession, loadRecents]);
+
+  // ⌘W closes the active tab (menu bar); ⌘1…⌘9 and ⌃Tab / ⌃⇧Tab switch
+  // tabs. Never while a dialog waits for an answer.
+  useEffect(() => {
+    const dialogOpen = () => document.querySelector('[aria-modal="true"]');
+    const tabs = useRepoStore.getState;
+    void installAppMenu(t, {
+      closeTab: () => {
+        if (!dialogOpen()) void tabs().closeActiveTab();
+      },
+    }).catch((error: unknown) => {
+      console.warn("could not install the app menu", error);
+    });
+    const onKey = (event: KeyboardEvent) => {
+      if (dialogOpen()) return;
+      if (
+        event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        /^[1-9]$/.test(event.key)
+      ) {
+        event.preventDefault();
+        tabs().activateIndex(Number(event.key) - 1);
+      } else if (event.ctrlKey && !event.metaKey && event.key === "Tab") {
+        event.preventDefault();
+        tabs().activateNext(event.shiftKey ? -1 : 1);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [t]);
 
   // Changes made outside GitCRAFT (terminal, editor, another client).
   useEffect(() => {
@@ -64,12 +103,13 @@ export function App() {
         <Sidebar repoId={active?.id ?? null} />
         <main className={styles.graph} aria-label={t("zones.graph")}>
           <OpenErrorBanner />
+          <RestoreFailedBanner />
           <InProgressBanner repoId={active?.id ?? null} />
           {active ? (
             <GraphView key={active.id} repoId={active.id} info={active.info} />
-          ) : (
+          ) : restored ? (
             <StartPage />
-          )}
+          ) : null}
           <UndoToast />
           <BranchToast />
           <StashToast />

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { RepoInfo } from "../../ipc";
 import { DiffView } from "../diff/DiffView";
+import { useRememberedScroll } from "../repo/viewState";
 import { UncommittedRow } from "../workdir/UncommittedRow";
 import { drawGraph } from "./drawGraph";
 import { OptimizeNotice } from "./OptimizeNotice";
@@ -47,6 +48,8 @@ export function GraphView({
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Each tab keeps its scroll position.
+  useRememberedScroll(scrollRef, `${repoId}:graph`);
   // The React Compiler is not enabled, so its memoization caveat does not apply.
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({

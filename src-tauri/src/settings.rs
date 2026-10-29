@@ -32,6 +32,16 @@ pub struct Settings {
     /// Pull mode chosen in GitCRAFT per repository (by path); without one,
     /// git's own configuration decides.
     pub pull_modes: BTreeMap<String, PullMode>,
+    /// Open tabs (repository paths, in order) and the active one, restored
+    /// on the next start.
+    pub session: SavedSession,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SavedSession {
+    pub tabs: Vec<String>,
+    pub active: Option<String>,
 }
 
 impl Settings {

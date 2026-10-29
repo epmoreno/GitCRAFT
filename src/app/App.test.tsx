@@ -33,7 +33,9 @@ describe("App", () => {
   it("shows the start page with an open button and an empty recent list", async () => {
     render(<App />);
     const main = screen.getByRole("main");
-    expect(within(main).getByText("Ningún repositorio abierto")).toBeVisible();
+    expect(
+      await within(main).findByText("Ningún repositorio abierto"),
+    ).toBeVisible();
     expect(
       within(main).getByRole("button", { name: "Abrir repositorio…" }),
     ).toBeEnabled();
@@ -87,7 +89,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(
-      screen.getByRole("button", { name: "Abrir repositorio…" }),
+      await screen.findByRole("button", { name: "Abrir repositorio…" }),
     );
 
     expect(ipc.pickFolder).toHaveBeenCalledWith("Abrir repositorio");
@@ -107,7 +109,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(
-      screen.getByRole("button", { name: "Abrir repositorio…" }),
+      await screen.findByRole("button", { name: "Abrir repositorio…" }),
     );
 
     const alert = await screen.findByRole("alert");
@@ -139,7 +141,7 @@ describe("App", () => {
     });
     render(<App />);
     await user.click(
-      screen.getByRole("button", { name: "Abrir repositorio…" }),
+      await screen.findByRole("button", { name: "Abrir repositorio…" }),
     );
     await screen.findByRole("tab", { name: "repo" });
 
@@ -164,7 +166,7 @@ describe("App", () => {
     });
     render(<App />);
     await user.click(
-      screen.getByRole("button", { name: "Abrir repositorio…" }),
+      await screen.findByRole("button", { name: "Abrir repositorio…" }),
     );
     await screen.findByText("0 commits");
     expect(ipc.streamGraph).toHaveBeenCalledTimes(1);
@@ -189,7 +191,7 @@ describe("App", () => {
   it("switches language", async () => {
     await i18n.changeLanguage("en");
     render(<App />);
-    expect(screen.getByText("No repository open")).toBeVisible();
+    expect(await screen.findByText("No repository open")).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Pull" }),
     ).toHaveAccessibleDescription("Open a repository first");

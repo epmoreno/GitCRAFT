@@ -21,7 +21,9 @@ use gitcraft_core::patch::HunkSelection;
 
 use crate::error::IpcError;
 use crate::settings::RecentRepository;
-use crate::state::{AppState, DiscardResult, GraphEvent, OpenedRepository, PullModeInfo, RepoId};
+use crate::state::{
+    AppState, DiscardResult, GraphEvent, OpenedRepository, PullModeInfo, RepoId, RestoredSession,
+};
 
 #[tauri::command]
 #[specta::specta]
@@ -525,4 +527,24 @@ pub async fn force_push_preview(
             let _ = on_progress.send(line.to_owned());
         })
         .await
+}
+
+/// Remembers the open tabs (repository paths, in order) and the active one.
+#[tauri::command]
+#[specta::specta]
+pub async fn save_session(
+    state: State<'_, AppState>,
+    tabs: Vec<String>,
+    active: Option<String>,
+) -> Result<(), IpcError> {
+    state.save_session(tabs, active);
+    Ok(())
+}
+
+/// Reopens the previous session's tabs; invalid repositories are reported
+/// and forgotten.
+#[tauri::command]
+#[specta::specta]
+pub async fn restore_session(state: State<'_, AppState>) -> Result<RestoredSession, IpcError> {
+    Ok(state.restore_session().await)
 }

@@ -34,6 +34,8 @@ export type {
   Head_Serialize as Head,
   OpenedRepository,
   RecentRepository,
+  RestoredSession_Serialize as RestoredSession,
+  FailedRestore_Serialize as FailedRestore,
   RecoverPreview_Serialize as RecoverPreview,
   RefKind,
   RepoInfo,

@@ -36,7 +36,7 @@ use gitcraft_core::{CancellationToken, Git, GitError};
 use serde::Serialize;
 
 use crate::error::IpcError;
-use crate::settings::{RecentRepository, Settings, SettingsFile};
+use crate::settings::{RecentRepository, SavedSession, Settings, SettingsFile};
 use crate::watcher::{RepoWatcher, Suppression};
 
 pub type RepoId = u32;
@@ -49,6 +49,24 @@ pub type ChangeNotifier = Arc<dyn Fn(RepoChanged) + Send + Sync>;
 pub struct OpenedRepository {
     pub id: RepoId,
     pub info: RepoInfo,
+}
+
+/// The previous session, reopened.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoredSession {
+    /// Tabs, in their saved order.
+    pub opened: Vec<OpenedRepository>,
+    pub active: Option<RepoId>,
+    /// Saved tabs that could not be opened (and were forgotten).
+    pub failed: Vec<FailedRestore>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct FailedRestore {
+    pub path: String,
+    pub error: IpcError,
 }
 
 /// The pull mode in effect for a repository.
@@ -173,14 +191,22 @@ impl AppState {
     /// Opens the repository containing `path`. Opening one that is already
     /// open returns the existing session instead of a duplicate tab.
     pub async fn open_repository(&self, path: &Path) -> Result<OpenedRepository, IpcError> {
+        self.open_session(path, true).await
+    }
+
+    /// Opens (or finds) the session for `path`; `record` moves it to the top
+    /// of the recent list (not when restoring the previous session).
+    async fn open_session(&self, path: &Path, record: bool) -> Result<OpenedRepository, IpcError> {
         let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
         let info = repo::open_repository(git, path, &CancellationToken::new()).await?;
 
         let mut inner = self.lock();
-        inner
-            .settings
-            .record_opened(&info.path, &info.name, unix_now());
-        self.persist(&inner.settings);
+        if record {
+            inner
+                .settings
+                .record_opened(&info.path, &info.name, unix_now());
+            self.persist(&inner.settings);
+        }
 
         if let Some(session) = inner.sessions.iter().find(|s| s.info.path == info.path) {
             return Ok(OpenedRepository {
@@ -951,6 +977,59 @@ impl AppState {
 
     /// Recent repositories, most recent first, without entries whose folder
     /// has disappeared.
+    /// Remembers the open tabs (paths in order) and the active one.
+    pub fn save_session(&self, tabs: Vec<String>, active: Option<String>) {
+        let mut inner = self.lock();
+        let session = SavedSession { tabs, active };
+        if inner.settings.session != session {
+            inner.settings.session = session;
+            self.persist(&inner.settings);
+        }
+    }
+
+    /// Reopens the tabs of the previous session. Repositories that no longer
+    /// exist or are not valid are not opened: they are reported once and
+    /// dropped from the saved session.
+    pub async fn restore_session(&self) -> RestoredSession {
+        let saved = self.lock().settings.session.clone();
+        let mut opened = Vec::new();
+        let mut failed = Vec::new();
+        for path in &saved.tabs {
+            match self.open_session(Path::new(path), false).await {
+                Ok(repo) => {
+                    if !opened.iter().any(|o: &OpenedRepository| o.id == repo.id) {
+                        opened.push(repo);
+                    }
+                }
+                Err(error) => failed.push(FailedRestore {
+                    path: path.clone(),
+                    error,
+                }),
+            }
+        }
+        let active = saved
+            .active
+            .as_deref()
+            .and_then(|path| opened.iter().find(|o| o.info.path == path))
+            .or_else(|| opened.first())
+            .map(|o| o.id);
+        if !failed.is_empty() {
+            let tabs = opened.iter().map(|o| o.info.path.clone()).collect();
+            let active = active.and_then(|id| {
+                opened
+                    .iter()
+                    .find(|o| o.id == id)
+                    .map(|o| o.info.path.clone())
+            });
+            self.save_session(tabs, active);
+        }
+        RestoredSession {
+            opened,
+            active,
+            failed,
+        }
+    }
+
     pub fn recent_repositories(&self) -> Vec<RecentRepository> {
         let mut inner = self.lock();
         if inner.settings.prune_missing(Path::is_dir) {
@@ -1439,5 +1518,89 @@ mod tests {
         assert!(f.state.recent_repositories().is_empty());
         let reloaded = SettingsFile::new(&f.settings_path).load();
         assert!(reloaded.recent_repositories.is_empty());
+    }
+
+    #[tokio::test]
+    async fn restores_the_previous_session_and_forgets_invalid_repositories() {
+        let f = fixture();
+        let a = TestRepo::new().await;
+        let b = TestRepo::new().await;
+        let gone = tempfile::tempdir().expect("tempdir");
+        let not_a_repo = tempfile::tempdir().expect("tempdir");
+        let path = |p: &Path| p.to_string_lossy().into_owned();
+        let a_path = f
+            .state
+            .open_repository(a.path())
+            .await
+            .expect("open a")
+            .info
+            .path;
+        let b_path = f
+            .state
+            .open_repository(b.path())
+            .await
+            .expect("open b")
+            .info
+            .path;
+        let gone_path = path(&gone.path().join("deleted"));
+        f.state.save_session(
+            vec![
+                b_path.clone(),
+                gone_path.clone(),
+                a_path.clone(),
+                path(not_a_repo.path()),
+            ],
+            Some(a_path.clone()),
+        );
+        let recents = f.state.recent_repositories();
+
+        // A new start, with the same settings file.
+        let state = AppState::new(
+            Git::discover().ok(),
+            SettingsFile::new(&f.settings_path),
+            Arc::new(|_| {}),
+        );
+        let restored = state.restore_session().await;
+        let paths: Vec<_> = restored
+            .opened
+            .iter()
+            .map(|o| o.info.path.clone())
+            .collect();
+        assert_eq!(paths, [b_path.clone(), a_path.clone()], "saved order");
+        assert_eq!(
+            restored.active,
+            restored
+                .opened
+                .iter()
+                .find(|o| o.info.path == a_path)
+                .map(|o| o.id)
+        );
+        let failed: Vec<_> = restored
+            .failed
+            .iter()
+            .map(|f| (f.path.clone(), f.error.kind))
+            .collect();
+        assert_eq!(
+            failed,
+            [
+                (gone_path, ErrorKind::PathNotFound),
+                (path(not_a_repo.path()), ErrorKind::NotARepository)
+            ]
+        );
+        assert_eq!(
+            state.recent_repositories(),
+            recents,
+            "restoring does not reorder recents"
+        );
+
+        // Forgotten: the next start only reopens the valid ones, silently.
+        let state = AppState::new(
+            Git::discover().ok(),
+            SettingsFile::new(&f.settings_path),
+            Arc::new(|_| {}),
+        );
+        let restored = state.restore_session().await;
+        assert_eq!(restored.opened.len(), 2);
+        assert!(restored.failed.is_empty());
     }
 }

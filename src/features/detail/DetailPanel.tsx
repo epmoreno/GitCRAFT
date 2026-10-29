@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commands,
@@ -12,6 +12,7 @@ import { labelsByCommit } from "../graph/refLabels";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
 import { selectedStash, useGraphStore, WORKTREE } from "../graph/store";
 import { StashPanel } from "../stash/StashPanel";
+import { useRememberedScroll } from "../repo/viewState";
 import { WorkingDirPanel } from "../workdir/WorkingDirPanel";
 import { FileList } from "./FileList";
 import { reflowMessage } from "./reflow";
@@ -29,6 +30,11 @@ export function DetailPanel({ repoId }: { repoId: number | null }) {
   );
   const selectedOid = graph?.selectedOid ?? null;
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const panel = useRef<HTMLElement>(null);
+  useRememberedScroll(
+    panel,
+    repoId === null ? null : `${repoId}:detail:${selectedOid ?? ""}`,
+  );
 
   useEffect(() => {
     if (
@@ -56,7 +62,7 @@ export function DetailPanel({ repoId }: { repoId: number | null }) {
   const current = loaded?.oid === selectedOid ? loaded : null;
 
   return (
-    <aside className={styles.panel} aria-label={t("zones.detail")}>
+    <aside ref={panel} className={styles.panel} aria-label={t("zones.detail")}>
       {selectedOid === null || repoId === null ? (
         <p className={styles.muted}>{t("detail.empty")}</p>
       ) : selectedOid === WORKTREE ? (

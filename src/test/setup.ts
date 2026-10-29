@@ -5,8 +5,14 @@ import { useGraphStore } from "../features/graph/store";
 import { initialRemoteState, useRemoteStore } from "../features/remote/store";
 import { initialStashState, useStashStore } from "../features/stash/store";
 import { initialRepoState, useRepoStore } from "../features/repo/store";
+import { useViewStore } from "../features/repo/viewState";
 import { useWorkdirStore } from "../features/workdir/store";
 import { resetIpcMock } from "./ipc";
+
+// The native menu bar does not exist in tests.
+vi.mock("../app/menu", () => ({
+  installAppMenu: vi.fn(() => Promise.resolve()),
+}));
 
 // No test talks to a real Tauri backend.
 vi.mock("../ipc", () => ({
@@ -47,6 +53,8 @@ vi.mock("../ipc", () => ({
     getPullMode: vi.fn(),
     setPullMode: vi.fn(),
     abortInProgress: vi.fn(),
+    saveSession: vi.fn(),
+    restoreSession: vi.fn(),
   },
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
@@ -74,6 +82,7 @@ HTMLCanvasElement.prototype.getContext = (() =>
 beforeEach(() => {
   resetIpcMock();
   useRepoStore.setState(initialRepoState);
+  useViewStore.setState({ collapsed: {} });
   useBranchStore.setState(initialBranchState);
   useStashStore.setState(initialStashState);
   useRemoteStore.setState(initialRemoteState);

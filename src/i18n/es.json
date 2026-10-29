@@ -17,7 +17,17 @@
   },
   "tabs": {
     "empty": "Sin repositorios abiertos",
-    "close": "Cerrar {{name}}"
+    "close": "Cerrar {{name}}",
+    "label": "Repositorios abiertos",
+    "moveLeft": "Mover a la izquierda",
+    "moveRight": "Mover a la derecha",
+    "alreadyFirst": "Ya es la primera",
+    "alreadyLast": "Ya es la última",
+    "closeTab": "Cerrar pestaña (⌘W)",
+    "titleWithShortcut": "{{path}}\n⌘{{number}}",
+    "restoreFailed_one": "No se pudo reabrir 1 repositorio de la sesión anterior",
+    "restoreFailed_other": "No se pudieron reabrir {{count}} repositorios de la sesión anterior",
+    "restoreForgotten": "Se ha quitado de las pestañas guardadas; si vuelve a existir, ábrelo de nuevo desde «Abrir repositorio» o los recientes."
   },
   "sidebar": {
     "local": "Ramas locales",
@@ -545,5 +555,10 @@
     "forced_other": "Push forzado completado: «{{upstream}}» apunta ahora a tu rama ({{count}} commits subidos).",
     "published": "Rama publicada en «{{upstream}}», que queda como su upstream.",
     "upToDate": "No hay nada que subir: «{{upstream}}» ya tiene todos tus commits."
+  },
+  "menu": {
+    "edit": "Edición",
+    "window": "Ventana",
+    "closeTab": "Cerrar pestaña"
   }
 }

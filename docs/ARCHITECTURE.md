@@ -304,7 +304,11 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
 `~/Library/Application Support/dev.gitcraft.app/`) guarda:
 
 - Los recientes: máximo 20 y se descartan los que ya no existen.
-- Las pestañas abiertas.
+- Las pestañas abiertas (rutas en orden) y la activa. La UI las guarda en
+  cada cambio (`save_session`), solo después de haber restaurado la sesión
+  anterior (`restore_session`), para que un arranque lento no la borre.
+  Restaurar no reordena los recientes; un repo que ya no existe o no es
+  válido no se abre, se avisa una vez y se quita de la sesión guardada.
 - Las preferencias: modo de pull por repo, tema e idioma.
 
 Se escribe de forma atómica (archivo temporal + rename). Si el archivo está

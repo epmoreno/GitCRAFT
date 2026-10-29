@@ -127,6 +127,13 @@ export const commands = {
 	 *  overwrite (and the lease to use).
 	 */
 	forcePushPreview: (id: number, onProgress: Channel<string>) => typedError<ForcePushPreview, IpcError_Serialize>(__TAURI_INVOKE("force_push_preview", { id, onProgress })),
+	/**  Remembers the open tabs (repository paths, in order) and the active one. */
+	saveSession: (tabs: string[], active: string | null) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("save_session", { tabs, active })),
+	/**
+	 *  Reopens the previous session's tabs; invalid repositories are reported
+	 *  and forgotten.
+	 */
+	restoreSession: () => typedError<RestoredSession_Serialize, IpcError_Serialize>(__TAURI_INVOKE("restore_session")),
 };
 
 /** Events */
@@ -407,6 +414,18 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 "authFailed" | "detachedHead" | 
 /**  The remote could not be reached (network, host, path). */
 "remoteUnreachable" | "cancelled" | "timedOut" | "unknown";
+
+export type FailedRestore = FailedRestore_Serialize | FailedRestore_Deserialize;
+
+export type FailedRestore_Deserialize = {
+	path: string,
+	error: IpcError_Deserialize,
+};
+
+export type FailedRestore_Serialize = {
+	path: string,
+	error: IpcError_Serialize,
+};
 
 export type FileChange = FileChange_Serialize | FileChange_Deserialize;
 
@@ -868,6 +887,27 @@ export type RepoRefs_Serialize = {
 	refs: GitRef_Serialize[],
 	/**  Configured remotes, including those without fetched branches. */
 	remotes: string[],
+};
+
+/**  The previous session, reopened. */
+export type RestoredSession = RestoredSession_Serialize | RestoredSession_Deserialize;
+
+/**  The previous session, reopened. */
+export type RestoredSession_Deserialize = {
+	/**  Tabs, in their saved order. */
+	opened: OpenedRepository[],
+	active?: number | null,
+	/**  Saved tabs that could not be opened (and were forgotten). */
+	failed: FailedRestore_Deserialize[],
+};
+
+/**  The previous session, reopened. */
+export type RestoredSession_Serialize = {
+	/**  Tabs, in their saved order. */
+	opened: OpenedRepository[],
+	active: number | null,
+	/**  Saved tabs that could not be opened (and were forgotten). */
+	failed: FailedRestore_Serialize[],
 };
 
 /**  What to do with a selection of a file's changes. */

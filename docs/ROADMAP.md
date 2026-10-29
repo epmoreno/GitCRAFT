@@ -35,12 +35,25 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
       no es un repo da un error claro. *Test:* integración con repo y no-repo.
 - [x] **1.2 Recientes.** La lista persiste entre sesiones (máx. 20) y quita
       entradas de rutas que ya no existen.
-- [ ] **1.3 Pestañas.** Varias pestañas con estado independiente (selección,
+- [x] **1.3 Pestañas.** Varias pestañas con estado independiente (selección,
       scroll, panel abierto); se pueden cerrar y reordenar arrastrando; se
       restauran al reiniciar con la pestaña activa. Al restaurar, un repo que
       ya no existe o no es válido no se abre: se avisa una vez y se quita de
       la sesión guardada. Atajos: ⌘W cerrar, ⌘1…⌘9 ir a la pestaña, ⌃Tab /
       ⌃⇧Tab siguiente y anterior.
+      *Estado:* reordenar arrastrando la pestaña o con su menú contextual
+      (mover a la izquierda/derecha, cerrar). Cada pestaña recuerda el scroll
+      del historial, del panel de detalle, del diff y de la barra lateral, y
+      las secciones plegadas; la selección, el diff abierto y el borrador del
+      commit ya eran por repositorio. La sesión (rutas en orden y la activa)
+      se guarda en `settings.json` en cada cambio y se restaura al arrancar
+      sin reordenar los recientes. ⌘W está en el menú de la app («Ventana →
+      Cerrar pestaña»), que sustituye al de Tauri, cuyo ⌘W cerraba la
+      ventana. Los atajos no actúan con un diálogo abierto.
+      *Tests:* integración en el backend (restaurar en orden con la activa,
+      repos borrados o no válidos avisados y olvidados, recientes intactos) e
+      interfaz (guardar la sesión, mover, ciclar, arrastrar, menú de la
+      pestaña, atajos, aviso de restauración, scroll por pestaña).
 - [ ] **1.4 Inicializar repo.** `git init` con rama inicial configurable.
 - [ ] **1.5 Clonar.** URL + destino, progreso (`--progress`) y cancelación; la
       autenticación la gestiona el credential helper. *Test:* clonar un repo

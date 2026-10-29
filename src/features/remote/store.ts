@@ -138,6 +138,7 @@ type RemoteState = {
   closeDialog: () => void;
   cancel: () => Promise<void>;
   dismissNotice: () => void;
+  forget: (repoId: number) => void;
 };
 
 export const initialRemoteState = {
@@ -440,5 +441,16 @@ export const useRemoteStore = create<RemoteState>()((set, get) => {
     },
 
     dismissNotice: () => set({ notice: null }),
+
+    forget: (repoId) =>
+      set((s) => {
+        const pullModes = { ...s.pullModes };
+        delete pullModes[repoId];
+        return {
+          pullModes,
+          notice: s.notice?.repoId === repoId ? null : s.notice,
+          dialog: s.dialog?.repoId === repoId ? null : s.dialog,
+        };
+      }),
   };
 });

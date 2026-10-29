@@ -17,7 +17,17 @@
   },
   "tabs": {
     "empty": "No open repositories",
-    "close": "Close {{name}}"
+    "close": "Close {{name}}",
+    "label": "Open repositories",
+    "moveLeft": "Move left",
+    "moveRight": "Move right",
+    "alreadyFirst": "Already the first one",
+    "alreadyLast": "Already the last one",
+    "closeTab": "Close tab (⌘W)",
+    "titleWithShortcut": "{{path}}\n⌘{{number}}",
+    "restoreFailed_one": "1 repository from the previous session could not be reopened",
+    "restoreFailed_other": "{{count}} repositories from the previous session could not be reopened",
+    "restoreForgotten": "It was removed from the saved tabs; if it exists again, open it from “Open repository” or the recent list."
   },
   "sidebar": {
     "local": "Local branches",
@@ -545,5 +555,10 @@
     "forced_other": "Force push done: “{{upstream}}” now points to your branch ({{count}} commits uploaded).",
     "published": "Branch published to “{{upstream}}”, now its upstream.",
     "upToDate": "Nothing to push: “{{upstream}}” already has all your commits."
+  },
+  "menu": {
+    "edit": "Edit",
+    "window": "Window",
+    "closeTab": "Close tab"
   }
 }
