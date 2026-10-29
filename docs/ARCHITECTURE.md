@@ -52,6 +52,19 @@ GitCRAFT/
 └─ docs/
 ```
 
+### Copia remota
+
+El repositorio tiene una copia de seguridad en GitHub, en un repositorio
+**privado**: `origin` → `https://github.com/epmoreno/GitCRAFT.git`. `main`
+sigue a `origin/main`, y las versiones se publican como tags anotados
+(`v0.1.0`, el MVP). Nunca se hace push forzado.
+
+Las credenciales de GitHub se gestionan con **GitHub CLI** (`gh auth login`).
+Git las toma del credential helper configurado en el sistema (`osxkeychain`,
+en `/opt/homebrew/etc/gitconfig`); `gh auth setup-git` haría que Git las
+pidiera directamente a `gh`. No se guardan tokens en el repositorio ni en su
+configuración.
+
 ## 3. Flujo de un comando Git (ida y vuelta)
 
 ```text
