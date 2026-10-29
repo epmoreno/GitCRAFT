@@ -105,9 +105,10 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
       *Verificado manualmente* en un repo de prueba: descartar una línea y
       «Deshacer» antes de 10 s; un archivo sin seguimiento a la Papelera y
       recuperado; «Deshacer» se niega si el archivo se edita antes.
-      *Pendiente de verificar:* la recuperación tardía (pasado el aviso), ya
-      disponible desde la app con «Recuperar» (7.3). Desde la terminal, por
-      archivo: `git restore --source=stash@{N} --worktree -- <ruta>` (nunca
+      *Verificado manualmente* también la recuperación tardía (pasado el
+      aviso) desde la app con «Recuperar» (7.3), sin diálogo y con
+      confirmación, con el índice intacto. Desde la terminal, por archivo:
+      `git restore --source=stash@{N} --worktree -- <ruta>` (nunca
       `git stash apply`, que aborta si el archivo tiene más cambios).
 - [x] **4.5 Commit.** Resumen + descripción, contador de caracteres; amend
       precarga el último mensaje. Respeta hooks (`pre-commit`, `commit-msg`) y
@@ -142,18 +143,26 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
       el diálogo abierto.
 
 ### 6. Remotos
-Las pruebas usan un repo bare local como remoto (p. ej.
-`~/gitcraft-remoto.git`), nunca un servidor real.
+Las pruebas usan un repo bare local como remoto, nunca un servidor real:
+`scripts/make-remote-sandbox.sh` crea desde cero `~/gitcraft-remoto-prueba`
+(repo de trabajo), `~/gitcraft-remoto.git` (remoto bare) y un segundo clon que
+simula a «otra persona» que hace push. Credenciales: solo el credential helper
+de git, con `GIT_TERMINAL_PROMPT=0`; un fallo de autenticación se explica con
+un mensaje claro. Fetch, pull y push muestran progreso y se pueden cancelar.
 
 - [ ] **6.1 Fetch** (todos los remotos o uno, `--prune` opcional) con progreso y
       cancelación.
 - [ ] **6.2 Pull** con modo merge o rebase configurable por repo (por defecto,
-      lo que diga `pull.rebase`).
-- [ ] **6.3 Push** y push con `--set-upstream`. Si el push es rechazado (non
-      fast-forward) se explica y se ofrece pull. El force push usa
-      `--force-with-lease` y pide confirmación explicando qué commits del
-      remoto se sobrescriben.
-- [ ] **6.4 Indicadores ahead/behind** en la barra lateral y en la toolbar.
+      lo que diga `pull.rebase`). Si hay cambios sin confirmar que lo impiden o
+      conflictos, se explica el motivo y se ofrecen alternativas; nunca se
+      fuerza.
+- [ ] **6.3 Push** y push con `--set-upstream`: si la rama no tiene upstream,
+      se ofrece crearlo. Si el remoto tiene commits nuevos (non fast-forward)
+      se explica que hay que hacer pull primero. El force push usa solo
+      `--force-with-lease` y pide confirmación listando los commits del remoto
+      que se sobrescribirían.
+- [ ] **6.4 Indicadores ahead/behind** en la rama (barra superior) y en la
+      barra lateral.
 
 ### 7. Stash
 Nunca se borran stashes automáticamente; borrar uno siempre pide
@@ -195,6 +204,14 @@ confirmación.
       en un archivo con cambios preparados— recuperado byte a byte sin tocar
       el índice; trabajo nuevo listado; archivo cambiado tras la comprobación;
       archivo borrado) y de interfaz.
+
+*Verificado manualmente* la 7.x al completo en un repo de prueba: lista,
+etiquetas y refresco desde la terminal; crear un stash desde la app (con
+archivos sin seguimiento) y ver su contenido; pop limpio; cambios que se
+sobrescribirían («Cancelar» / «Guardar mis cambios y aplicar»); conflictos
+(«Cancelar» / «Aplicar con conflictos», entrada conservada); borrar y
+recuperar con `git stash store`; recuperación tardía de un descarte, sin
+diálogo y con confirmación, con el índice intacto.
 
 ### Transversal del MVP
 - [ ] **T.1 Errores.** Un catálogo traduce los errores conocidos de git a
