@@ -16,5 +16,5 @@ See [docs/VISION.md](docs/VISION.md), [docs/ROADMAP.md](docs/ROADMAP.md) and
 npm install          # once
 npm run tauri dev    # run the app with hot reload
 npm run check        # format + lint + typecheck + all tests (web and Rust)
-npm run tauri build  # build GitCRAFT.app and .dmg into target/release/bundle
+npm run dist         # build GitCRAFT.app and .dmg into target/release/bundle
 ```

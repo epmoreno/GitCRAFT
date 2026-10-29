@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "tauri": "tauri",
+    "dist": "CI=true tauri build --bundles app,dmg",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",

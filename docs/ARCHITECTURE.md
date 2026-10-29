@@ -400,6 +400,30 @@ previas que fallan dejan seguir y el error de la operación real se explica.
   el historial, del más reciente al más antiguo. Filtros: solo la pestaña
   activa (por carpeta) y ocultar las lecturas.
 
+### Empaquetado (macOS)
+
+- `npm run dist` → `tauri build --bundles app,dmg` (con `CI=true`, para que el
+  `.dmg` se cree sin automatizar Finder). Compila para la arquitectura del Mac
+  que lo ejecuta (arm64 en Apple Silicon); salida en
+  `target/release/bundle/{macos,dmg}`. Instalación y primer arranque:
+  `docs/INSTALACION.md`.
+- **Firma ad-hoc** (`signingIdentity: "-"`): no identifica a ningún
+  desarrollador ni está notarizada, así que Gatekeeper la trata como app sin
+  firmar. Hace falta porque en Apple Silicon macOS solo ejecuta código con
+  alguna firma, y un `.app` sin sellar se reporta como «dañado» al
+  descargarlo.
+- **`minimumSystemVersion: "11.0"`**, la primera versión de macOS para Apple
+  Silicon. Tauri lo pasa como `MACOSX_DEPLOYMENT_TARGET` a toda la
+  compilación, incluidos los proc-macros. Con el toolchain actual en macOS 27,
+  cualquier valor ≥ 12.0 genera dylibs de proc-macro que rustc no puede
+  cargar (`E0463: can't find crate for …_macros`). Hay que volver a comprobarlo
+  antes de subir el mínimo.
+- **PATH de git.** Una app abierta desde Finder recibe un `PATH` mínimo.
+  `find_git` ya busca en las rutas de Homebrew, y además el runner añade al
+  final del `PATH` de git `/opt/homebrew/bin`, `/usr/local/bin` y las rutas
+  del sistema que falten. Así git encuentra sus helpers: credential helpers
+  como `gh`, git-lfs o ssh.
+
 ## 7. Estrategia de tests
 
 | Nivel | Qué | Cómo |

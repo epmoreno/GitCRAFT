@@ -344,7 +344,12 @@ diálogo y con confirmación, con el índice intacto.
       usa una clave que no existe (`missingKeyHandler` en
       `src/test/setup.ts`), así que una clave mal escrita no llega a mostrarse
       como texto crudo.
-- [ ] **T.4 Empaquetado.** `.dmg` para Apple Silicon (sin firmar en el MVP).
+- [x] **T.4 Empaquetado.** `.dmg` para Apple Silicon (sin firmar en el MVP).
+      *Estado:* `npm run dist` genera `GitCRAFT.app` y
+      `GitCRAFT_<versión>_aarch64.dmg` (arm64, firma ad-hoc sin identidad, sin
+      notarizar, macOS ≥ 11). Instalar, primer arranque con Gatekeeper sin
+      desactivarlo, y desinstalar: `docs/INSTALACION.md`. Detalles en
+      ARCHITECTURE.md (sección 6, «Empaquetado»).
 
 ## Fase 2
 

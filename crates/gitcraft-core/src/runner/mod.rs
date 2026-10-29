@@ -42,6 +42,18 @@ const BLOCKED_ENV: &[&str] = &[
     "GIT_NAMESPACE",
 ];
 
+/// Added to the end of git's `PATH` when missing: apps launched from Finder
+/// get a minimal `PATH`, and git runs helpers (credential helpers such as
+/// `gh`, git-lfs, ssh) that are often installed with Homebrew.
+const EXTRA_PATH_DIRS: &[&str] = &[
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+];
+
 /// Time git gets to exit after SIGTERM before the group is SIGKILLed.
 const KILL_GRACE: Duration = Duration::from_secs(2);
 
@@ -281,6 +293,9 @@ impl GitCommand {
             .args(&self.args)
             .env("LC_ALL", "C")
             .env("GIT_TERMINAL_PROMPT", "0");
+        if let Some(path) = child_path(std::env::var_os("PATH")) {
+            cmd.env("PATH", path);
+        }
         for key in BLOCKED_ENV {
             cmd.env_remove(key);
         }
@@ -444,6 +459,21 @@ impl GitCommand {
     }
 }
 
+/// `path` with [`EXTRA_PATH_DIRS`] appended (those not already in it), so the
+/// user's own order still wins.
+fn child_path(path: Option<OsString>) -> Option<OsString> {
+    let mut dirs: Vec<PathBuf> = path
+        .as_deref()
+        .map(|p| std::env::split_paths(p).collect())
+        .unwrap_or_default();
+    for extra in EXTRA_PATH_DIRS {
+        if !dirs.iter().any(|d| d == Path::new(extra)) {
+            dirs.push(PathBuf::from(extra));
+        }
+    }
+    std::env::join_paths(dirs).ok()
+}
+
 /// Asks git's process group to stop, then forces it after [`KILL_GRACE`].
 async fn terminate(child: &mut Child, pid: Option<u32>) {
     signal_group(pid, GroupSignal::Terminate);
@@ -534,6 +564,24 @@ mod tests {
             cmd.command_line(),
             "git -c core.quotepath=false -c color.ui=false clone -- \
              'https://***@example.com/a b.git' dest"
+        );
+    }
+
+    #[test]
+    fn helpers_are_found_when_launched_from_finder() {
+        let finder = child_path(Some("/usr/bin:/bin:/usr/sbin:/sbin".into()));
+        assert_eq!(
+            finder.as_deref(),
+            Some(std::ffi::OsStr::new(
+                "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin"
+            ))
+        );
+        let terminal = child_path(Some("/Users/ana/bin:/usr/local/bin:/usr/bin".into()));
+        assert_eq!(
+            terminal.as_deref(),
+            Some(std::ffi::OsStr::new(
+                "/Users/ana/bin:/usr/local/bin:/usr/bin:/opt/homebrew/bin:/bin:/usr/sbin:/sbin"
+            ))
         );
     }
 
