@@ -294,8 +294,14 @@ diálogo y con confirmación, con el índice intacto.
       mensajes claros, con la salida original desplegable.
 - [ ] **T.2 Panel de operaciones.** Muestra las operaciones en curso con progreso
       y botón de cancelar, y un historial de comandos ejecutados.
-- [ ] **T.3 i18n.** Todos los textos de la UI están en `es` y `en`; hay un test
+- [x] **T.3 i18n.** Todos los textos de la UI están en `es` y `en`; hay un test
       que falla si falta una clave.
+      *Estado:* `src/i18n/i18n.test.ts` (desde la 0.3) falla si una clave
+      está en un idioma y no en el otro, o si un texto está vacío. Se añade,
+      sin duplicarlo, lo que no cubría: cualquier test falla si un componente
+      usa una clave que no existe (`missingKeyHandler` en
+      `src/test/setup.ts`), así que una clave mal escrita no llega a mostrarse
+      como texto crudo.
 - [ ] **T.4 Empaquetado.** `.dmg` para Apple Silicon (sin firmar en el MVP).
 
 ## Fase 2

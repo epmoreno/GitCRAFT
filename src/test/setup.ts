@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import "../i18n";
+import i18n from "../i18n";
 import { initialBranchState, useBranchStore } from "../features/branches/store";
 import { useGraphStore } from "../features/graph/store";
 import { initialRemoteState, useRemoteStore } from "../features/remote/store";
@@ -93,4 +93,17 @@ beforeEach(() => {
     pendingDiscard: null,
     lastDiscard: null,
   });
+});
+
+// T.3: a text key used by a rendered component must exist (in "es" and, by
+// the i18n test, in "en"): i18next would otherwise show the key itself.
+const missingKeys: string[] = [];
+i18n.options.saveMissing = true;
+i18n.options.missingKeyHandler = (_lngs, _ns, key) => {
+  missingKeys.push(key);
+};
+
+afterEach(() => {
+  const missing = missingKeys.splice(0);
+  expect(missing, "i18n keys used but not defined").toEqual([]);
 });
