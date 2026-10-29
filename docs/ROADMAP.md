@@ -35,8 +35,12 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
       no es un repo da un error claro. *Test:* integración con repo y no-repo.
 - [x] **1.2 Recientes.** La lista persiste entre sesiones (máx. 20) y quita
       entradas de rutas que ya no existen.
-- [ ] **1.3 Pestañas.** Varias pestañas con estado independiente; se pueden
-      cerrar y reordenar; se restauran al reiniciar.
+- [ ] **1.3 Pestañas.** Varias pestañas con estado independiente (selección,
+      scroll, panel abierto); se pueden cerrar y reordenar arrastrando; se
+      restauran al reiniciar con la pestaña activa. Al restaurar, un repo que
+      ya no existe o no es válido no se abre: se avisa una vez y se quita de
+      la sesión guardada. Atajos: ⌘W cerrar, ⌘1…⌘9 ir a la pestaña, ⌃Tab /
+      ⌃⇧Tab siguiente y anterior.
 - [ ] **1.4 Inicializar repo.** `git init` con rama inicial configurable.
 - [ ] **1.5 Clonar.** URL + destino, progreso (`--progress`) y cancelación; la
       autenticación la gestiona el credential helper. *Test:* clonar un repo
@@ -205,6 +209,14 @@ un mensaje claro. Fetch, pull y push muestran progreso y se pueden cancelar.
       *Tests:* integración (por delante, por detrás tras fetch, upstream
       borrado) y de interfaz.
 
+*Verificado manualmente* la 6.x al completo con
+`scripts/make-remote-sandbox.sh`: indicadores y fetch (↓1 tras el fetch);
+pull limpio (avance rápido); pull bloqueado («Cancelar» / «Guardar mis cambios
+y hacer pull»); conflictos y abortar, con merge y con rebase; push rechazado
+por commits nuevos en el remoto; push forzado (lease caducado rechazado y
+forzado real); publicar una rama sin upstream; prune (rama «borrada en el
+remoto»); remoto inalcanzable.
+
 ### 7. Stash
 Nunca se borran stashes automáticamente; borrar uno siempre pide
 confirmación.
@@ -270,6 +282,9 @@ diálogo y con confirmación, con el índice intacto.
       commits.
 - [ ] **9. Conflictos.** Vista a tres paneles (ours / theirs / resultado),
       elección por bloque, marcar como resuelto, continuar o abortar.
+      Incluye continuar un merge/rebase tras resolver conflictos desde la app
+      (`git merge --continue` / `git rebase --continue` / `--skip`); hoy (6.2)
+      solo se puede abortar desde la app y continuar se hace en la terminal.
 - [ ] **10. Cherry-pick, revert, reset** (soft/mixed/hard con aviso) y **crear
       tags** (ligeros y anotados).
 - [ ] **11. Deshacer/rehacer** de la última operación cuando sea seguro, basado
