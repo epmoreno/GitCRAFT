@@ -1,3 +1,4 @@
+use gitcraft_core::redact::redact_credentials;
 use gitcraft_core::{ErrorKind, GitError};
 use serde::Serialize;
 
@@ -16,7 +17,7 @@ impl From<GitError> for IpcError {
     fn from(err: GitError) -> Self {
         Self {
             kind: err.kind(),
-            message: err.to_string(),
+            message: redact_credentials(&err.to_string()).into_owned(),
             details: err.details(),
         }
     }

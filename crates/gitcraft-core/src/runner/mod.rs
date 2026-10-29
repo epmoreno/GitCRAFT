@@ -4,14 +4,17 @@
 //! array (never through a shell), the environment is fixed so output is
 //! parseable, and long operations can be cancelled or time out. Cancelling
 //! kills git's whole process group, including hooks and `ssh` children.
+//! A [`CommandLog`] attached to [`Git`] sees every command start and end.
 
 mod discover;
+mod log;
 mod split;
 
 use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{ExitStatus, Stdio};
+use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -19,9 +22,12 @@ use tokio::process::Child;
 use tokio_util::sync::CancellationToken;
 
 pub use discover::{GIT_PATH_OVERRIDE, GitVersion, find_git};
+pub use log::{CommandEvent, CommandLog, CommandOutcome};
+use log::{LogHandle, Pending, shell_line};
 use split::Splitter;
 
 use crate::error::{GitError, Result};
+use crate::redact::redact_credentials;
 
 /// Config overrides applied to every invocation.
 const BASE_ARGS: &[&str] = &["-c", "core.quotepath=false", "-c", "color.ui=false"];
@@ -54,6 +60,7 @@ pub enum Access {
 #[derive(Debug, Clone)]
 pub struct Git {
     exe: PathBuf,
+    log: Option<LogHandle>,
 }
 
 impl Git {
@@ -62,7 +69,17 @@ impl Git {
     }
 
     pub fn at(exe: impl Into<PathBuf>) -> Self {
-        Self { exe: exe.into() }
+        Self {
+            exe: exe.into(),
+            log: None,
+        }
+    }
+
+    /// Reports every command run through this `Git` (and its clones made
+    /// afterwards) to `log`.
+    pub fn with_log(mut self, log: Arc<dyn CommandLog>) -> Self {
+        self.log = Some(LogHandle(log));
+        self
     }
 
     pub fn exe(&self) -> &Path {
@@ -71,12 +88,12 @@ impl Git {
 
     /// A command that only reads the repository at `cwd`.
     pub fn read(&self, cwd: impl Into<PathBuf>) -> GitCommand {
-        GitCommand::new(self.exe.clone(), cwd.into(), Access::Read)
+        GitCommand::new(self, cwd.into(), Access::Read)
     }
 
     /// A command that may modify the repository at `cwd`.
     pub fn write(&self, cwd: impl Into<PathBuf>) -> GitCommand {
-        GitCommand::new(self.exe.clone(), cwd.into(), Access::Write)
+        GitCommand::new(self, cwd.into(), Access::Write)
     }
 
     pub async fn version(&self) -> Result<GitVersion> {
@@ -109,6 +126,7 @@ impl GitOutput {
 #[derive(Debug, Clone)]
 pub struct GitCommand {
     exe: PathBuf,
+    log: Option<LogHandle>,
     cwd: PathBuf,
     access: Access,
     args: Vec<OsString>,
@@ -131,9 +149,10 @@ enum Outcome {
 }
 
 impl GitCommand {
-    fn new(exe: PathBuf, cwd: PathBuf, access: Access) -> Self {
+    fn new(git: &Git, cwd: PathBuf, access: Access) -> Self {
         Self {
-            exe,
+            exe: git.exe.clone(),
+            log: git.log.clone(),
             cwd,
             access,
             args: Vec::new(),
@@ -190,6 +209,18 @@ impl GitCommand {
             .iter()
             .map(|a| a.to_string_lossy().into_owned())
             .collect()
+    }
+
+    /// The whole command line as run (`git`, the fixed base args, then the
+    /// arguments), quoted for a shell, with credentials in URLs redacted.
+    pub fn command_line(&self) -> String {
+        let args: Vec<String> = self.display_args();
+        let line = shell_line(
+            std::iter::once("git")
+                .chain(BASE_ARGS.iter().copied())
+                .chain(args.iter().map(String::as_str)),
+        );
+        redact_credentials(&line).into_owned()
     }
 
     /// Runs git and collects stdout.
@@ -273,6 +304,21 @@ impl GitCommand {
     }
 
     async fn run(
+        self,
+        cancel: &CancellationToken,
+        on_stdout: impl FnMut(&[u8]),
+        on_progress: impl FnMut(&str),
+    ) -> Result<GitOutput> {
+        let Some(log) = self.log.clone() else {
+            return self.run_unlogged(cancel, on_stdout, on_progress).await;
+        };
+        let pending = Pending::start(log, self.cwd.clone(), self.command_line(), self.access);
+        let result = self.run_unlogged(cancel, on_stdout, on_progress).await;
+        pending.finish(CommandOutcome::of(&result));
+        result
+    }
+
+    async fn run_unlogged(
         mut self,
         cancel: &CancellationToken,
         mut on_stdout: impl FnMut(&[u8]),
@@ -474,6 +520,21 @@ mod tests {
         );
         assert_eq!(cmd.as_std().get_program(), "git");
         assert_eq!(cmd.as_std().get_current_dir(), Some(Path::new("/repo")));
+    }
+
+    #[test]
+    fn command_line_is_exact_and_redacted() {
+        let cmd = Git::at("/usr/bin/git").write("/repo").args([
+            "clone",
+            "--",
+            "https://ana:tok@example.com/a b.git",
+            "dest",
+        ]);
+        assert_eq!(
+            cmd.command_line(),
+            "git -c core.quotepath=false -c color.ui=false clone -- \
+             'https://***@example.com/a b.git' dest"
+        );
     }
 
     #[test]

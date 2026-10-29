@@ -331,8 +331,11 @@ diálogo y con confirmación, con el índice intacto.
       `diskFull`, `filePermission`. Dejan de ser silenciosos: activar amend,
       leer la sesión anterior, guardar el modo de pull, comprobar el destino
       del clon y push sin remotos.
-- [ ] **T.2 Panel de operaciones.** Muestra las operaciones en curso con progreso
+- [x] **T.2 Panel de operaciones.** Muestra las operaciones en curso con progreso
       y botón de cancelar, y un historial de comandos ejecutados.
+      *Estado:* botón «Operaciones» → panel inferior. El historial muestra
+      el comando exacto, su duración y su resultado, con las credenciales de
+      las URLs redactadas (`***`). Detalles en ARCHITECTURE.md (sección 6).
 - [x] **T.3 i18n.** Todos los textos de la UI están en `es` y `en`; hay un test
       que falla si falta una clave.
       *Estado:* `src/i18n/i18n.test.ts` (desde la 0.3) falla si una clave

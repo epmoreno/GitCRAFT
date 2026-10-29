@@ -4,6 +4,8 @@ use std::time::Duration;
 
 use serde::Serialize;
 
+use crate::redact::redact_credentials;
+
 pub type Result<T, E = GitError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
@@ -172,10 +174,10 @@ impl GitError {
                 if let Some(code) = exit_code {
                     text.push_str(&format!("(exit code {code})"));
                 }
-                Some(text.trim_end().to_owned())
+                Some(redact_credentials(text.trim_end()).into_owned())
             }
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) | Self::TimedOut(_) => {
-                Some(self.to_string())
+                Some(redact_credentials(&self.to_string()).into_owned())
             }
             Self::UndoConflict(_) => Some(self.to_string()),
             Self::GitNotFound
@@ -394,6 +396,19 @@ mod tests {
             Some("$ git rev-parse --show-toplevel\nfatal: not a git repository\n(exit code 128)")
         );
         assert_eq!(GitError::Cancelled.details(), None);
+    }
+
+    #[test]
+    fn details_never_show_credentials() {
+        let err = GitError::Failed {
+            args: vec!["fetch".into(), "https://ana:tok@example.com/r.git".into()],
+            exit_code: Some(128),
+            stderr: "fatal: unable to access 'https://ana:tok@example.com/r.git/'\n".into(),
+            stdout_tail: String::new(),
+        };
+        let details = err.details().unwrap_or_default();
+        assert!(!details.contains("tok"), "{details}");
+        assert!(details.contains("https://***@example.com/r.git"));
     }
 
     #[test]

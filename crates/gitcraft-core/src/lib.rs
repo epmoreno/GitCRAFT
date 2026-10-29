@@ -7,10 +7,13 @@ pub mod graph;
 pub mod ops;
 pub mod parse;
 pub mod patch;
+pub mod redact;
 pub mod runner;
 #[cfg(feature = "testing")]
 pub mod testing;
 
 pub use error::{ErrorKind, GitError, Result};
-pub use runner::{Access, Git, GitCommand, GitOutput, GitVersion};
+pub use runner::{
+    Access, CommandEvent, CommandLog, CommandOutcome, Git, GitCommand, GitOutput, GitVersion,
+};
 pub use tokio_util::sync::CancellationToken;

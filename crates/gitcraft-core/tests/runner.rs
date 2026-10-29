@@ -1,9 +1,12 @@
 //! Integration tests for the git runner against the real `git` binary.
 
 use std::path::Path;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use gitcraft_core::{CancellationToken, Git, GitCommand, GitError};
+use gitcraft_core::{
+    Access, CancellationToken, CommandEvent, CommandLog, CommandOutcome, Git, GitCommand, GitError,
+};
 
 fn git() -> Git {
     Git::discover().expect("git must be installed to run the tests")
@@ -256,4 +259,91 @@ async fn missing_executable_is_a_spawn_error() {
         .output(&CancellationToken::new())
         .await;
     assert!(matches!(result, Err(GitError::Spawn(_))), "{result:?}");
+}
+
+/// Keeps every event a [`CommandLog`] receives.
+#[derive(Default)]
+struct Recorder(std::sync::Mutex<Vec<CommandEvent>>);
+
+impl CommandLog for Recorder {
+    fn record(&self, event: CommandEvent) {
+        self.0.lock().expect("recorder").push(event);
+    }
+}
+
+#[tokio::test]
+async fn logs_each_command_with_its_outcome_and_without_credentials() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let recorder = Arc::new(Recorder::default());
+    let git = git().with_log(recorder.clone());
+
+    isolated(git.read(dir.path()))
+        .arg("--version")
+        .output(&CancellationToken::new())
+        .await
+        .expect("version");
+    let failed = isolated(git.read(dir.path()))
+        .args(["ls-remote", "--", "file://ana:tok@/nonexistent/x.git"])
+        .output(&CancellationToken::new())
+        .await;
+    assert!(failed.is_err());
+
+    let events = recorder.0.lock().expect("recorder").clone();
+    let [
+        CommandEvent::Started {
+            id: first,
+            command: version,
+            access: Access::Read,
+            cwd,
+            ..
+        },
+        CommandEvent::Finished {
+            id: first_end,
+            outcome: CommandOutcome::Succeeded,
+            ..
+        },
+        CommandEvent::Started {
+            id: second,
+            command: ls_remote,
+            ..
+        },
+        CommandEvent::Finished {
+            id: second_end,
+            outcome: CommandOutcome::Failed { code: Some(_) },
+            ..
+        },
+    ] = events.as_slice()
+    else {
+        panic!("unexpected events: {events:?}");
+    };
+    assert_eq!((first, second), (first_end, second_end));
+    assert_ne!(first, second);
+    assert_eq!(cwd, dir.path());
+    assert_eq!(
+        version,
+        "git -c core.quotepath=false -c color.ui=false --version"
+    );
+    assert!(!ls_remote.contains("tok"), "{ls_remote}");
+    assert!(ls_remote.ends_with("ls-remote -- file://***@/nonexistent/x.git"));
+}
+
+#[tokio::test]
+async fn logs_a_cancelled_command_as_cancelled() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let recorder = Arc::new(Recorder::default());
+    let cancel = CancellationToken::new();
+    cancel.cancel();
+    let cmd = git().with_log(recorder.clone()).read(dir.path());
+    let _ = isolated(cmd).arg("status").output(&cancel).await;
+    let events = recorder.0.lock().expect("recorder").clone();
+    assert!(
+        matches!(
+            events.last(),
+            Some(CommandEvent::Finished {
+                outcome: CommandOutcome::Cancelled,
+                ..
+            })
+        ),
+        "{events:?}"
+    );
 }

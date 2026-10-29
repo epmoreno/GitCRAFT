@@ -1,6 +1,8 @@
 .shell {
   display: grid;
-  grid-template-rows: var(--toolbar-height) var(--tabbar-height) 1fr;
+  grid-template-rows:
+    var(--toolbar-height) var(--tabbar-height) minmax(0, 1fr)
+    auto;
   height: 100%;
 }
 
@@ -72,4 +74,12 @@
   overflow: hidden;
   background: var(--surface-0);
   min-width: 0;
+}
+
+.toolButton[aria-pressed="true"] {
+  background: var(--surface-3);
+}
+
+.busy {
+  color: var(--accent);
 }

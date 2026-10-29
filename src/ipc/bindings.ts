@@ -150,10 +150,18 @@ export const commands = {
 	cloneRepository: (url: string, parent: string, name: string, onProgress: Channel<string>) => typedError<OpenedRepository, IpcError_Serialize>(__TAURI_INVOKE("clone_repository", { url, parent, name, onProgress })),
 	/**  Cancels the clone in progress. */
 	cancelClone: () => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_clone")),
+	/**
+	 *  The git commands run so far (oldest first), for the operations panel.
+	 *  New and finished commands arrive as `CommandRecord` events.
+	 */
+	commandHistory: () => typedError<CommandRecord_Serialize[], IpcError_Serialize>(__TAURI_INVOKE("command_history")),
+	/**  Forgets the finished commands of the history. */
+	clearCommandHistory: () => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("clear_command_history")),
 };
 
 /** Events */
 export const events = {
+	commandRecord: makeEvent<CommandRecord_Serialize, CommandRecord_Deserialize>("command-record"),
 	repoChanged: makeEvent<RepoChanged, RepoChanged>("repo-changed"),
 };
 
@@ -270,6 +278,68 @@ export type CheckoutOutcome = { type: "switched" } |
  *  would go to the stash).
  */
 changed: number };
+
+/**  How a git process ended. */
+export type CommandOutcome = CommandOutcome_Serialize | CommandOutcome_Deserialize;
+
+/**  How a git process ended. */
+export type CommandOutcome_Deserialize = { type: "succeeded" } | 
+/**
+ *  Exited with a status the caller did not accept (`code` is missing
+ *  when a signal stopped it).
+ */
+{ type: "failed"; code?: number | null } | { type: "cancelled" } | { type: "timedOut" } | 
+/**  It could not be started or talked to. */
+{ type: "error" };
+
+/**  How a git process ended. */
+export type CommandOutcome_Serialize = { type: "succeeded" } | 
+/**
+ *  Exited with a status the caller did not accept (`code` is missing
+ *  when a signal stopped it).
+ */
+{ type: "failed"; code: number | null } | { type: "cancelled" } | { type: "timedOut" } | 
+/**  It could not be started or talked to. */
+{ type: "error" };
+
+/**  One git command, running (`outcome` is `None`) or finished. */
+export type CommandRecord = CommandRecord_Serialize | CommandRecord_Deserialize;
+
+/**  One git command, running (`outcome` is `None`) or finished. */
+export type CommandRecord_Deserialize = {
+	id: number,
+	/**  Folder git ran in. */
+	cwd: string,
+	/**  Exact command line, quoted for a shell, credentials redacted. */
+	command: string,
+	/**  May modify the repository (as opposed to only reading it). */
+	write: boolean,
+	/**
+	 *  Milliseconds since the Unix epoch (a whole number; typed as a plain
+	 *  number for TypeScript, where it is exact).
+	 */
+	startedAt: number,
+	durationMs?: number | null,
+	outcome?: CommandOutcome_Deserialize | null,
+};
+
+/**  One git command, running (`outcome` is `None`) or finished. */
+export type CommandRecord_Serialize = {
+	id: number,
+	/**  Folder git ran in. */
+	cwd: string,
+	/**  Exact command line, quoted for a shell, credentials redacted. */
+	command: string,
+	/**  May modify the repository (as opposed to only reading it). */
+	write: boolean,
+	/**
+	 *  Milliseconds since the Unix epoch (a whole number; typed as a plain
+	 *  number for TypeScript, where it is exact).
+	 */
+	startedAt: number,
+	durationMs: number | null,
+	outcome: CommandOutcome_Serialize | null,
+};
 
 export type CommitChanges = CommitChanges_Serialize | CommitChanges_Deserialize;
 

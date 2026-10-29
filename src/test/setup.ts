@@ -3,6 +3,10 @@ import i18n from "../i18n";
 import { initialBranchState, useBranchStore } from "../features/branches/store";
 import { initialCreateState, useCreateStore } from "../features/create/store";
 import { useGraphStore } from "../features/graph/store";
+import {
+  initialOperationsState,
+  useOperationsStore,
+} from "../features/operations/store";
 import { initialRemoteState, useRemoteStore } from "../features/remote/store";
 import { initialStashState, useStashStore } from "../features/stash/store";
 import { initialRepoState, useRepoStore } from "../features/repo/store";
@@ -63,6 +67,8 @@ vi.mock("../ipc", () => ({
     defaultCloneName: vi.fn(),
     checkCloneDestination: vi.fn(),
     cancelClone: vi.fn(),
+    commandHistory: vi.fn(),
+    clearCommandHistory: vi.fn(),
   },
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
@@ -73,6 +79,7 @@ vi.mock("../ipc", () => ({
   forcePushPreview: vi.fn(),
   cloneRepository: vi.fn(),
   onRepoChanged: vi.fn(),
+  onCommandRecord: vi.fn(),
 }));
 
 // jsdom has no layout: give scroll containers a viewport so virtualized
@@ -96,6 +103,7 @@ beforeEach(() => {
   useStashStore.setState(initialStashState);
   useRemoteStore.setState(initialRemoteState);
   useCreateStore.setState(initialCreateState);
+  useOperationsStore.setState(initialOperationsState);
   useGraphStore.setState({ graphs: {} });
   useWorkdirStore.setState({
     statuses: {},

@@ -373,6 +373,33 @@ Solo se ignoran sin aviso fallos que no impiden nada y se reintentan solos
 optimizar, sugerir el nombre de la carpeta del clon); las comprobaciones
 previas que fallan dejan seguir y el error de la operación real se explica.
 
+### Panel de operaciones e historial de comandos
+
+- **Registro en el núcleo.** `Git::with_log(Arc<dyn CommandLog>)` hace que
+  cada `GitCommand` avise al empezar (`CommandEvent::Started`: id, carpeta,
+  línea de comando, lectura/escritura, hora) y al terminar
+  (`Finished`: duración y `CommandOutcome`: correcto, código de salida,
+  cancelado, tiempo agotado, no se pudo ejecutar). Si el futuro del comando se
+  abandona antes de terminar, se registra como cancelado.
+- **Comando exacto.** La línea es la que se ejecuta: `git`, los `-c` fijos y
+  los argumentos, con comillas de shell solo donde hacen falta, de modo que se
+  puede copiar y pegar. No incluye el entorno fijo (`LC_ALL=C`,
+  `GIT_TERMINAL_PROMPT=0`…) ni la entrada estándar.
+- **Sin credenciales.** `redact::redact_credentials` sustituye por `***` la
+  parte usuario/contraseña de toda URL (`https://***@host/…`) y el valor de
+  parámetros como `token`, `access_token` o `password`. Se aplica a la línea
+  del historial y también a `details` y `message` de los errores. Nunca se
+  guarda la salida de los comandos en el historial.
+- **App.** `CommandHistory` (`src-tauri/src/history.rs`) guarda en memoria los
+  últimos 1000 comandos (no se persisten) y emite el evento `CommandRecord`
+  con cada inicio y fin. Comandos: `command_history` y
+  `clear_command_history`.
+- **UI.** `src/features/operations/`: el botón «Operaciones» de la barra
+  superior abre un panel inferior con «En curso» (la operación remota con su
+  progreso y «Cancelar», y los comandos que siguen en marcha con su tiempo) y
+  el historial, del más reciente al más antiguo. Filtros: solo la pestaña
+  activa (por carpeta) y ocultar las lecturas.
+
 ## 7. Estrategia de tests
 
 | Nivel | Qué | Cómo |

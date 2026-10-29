@@ -627,5 +627,30 @@
     "clone": "Clonar",
     "failed": "No se pudo clonar.",
     "checkFailed": "No se pudo comprobar la carpeta de destino."
+  },
+  "operations": {
+    "button": "Operaciones",
+    "hint": "Operaciones en curso e historial de comandos de Git",
+    "title": "Operaciones",
+    "onlyActive": "Solo esta pestaña",
+    "hideReads": "Ocultar lecturas",
+    "clear": "Limpiar historial",
+    "close": "Cerrar el panel de operaciones",
+    "running": "En curso",
+    "nothingRunning": "No hay ninguna operación en curso.",
+    "history": "Historial de comandos",
+    "noHistory": "Todavía no se ha ejecutado ningún comando.",
+    "write": "escritura",
+    "runningCount_one": "1 comando en curso",
+    "runningCount_other": "{{count}} comandos en curso",
+    "outcome": {
+      "running": "En curso",
+      "succeeded": "Correcto",
+      "failed": "Error (código {{code}})",
+      "killed": "Interrumpido",
+      "cancelled": "Cancelado",
+      "timedOut": "Tiempo agotado",
+      "error": "No se pudo ejecutar"
+    }
   }
 }

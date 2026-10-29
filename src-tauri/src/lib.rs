@@ -2,6 +2,7 @@
 
 mod commands;
 mod error;
+mod history;
 mod settings;
 mod state;
 mod watcher;
@@ -12,13 +13,14 @@ use tauri::Manager;
 
 use tauri_specta::{Builder, Event, collect_commands, collect_events};
 
+use crate::history::{CommandHistory, CommandRecord};
 use crate::settings::SettingsFile;
 use crate::state::{AppState, RepoChanged};
 
 /// Registers every command; also the source of `src/ipc/bindings.ts`.
 fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
-        .events(collect_events![RepoChanged])
+        .events(collect_events![RepoChanged, CommandRecord])
         .commands(collect_commands![
             commands::open_repository,
             commands::close_repository,
@@ -71,6 +73,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::check_clone_destination,
             commands::clone_repository,
             commands::cancel_clone,
+            commands::command_history,
+            commands::clear_command_history,
         ])
 }
 
@@ -84,8 +88,18 @@ pub fn run() {
             builder.mount_events(app);
             let settings = app.path().app_config_dir()?.join("settings.json");
             let handle = app.handle().clone();
+            let history = Arc::new(CommandHistory::new(Arc::new({
+                let handle = handle.clone();
+                move |record: CommandRecord| {
+                    let _ = record.emit(&handle);
+                }
+            })));
+            let git = Git::discover().ok().map(|git| {
+                git.with_log(Arc::clone(&history) as Arc<dyn gitcraft_core::CommandLog>)
+            });
+            app.manage(Arc::clone(&history));
             app.manage(AppState::new(
-                Git::discover().ok(),
+                git,
                 SettingsFile::new(settings),
                 Arc::new(move |event: RepoChanged| {
                     let _ = event.emit(&handle);

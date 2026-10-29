@@ -1,6 +1,7 @@
 import {
   commands,
   onRepoChanged,
+  onCommandRecord,
   fetchRemote,
   optimizeRepository,
   pullBranch,
@@ -46,6 +47,9 @@ export const ipc = {
   checkCloneDestination: vi.mocked(commands.checkCloneDestination),
   cancelClone: vi.mocked(commands.cancelClone),
   onRepoChanged: vi.mocked(onRepoChanged),
+  onCommandRecord: vi.mocked(onCommandRecord),
+  commandHistory: vi.mocked(commands.commandHistory),
+  clearCommandHistory: vi.mocked(commands.clearCommandHistory),
   cancelOperation: vi.mocked(commands.cancelOperation),
   dismissOptimizeNotice: vi.mocked(commands.dismissOptimizeNotice),
   commitDetails: vi.mocked(commands.commitDetails),
@@ -82,6 +86,9 @@ export function resetIpcMock() {
   ipc.closeRepository.mockResolvedValue({ status: "ok", data: true });
   ipc.pickFolder.mockResolvedValue(null);
   ipc.onRepoChanged.mockResolvedValue(() => {});
+  ipc.onCommandRecord.mockResolvedValue(() => {});
+  ipc.commandHistory.mockResolvedValue({ status: "ok", data: [] });
+  ipc.clearCommandHistory.mockResolvedValue({ status: "ok", data: null });
   ipc.workingStatus.mockResolvedValue({ status: "ok", data: cleanStatus() });
   ipc.stageFiles.mockResolvedValue({ status: "ok", data: null });
   ipc.unstageFiles.mockResolvedValue({ status: "ok", data: null });

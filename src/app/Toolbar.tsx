@@ -8,6 +8,7 @@ import {
   PullButton,
   PushButton,
 } from "../features/remote/RemoteButtons";
+import { useOperationsStore } from "../features/operations/store";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
 import { useStashStore } from "../features/stash/store";
 import { useWorkdirStore } from "../features/workdir/store";
@@ -30,6 +31,11 @@ export function Toolbar() {
     active ? (s.graphs[active.id]?.refs?.head ?? null) : null,
   );
   const requestStash = useStashStore((s) => s.requestCreate);
+  const operationsOpen = useOperationsStore((s) => s.open);
+  const toggleOperations = useOperationsStore((s) => s.toggle);
+  const runningCommands = useOperationsStore(
+    (s) => s.records.filter((r) => !r.outcome).length,
+  );
   const status = useWorkdirStore((s) =>
     active ? (s.statuses[active.id]?.status ?? null) : null,
   );
@@ -117,6 +123,27 @@ export function Toolbar() {
           </Tooltip>
         ))}
       </div>
+      <Tooltip label={t("operations.hint")}>
+        <button
+          type="button"
+          className={styles.toolButton}
+          aria-pressed={operationsOpen}
+          onClick={toggleOperations}
+        >
+          {t("operations.button")}
+          {runningCommands > 0 && (
+            <span
+              className={styles.busy}
+              aria-label={t("operations.runningCount", {
+                count: runningCommands,
+              })}
+            >
+              {" "}
+              ●
+            </span>
+          )}
+        </button>
+      </Tooltip>
     </header>
   );
 }

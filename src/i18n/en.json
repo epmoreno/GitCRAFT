@@ -627,5 +627,30 @@
     "clone": "Clone",
     "failed": "Could not clone.",
     "checkFailed": "Couldn't check the destination folder."
+  },
+  "operations": {
+    "button": "Operations",
+    "hint": "Operations in progress and history of Git commands",
+    "title": "Operations",
+    "onlyActive": "Only this tab",
+    "hideReads": "Hide reads",
+    "clear": "Clear history",
+    "close": "Close the operations panel",
+    "running": "In progress",
+    "nothingRunning": "No operation in progress.",
+    "history": "Command history",
+    "noHistory": "No command has run yet.",
+    "write": "write",
+    "runningCount_one": "1 command running",
+    "runningCount_other": "{{count}} commands running",
+    "outcome": {
+      "running": "Running",
+      "succeeded": "Succeeded",
+      "failed": "Failed (code {{code}})",
+      "killed": "Interrupted",
+      "cancelled": "Cancelled",
+      "timedOut": "Timed out",
+      "error": "Couldn't run"
+    }
   }
 }

@@ -1,6 +1,7 @@
 //! Tauri commands. Thin wrappers: the logic lives in `AppState` and `gitcraft_core`.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use tauri::State;
 use tauri::ipc::Channel;
@@ -22,6 +23,7 @@ use gitcraft_core::parse::status::WorkingStatus;
 use gitcraft_core::patch::HunkSelection;
 
 use crate::error::IpcError;
+use crate::history::{CommandHistory, CommandRecord};
 use crate::settings::RecentRepository;
 use crate::state::{
     AppState, DiscardResult, GraphEvent, OpenedRepository, PullModeInfo, RepoId, RestoredSession,
@@ -626,5 +628,25 @@ pub async fn clone_repository(
 #[specta::specta]
 pub async fn cancel_clone(state: State<'_, AppState>) -> Result<(), IpcError> {
     state.cancel_clone();
+    Ok(())
+}
+
+/// The git commands run so far (oldest first), for the operations panel.
+/// New and finished commands arrive as `CommandRecord` events.
+#[tauri::command]
+#[specta::specta]
+pub async fn command_history(
+    history: State<'_, Arc<CommandHistory>>,
+) -> Result<Vec<CommandRecord>, IpcError> {
+    Ok(history.records())
+}
+
+/// Forgets the finished commands of the history.
+#[tauri::command]
+#[specta::specta]
+pub async fn clear_command_history(
+    history: State<'_, Arc<CommandHistory>>,
+) -> Result<(), IpcError> {
+    history.clear();
     Ok(())
 }

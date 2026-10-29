@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import {
   commands,
   events,
+  type CommandRecord_Serialize as CommandRecord,
   type GraphEvent,
   type RepoChanged,
 } from "./bindings";
@@ -17,6 +18,8 @@ export type {
   CheckoutOutcome,
   OrphanCommit,
   CommitChanges_Serialize as CommitChanges,
+  CommandOutcome_Serialize as CommandOutcome,
+  CommandRecord_Serialize as CommandRecord,
   ConflictEntry,
   ConflictKind,
   DiscardResult_Serialize as DiscardResult,
@@ -160,4 +163,9 @@ export function cloneRepository(
  * (refs and/or working directory). Resolves to an unsubscribe function. */
 export function onRepoChanged(handler: (change: RepoChanged) => void) {
   return events.repoChanged.listen((event) => handler(event.payload));
+}
+
+/** A git command started or finished (for the operations panel). */
+export function onCommandRecord(handler: (record: CommandRecord) => void) {
+  return events.commandRecord.listen((event) => handler(event.payload));
 }

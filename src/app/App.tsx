@@ -14,7 +14,9 @@ import { GraphView } from "../features/graph/GraphView";
 import { useGraphStore } from "../features/graph/store";
 import { DiscardDialog, UndoToast } from "../features/workdir/Discard";
 import { useWorkdirStore } from "../features/workdir/store";
-import { onRepoChanged } from "../ipc";
+import { onCommandRecord, onRepoChanged } from "../ipc";
+import { OperationsPanel } from "../features/operations/OperationsPanel";
+import { useOperationsStore } from "../features/operations/store";
 import {
   OpenErrorBanner,
   RestoreFailedBanner,
@@ -74,6 +76,15 @@ export function App() {
 
   // Changes made outside GitCRAFT (terminal, editor, another client).
   useEffect(() => {
+    const operations = useOperationsStore.getState();
+    const unlisten = onCommandRecord(operations.receive);
+    void operations.load();
+    return () => {
+      void unlisten.then((stop) => stop());
+    };
+  }, []);
+
+  useEffect(() => {
     const unlisten = onRepoChanged(({ id, refs, worktree, stash }) => {
       if (refs) void useGraphStore.getState().refresh(id);
       if (worktree) void useWorkdirStore.getState().refresh(id);
@@ -124,6 +135,7 @@ export function App() {
         <RemoteDialogs />
         <CreateDialogs />
       </div>
+      <OperationsPanel />
     </div>
   );
 }
