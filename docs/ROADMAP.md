@@ -27,7 +27,8 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha
 ## Fase 1 — MVP
 
 Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
-1.3 (pestañas).
+1.3 (pestañas). Para cerrar el MVP: T.3 → 5.1 (filtro) → 1.4 → 1.5 → T.1 →
+T.2 → T.4.
 
 ### 1. Repositorios
 - [x] **1.1 Abrir repo.** Diálogo nativo → validación con
@@ -54,6 +55,12 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
       repos borrados o no válidos avisados y olvidados, recientes intactos) e
       interfaz (guardar la sesión, mover, ciclar, arrastrar, menú de la
       pestaña, atajos, aviso de restauración, scroll por pestaña).
+      *Verificado manualmente:* varias pestañas con ruta y atajo en el tooltip;
+      estado por pestaña (scroll, selección, diff, secciones plegadas);
+      reordenar arrastrando y con el menú contextual; atajos ⌘1–3, ⌃Tab/⌃⇧Tab,
+      ⌘W cierra solo la pestaña y bloqueados con un diálogo abierto; menú de
+      la app y copiar/pegar; restaurar orden y pestaña activa tras ⌘Q; repo
+      movido: aviso una sola vez y pestaña no abierta.
 - [ ] **1.4 Inicializar repo.** `git init` con rama inicial configurable.
 - [ ] **1.5 Clonar.** URL + destino, progreso (`--progress`) y cancelación; la
       autenticación la gestiona el credential helper. *Test:* clonar un repo
@@ -77,6 +84,9 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
       página cumple con `commit-graph` (83 ms). En repos de más de 10.000
       commits sin él, GitCRAFT ofrece «Optimizar repositorio» (nunca lo genera
       sin permiso; el aviso se puede descartar por repo).
+      *Verificado manualmente* con un repo de 12.000 commits sin commit-graph:
+      el aviso aparece, optimiza con progreso, no vuelve tras optimizar, y «No
+      mostrar más» se recuerda tras reiniciar.
 - [x] **2.5 Render virtualizado.** Canvas para el grafo y filas virtualizadas
       para el texto; scroll a 60 fps con 50k commits. Muestra etiquetas de
       ramas, tags y HEAD.
@@ -91,7 +101,7 @@ Orden acordado tras la fase 4: 5.2 (ramas) → 7.x (stash) → 6.x (remotos) →
 - [x] **3.1 Metadatos.** Autor, committer, fechas, mensaje completo, padres
       navegables y refs.
       *Verificado manualmente:* el hash completo se muestra en una línea,
-      recortado con «…».
+      recortado con «…»; el reajuste del cuerpo del mensaje.
 - [x] **3.2 Archivos cambiados.** `git diff-tree -r -z --name-status -M` con
       estado A/M/D/R/C y contadores +/−. *Tests:* renombrados, binarios y commit
       raíz.
