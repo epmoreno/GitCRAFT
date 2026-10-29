@@ -12,7 +12,8 @@
     "undo": "Undo",
     "openRepo": "Open repository",
     "needsRepo": "Open a repository first",
-    "notYetAvailable": "Not available yet"
+    "notYetAvailable": "Not available yet",
+    "fetch": "Fetch"
   },
   "tabs": {
     "empty": "No open repositories",
@@ -75,7 +76,9 @@
     "branchChanged": "The branch changed since it was shown (it was moved, renamed or deleted). Nothing was done; check the sidebar and try again.",
     "branchInWorktree": "That branch is in use in another worktree of this repository.",
     "stashChanged": "That entry is no longer in the stash (it was applied or deleted elsewhere). Nothing was done.",
-    "nothingToStash": "There are no uncommitted changes to save."
+    "nothingToStash": "There are no uncommitted changes to save.",
+    "authFailed": "Git could not authenticate with the remote. GitCRAFT never stores or asks for passwords: set up a credential helper (osxkeychain on macOS) or add your SSH key to the agent, and check that “git fetch” works in a terminal.",
+    "remoteUnreachable": "Could not connect to the remote. Check your connection and the remote's URL (git remote -v)."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -373,5 +376,29 @@
     "moreLines_other": "and {{count}} more lines",
     "recovered": "“{{path}}” recovered as it was before the discard. The entry is still in the stash.",
     "alreadyRecovered": "“{{path}}” already has the saved content: nothing to recover."
+  },
+  "remote": {
+    "allRemotes": "all remotes",
+    "noRemotes": "This repository has no remotes",
+    "busy": "A remote operation is already running",
+    "fetchHint": "Download new commits and branches from every remote (your branches and files do not change)",
+    "fetchOptions": "Fetch options",
+    "fetchAll": "Fetch all remotes",
+    "fetchAllPrune": "Fetch all and remove deleted remote branches (--prune)",
+    "fetchOne": "Fetch “{{remote}}”",
+    "fetchOnePrune": "Fetch “{{remote}}” and remove its deleted branches (--prune)",
+    "running": {
+      "fetch": "Downloading from {{remote}}…",
+      "pull": "Pulling from {{remote}}…",
+      "push": "Pushing to {{remote}}…"
+    },
+    "progress": "Progress",
+    "cancel": "Cancel",
+    "fetched": "Fetched {{remote}}. Your branches and files did not change.",
+    "failed": {
+      "fetch": "Fetch failed.",
+      "pull": "Pull failed.",
+      "push": "Push failed."
+    }
   }
 }

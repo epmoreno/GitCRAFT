@@ -424,3 +424,21 @@ pub async fn recover_file(
 ) -> Result<(), IpcError> {
     state.recover_file(id, oid, path, current).await
 }
+
+/// Fetches from `remote` (every remote when `null`), with `--prune` when
+/// asked, streaming git's progress lines. Cancel with `cancel_operation`.
+#[tauri::command]
+#[specta::specta]
+pub async fn fetch_remote(
+    state: State<'_, AppState>,
+    id: RepoId,
+    remote: Option<String>,
+    prune: bool,
+    on_progress: Channel<String>,
+) -> Result<(), IpcError> {
+    state
+        .fetch(id, remote, prune, |line| {
+            let _ = on_progress.send(line.to_owned());
+        })
+        .await
+}

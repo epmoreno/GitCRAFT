@@ -19,6 +19,7 @@ use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
+use gitcraft_core::ops::remote;
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::ops::stage;
 use gitcraft_core::ops::stash::{self, ApplyOutcome, RecoverPreview};
@@ -296,6 +297,56 @@ impl AppState {
         let result = op(path).await;
         drop(quiet);
         Ok(result?)
+    }
+
+    /// Runs a remote operation (fetch, pull, push): one write at a time,
+    /// the watcher held back, and cancellable with `cancel_operation`.
+    async fn remote_operation<T, Fut>(
+        &self,
+        id: RepoId,
+        op: impl FnOnce(PathBuf, CancellationToken) -> Fut,
+    ) -> Result<T, IpcError>
+    where
+        Fut: std::future::Future<Output = gitcraft_core::Result<T>>,
+    {
+        let lock = {
+            let inner = self.lock();
+            let session = inner
+                .sessions
+                .iter()
+                .find(|s| s.id == id)
+                .ok_or(GitError::Cancelled)?;
+            Arc::clone(&session.write_lock)
+        };
+        let _turn = lock.lock().await;
+        let (path, cancel, quiet) = self.start_operation(id)?;
+        let result = op(path, cancel).await;
+        drop(quiet);
+        self.finish_operation(id);
+        Ok(result?)
+    }
+
+    /// Fetches from `remote` (all when `None`), reporting git's progress.
+    pub async fn fetch(
+        &self,
+        id: RepoId,
+        remote_name: Option<String>,
+        prune: bool,
+        on_progress: impl FnMut(&str),
+    ) -> Result<(), IpcError> {
+        let git = self.git()?;
+        self.remote_operation(id, |repo, cancel| async move {
+            remote::fetch(
+                git,
+                &repo,
+                remote_name.as_deref(),
+                prune,
+                &cancel,
+                on_progress,
+            )
+            .await
+        })
+        .await
     }
 
     fn git(&self) -> Result<&Git, IpcError> {

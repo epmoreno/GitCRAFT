@@ -5,6 +5,7 @@ import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
 import { useBranchStore } from "../branches/store";
 import { selectedStash, stashSelection, useGraphStore } from "../graph/store";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
+import { useRemoteStore } from "../remote/store";
 import { useStashStore } from "../stash/store";
 import styles from "./sidebar.module.css";
 
@@ -171,6 +172,8 @@ function LocalBranches({ refs, repoId, onSelect, onMenu }: ListProps) {
 function Remotes({ refs, repoId, onSelect, onMenu }: ListProps) {
   const { t } = useTranslation();
   const branch = useBranchStore();
+  const fetch = useRemoteStore((s) => s.fetch);
+  const fetching = useRemoteStore((s) => s.running !== null);
   const checkoutRemote = (ref: GitRef) => {
     if (repoId !== null && refs) void branch.checkoutRemote(repoId, ref, refs);
   };
@@ -186,7 +189,28 @@ function Remotes({ refs, repoId, onSelect, onMenu }: ListProps) {
       ) : (
         remotes.map((remote) => (
           <div key={remote} className={styles.group}>
-            <h3 className={styles.groupTitle}>{remote}</h3>
+            <h3
+              className={styles.groupTitle}
+              onContextMenu={(event) => {
+                if (repoId === null) return;
+                onMenu(event, remote, [
+                  {
+                    label: t("remote.fetchOne", { remote }),
+                    onSelect: () => void fetch(repoId, remote, false),
+                    disabled: fetching,
+                    hint: t("remote.busy"),
+                  },
+                  {
+                    label: t("remote.fetchOnePrune", { remote }),
+                    onSelect: () => void fetch(repoId, remote, true),
+                    disabled: fetching,
+                    hint: t("remote.busy"),
+                  },
+                ]);
+              }}
+            >
+              {remote}
+            </h3>
             <ul className={styles.list}>
               {byRemote(remote).map((ref) => (
                 <Item

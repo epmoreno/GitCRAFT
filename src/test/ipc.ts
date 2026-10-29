@@ -1,6 +1,7 @@
 import {
   commands,
   onRepoChanged,
+  fetchRemote,
   optimizeRepository,
   pickFolder,
   streamGraph,
@@ -23,6 +24,7 @@ export const ipc = {
   pickFolder: vi.mocked(pickFolder),
   streamGraph: vi.mocked(streamGraph),
   optimizeRepository: vi.mocked(optimizeRepository),
+  fetchRemote: vi.mocked(fetchRemote),
   onRepoChanged: vi.mocked(onRepoChanged),
   cancelOperation: vi.mocked(commands.cancelOperation),
   dismissOptimizeNotice: vi.mocked(commands.dismissOptimizeNotice),
@@ -92,6 +94,7 @@ export function resetIpcMock() {
     data: { base: null, files: [] },
   });
   ipc.cancelOperation.mockResolvedValue({ status: "ok", data: null });
+  ipc.fetchRemote.mockResolvedValue({ status: "ok", data: null });
   ipc.dismissOptimizeNotice.mockResolvedValue({ status: "ok", data: null });
   ipc.getRefs.mockResolvedValue({ status: "ok", data: emptyRefs() });
   ipc.streamGraph.mockImplementation(async (_id, onEvent) => {

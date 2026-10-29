@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { BranchDialogs, BranchToast } from "../features/branches/BranchDialogs";
 import { DetailPanel } from "../features/detail/DetailPanel";
+import { RemoteProgress, RemoteToast } from "../features/remote/RemoteStatus";
 import { StashDialogs, StashToast } from "../features/stash/StashDialogs";
 import { useStashStore } from "../features/stash/store";
 import { GraphView } from "../features/graph/GraphView";
@@ -67,6 +68,8 @@ export function App() {
           <UndoToast />
           <BranchToast />
           <StashToast />
+          <RemoteToast />
+          <RemoteProgress />
         </main>
         <DetailPanel repoId={active?.id ?? null} />
         <DiscardDialog />

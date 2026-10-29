@@ -39,6 +39,20 @@ impl TestRepo {
         repo
     }
 
+    /// A clone of `source` (e.g. a bare remote made with
+    /// [`add_bare_remote`](Self::add_bare_remote)): "someone else" working
+    /// on the same remote.
+    pub async fn clone_of(source: &Path) -> Self {
+        let repo = Self {
+            dir: tempfile::tempdir().expect("create temp dir"),
+            git: Git::discover().expect("git must be installed to run tests"),
+            clock: AtomicU64::new(100),
+        };
+        let source = source.to_str().expect("utf-8 path");
+        repo.run(&["clone", "--quiet", source, "."]).await;
+        repo
+    }
+
     pub fn path(&self) -> &Path {
         self.dir.path()
     }

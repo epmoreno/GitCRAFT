@@ -54,6 +54,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::drop_stash,
             commands::recover_preview,
             commands::recover_file,
+            commands::fetch_remote,
         ])
 }
 

@@ -96,6 +96,11 @@ export const commands = {
 	 *  `current` is the preview's: a file changed since is `staleDiff`.
 	 */
 	recoverFile: (id: number, oid: string, path: string, current: string | null) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("recover_file", { id, oid, path, current })),
+	/**
+	 *  Fetches from `remote` (every remote when `null`), with `--prune` when
+	 *  asked, streaming git's progress lines. Cancel with `cancel_operation`.
+	 */
+	fetchRemote: (id: number, remote: string | null, prune: boolean, onProgress: Channel<string>) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("fetch_remote", { id, remote, prune, onProgress })),
 };
 
 /** Events */
@@ -368,7 +373,14 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 /**  No user.name / user.email configured. */
 "identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "invalidBranchName" | "branchExists" | "branchChanged" | 
 /**  The branch is checked out in another worktree. */
-"branchInWorktree" | "stashChanged" | "nothingToStash" | "cancelled" | "timedOut" | "unknown";
+"branchInWorktree" | "stashChanged" | "nothingToStash" | 
+/**
+ *  The remote rejected the credentials, or none were available (no
+ *  credential helper / SSH key): git cannot prompt.
+ */
+"authFailed" | 
+/**  The remote could not be reached (network, host, path). */
+"remoteUnreachable" | "cancelled" | "timedOut" | "unknown";
 
 export type FileChange = FileChange_Serialize | FileChange_Deserialize;
 

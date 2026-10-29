@@ -75,6 +75,19 @@ export function optimizeRepository(
   return commands.optimizeRepository(id, channel);
 }
 
+/** Fetches from `remote` (every remote when `null`), reporting git's
+ * progress lines. Cancel with `commands.cancelOperation`. */
+export function fetchRemote(
+  id: number,
+  remote: string | null,
+  prune: boolean,
+  onProgress: (line: string) => void,
+) {
+  const channel = new Channel<string>();
+  channel.onmessage = onProgress;
+  return commands.fetchRemote(id, remote, prune, channel);
+}
+
 /** Calls `handler` whenever an open repository changes outside GitCRAFT
  * (refs and/or working directory). Resolves to an unsubscribe function. */
 export function onRepoChanged(handler: (change: RepoChanged) => void) {

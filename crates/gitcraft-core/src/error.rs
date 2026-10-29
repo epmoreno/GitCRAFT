@@ -91,6 +91,11 @@ pub enum ErrorKind {
     BranchInWorktree,
     StashChanged,
     NothingToStash,
+    /// The remote rejected the credentials, or none were available (no
+    /// credential helper / SSH key): git cannot prompt.
+    AuthFailed,
+    /// The remote could not be reached (network, host, path).
+    RemoteUnreachable,
     Cancelled,
     TimedOut,
     Unknown,
@@ -165,7 +170,29 @@ pub fn classify_stderr(stderr: &str) -> ErrorKind {
 /// Like [`classify_stderr`], also looking at stdout: some commands (e.g.
 /// `git commit` with nothing staged) explain themselves there.
 pub fn classify_output(stderr: &str, stdout: &str) -> ErrorKind {
+    // First match wins: authentication before the generic "could not read
+    // from remote repository" that follows SSH failures.
     const PATTERNS: &[(&str, ErrorKind)] = &[
+        ("terminal prompts disabled", ErrorKind::AuthFailed),
+        ("could not read Username", ErrorKind::AuthFailed),
+        ("could not read Password", ErrorKind::AuthFailed),
+        ("Authentication failed", ErrorKind::AuthFailed),
+        ("Invalid username or password", ErrorKind::AuthFailed),
+        ("Permission denied (publickey", ErrorKind::AuthFailed),
+        ("Host key verification failed", ErrorKind::AuthFailed),
+        ("Could not resolve host", ErrorKind::RemoteUnreachable),
+        ("Connection refused", ErrorKind::RemoteUnreachable),
+        ("Connection timed out", ErrorKind::RemoteUnreachable),
+        ("Operation timed out", ErrorKind::RemoteUnreachable),
+        ("Network is unreachable", ErrorKind::RemoteUnreachable),
+        (
+            "does not appear to be a git repository",
+            ErrorKind::RemoteUnreachable,
+        ),
+        (
+            "Could not read from remote repository",
+            ErrorKind::RemoteUnreachable,
+        ),
         ("detected dubious ownership", ErrorKind::DubiousOwnership),
         ("not a git repository", ErrorKind::NotARepository),
         ("must be run in a work tree", ErrorKind::BareRepository),
@@ -222,6 +249,22 @@ mod tests {
                  To add an exception for this directory, call:\n\n\
                  \tgit config --global --add safe.directory /Volumes/usb/repo\n",
                 ErrorKind::DubiousOwnership,
+            ),
+            (
+                "fatal: could not read Username for 'https://example.com': terminal prompts disabled\n",
+                ErrorKind::AuthFailed,
+            ),
+            (
+                "git@example.com: Permission denied (publickey).\nfatal: Could not read from remote repository.\n",
+                ErrorKind::AuthFailed,
+            ),
+            (
+                "fatal: unable to access 'https://nope.invalid/x.git/': Could not resolve host: nope.invalid\n",
+                ErrorKind::RemoteUnreachable,
+            ),
+            (
+                "fatal: '/tmp/missing.git' does not appear to be a git repository\nfatal: Could not read from remote repository.\n",
+                ErrorKind::RemoteUnreachable,
             ),
             ("fatal: something new\n", ErrorKind::Unknown),
         ];

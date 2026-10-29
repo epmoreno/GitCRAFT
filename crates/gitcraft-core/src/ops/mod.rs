@@ -7,6 +7,7 @@ pub mod discard;
 pub mod log;
 pub mod maintenance;
 pub mod refs;
+pub mod remote;
 pub mod repo;
 pub mod stage;
 pub mod stash;

@@ -260,6 +260,25 @@ GitCRAFT se reconocen por su mensaje («GitCRAFT: descarte de …»,
   como `stash` (borrar una entrada que no es la última solo reescribe el
   reflog) y la barra lateral recarga la lista.
 
+## 5e. Remotos
+
+`gitcraft-core/src/ops/remote.rs`. Fetch, pull y push se ejecutan con
+`AppState::remote_operation`: van por la cola de escritura de la sesión, con
+el vigilante en silencio, y con un token de cancelación que
+`cancel_operation` activa (el proceso de git y sus hijos —ssh, helpers— se
+terminan por grupo). El progreso son las líneas de `--progress` de git
+(`GIT_PROGRESS_DELAY=0`), que llegan a la UI por un `Channel`.
+
+- **Credenciales:** solo el credential helper o el agente SSH del usuario.
+  Con `GIT_TERMINAL_PROMPT=0` una credencial que falta falla al momento; el
+  stderr se clasifica como `authFailed` o `remoteUnreachable` y la UI lo
+  explica, con la salida original desplegable.
+- **Nombres de remoto** que vienen de la UI: solo se aceptan los
+  configurados (`git remote`).
+- **Pruebas:** `scripts/make-remote-sandbox.sh` crea un repo de trabajo, un
+  remoto bare y un segundo clon («otra persona»); los tests de integración
+  hacen lo mismo con `TestRepo::add_bare_remote` y `TestRepo::clone_of`.
+
 ## 6. Persistencia
 
 `settings.json` en el `app_config_dir` de Tauri (en macOS,

@@ -150,8 +150,17 @@ simula a «otra persona» que hace push. Credenciales: solo el credential helper
 de git, con `GIT_TERMINAL_PROMPT=0`; un fallo de autenticación se explica con
 un mensaje claro. Fetch, pull y push muestran progreso y se pueden cancelar.
 
-- [ ] **6.1 Fetch** (todos los remotos o uno, `--prune` opcional) con progreso y
+- [x] **6.1 Fetch** (todos los remotos o uno, `--prune` opcional) con progreso y
       cancelación.
+      *Estado:* botón «Fetch» (todos los remotos) con menú ▾ (con `--prune`
+      o un remoto concreto) y menú contextual en cada remoto de la barra
+      lateral. Panel de progreso con la línea de git y «Cancelar». Errores de
+      autenticación y de conexión con mensajes propios. Script
+      `scripts/make-remote-sandbox.sh` (con `otra-push` para simular a otra
+      persona).
+      *Tests:* integración (fetch sin tocar ramas locales, `--prune` solo si
+      se pide, remotos desconocidos o inalcanzables, cancelación) y de
+      interfaz.
 - [ ] **6.2 Pull** con modo merge o rebase configurable por repo (por defecto,
       lo que diga `pull.rebase`). Si hay cambios sin confirmar que lo impiden o
       conflictos, se explica el motivo y se ofrecen alternativas; nunca se
