@@ -164,6 +164,9 @@ export function GraphView({
         ref={scrollRef}
         className={styles.scroller}
         role="listbox"
+        // Focusable so it can be scrolled with the keyboard and so the
+        // selection can tell whether the history has the focus.
+        tabIndex={0}
         aria-label={t("graph.listLabel", { name: info.name })}
       >
         <div className={styles.canvasLayer} aria-hidden="true">

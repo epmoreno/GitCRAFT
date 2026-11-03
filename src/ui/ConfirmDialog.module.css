@@ -50,10 +50,6 @@
   background: transparent;
 }
 
-.cancel:hover {
-  background: var(--surface-3);
-}
-
 .confirm {
   border-color: transparent;
   background: var(--accent);
@@ -66,4 +62,16 @@
   background: var(--danger);
   color: var(--danger-contrast);
   font-weight: 600;
+}
+
+.confirm:disabled {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--text-muted);
+}
+
+.danger:disabled {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--text-muted);
 }

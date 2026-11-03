@@ -71,6 +71,8 @@ describe("GraphView", () => {
     await user.click(within(rows[2]!).getByText(oid("d").slice(0, 7)));
     expect(rows[2]).toHaveAttribute("aria-selected", "true");
     expect(rows[0]).toHaveAttribute("aria-selected", "false");
+    // The history takes the focus, so the selection shows as active.
+    expect(screen.getByRole("listbox")).toHaveFocus();
   });
 
   it("reflects a selection made elsewhere (e.g. the sidebar)", async () => {

@@ -99,7 +99,13 @@ function contrast(fg: Rgba, bg: Rgba): number {
 
 const SURFACES = ["surface-0", "surface-1", "surface-2", "surface-3"];
 /** Opaque state backgrounds. */
-const STATE_BACKGROUNDS = ["selected-bg", "notice-bg", "hunk-bg", "warning-bg"];
+const STATE_BACKGROUNDS = [
+  "selected-bg",
+  "selected-inactive-bg",
+  "notice-bg",
+  "hunk-bg",
+  "warning-bg",
+];
 /**
  * Translucent tints, checked over the surfaces they may sit on: 0 to 2
  * (surface-3 is for hover and raised controls, never under a tint).
@@ -111,9 +117,30 @@ const TINTS = [
   "diff-picked-bg",
 ];
 
-/** Every background text can be drawn on, as [label, colour]. */
+/** `[label, colour]` of a background, plus its hovered and pressed looks. */
+function withStates(label: string, colour: Rgba): [string, Rgba][] {
+  return [
+    [label, colour],
+    [`${label} + hover`, over(token("hover-overlay"), colour)],
+    [`${label} + pressed`, over(token("pressed-overlay"), colour)],
+  ];
+}
+
+/** Backgrounds of things that can be hovered and pressed: controls and rows. */
+const INTERACTIVE_BACKGROUNDS = [
+  ...SURFACES,
+  "selected-bg",
+  "selected-inactive-bg",
+];
+
+/**
+ * Every background text can be drawn on, as [label, colour]. Banners,
+ * hunk headers and tints are not interactive themselves (their buttons sit
+ * on a surface), so only their resting look is checked.
+ */
 const TEXT_BACKGROUNDS: [string, Rgba][] = [
-  ...[...SURFACES, ...STATE_BACKGROUNDS].map(
+  ...INTERACTIVE_BACKGROUNDS.flatMap((n) => withStates(n, token(n))),
+  ...STATE_BACKGROUNDS.filter((n) => !INTERACTIVE_BACKGROUNDS.includes(n)).map(
     (n) => [n, token(n)] as [string, Rgba],
   ),
   ...TINTS.flatMap((tint) =>
@@ -145,7 +172,7 @@ function failures(pairs: [string, Rgba, string, Rgba][], min: number) {
 }
 
 describe("design tokens: contrast (WCAG AA)", () => {
-  it("text colours reach 4.5:1 on every background they can sit on", () => {
+  it("text colours reach 4.5:1 on every background, also hovered and pressed", () => {
     const pairs = TEXT_TOKENS.flatMap((fg) =>
       TEXT_BACKGROUNDS.map(
         ([bg, colour]) =>
@@ -169,31 +196,35 @@ describe("design tokens: contrast (WCAG AA)", () => {
   });
 
   it("text on filled buttons and chips reaches 4.5:1", () => {
-    const pairs: [string, Rgba, string, Rgba][] = [
-      ...["accent", "accent-strong", ...LANES].map(
-        (bg) =>
-          ["accent-contrast", token("accent-contrast"), bg, token(bg)] as [
-            string,
-            Rgba,
-            string,
-            Rgba,
-          ],
-      ),
-      ["danger-contrast", token("danger-contrast"), "danger", token("danger")],
+    const on = (fg: string, backgrounds: [string, Rgba][]) =>
+      backgrounds.map(
+        ([label, colour]) =>
+          [fg, token(fg), label, colour] as [string, Rgba, string, Rgba],
+      );
+    const pairs = [
+      // Filled buttons in every state; lane chips are not interactive.
+      ...on("accent-contrast", [
+        ...withStates("accent", token("accent")),
+        ...withStates("accent-strong", token("accent-strong")),
+        ...LANES.map((bg) => [bg, token(bg)] as [string, Rgba]),
+      ]),
+      ...on("danger-contrast", withStates("danger", token("danger"))),
     ];
     expect(failures(pairs, 4.5)).toEqual([]);
   });
 
-  it("control borders, the focus ring and graph lanes reach 3:1", () => {
+  it("control borders, the focus ring and graph lanes reach 3:1 (also hovered and pressed)", () => {
     const pairs: [string, Rgba, string, Rgba][] = [
-      ...["border-control", "accent"].flatMap((fg) =>
-        [...SURFACES, "selected-bg"].map(
-          (bg) =>
-            [fg, token(fg), bg, token(bg)] as [string, Rgba, string, Rgba],
+      ...["border-control", "focus-ring"].flatMap((fg) =>
+        INTERACTIVE_BACKGROUNDS.flatMap((bg) =>
+          withStates(bg, token(bg)).map(
+            ([label, colour]) =>
+              [fg, token(fg), label, colour] as [string, Rgba, string, Rgba],
+          ),
         ),
       ),
       ...LANES.flatMap((fg) =>
-        ["surface-0", "selected-bg"].map(
+        ["surface-0", "selected-bg", "selected-inactive-bg"].map(
           (bg) =>
             [fg, token(fg), bg, token(bg)] as [string, Rgba, string, Rgba],
         ),
@@ -263,5 +294,69 @@ describe("design tokens: no colours outside tokens.css", () => {
           .map(({ line, at }) => `${at}: ${line.trim()}`),
       );
     expect(offenders).toEqual([]);
+  });
+});
+
+/*
+ * A.2: interaction states. Hover and pressed are a background-image layer
+ * (tokens.css); a component state rule that used the `background` shorthand
+ * would wipe it, and an `outline: none` without another visible cue would
+ * hide the keyboard focus.
+ */
+function cssRules(css: string): { selector: string; body: string }[] {
+  return [
+    ...css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g),
+  ].map(([, selector, body]) => ({
+    selector: selector!.trim(),
+    body: body!,
+  }));
+}
+
+const STATE_SELECTOR =
+  /:(hover|active|focus|focus-visible|focus-within|disabled)|\[aria-(current|selected|pressed)|Selected|selected|Active|Open\b/;
+
+const modules = Object.entries(sources).filter(([path]) =>
+  path.endsWith(".module.css"),
+);
+
+describe("design tokens: interaction states", () => {
+  it("state rules set background-color, not the background shorthand", () => {
+    const offenders = modules.flatMap(([path, css]) =>
+      cssRules(css)
+        .filter(
+          (r) =>
+            STATE_SELECTOR.test(r.selector) &&
+            /(^|;)\s*background:/.test(r.body),
+        )
+        .map((r) => `${path}: ${r.selector}`),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("removing the focus outline always leaves another visible cue", () => {
+    const offenders = modules.flatMap(([path, css]) =>
+      cssRules(css)
+        .filter(
+          (r) =>
+            /outline:\s*(none|0)\b/.test(r.body) &&
+            !/(background-color|border-color|box-shadow):/.test(r.body),
+        )
+        .map((r) => `${path}: ${r.selector}`),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("defines the shared hover, pressed, focus and disabled rules", () => {
+    const rules = cssRules(tokensCss);
+    const has = (selector: RegExp, body: RegExp) =>
+      rules.some((r) => selector.test(r.selector) && body.test(r.body));
+    expect(has(/:hover$/, /background-image: var\(--hover-layer\)/)).toBe(true);
+    expect(has(/:active$/, /background-image: var\(--pressed-layer\)/)).toBe(
+      true,
+    );
+    expect(
+      has(/^:focus-visible$/, /outline: 2px solid var\(--focus-ring\)/),
+    ).toBe(true);
+    expect(has(/:disabled/, /opacity: var\(--disabled-opacity\)/)).toBe(true);
   });
 });

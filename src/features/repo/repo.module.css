@@ -25,12 +25,12 @@
 }
 
 .tab:hover {
-  background: var(--surface-1);
+  background-color: var(--surface-1);
 }
 
 .tabActive {
   border-bottom-color: var(--accent);
-  background: var(--surface-1);
+  background-color: var(--surface-1);
   color: var(--text);
 }
 
@@ -62,7 +62,6 @@
 }
 
 .tabClose:hover {
-  background: var(--surface-3);
   color: var(--text);
 }
 
@@ -103,11 +102,13 @@
 }
 
 .startButton:hover:not(:disabled) {
-  background: var(--accent-strong);
+  background-color: var(--accent-strong);
 }
 
 .startButton:disabled {
-  opacity: 0.6;
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--text-muted);
 }
 
 .recent {
@@ -156,10 +157,6 @@
   border: 0;
   background: var(--surface-1);
   text-align: left;
-}
-
-.recentItem:hover:not(:disabled) {
-  background: var(--surface-2);
 }
 
 .recentName {
@@ -216,10 +213,6 @@
   background: transparent;
 }
 
-.errorDismiss:hover {
-  background: var(--surface-3);
-}
-
 .restoreList {
   margin: var(--space-1) 0;
   padding-left: var(--space-4);
@@ -238,8 +231,4 @@
   border-radius: var(--radius);
   background: transparent;
   color: var(--accent);
-}
-
-.startLink:hover:not(:disabled) {
-  background: var(--surface-2);
 }

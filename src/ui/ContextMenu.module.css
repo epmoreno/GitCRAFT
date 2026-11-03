@@ -22,13 +22,9 @@
 
 .item:hover:not(:disabled),
 .item:focus-visible {
-  background: var(--accent);
+  background-color: var(--accent);
   color: var(--accent-contrast);
   outline: none;
-}
-
-.item:disabled {
-  color: var(--text-faint);
 }
 
 .danger:not(:disabled) {

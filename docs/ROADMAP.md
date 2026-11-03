@@ -390,7 +390,7 @@ ningún producto.
         `--border-control` para el contorno de los controles.
       - Los carriles del grafo pasan a ser `--lane-1` … `--lane-8`.
       - El texto seleccionado se pinta siempre en `--text`.
-- [ ] **A.2 Estados de interacción.** Tokens y estilos base comunes para
+- [x] **A.2 Estados de interacción.** Tokens y estilos base comunes para
       *hover*, *pulsado*, *seleccionado* (con y sin foco en la lista), *foco
       de teclado* y *deshabilitado*. Se aplican a botones, filas de listas,
       pestañas, chips, elementos de menú, campos y casillas. Siempre se ve
@@ -400,6 +400,19 @@ ningún producto.
       contraste. Un test de componentes comprueba que los controles
       deshabilitados llevan `disabled`/`aria-disabled` y que la selección se
       expone con `aria-selected`/`aria-current`.
+      *Estado:* reglas comunes en `tokens.css`; detalles en ARCHITECTURE.md
+      («Estados de interacción»).
+      - *Hover* (aclara) y pulsado (oscurece) son una capa sobre cualquier
+        fondo.
+      - Seleccionado: fondo de acento con marca lateral, y un tono más apagado
+        cuando el foco está en otra zona.
+      - Anillo de foco de 2 px, por dentro en las filas.
+      - Deshabilitado: atenuado y sin reacción; los botones rellenos pierden
+        el relleno.
+
+      *Tests:* contraste también con *hover* y pulsado. Ninguna regla de
+      estado usa el atajo `background`, y quitar el `outline` exige otra señal
+      visible. Al hacer clic en una fila, el historial recibe el foco.
 
 ### B. Panel de cambios sin confirmar
 - [ ] **B.1 Cabecera y caja de commit fija.** La cabecera dice «N cambios en

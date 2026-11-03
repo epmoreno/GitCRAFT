@@ -13,13 +13,13 @@
   text-align: left;
 }
 
-.row:hover {
-  background: var(--surface-1);
+.rowSelected {
+  background-color: var(--selected-bg);
+  box-shadow: var(--selected-marker);
 }
 
-.rowSelected,
-.rowSelected:hover {
-  background: var(--selected-bg);
+.rowSelected:not(:focus) {
+  background-color: var(--selected-inactive-bg);
 }
 
 .nodeArea {
@@ -114,7 +114,7 @@
 }
 
 .file:hover {
-  background: var(--surface-2);
+  background-image: var(--hover-layer);
 }
 
 .letter {
@@ -188,24 +188,18 @@
   white-space: nowrap;
 }
 
-.action:hover:not(:disabled),
-.rowAction:hover:not(:disabled) {
-  background: var(--surface-3);
-}
-
-.action:disabled,
-.rowAction:disabled {
-  opacity: 0.5;
-}
-
 /* Row actions appear on hover or keyboard focus to keep the list calm. */
 .rowAction {
   opacity: 0;
 }
 
-.file:hover .rowAction,
+.file:hover .rowAction:not(:disabled),
 .rowAction:focus-visible {
   opacity: 1;
+}
+
+.file:hover .rowAction:disabled {
+  opacity: var(--disabled-opacity);
 }
 
 .opError {
@@ -309,11 +303,13 @@
 }
 
 .commitButton:hover:not(:disabled) {
-  background: var(--accent-strong);
+  background-color: var(--accent-strong);
 }
 
 .commitButton:disabled {
-  opacity: 0.45;
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--text-muted);
 }
 
 .pathButton {
@@ -326,13 +322,23 @@
   text-align: left;
 }
 
+/* The whole row already shows the hover layer. */
+.pathButton:not(:active) {
+  background-image: none;
+}
+
 .pathButton:hover .path {
   text-decoration: underline;
   text-decoration-color: var(--text-faint);
 }
 
 .fileOpen {
-  background: var(--selected-bg);
+  background-color: var(--selected-bg);
+  box-shadow: var(--selected-marker);
+}
+
+.list:not(:focus-within) .fileOpen {
+  background-color: var(--selected-inactive-bg);
 }
 
 .danger {
@@ -417,6 +423,12 @@
   color: var(--accent-contrast);
   font-weight: 600;
   white-space: nowrap;
+}
+
+.toastUndo:disabled {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--text-muted);
 }
 
 .toastClose {

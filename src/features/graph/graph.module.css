@@ -57,13 +57,13 @@
   white-space: nowrap;
 }
 
-.row:hover {
-  background: var(--surface-1);
+.rowSelected {
+  background-color: var(--selected-bg);
+  box-shadow: var(--selected-marker);
 }
 
-.rowSelected,
-.rowSelected:hover {
-  background: var(--selected-bg);
+.scroller:not(:focus-within) .rowSelected {
+  background-color: var(--selected-inactive-bg);
 }
 
 .description {
@@ -240,8 +240,10 @@
   font-weight: 600;
 }
 
-.noticeButton:hover {
-  background: var(--surface-3);
+.noticePrimary:disabled {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--text-muted);
 }
 
 .progress {

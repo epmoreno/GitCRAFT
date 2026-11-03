@@ -15,12 +15,12 @@
   /* Edges of popovers, tooltips, dialogs, badges and tags. */
   --border-strong: #3d444d;
   /* Outline of interactive controls (buttons, fields, progress): ≥ 3:1. */
-  --border-control: #737b86;
+  --border-control: #7d8590;
 
   /* Text: every one of them is ≥ 4.5:1 on every surface (contrast test). */
   --text: #dde1e6;
   --text-muted: #b0b7c0;
-  --text-faint: #99a1ac;
+  --text-faint: #9ca4ae;
 
   --accent: #d9925f;
   --accent-strong: #e4a477;
@@ -61,6 +61,24 @@
   --backdrop: rgb(0 0 0 / 45%);
   --shadow-popover: 0 10px 30px rgb(0 0 0 / 45%);
   --shadow-dialog: 0 16px 48px rgb(0 0 0 / 50%);
+
+  /*
+   * Interaction states (see the rules at the end of this file). Hover and
+   * pressed are translucent layers, so they work over any background: hover
+   * lightens a little, pressed darkens (light text keeps its contrast).
+   */
+  --hover-overlay: rgb(255 255 255 / 4%);
+  --pressed-overlay: rgb(0 0 0 / 22%);
+  --hover-layer: linear-gradient(var(--hover-overlay), var(--hover-overlay));
+  --pressed-layer: linear-gradient(
+    var(--pressed-overlay),
+    var(--pressed-overlay)
+  );
+  /* Selection while focus is elsewhere: quieter, the marker stays. */
+  --selected-inactive-bg: color-mix(in srgb, var(--text) 8%, var(--surface-1));
+  --selected-marker: inset 2px 0 0 var(--accent);
+  --focus-ring: var(--accent);
+  --disabled-opacity: 0.45;
 
   --font-ui:
     -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui,
@@ -143,8 +161,57 @@ textarea,
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
+}
+
+/* Rows and tabs draw the ring inside: scroll containers would clip it. */
+:where(
+  [role="option"],
+  [role="tab"],
+  [role="treeitem"],
+  [role="listbox"],
+  li > button
+):focus-visible {
+  outline-offset: -2px;
+}
+
+/*
+ * Interaction states shared by every control. Hover and pressed are a layer
+ * in background-image, on top of whatever background the component sets.
+ * Component state rules therefore set background-color, never the
+ * `background` shorthand (which would remove the layer): a test checks it.
+ */
+:where(
+    button,
+    summary,
+    [role="button"],
+    [role="tab"],
+    [role="option"],
+    [role="menuitem"],
+    [role="treeitem"]
+  ):not(:disabled, [aria-disabled="true"]):hover {
+  background-image: var(--hover-layer);
+}
+
+:where(
+    button,
+    summary,
+    [role="button"],
+    [role="tab"],
+    [role="option"],
+    [role="menuitem"],
+    [role="treeitem"]
+  ):not(:disabled, [aria-disabled="true"]):active {
+  background-image: var(--pressed-layer);
+}
+
+/* Disabled: the whole control fades (text, border, fill) and does not react. */
+:where(button, input, textarea, select, [role="tab"], [role="option"]):is(
+  :disabled,
+  [aria-disabled="true"]
+) {
+  opacity: var(--disabled-opacity);
 }
 
 button {

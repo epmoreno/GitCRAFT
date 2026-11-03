@@ -45,7 +45,3 @@
   color: var(--text);
   font-size: var(--font-size-small);
 }
-
-.copy:hover {
-  background: var(--surface-3);
-}

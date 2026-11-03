@@ -101,11 +101,6 @@
   font-size: var(--font-size-small);
 }
 
-.parent:hover,
-.copy:hover {
-  background: var(--surface-3);
-}
-
 .copy {
   flex: none;
 }
@@ -151,12 +146,13 @@
   padding: 3px var(--space-4);
 }
 
-.file:hover {
-  background: var(--surface-2);
+.file[aria-current="true"] {
+  background-color: var(--selected-bg);
+  box-shadow: var(--selected-marker);
 }
 
-.file[aria-current="true"] {
-  background: var(--selected-bg);
+.files:not(:focus-within) .file[aria-current="true"] {
+  background-color: var(--selected-inactive-bg);
 }
 
 .status {

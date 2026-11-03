@@ -33,12 +33,7 @@
 }
 
 .sectionAction:hover:not(:disabled) {
-  background: var(--surface-3);
   color: var(--text);
-}
-
-.sectionAction:disabled {
-  opacity: 0.4;
 }
 
 .toggle {
@@ -100,10 +95,6 @@
   border: 0;
   background: transparent;
   text-align: left;
-}
-
-.item:hover {
-  background: var(--surface-2);
 }
 
 .label {
@@ -175,9 +166,13 @@
   font-weight: 600;
 }
 
-.selected,
-.selected:hover {
-  background: var(--surface-3);
+.selected {
+  background-color: var(--selected-bg);
+  box-shadow: var(--selected-marker);
+}
+
+.sidebar:not(:focus-within) .selected {
+  background-color: var(--selected-inactive-bg);
 }
 
 /* Filter */
@@ -200,7 +195,6 @@
   color: var(--text);
 }
 
-.filterInput:focus {
-  border-color: var(--accent);
-  outline: none;
+.filterInput:focus-visible {
+  outline-offset: 0;
 }

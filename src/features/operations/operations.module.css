@@ -41,14 +41,6 @@
   color: var(--text);
 }
 
-.button:hover:not(:disabled) {
-  background: var(--surface-3);
-}
-
-.button:disabled {
-  color: var(--text-faint);
-}
-
 .body {
   flex: 1;
   min-height: 0;

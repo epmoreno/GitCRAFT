@@ -33,19 +33,13 @@
   font-weight: 600;
 }
 
-.secondary:hover:not(:disabled),
-.recover:hover:not(:disabled) {
-  background: var(--surface-3);
-}
-
 .danger {
   border-color: var(--danger-border);
   color: var(--danger);
 }
 
-.primary:disabled,
-.secondary:disabled,
-.danger:disabled,
-.recover:disabled {
-  opacity: 0.5;
+.primary:disabled {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--border-control);
+  color: var(--text-muted);
 }

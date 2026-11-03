@@ -460,21 +460,48 @@ se fija en cada etiqueta. El canvas del grafo lee los tokens con
   original.
 
 El test calcula los ratios WCAG a partir de los propios tokens, resolviendo
-las variables y `color-mix` (con alfa premultiplicado). Comprueba estos
-pares; el mínimo es el peor caso actual:
+las variables y `color-mix` (con alfa premultiplicado). En los fondos
+interactivos (las superficies, `--selected-bg` y `--selected-inactive-bg`)
+comprueba también el aspecto con *hover* y pulsado. El peor caso es el
+mínimo actual:
 
 | Pares | Mínimo exigido | Peor caso actual |
 | --- | --- | --- |
-| `--text` sobre todas las superficies, fondos de estado y tintes | 4,5:1 | 9,16 |
-| `--text-muted` (ídem) | 4,5:1 | 5,95 |
-| `--text-faint` (ídem) | 4,5:1 | 4,61 |
-| `--accent`, `--danger`, `--success`, `--warning`, `--info` como texto (ídem) | 4,5:1 | 4,63 (`--danger`) |
+| `--text` sobre todas las superficies, fondos de estado y tintes | 4,5:1 | 8,92 |
+| `--text-muted` (ídem) | 4,5:1 | 5,79 |
+| `--text-faint` (ídem) | 4,5:1 | 4,65 |
+| `--accent`, `--danger`, `--success`, `--warning`, `--info` como texto (ídem) | 4,5:1 | 4,51 (`--danger`) |
 | `--text` sobre la selección de texto | 4,5:1 | 5,71 |
-| `--accent-contrast` sobre `--accent`, `--accent-strong` y cada carril | 4,5:1 | 6,83 |
-| `--danger-contrast` sobre `--danger` | 4,5:1 | 7,47 |
-| `--border-control` sobre superficies y `--selected-bg` | 3:1 | 3,09 |
-| `--accent` como anillo de foco (ídem) | 3:1 | 5,19 |
-| Carriles sobre `--surface-0` y `--selected-bg` | 3:1 | 4,83 |
+| `--accent-contrast` sobre `--accent` y `--accent-strong` (en todos sus estados) y sobre cada carril | 4,5:1 | 4,63 |
+| `--danger-contrast` sobre `--danger` (en todos sus estados) | 4,5:1 | 4,72 |
+| `--border-control` sobre los fondos interactivos | 3:1 | 3,14 |
+| `--focus-ring` (ídem) | 3:1 | 4,59 |
+| Carriles sobre `--surface-0` y los fondos de selección | 3:1 | 4,83 |
+
+### Estados de interacción
+
+Son reglas comunes en `tokens.css`: ningún componente las redefine.
+
+- **Hover y pulsado:** una capa translúcida en `background-image`
+  (`--hover-layer`, que aclara un 4 %, y `--pressed-layer`, que oscurece un
+  22 %). Se pinta sobre el fondo de cualquier botón, pestaña, opción, elemento
+  de menú o fila. Por eso las reglas de estado de los componentes usan
+  `background-color` y nunca el atajo `background`, que borraría la capa; el
+  test lo comprueba.
+- **Seleccionado:** `--selected-bg` más una marca lateral de 2 px
+  (`--selected-marker`), que no depende solo del color. Cuando el foco está en
+  otra zona, el fondo pasa a `--selected-inactive-bg` y la marca se mantiene.
+  El historial es enfocable (`tabIndex=0`) para que se note cuándo tiene el
+  foco. La selección se expone con `aria-selected`, `aria-current` o
+  `aria-pressed`, según el control.
+- **Foco de teclado:** anillo de 2 px en `--focus-ring`, solo con
+  `:focus-visible`. Las filas y pestañas lo dibujan por dentro para que el
+  scroll no lo recorte. Si una regla quita el `outline`, debe dar otra señal
+  visible (fondo, borde o sombra); el test lo comprueba.
+- **Deshabilitado:** todo el control se atenúa (`--disabled-opacity`) y deja
+  de reaccionar al *hover* y al pulsado. Los botones rellenos además pierden
+  el relleno y quedan solo con el contorno, así que el cambio no depende solo
+  del color.
 
 Solo hay tema oscuro; el tema claro está en la fase 3.
 
