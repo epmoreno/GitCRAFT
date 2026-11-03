@@ -433,6 +433,9 @@ ningún producto.
 
       *Tests:* colocación junto a cada borde y encima, y el tooltip y el
       icono de los tres menús remotos.
+      icono de los tres menús remotos.
+      *Verificado manualmente:* el tooltip de Operaciones queda dentro de la
+      ventana y los chevrons se ven.
 
 ### B. Panel de cambios sin confirmar
 - [x] **B.1 Cabecera y caja de commit fija.** La cabecera dice «N cambios en
@@ -452,6 +455,9 @@ ningún producto.
       *Tests:* textos de la cabecera (con rama y con HEAD separado), la caja
       de commit fuera de la lista, y el redimensionado con teclado y su
       persistencia.
+      *Verificado manualmente:* la cabecera «N cambios en main» y «HEAD
+      separado» (tras `git switch --detach` y vuelta con `git switch
+      main`), y el divisor (ratón y teclado; se recuerda al reiniciar).
 - [x] **B.2 Secciones plegables con acciones.** «Conflictos», «Sin preparar»
       y «Preparados» se pliegan y despliegan, cada una con su contador y sus
       acciones siempre visibles: *Preparar todo*, *Quitar todo* y *Descartar
@@ -464,6 +470,8 @@ ningún producto.
       *Tests:* plegar y recordar al volver a montar, acciones de una sección
       vacía desactivadas, y «Descartar todo» pasa por la vista previa del
       descarte.
+      *Verificado manualmente:* secciones plegables con los botones a la
+      vista, y «Descartar todo» con confirmación.
 - [x] **B.3 Vista de árbol.** Un conmutador cambia entre lista por ruta y
       árbol de carpetas. En el árbol, las carpetas se pliegan, muestran su
       número de archivos y hay *Expandir todo* / *Plegar todo*. Se navega con
@@ -484,6 +492,8 @@ ningún producto.
       *Tests:* construcción del árbol (contadores, orden y rutas que empiezan
       por `-`), conmutar y recordar la vista, plegar con clic, Expandir y
       Plegar todo, y teclado.
+      *Verificado manualmente:* vista de árbol con contadores, Expandir y
+      Plegar todo, y navegación con teclado.
 - [x] **B.4 Ordenar y carpetas enteras.** Se ordena por nombre o por estado
       en las dos vistas, y el orden se recuerda. Desde el árbol se prepara o
       se quita una carpeta entera (botón en la fila y menú contextual). La
@@ -501,6 +511,13 @@ ningún producto.
         preparados van con sus dos nombres, y una carpeta hermana con un
         nombre parecido (`-dir2`) no se toca. Test de integración en el
         núcleo con `-dir/a b.txt`.
+        núcleo con `-dir/a b.txt`.
+
+      *Verificado manualmente:*
+      - preparar y quitar una carpeta entera: `git status` confirma que solo
+        se preparó `src/ui/`, y al quitar `docs/` el renombrado pasa a D + ?,
+        como hace git;
+      - orden por estado.
 
 ### C. Pestaña nueva
 - [ ] **C.1 Botón «+» y ⌘T.** El botón «+» de la barra de pestañas, ⌘T y
