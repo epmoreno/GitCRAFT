@@ -239,7 +239,7 @@ function Section({
   );
 }
 
-/** List or tree, and in the tree "expand all" / "collapse all". */
+/** List or tree, the order, and in the tree "expand all" / "collapse all". */
 function ViewControls({
   repoId,
   status,
@@ -251,6 +251,8 @@ function ViewControls({
   const layout = useWorkdirViewPrefs((s) => s.layout);
   const setLayout = useWorkdirViewPrefs((s) => s.setLayout);
   const setDirsCollapsed = useWorkdirViewPrefs((s) => s.setDirsCollapsed);
+  const sort = useWorkdirViewPrefs((s) => s.sort);
+  const setSort = useWorkdirViewPrefs((s) => s.setSort);
   const sections: [ChangeSection, StatusEntry[]][] = [
     ["unstaged", [...status.unstaged, ...status.untracked]],
     ["staged", status.staged],
@@ -274,6 +276,23 @@ function ViewControls({
             onClick={() => setLayout(value)}
           >
             {t(`workdir.view.${value}`)}
+          </button>
+        ))}
+      </div>
+      <div
+        className={styles.segmented}
+        role="group"
+        aria-label={t("workdir.sort.label")}
+      >
+        {(["name", "status"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={styles.segment}
+            aria-pressed={sort === value}
+            onClick={() => setSort(value)}
+          >
+            {t(`workdir.sort.${value}`)}
           </button>
         ))}
       </div>

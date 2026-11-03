@@ -1,4 +1,36 @@
-import type { StatusEntry } from "../../ipc";
+import type { FileStatus, StatusEntry } from "../../ipc";
+
+export type SortOrder = "name" | "status";
+
+/** Order of the "by status" sort: the usual changes first, then the rest. */
+const STATUS_ORDER: FileStatus[] = [
+  "modified",
+  "added",
+  "deleted",
+  "renamed",
+  "copied",
+  "typeChanged",
+  "untracked",
+  "unmerged",
+  "unknown",
+];
+
+const collator = new Intl.Collator(undefined, { numeric: true });
+export const compareNames = (a: string, b: string) => collator.compare(a, b);
+
+const byStatus = (a: StatusEntry, b: StatusEntry) =>
+  STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+
+/** The flat list's order: by path, or by status and then path. */
+export function sortEntries(
+  entries: readonly StatusEntry[],
+  sort: SortOrder,
+): StatusEntry[] {
+  return [...entries].sort(
+    (a, b) =>
+      (sort === "status" ? byStatus(a, b) : 0) || compareNames(a.path, b.path),
+  );
+}
 
 export type DirNode = {
   kind: "dir";
@@ -21,11 +53,15 @@ export type FileNode = {
 export type TreeNode = DirNode | FileNode;
 
 /**
- * Groups changed paths into folders. Folders come before files, both by
- * name. An untracked directory (`notes/`, git does not list its contents)
- * is a leaf, not a folder: it can only be staged or discarded whole.
+ * Groups changed paths into folders. Folders come first, by name; files
+ * follow by name or by status. An untracked directory (`notes/`, git does
+ * not list its contents) is a leaf, not a folder: it can only be staged or
+ * discarded whole.
  */
-export function buildTree(entries: readonly StatusEntry[]): TreeNode[] {
+export function buildTree(
+  entries: readonly StatusEntry[],
+  sort: SortOrder = "name",
+): TreeNode[] {
   const root: DirNode = {
     kind: "dir",
     name: "",
@@ -55,26 +91,25 @@ export function buildTree(entries: readonly StatusEntry[]): TreeNode[] {
       entry,
     });
   }
-  return finish(root).children;
+  return finish(root, sort).children;
 }
 
-function finish(dir: DirNode): DirNode {
+function finish(dir: DirNode, sort: SortOrder): DirNode {
   let count = 0;
   for (const child of dir.children) {
-    if (child.kind === "dir") count += finish(child).fileCount;
+    if (child.kind === "dir") count += finish(child, sort).fileCount;
     else count += 1;
   }
   dir.fileCount = count;
-  dir.children.sort(
-    (a, b) =>
-      (a.kind === b.kind ? 0 : a.kind === "dir" ? -1 : 1) ||
-      compareNames(a.name, b.name),
-  );
+  dir.children.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === "dir" ? -1 : 1;
+    if (a.kind === "file" && b.kind === "file" && sort === "status") {
+      return byStatus(a.entry, b.entry) || compareNames(a.name, b.name);
+    }
+    return compareNames(a.name, b.name);
+  });
   return dir;
 }
-
-const collator = new Intl.Collator(undefined, { numeric: true });
-export const compareNames = (a: string, b: string) => collator.compare(a, b);
 
 /** Every folder path in the tree (for "collapse all"). */
 export function dirPaths(nodes: readonly TreeNode[]): string[] {

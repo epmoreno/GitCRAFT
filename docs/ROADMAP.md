@@ -484,13 +484,23 @@ ningún producto.
       *Tests:* construcción del árbol (contadores, orden y rutas que empiezan
       por `-`), conmutar y recordar la vista, plegar con clic, Expandir y
       Plegar todo, y teclado.
-- [ ] **B.4 Ordenar y carpetas enteras.** Se ordena por nombre o por estado
+- [x] **B.4 Ordenar y carpetas enteras.** Se ordena por nombre o por estado
       en las dos vistas, y el orden se recuerda. Desde el árbol se prepara o
       se quita una carpeta entera (botón en la fila y menú contextual). La
       operación pasa la lista explícita de archivos de la carpeta, no un
       patrón.
       *Tests:* construcción del árbol y contadores, orden, preparar o quitar
       una carpeta con rutas que contienen espacios o empiezan por `-`.
+      *Estado:* selector Nombre/Estado en la cabecera del panel.
+      - Por estado: modificados, añadidos, eliminados, renombrados… y
+        después sin seguimiento; dentro de cada grupo, por nombre. En el
+        árbol, las carpetas siguen yendo primero.
+      - Cada carpeta tiene el botón Preparar (o Quitar), la entrada en su
+        menú contextual y la tecla Espacio.
+      - Se envían los archivos que hay debajo de la carpeta: los renombrados
+        preparados van con sus dos nombres, y una carpeta hermana con un
+        nombre parecido (`-dir2`) no se toca. Test de integración en el
+        núcleo con `-dir/a b.txt`.
 
 ### C. Pestaña nueva
 - [ ] **C.1 Botón «+» y ⌘T.** El botón «+» de la barra de pestañas, ⌘T y

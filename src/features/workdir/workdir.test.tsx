@@ -506,3 +506,105 @@ describe("tree view", () => {
     expect(ipc.stageFiles).toHaveBeenCalledWith(1, ["src/ui/Button.tsx"]);
   });
 });
+
+describe("sorting and whole folders", () => {
+  const status = (): WorkingStatus => ({
+    ...cleanStatus(),
+    unstaged: [
+      { path: "-dir/z b.txt", oldPath: null, status: "modified" },
+      { path: "-dir/sub/a.txt", oldPath: null, status: "deleted" },
+      { path: "lib.ts", oldPath: null, status: "modified" },
+    ],
+    untracked: [
+      { path: "-dir/new file.txt", oldPath: null, status: "untracked" },
+    ],
+    staged: [
+      { path: "docs/new name.md", oldPath: "docs/old.md", status: "renamed" },
+      { path: "docs/a.md", oldPath: null, status: "added" },
+    ],
+  });
+
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+    ipc.workingStatus.mockResolvedValue({ status: "ok", data: status() });
+    useWorkdirStore.setState({
+      statuses: { 1: { status: status(), error: null } },
+    });
+  });
+
+  const paths = (region: string) =>
+    within(screen.getByRole("region", { name: region }))
+      .getAllByRole("listitem")
+      .map((li) => li.querySelector(".path")?.getAttribute("title"));
+
+  it("sorts the list by name or by status, and remembers it", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<WorkingDirPanel repoId={1} />);
+    expect(paths("Sin preparar")).toEqual([
+      "-dir/new file.txt",
+      "-dir/sub/a.txt",
+      "-dir/z b.txt",
+      "lib.ts",
+    ]);
+    await user.click(screen.getByRole("button", { name: "Estado" }));
+    expect(paths("Sin preparar")).toEqual([
+      "-dir/z b.txt",
+      "lib.ts",
+      "-dir/sub/a.txt",
+      "-dir/new file.txt",
+    ]);
+    unmount();
+    render(<WorkingDirPanel repoId={1} />);
+    expect(screen.getByRole("button", { name: "Estado" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("stages a whole folder by listing its files", async () => {
+    const user = userEvent.setup();
+    render(<WorkingDirPanel repoId={1} />);
+    await user.click(screen.getByRole("button", { name: "Árbol" }));
+    const tree = screen.getByRole("tree", { name: "Sin preparar" });
+    const folder = within(tree).getByRole("treeitem", { name: /^-dir/ });
+    await user.click(
+      within(folder).getByRole("button", { name: "Preparar la carpeta -dir" }),
+    );
+    expect(ipc.stageFiles).toHaveBeenCalledWith(1, [
+      "-dir/sub/a.txt",
+      "-dir/new file.txt",
+      "-dir/z b.txt",
+    ]);
+    // The button does not fold the folder.
+    expect(folder).toHaveAttribute("aria-expanded", "true");
+
+    // Also with Space on the folder, and from its context menu.
+    const sub = within(tree).getByRole("treeitem", { name: /^sub/ });
+    sub.focus();
+    await user.keyboard(" ");
+    expect(ipc.stageFiles).toHaveBeenLastCalledWith(1, ["-dir/sub/a.txt"]);
+    await user.pointer({ keys: "[MouseRight]", target: sub });
+    await user.click(
+      screen.getByRole("menuitem", { name: "Preparar la carpeta -dir/sub" }),
+    );
+    expect(ipc.stageFiles).toHaveBeenCalledTimes(3);
+    expect(sub).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("unstages a folder with renames under both names", async () => {
+    const user = userEvent.setup();
+    render(<WorkingDirPanel repoId={1} />);
+    await user.click(screen.getByRole("button", { name: "Árbol" }));
+    const tree = screen.getByRole("tree", { name: "Preparados" });
+    await user.click(
+      within(tree).getByRole("button", {
+        name: "Quitar la carpeta docs del stage",
+      }),
+    );
+    expect(ipc.unstageFiles).toHaveBeenCalledWith(1, [
+      "docs/a.md",
+      "docs/new name.md",
+      "docs/old.md",
+    ]);
+  });
+});

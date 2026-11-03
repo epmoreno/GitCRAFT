@@ -280,6 +280,7 @@
 }
 
 .file:hover .rowAction:not(:disabled),
+.file:focus-visible .rowAction:not(:disabled),
 .rowAction:focus-visible {
   opacity: 1;
 }
@@ -576,4 +577,8 @@
 .dirCount {
   color: var(--text-faint);
   font-size: var(--font-size-small);
+}
+
+.dirRow .rowAction {
+  margin-left: auto;
 }

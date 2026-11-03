@@ -252,7 +252,14 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "folderFiles_one": "{{count}} file",
-    "folderFiles_other": "{{count}} files"
+    "folderFiles_other": "{{count}} files",
+    "sort": {
+      "label": "Sort by",
+      "name": "Name",
+      "status": "Status"
+    },
+    "stageFolder": "Stage the folder {{path}}",
+    "unstageFolder": "Unstage the folder {{path}}"
   },
   "commit": {
     "label": "Create commit",

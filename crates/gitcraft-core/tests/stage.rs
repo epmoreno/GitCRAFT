@@ -160,6 +160,35 @@ async fn paths_are_literal() {
     assert_eq!(names(&s.untracked), [("a.txt", FileStatus::Untracked)]);
 }
 
+/// B.4: the UI stages a folder by listing each of its files.
+#[tokio::test]
+async fn stages_and_unstages_a_whole_folder_by_its_files() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("keep.txt", "k\n", "base").await;
+    repo.write_file("-dir/a b.txt", "a\n");
+    repo.write_file("-dir/sub/c.txt", "c\n");
+    repo.write_file("-dir2/d.txt", "d\n");
+    let folder = p(&["-dir/a b.txt", "-dir/sub/c.txt"]);
+    stage(&git(), repo.path(), &folder, &c())
+        .await
+        .expect("stage folder");
+    let s = status(&repo).await;
+    assert_eq!(
+        names(&s.staged),
+        [
+            ("-dir/a b.txt", FileStatus::Added),
+            ("-dir/sub/c.txt", FileStatus::Added)
+        ]
+    );
+    // The sibling folder whose name starts the same is left alone.
+    assert_eq!(names(&s.untracked), [("-dir2/", FileStatus::Untracked)]);
+
+    unstage(&git(), repo.path(), &folder, &c())
+        .await
+        .expect("unstage folder");
+    assert!(status(&repo).await.staged.is_empty());
+}
+
 #[tokio::test]
 async fn rejects_empty_paths_and_ignores_empty_lists() {
     let repo = repo_with_changes().await;

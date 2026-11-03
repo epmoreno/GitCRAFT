@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type { SortOrder } from "./fileTree";
 
 /**
  * How the uncommitted-changes panel is laid out. Remembered between
@@ -17,6 +18,8 @@ type WorkdirViewPrefs = {
   /** Files as a flat list of paths or as a folder tree. */
   layout: "list" | "tree";
   setLayout: (layout: "list" | "tree") => void;
+  sort: SortOrder;
+  setSort: (sort: SortOrder) => void;
   /**
    * Collapsed folders of the tree, by `<repoId>:<section>:<path>`. Only for
    * this session: not persisted.
@@ -30,6 +33,7 @@ export const initialWorkdirViewPrefs = {
   commitBoxHeight: null,
   collapsedSections: {},
   layout: "list" as const,
+  sort: "name" as const,
   collapsedDirs: {},
 };
 
@@ -46,6 +50,7 @@ export const useWorkdirViewPrefs = create<WorkdirViewPrefs>()(
           return { collapsedSections };
         }),
       setLayout: (layout) => set({ layout }),
+      setSort: (sort) => set({ sort }),
       toggleDir: (key) =>
         set((s) => {
           const collapsedDirs = { ...s.collapsedDirs };
@@ -66,10 +71,11 @@ export const useWorkdirViewPrefs = create<WorkdirViewPrefs>()(
     {
       name: "gitcraft.workdir-view",
       storage: createJSONStorage(() => localStorage),
-      partialize: ({ commitBoxHeight, collapsedSections, layout }) => ({
+      partialize: ({ commitBoxHeight, collapsedSections, layout, sort }) => ({
         commitBoxHeight,
         collapsedSections,
         layout,
+        sort,
       }),
     },
   ),

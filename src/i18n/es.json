@@ -252,7 +252,14 @@
     "expandAll": "Expandir todo",
     "collapseAll": "Plegar todo",
     "folderFiles_one": "{{count}} archivo",
-    "folderFiles_other": "{{count}} archivos"
+    "folderFiles_other": "{{count}} archivos",
+    "sort": {
+      "label": "Ordenar por",
+      "name": "Nombre",
+      "status": "Estado"
+    },
+    "stageFolder": "Preparar la carpeta {{path}}",
+    "unstageFolder": "Quitar la carpeta {{path}} del stage"
   },
   "commit": {
     "label": "Crear commit",

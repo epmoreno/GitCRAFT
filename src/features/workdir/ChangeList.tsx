@@ -2,8 +2,15 @@ import { useMemo, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { StatusEntry, WorktreeArea } from "../../ipc";
 import { Chevron } from "../../ui/Chevron";
+import { ContextMenu } from "../../ui/ContextMenu";
 import { useGraphStore } from "../graph/store";
-import { buildTree, visibleRows, type DirNode } from "./fileTree";
+import {
+  buildTree,
+  filesUnder,
+  sortEntries,
+  visibleRows,
+  type DirNode,
+} from "./fileTree";
 import { StatusLetter } from "./StatusLetter";
 import { useWorkdirStore } from "./store";
 import { useWorkdirViewPrefs } from "./viewPrefs";
@@ -36,11 +43,13 @@ export function ChangeList({
   disabled: boolean;
 }) {
   const layout = useWorkdirViewPrefs((s) => s.layout);
+  const sort = useWorkdirViewPrefs((s) => s.sort);
   const row = useFileRowProps(repoId, section, disabled);
+  const folder = useFolderAction(repoId, section, disabled);
   if (layout === "list") {
     return (
       <ul className={styles.list}>
-        {entries.map((e) => (
+        {sortEntries(entries, sort).map((e) => (
           <FileRow key={e.path} {...row(e)} />
         ))}
       </ul>
@@ -53,8 +62,53 @@ export function ChangeList({
       label={label}
       entries={entries}
       row={row}
+      folder={folder}
     />
   );
+}
+
+type FolderAction = {
+  label: string;
+  title: (path: string) => string;
+  disabled: boolean;
+  run: (files: StatusEntry[]) => void;
+};
+
+/**
+ * Stage or unstage every file below a folder. The explicit list of files is
+ * sent (never the folder as a pathspec), so exactly what is shown is what
+ * changes.
+ */
+function useFolderAction(
+  repoId: number,
+  section: ChangeSection,
+  disabled: boolean,
+): FolderAction {
+  const { t } = useTranslation();
+  const stage = useWorkdirStore((s) => s.stage);
+  const unstage = useWorkdirStore((s) => s.unstage);
+  return section === "unstaged"
+    ? {
+        label: t("workdir.stage"),
+        title: (path) => t("workdir.stageFolder", { path }),
+        disabled,
+        run: (files) =>
+          void stage(
+            repoId,
+            files.map((f) => f.path),
+          ),
+      }
+    : {
+        label: t("workdir.unstage"),
+        title: (path) => t("workdir.unstageFolder", { path }),
+        disabled,
+        // A staged rename lives under both names in the index.
+        run: (files) =>
+          void unstage(
+            repoId,
+            files.flatMap((f) => (f.oldPath ? [f.path, f.oldPath] : [f.path])),
+          ),
+      };
 }
 
 type FileRowProps = {
@@ -120,16 +174,19 @@ function FileTree({
   label,
   entries,
   row,
+  folder,
 }: {
   repoId: number;
   section: ChangeSection;
   label: string;
   entries: StatusEntry[];
   row: (entry: StatusEntry) => FileRowProps;
+  folder: FolderAction;
 }) {
   const collapsed = useWorkdirViewPrefs((s) => s.collapsedDirs);
   const toggleDir = useWorkdirViewPrefs((s) => s.toggleDir);
-  const tree = useMemo(() => buildTree(entries), [entries]);
+  const sort = useWorkdirViewPrefs((s) => s.sort);
+  const tree = useMemo(() => buildTree(entries, sort), [entries, sort]);
   const rows = visibleRows(
     tree,
     (path) => !!collapsed[dirKey(repoId, section, path)],
@@ -213,6 +270,7 @@ function FileTree({
             tree={tree}
             expanded={!collapsed[dirKey(repoId, section, node.path)]}
             onToggle={() => toggleDir(dirKey(repoId, section, node.path))}
+            folder={folder}
           />
         ) : (
           <FileRow
@@ -252,13 +310,17 @@ function DirRow({
   tree,
   expanded,
   onToggle,
+  folder,
 }: {
   dir: DirNode;
   tree: TreeItem;
   expanded: boolean;
   onToggle: () => void;
+  folder: FolderAction;
 }) {
   const { t } = useTranslation();
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const run = () => folder.run(filesUnder(dir.children));
   return (
     <li
       className={`${styles.file} ${styles.dirRow}`}
@@ -267,6 +329,10 @@ function DirRow({
       data-dir={dir.path}
       title={dir.path}
       onClick={onToggle}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        setMenu({ x: event.clientX, y: event.clientY });
+      }}
     >
       <Chevron direction={expanded ? "down" : "right"} />
       <span className={styles.dirName}>{dir.name}</span>
@@ -276,6 +342,42 @@ function DirRow({
       >
         {dir.fileCount}
       </span>
+      <button
+        type="button"
+        className={styles.rowAction}
+        aria-label={folder.title(dir.path)}
+        title={folder.title(dir.path)}
+        disabled={folder.disabled}
+        tabIndex={-1}
+        data-primary
+        onClick={(event) => {
+          event.stopPropagation();
+          run();
+        }}
+      >
+        {folder.label}
+      </button>
+      {menu && (
+        // Rendered inside the row: keep its clicks from toggling the folder.
+        <span
+          onClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.stopPropagation()}
+        >
+          <ContextMenu
+            x={menu.x}
+            y={menu.y}
+            label={dir.path}
+            items={[
+              {
+                label: folder.title(dir.path),
+                onSelect: run,
+                disabled: folder.disabled,
+              },
+            ]}
+            onClose={() => setMenu(null)}
+          />
+        </span>
+      )}
     </li>
   );
 }

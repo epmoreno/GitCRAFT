@@ -3,6 +3,7 @@ import {
   buildTree,
   dirPaths,
   filesUnder,
+  sortEntries,
   visibleRows,
   type DirNode,
 } from "./fileTree";
@@ -72,6 +73,42 @@ describe("file tree", () => {
       ["app.ts", 2, "src"],
       ["notes/", 1, ""],
       ["README.md", 1, ""],
+    ]);
+  });
+
+  it("sorts the list by path or by status, then path", () => {
+    const list = [
+      e("b.txt", "untracked"),
+      e("a.txt", "deleted"),
+      e("c.txt", "modified"),
+      e("a 10.txt", "modified"),
+      e("a 2.txt", "added"),
+    ];
+    expect(sortEntries(list, "name").map((x) => x.path)).toEqual([
+      "a 2.txt",
+      "a 10.txt",
+      "a.txt",
+      "b.txt",
+      "c.txt",
+    ]);
+    expect(sortEntries(list, "status").map((x) => x.path)).toEqual([
+      "a 10.txt",
+      "c.txt",
+      "a 2.txt",
+      "a.txt",
+      "b.txt",
+    ]);
+  });
+
+  it("sorts files by status inside each folder, folders still first", () => {
+    const tree = buildTree(
+      [e("z/new.ts", "added"), e("z/old.ts", "modified"), e("y/a.ts")],
+      "status",
+    );
+    expect(tree.map((n) => n.name)).toEqual(["y", "z"]);
+    expect((tree[1] as DirNode).children.map((n) => n.name)).toEqual([
+      "old.ts",
+      "new.ts",
     ]);
   });
 });
