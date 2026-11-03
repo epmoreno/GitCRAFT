@@ -9,10 +9,10 @@
   align-items: center;
   width: min(420px, 100% - 24px);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: 8px;
   background: var(--surface-3);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+  box-shadow: var(--shadow-popover);
 }
 
 .progressBody {
@@ -43,7 +43,7 @@
 .cancel {
   height: 26px;
   padding: 0 var(--space-3);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius);
   background: transparent;
   white-space: nowrap;
@@ -107,8 +107,8 @@
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid color-mix(in srgb, var(--warning) 50%, transparent);
-  background: color-mix(in srgb, var(--warning) 14%, var(--surface-1));
+  border-bottom: 1px solid var(--warning-border);
+  background: var(--warning-bg);
 }
 
 .banner p {
@@ -119,7 +119,7 @@
 .bannerButton {
   height: 26px;
   padding: 0 var(--space-3);
-  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+  border: 1px solid var(--danger-border);
   border-radius: var(--radius);
   background: transparent;
   color: var(--danger);

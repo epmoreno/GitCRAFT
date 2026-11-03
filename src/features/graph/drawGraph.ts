@@ -1,11 +1,5 @@
 import type { GraphLine } from "../../ipc";
-import {
-  NODE_RADIUS,
-  ROW_HEIGHT,
-  columnX,
-  laneColor,
-  rowSegments,
-} from "./geometry";
+import { NODE_RADIUS, ROW_HEIGHT, columnX, rowSegments } from "./geometry";
 
 type DrawOptions = {
   lines: GraphLine[];
@@ -18,10 +12,14 @@ type DrawOptions = {
   /** Colour behind nodes (punches the line through hollow merge nodes). */
   background: string;
   ringColor: string;
+  /** Resolved lane colours (the canvas cannot use CSS variables). */
+  laneColors: readonly string[];
 };
 
 /** Draws the rows visible in the viewport. Lines first, then nodes on top. */
 export function drawGraph(ctx: CanvasRenderingContext2D, o: DrawOptions) {
+  const laneColor = (index: number) =>
+    o.laneColors[index % o.laneColors.length] ?? o.ringColor;
   ctx.setTransform(o.pixelRatio, 0, 0, o.pixelRatio, 0, 0);
   ctx.clearRect(0, 0, o.width, o.height);
 

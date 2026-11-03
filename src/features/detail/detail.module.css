@@ -95,7 +95,7 @@
 .parent,
 .copy {
   padding: 1px 6px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: 3px;
   background: transparent;
   font-size: var(--font-size-small);
@@ -156,7 +156,7 @@
 }
 
 .file[aria-current="true"] {
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface-1));
+  background: var(--selected-bg);
 }
 
 .status {

@@ -9,7 +9,7 @@
 .input {
   height: 28px;
   padding: 0 var(--space-2);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius);
   background: var(--surface-0);
   color: var(--text);
@@ -122,7 +122,7 @@
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   background: var(--surface-3);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+  box-shadow: var(--shadow-popover);
   transform: translateX(-50%);
 }
 

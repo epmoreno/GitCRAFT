@@ -8,7 +8,7 @@
   height: 28px;
   padding: 0 var(--space-3) 0 0;
   border: 0;
-  border-bottom: 1px dashed var(--border-strong);
+  border-bottom: 1px dashed var(--border);
   background: var(--surface-0);
   text-align: left;
 }
@@ -19,7 +19,7 @@
 
 .rowSelected,
 .rowSelected:hover {
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface-1));
+  background: var(--selected-bg);
 }
 
 .nodeArea {
@@ -50,12 +50,12 @@
 }
 
 .badgeStaged {
-  border-color: color-mix(in srgb, var(--success) 60%, transparent);
+  border-color: var(--success-border);
   color: var(--success);
 }
 
 .badgeConflict {
-  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+  border-color: var(--danger-border);
   color: var(--danger);
 }
 
@@ -180,7 +180,7 @@
 .action,
 .rowAction {
   padding: 1px 8px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: 3px;
   background: transparent;
   font-size: var(--font-size-small);
@@ -243,7 +243,7 @@
 .description {
   width: 100%;
   padding: 6px var(--space-2);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius);
   background: var(--surface-0);
   color: var(--text);
@@ -332,11 +332,11 @@
 }
 
 .fileOpen {
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface-1));
+  background: var(--selected-bg);
 }
 
 .danger {
-  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  border-color: var(--danger-border);
   color: var(--danger);
 }
 
@@ -388,7 +388,7 @@
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   background: var(--surface-3);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+  box-shadow: var(--shadow-popover);
   transform: translateX(-50%);
 }
 

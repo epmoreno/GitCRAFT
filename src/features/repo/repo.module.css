@@ -185,11 +185,11 @@
   gap: var(--space-3);
   align-items: flex-start;
   padding: var(--space-3);
-  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--border));
+  border: 1px solid var(--danger-border);
   border-left: 3px solid var(--danger);
   border-radius: var(--radius);
   background: var(--surface-2);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+  box-shadow: var(--shadow-popover);
 }
 
 .errorBody {
@@ -211,7 +211,7 @@
 .errorDismiss {
   height: 26px;
   padding: 0 var(--space-3);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius);
   background: transparent;
 }

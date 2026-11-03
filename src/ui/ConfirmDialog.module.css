@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
-  background: rgb(0 0 0 / 45%);
+  background: var(--backdrop);
 }
 
 .dialog {
@@ -15,7 +15,7 @@
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   background: var(--surface-2);
-  box-shadow: 0 16px 48px rgb(0 0 0 / 50%);
+  box-shadow: var(--shadow-dialog);
 }
 
 .title {
@@ -45,7 +45,7 @@
 .danger {
   height: 28px;
   padding: 0 var(--space-3);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius);
   background: transparent;
 }
@@ -64,6 +64,6 @@
 .danger {
   border-color: transparent;
   background: var(--danger);
-  color: #1c0706;
+  color: var(--danger-contrast);
   font-weight: 600;
 }

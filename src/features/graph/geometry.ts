@@ -6,20 +6,12 @@ export const GRAPH_PADDING = 8;
 export const MAX_GRAPH_WIDTH = 320;
 export const NODE_RADIUS = 4.5;
 
-/** Original lane palette, readable on the dark surfaces. */
-export const LANE_COLORS = [
-  "#e08a4f", // copper
-  "#5fb3c9", // teal
-  "#a596f0", // lavender
-  "#7cc46f", // green
-  "#e0687f", // rose
-  "#d9b84a", // brass
-  "#5c8fe0", // blue
-  "#c47ad6", // orchid
-] as const;
+/** Number of lane colours (`--lane-1` … `--lane-8` in tokens.css). */
+export const LANE_COUNT = 8;
 
+/** Lane colour as a CSS value, for DOM elements (chips). */
 export function laneColor(index: number): string {
-  return LANE_COLORS[index % LANE_COLORS.length] ?? LANE_COLORS[0];
+  return `var(--lane-${(index % LANE_COUNT) + 1})`;
 }
 
 export function columnX(column: number): number {

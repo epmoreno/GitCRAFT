@@ -370,7 +370,7 @@ comportamientos se describen con palabras propias, sin copiar el aspecto de
 ningún producto.
 
 ### A. Estética y contraste
-- [ ] **A.1 Paleta revisada y test de contraste.** Los colores de
+- [x] **A.1 Paleta revisada y test de contraste.** Los colores de
       `src/ui/tokens.css` se revisan para que sean más suaves (acento y
       colores de estado menos saturados) y mantienen la identidad
       grafito/cobre. Todo color de la app sale de un token: no queda ningún
@@ -384,6 +384,12 @@ ningún producto.
       **3:1**. Otro test falla si aparece un color literal fuera de
       `tokens.css`. La tabla de pares y ratios se documenta en
       ARCHITECTURE.md.
+      *Estado:* acento, estados y carriles menos saturados, y texto
+      secundario más claro (`--text-faint` pasa de 3,9:1 a ≥ 4,6:1).
+      - Nuevos tokens derivados: selección, tintes, diff, avisos, sombras y
+        `--border-control` para el contorno de los controles.
+      - Los carriles del grafo pasan a ser `--lane-1` … `--lane-8`.
+      - El texto seleccionado se pinta siempre en `--text`.
 - [ ] **A.2 Estados de interacción.** Tokens y estilos base comunes para
       *hover*, *pulsado*, *seleccionado* (con y sin foco en la lista), *foco
       de teclado* y *deshabilitado*. Se aplican a botones, filas de listas,

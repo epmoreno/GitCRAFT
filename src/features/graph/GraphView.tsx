@@ -7,7 +7,7 @@ import { useRememberedScroll } from "../repo/viewState";
 import { UncommittedRow } from "../workdir/UncommittedRow";
 import { drawGraph } from "./drawGraph";
 import { OptimizeNotice } from "./OptimizeNotice";
-import { ROW_HEIGHT, graphWidth, laneColor } from "./geometry";
+import { LANE_COUNT, ROW_HEIGHT, graphWidth, laneColor } from "./geometry";
 import { RefChips } from "./RefChips";
 import { headOid, labelsByCommit } from "./refLabels";
 import { absoluteTime, relativeTime } from "./relativeTime";
@@ -15,11 +15,17 @@ import { useGraphStore } from "./store";
 import styles from "./graph.module.css";
 import { ErrorReport } from "../../ui/ErrorReport";
 
-function cssVar(name: string, fallback: string): string {
-  const value = getComputedStyle(document.documentElement)
-    .getPropertyValue(name)
-    .trim();
-  return value || fallback;
+/** Theme colours for the canvas, which cannot use CSS variables. */
+function canvasColors() {
+  const style = getComputedStyle(document.documentElement);
+  const token = (name: string) => style.getPropertyValue(name).trim();
+  return {
+    background: token("--surface-0"),
+    ringColor: token("--text"),
+    laneColors: Array.from({ length: LANE_COUNT }, (_, i) =>
+      token(`--lane-${i + 1}`),
+    ),
+  };
 }
 
 /** Commit history of one repository: lanes on a canvas behind virtualized rows. */
@@ -96,8 +102,7 @@ export function GraphView({
       pixelRatio: ratio,
       headOid: head,
       selectedOid,
-      background: cssVar("--surface-0", "#121417"),
-      ringColor: cssVar("--text", "#e3e6ea"),
+      ...canvasColors(),
     });
   }, [lines, width, head, selectedOid]);
 

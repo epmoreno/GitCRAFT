@@ -5,25 +5,62 @@
 :root {
   color-scheme: dark;
 
+  /* Surfaces, from the window background up to raised controls. */
   --surface-0: #121417;
   --surface-1: #181b1f;
   --surface-2: #1f2328;
   --surface-3: #282d33;
+  /* Dividers between areas (decorative, no contrast requirement). */
   --border: #2e343b;
-  --border-strong: #3c434c;
+  /* Edges of popovers, tooltips, dialogs, badges and tags. */
+  --border-strong: #3d444d;
+  /* Outline of interactive controls (buttons, fields, progress): ≥ 3:1. */
+  --border-control: #737b86;
 
-  --text: #e3e6ea;
-  --text-muted: #9aa2ad;
-  --text-faint: #6b737e;
+  /* Text: every one of them is ≥ 4.5:1 on every surface (contrast test). */
+  --text: #dde1e6;
+  --text-muted: #b0b7c0;
+  --text-faint: #99a1ac;
 
-  --accent: #e08a4f;
-  --accent-strong: #f09a5c;
+  --accent: #d9925f;
+  --accent-strong: #e4a477;
   --accent-contrast: #1a1006;
 
-  --danger: #e5645c;
-  --success: #6cc08b;
-  --warning: #e3b553;
-  --info: #5fb3c9;
+  --danger: #e8857d;
+  --danger-contrast: #1c0706;
+  --success: #80c49b;
+  --warning: #d8b872;
+  --info: #7bbdce;
+
+  /* Graph lanes (also branch chips). */
+  --lane-1: #d9925f; /* copper */
+  --lane-2: #6fb5c6; /* teal */
+  --lane-3: #a99ee6; /* lavender */
+  --lane-4: #8cc47e; /* green */
+  --lane-5: #dc8292; /* rose */
+  --lane-6: #cdb565; /* brass */
+  --lane-7: #7c9edb; /* blue */
+  --lane-8: #c08dcd; /* orchid */
+
+  /*
+   * Derived backgrounds and borders: components use these, never their own
+   * mix. Translucent tints go on surfaces 0 to 2, not on surface-3.
+   */
+  --selected-bg: color-mix(in srgb, var(--accent) 16%, var(--surface-1));
+  --accent-tint: color-mix(in srgb, var(--accent) 16%, transparent);
+  --notice-bg: color-mix(in srgb, var(--accent) 7%, var(--surface-1));
+  --hunk-bg: color-mix(in srgb, var(--info) 10%, var(--surface-1));
+  --diff-added-bg: color-mix(in srgb, var(--success) 13%, transparent);
+  --diff-removed-bg: color-mix(in srgb, var(--danger) 13%, transparent);
+  --diff-picked-bg: color-mix(in srgb, var(--accent) 14%, transparent);
+  --warning-bg: color-mix(in srgb, var(--warning) 14%, var(--surface-1));
+  --warning-border: color-mix(in srgb, var(--warning) 50%, transparent);
+  --danger-border: color-mix(in srgb, var(--danger) 60%, transparent);
+  --success-border: color-mix(in srgb, var(--success) 60%, transparent);
+  --text-selection-bg: color-mix(in srgb, var(--accent) 35%, transparent);
+  --backdrop: rgb(0 0 0 / 45%);
+  --shadow-popover: 0 10px 30px rgb(0 0 0 / 45%);
+  --shadow-dialog: 0 16px 48px rgb(0 0 0 / 50%);
 
   --font-ui:
     -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui,
@@ -96,7 +133,8 @@ textarea,
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--text-selection-bg);
+  color: var(--text);
 }
 
 /* Focus rings only for keyboard navigation, in the accent colour. */

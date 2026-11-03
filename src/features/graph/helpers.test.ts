@@ -1,6 +1,6 @@
 import { oid, sampleLines, sampleRefs } from "../../test/ipc";
 import {
-  LANE_COLORS,
+  LANE_COUNT,
   LANE_WIDTH,
   MAX_GRAPH_WIDTH,
   ROW_HEIGHT,
@@ -20,7 +20,7 @@ describe("geometry", () => {
   });
 
   it("cycles the lane palette", () => {
-    expect(laneColor(0)).toBe(laneColor(LANE_COLORS.length));
+    expect(laneColor(0)).toBe(laneColor(LANE_COUNT));
     expect(laneColor(1)).not.toBe(laneColor(0));
   });
 

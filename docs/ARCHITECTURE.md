@@ -153,7 +153,7 @@ configuración.
 
    El estado es pequeño y continuable, así que cada página de N commits
    extiende el layout sin recalcular lo anterior. El color se asigna por carril
-   con una paleta propia que rota.
+   con una paleta propia que rota (`--lane-1` … `--lane-8` en los tokens).
 3. **Transferencia:** páginas de ~2 000 filas por `Channel`, en un formato
    compacto (índices en lugar de oids repetidos). Si se queda corto, se pasa a
    un buffer binario.
@@ -436,6 +436,47 @@ previas que fallan dejan seguir y el error de la operación real se explica.
   final del `PATH` de git `/opt/homebrew/bin`, `/usr/local/bin` y las rutas
   del sistema que falten. Así git encuentra sus helpers: credential helpers
   como `gh`, git-lfs o ssh.
+
+### Tokens de diseño y contraste
+
+Todos los colores están en `src/ui/tokens.css`: superficies, texto, acento,
+estados, carriles del grafo y derivados (`--selected-bg`, tintes del diff,
+sombras…). Los componentes solo usan `var(--…)`.
+`src/ui/tokens.test.ts` falla si aparece un color literal (`#…`, `rgb()`,
+`color-mix()`…) en cualquier otro archivo de `src/`. Hay una sola excepción:
+el tinte de las etiquetas de rama, que mezcla `var(--lane)`, una variable que
+se fija en cada etiqueta. El canvas del grafo lee los tokens con
+`getComputedStyle`, porque no puede usar variables CSS.
+
+- **Superficies:** de `--surface-0` (fondo) a `--surface-3` (*hover* y
+  controles elevados).
+  - `--border` separa zonas y es decorativo.
+  - `--border-strong` es el borde de menús, tooltips, diálogos y etiquetas.
+  - `--border-control` es el contorno de los controles interactivos (botones,
+    campos, barra de progreso).
+- **Tintes translúcidos** (`--accent-tint` y los fondos del diff): solo sobre
+  `--surface-0` a `--surface-2`.
+- **Texto seleccionado:** siempre en `--text`, sea cual sea el color del texto
+  original.
+
+El test calcula los ratios WCAG a partir de los propios tokens, resolviendo
+las variables y `color-mix` (con alfa premultiplicado). Comprueba estos
+pares; el mínimo es el peor caso actual:
+
+| Pares | Mínimo exigido | Peor caso actual |
+| --- | --- | --- |
+| `--text` sobre todas las superficies, fondos de estado y tintes | 4,5:1 | 9,16 |
+| `--text-muted` (ídem) | 4,5:1 | 5,95 |
+| `--text-faint` (ídem) | 4,5:1 | 4,61 |
+| `--accent`, `--danger`, `--success`, `--warning`, `--info` como texto (ídem) | 4,5:1 | 4,63 (`--danger`) |
+| `--text` sobre la selección de texto | 4,5:1 | 5,71 |
+| `--accent-contrast` sobre `--accent`, `--accent-strong` y cada carril | 4,5:1 | 6,83 |
+| `--danger-contrast` sobre `--danger` | 4,5:1 | 7,47 |
+| `--border-control` sobre superficies y `--selected-bg` | 3:1 | 3,09 |
+| `--accent` como anillo de foco (ídem) | 3:1 | 5,19 |
+| Carriles sobre `--surface-0` y `--selected-bg` | 3:1 | 4,83 |
+
+Solo hay tema oscuro; el tema claro está en la fase 3.
 
 ## 7. Estrategia de tests
 
