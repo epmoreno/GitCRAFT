@@ -532,7 +532,7 @@ ningún producto.
       preparar.
 
 ### C. Pestaña nueva
-- [ ] **C.1 Botón «+» y ⌘T.** El botón «+» de la barra de pestañas, ⌘T y
+- [x] **C.1 Botón «+» y ⌘T.** El botón «+» de la barra de pestañas, ⌘T y
       *Archivo → Nueva pestaña* abren una pestaña con la pantalla de inicio
       (Abrir, Clonar, Inicializar y Recientes). Al abrir, clonar o
       inicializar un repo desde ahí, esa pestaña pasa a ser la del repo. Si
@@ -540,6 +540,18 @@ ningún producto.
       vacía. Si ya hay una pestaña vacía, ⌘T va a ella en vez de crear otra.
       ⌘W cierra la pestaña vacía. Las pestañas vacías no se guardan en la
       sesión.
+      *Estado:* la pestaña nueva es una sola y siempre la última.
+      - ⌘1…⌘9 y ⌃Tab la cuentan, y ⌘T está en el menú nuevo *Archivo →
+        Nueva pestaña*.
+      - Al cerrarla, con × o ⌘W, se activa la pestaña de su izquierda.
+      - Si se abre un repo desde otra pestaña, la pestaña nueva se queda
+        donde está, sin activar.
+      - Si se sale con ella activa, la sesión guarda como activa la pestaña
+        de su izquierda.
+
+      *Tests:* abrir con «+» y ⌘T (sin duplicar), convertirse al abrir,
+      clonar o inicializar, ir a la pestaña existente si el repo ya está
+      abierto, cerrar con × y ⌘W, y que no se guarde en la sesión.
 
 ### D. Ajustes (engranaje y ⌘,)
 - [ ] **D.1 Ventana de Ajustes y Generales.** El engranaje de la barra y

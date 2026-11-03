@@ -173,6 +173,133 @@ describe("tabs", () => {
   });
 });
 
+describe("new tab", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+  });
+
+  const tab = (name: string | RegExp) => screen.getByRole("tab", { name });
+
+  it("opens a tab with the start page from + and ⌘T, only one at a time", async () => {
+    const user = userEvent.setup();
+    withTabs(2, 2);
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Nueva pestaña" }));
+    expect(tab("Nueva pestaña")).toHaveAttribute("aria-selected", "true");
+    expect(store().activeId).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Abrir repositorio…" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Clonar repositorio…" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Inicializar repositorio…" }),
+    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Recientes" })).toBeVisible();
+
+    act(() => store().activate(1));
+    const { installAppMenu } = await import("../../app/menu");
+    const [, actions] = vi.mocked(installAppMenu).mock.lastCall!;
+    act(() => actions.newTab());
+    expect(screen.getAllByRole("tab", { name: "Nueva pestaña" })).toHaveLength(
+      1,
+    );
+    expect(store().activeId).toBeNull();
+    // It is the last tab for ⌘1…⌘9 and ⌃Tab.
+    act(() => store().activateIndex(0));
+    act(() => store().activateIndex(2));
+    expect(store().activeId).toBeNull();
+    act(() => store().activateNext(1));
+    expect(store().activeId).toBe(1);
+    act(() => store().activateNext(-1));
+    expect(store().activeId).toBeNull();
+  });
+
+  it("becomes the tab of the repository opened from it", async () => {
+    const user = userEvent.setup();
+    withTabs(1);
+    ipc.listRecentRepositories.mockResolvedValue({
+      status: "ok",
+      data: [{ path: "/repos/nuevo", name: "nuevo", lastOpened: 1 }],
+    });
+    ipc.openRepository.mockResolvedValue({
+      status: "ok",
+      data: opened(7, "/repos/nuevo"),
+    });
+    render(<App />);
+    act(() => store().newTab());
+    await user.click(await screen.findByRole("button", { name: /^nuevo/ }));
+    expect(ids()).toEqual([1, 7]);
+    expect(store().activeId).toBe(7);
+    expect(store().blankTab).toBe(false);
+    expect(tab("nuevo")).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("tab", { name: "Nueva pestaña" })).toBeNull();
+  });
+
+  it("goes to the existing tab when that repository is already open", async () => {
+    withTabs(2, 2);
+    ipc.openRepository.mockResolvedValue({
+      status: "ok",
+      data: opened(1, "/repos/r1"),
+    });
+    store().newTab();
+    await act(() => store().openRepository("/repos/r1"));
+    expect(ids()).toEqual([1, 2]);
+    expect(store().activeId).toBe(1);
+    expect(store().blankTab).toBe(false);
+  });
+
+  it("also becomes the tab of a repository cloned or initialized from it", async () => {
+    withTabs(1);
+    store().newTab();
+    await act(() => store().adopt(opened(9, "/repos/clonado")));
+    expect(ids()).toEqual([1, 9]);
+    expect(store().activeId).toBe(9);
+    expect(store().blankTab).toBe(false);
+  });
+
+  it("keeps an inactive new tab when a repository opens from another tab", async () => {
+    withTabs(1);
+    ipc.openRepository.mockResolvedValue({
+      status: "ok",
+      data: opened(3, "/repos/r3"),
+    });
+    store().newTab();
+    store().activate(1);
+    await act(() => store().openRepository("/repos/r3"));
+    expect(store().blankTab).toBe(true);
+    expect(store().activeId).toBe(3);
+  });
+
+  it("closes with × or ⌘W, back to its left neighbour", async () => {
+    const user = userEvent.setup();
+    withTabs(2, 1);
+    render(<App />);
+    act(() => store().newTab());
+    await user.click(
+      screen.getByRole("button", { name: "Cerrar Nueva pestaña" }),
+    );
+    expect(store().blankTab).toBe(false);
+    expect(store().activeId).toBe(2);
+
+    act(() => store().newTab());
+    await act(() => store().closeActiveTab());
+    expect(store().blankTab).toBe(false);
+    expect(ids()).toEqual([1, 2]);
+  });
+
+  it("is not saved in the session", async () => {
+    useRepoStore.setState({
+      tabs: [opened(1, "/a"), opened(2, "/b")],
+      activeId: 1,
+    });
+    await store().restoreSession();
+    store().newTab();
+    expect(ipc.saveSession).toHaveBeenLastCalledWith(["/a", "/b"], "/b");
+  });
+});
+
 function Scroller({ id }: { id: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useRememberedScroll(ref, id);

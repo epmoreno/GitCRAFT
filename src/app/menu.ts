@@ -8,11 +8,12 @@ import type { TFunction } from "i18next";
 
 /**
  * The macOS menu bar. Replaces the default one, whose "Close Window" on ⌘W
- * would close the whole app: here ⌘W closes the active tab.
+ * would close the whole app: here ⌘W closes the active tab. ⌘T opens a new
+ * tab with the start page.
  */
 export async function installAppMenu(
   t: TFunction,
-  actions: { closeTab: () => void },
+  actions: { newTab: () => void; closeTab: () => void },
 ) {
   const separator = () => PredefinedMenuItem.new({ item: "Separator" });
   const app = await Submenu.new({
@@ -27,6 +28,17 @@ export async function installAppMenu(
       await PredefinedMenuItem.new({ item: "ShowAll" }),
       await separator(),
       await PredefinedMenuItem.new({ item: "Quit" }),
+    ],
+  });
+  const file = await Submenu.new({
+    text: t("menu.file"),
+    items: [
+      await MenuItem.new({
+        id: "new-tab",
+        text: t("menu.newTab"),
+        accelerator: "CmdOrCtrl+T",
+        action: actions.newTab,
+      }),
     ],
   });
   // Copy and paste in text fields need the Edit menu's standard items.
@@ -56,6 +68,6 @@ export async function installAppMenu(
       await PredefinedMenuItem.new({ item: "Fullscreen" }),
     ],
   });
-  const menu = await Menu.new({ items: [app, edit, window] });
+  const menu = await Menu.new({ items: [app, file, edit, window] });
   await menu.setAsAppMenu();
 }

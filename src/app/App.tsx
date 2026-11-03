@@ -42,12 +42,15 @@ export function App() {
     void loadRecents();
   }, [restoreSession, loadRecents]);
 
-  // ⌘W closes the active tab (menu bar); ⌘1…⌘9 and ⌃Tab / ⌃⇧Tab switch
-  // tabs. Never while a dialog waits for an answer.
+  // ⌘T opens a new tab and ⌘W closes the active one (menu bar); ⌘1…⌘9 and
+  // ⌃Tab / ⌃⇧Tab switch tabs. Never while a dialog waits for an answer.
   useEffect(() => {
     const dialogOpen = () => document.querySelector('[aria-modal="true"]');
     const tabs = useRepoStore.getState;
     void installAppMenu(t, {
+      newTab: () => {
+        if (!dialogOpen()) tabs().newTab();
+      },
       closeTab: () => {
         if (!dialogOpen()) void tabs().closeActiveTab();
       },

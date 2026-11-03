@@ -30,7 +30,9 @@
     "restoreFailed_one": "No se pudo reabrir 1 repositorio de la sesión anterior",
     "restoreFailed_other": "No se pudieron reabrir {{count}} repositorios de la sesión anterior",
     "restoreForgotten": "Se ha quitado de las pestañas guardadas; si vuelve a existir, ábrelo de nuevo desde «Abrir repositorio» o los recientes.",
-    "restoreError": "No se pudo leer la sesión anterior, así que GitCRAFT empieza sin pestañas."
+    "restoreError": "No se pudo leer la sesión anterior, así que GitCRAFT empieza sin pestañas.",
+    "newTab": "Nueva pestaña",
+    "newTabHint": "Nueva pestaña (⌘T)"
   },
   "sidebar": {
     "local": "Ramas locales",
@@ -610,7 +612,9 @@
   "menu": {
     "edit": "Edición",
     "window": "Ventana",
-    "closeTab": "Cerrar pestaña"
+    "closeTab": "Cerrar pestaña",
+    "file": "Archivo",
+    "newTab": "Nueva pestaña"
   },
   "init": {
     "pickerTitle": "Carpeta para el nuevo repositorio",

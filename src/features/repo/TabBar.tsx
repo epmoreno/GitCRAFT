@@ -1,6 +1,7 @@
 import { useRef, useState, type PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
+import { Tooltip } from "../../ui/Tooltip";
 import { useRepoStore } from "./store";
 import styles from "./repo.module.css";
 
@@ -19,6 +20,10 @@ export function TabBar() {
   const activate = useRepoStore((s) => s.activate);
   const closeTab = useRepoStore((s) => s.closeTab);
   const moveTab = useRepoStore((s) => s.moveTab);
+  const blankTab = useRepoStore((s) => s.blankTab);
+  const newTab = useRepoStore((s) => s.newTab);
+  const activateBlank = useRepoStore((s) => s.activateBlank);
+  const closeBlankTab = useRepoStore((s) => s.closeBlankTab);
   const elements = useRef(new Map<number, HTMLElement>());
   const drag = useRef<Drag | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
@@ -65,7 +70,7 @@ export function TabBar() {
 
   return (
     <div className={styles.tabbar} role="tablist" aria-label={t("tabs.label")}>
-      {tabs.length === 0 && (
+      {tabs.length === 0 && !blankTab && (
         <span className={styles.tabbarEmpty}>{t("tabs.empty")}</span>
       )}
       {tabs.map(({ id, info }, index) => {
@@ -148,6 +153,41 @@ export function TabBar() {
           </div>
         );
       })}
+      {blankTab && (
+        <div
+          className={
+            activeId === null ? `${styles.tab} ${styles.tabActive}` : styles.tab
+          }
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeId === null}
+            className={styles.tabLabel}
+            onClick={activateBlank}
+          >
+            {t("tabs.newTab")}
+          </button>
+          <button
+            type="button"
+            className={styles.tabClose}
+            aria-label={t("tabs.close", { name: t("tabs.newTab") })}
+            onClick={closeBlankTab}
+          >
+            ×
+          </button>
+        </div>
+      )}
+      <Tooltip label={t("tabs.newTabHint")}>
+        <button
+          type="button"
+          className={styles.newTab}
+          aria-label={t("tabs.newTab")}
+          onClick={newTab}
+        >
+          +
+        </button>
+      </Tooltip>
       {menu && (
         <ContextMenu
           x={menu.x}

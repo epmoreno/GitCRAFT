@@ -30,7 +30,9 @@
     "restoreFailed_one": "1 repository from the previous session could not be reopened",
     "restoreFailed_other": "{{count}} repositories from the previous session could not be reopened",
     "restoreForgotten": "It was removed from the saved tabs; if it exists again, open it from “Open repository” or the recent list.",
-    "restoreError": "Couldn't read the previous session, so GitCRAFT starts with no tabs."
+    "restoreError": "Couldn't read the previous session, so GitCRAFT starts with no tabs.",
+    "newTab": "New tab",
+    "newTabHint": "New tab (⌘T)"
   },
   "sidebar": {
     "local": "Local branches",
@@ -610,7 +612,9 @@
   "menu": {
     "edit": "Edit",
     "window": "Window",
-    "closeTab": "Close tab"
+    "closeTab": "Close tab",
+    "file": "File",
+    "newTab": "New tab"
   },
   "init": {
     "pickerTitle": "Folder for the new repository",

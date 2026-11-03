@@ -354,6 +354,11 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   anterior (`restore_session`), para que un arranque lento no la borre.
   Restaurar no reordena los recientes; un repo que ya no existe o no es
   válido no se abre, se avisa una vez y se quita de la sesión guardada.
+  La pestaña nueva (⌘T, «+») no se guarda. Es una sola, siempre la última,
+  y muestra la pantalla de inicio. Está activa cuando `activeId` es `null`,
+  y al abrir, clonar o inicializar un repo desde ella se convierte en la
+  pestaña de ese repo. Mientras está activa, la sesión guarda como activa la
+  pestaña de su izquierda.
 - Las preferencias: modo de pull por repo, tema e idioma.
 
 Se escribe de forma atómica (archivo temporal + rename). Si el archivo está
