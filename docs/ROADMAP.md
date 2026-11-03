@@ -362,6 +362,173 @@ diálogo y con confirmación, con el índice intacto.
 
 **MVP (fase 1) completo y verificado manualmente** — versión `v0.1.0`.
 
+## Fase 1.5 — Pulido, ajustes y GitHub (v0.2.0)
+
+Orden: A → B → C → D → E. Al terminar cada letra se para y se explica cómo
+probarla antes de seguir. Identidad visual propia (grafito/cobre); los
+comportamientos se describen con palabras propias, sin copiar el aspecto de
+ningún producto.
+
+### A. Estética y contraste
+- [ ] **A.1 Paleta revisada y test de contraste.** Los colores de
+      `src/ui/tokens.css` se revisan para que sean más suaves (acento y
+      colores de estado menos saturados) y mantienen la identidad
+      grafito/cobre. Todo color de la app sale de un token: no queda ningún
+      color literal en los CSS de componentes ni en el código (los carriles
+      del grafo incluidos).
+      *Tests:* `src/ui/contrast.test.ts` lee los tokens y calcula el ratio
+      WCAG de los pares principales. Falla si el texto (`--text`,
+      `--text-muted`, acento, peligro, éxito, aviso e info, y el texto sobre
+      el acento) baja de **4,5:1** sobre cualquier superficie en la que se
+      usa, o si el anillo de foco y los bordes de los controles bajan de
+      **3:1**. Otro test falla si aparece un color literal fuera de
+      `tokens.css`. La tabla de pares y ratios se documenta en
+      ARCHITECTURE.md.
+- [ ] **A.2 Estados de interacción.** Tokens y estilos base comunes para
+      *hover*, *pulsado*, *seleccionado* (con y sin foco en la lista), *foco
+      de teclado* y *deshabilitado*. Se aplican a botones, filas de listas,
+      pestañas, chips, elementos de menú, campos y casillas. Siempre se ve
+      qué elemento está activo o se está pulsando. Lo deshabilitado se
+      distingue sin depender solo del color y no reacciona al *hover*.
+      *Tests:* los pares de color de cada estado entran en el test de
+      contraste. Un test de componentes comprueba que los controles
+      deshabilitados llevan `disabled`/`aria-disabled` y que la selección se
+      expone con `aria-selected`/`aria-current`.
+
+### B. Panel de cambios sin confirmar
+- [ ] **B.1 Cabecera y caja de commit fija.** La cabecera dice «N cambios en
+      `<rama>`» (o «en HEAD separado»). La caja de commit queda fija abajo,
+      separada de la lista por un divisor redimensionable con ratón y con
+      teclado (`role="separator"`, flechas). Tiene límites de altura y su
+      altura se recuerda.
+- [ ] **B.2 Secciones plegables con acciones.** «Conflictos», «Sin preparar»
+      y «Preparados» se pliegan y despliegan, cada una con su contador y sus
+      acciones siempre visibles: *Preparar todo*, *Quitar todo* y *Descartar
+      todo*. *Descartar todo* usa la confirmación y el «Deshacer» de la 4.4.
+      El plegado se recuerda.
+- [ ] **B.3 Vista de árbol.** Un conmutador cambia entre lista por ruta y
+      árbol de carpetas. En el árbol, las carpetas se pliegan, muestran su
+      número de archivos y hay *Expandir todo* / *Plegar todo*. Se navega con
+      teclado (`role="tree"`: flechas para moverse, ← pliega y → despliega).
+      La vista elegida se recuerda entre sesiones.
+- [ ] **B.4 Ordenar y carpetas enteras.** Se ordena por nombre o por estado
+      en las dos vistas, y el orden se recuerda. Desde el árbol se prepara o
+      se quita una carpeta entera (botón en la fila y menú contextual). La
+      operación pasa la lista explícita de archivos de la carpeta, no un
+      patrón.
+      *Tests:* construcción del árbol y contadores, orden, preparar o quitar
+      una carpeta con rutas que contienen espacios o empiezan por `-`.
+
+### C. Pestaña nueva
+- [ ] **C.1 Botón «+» y ⌘T.** El botón «+» de la barra de pestañas, ⌘T y
+      *Archivo → Nueva pestaña* abren una pestaña con la pantalla de inicio
+      (Abrir, Clonar, Inicializar y Recientes). Al abrir, clonar o
+      inicializar un repo desde ahí, esa pestaña pasa a ser la del repo. Si
+      el repo ya estaba abierto en otra pestaña, se activa esa y se cierra la
+      vacía. Si ya hay una pestaña vacía, ⌘T va a ella en vez de crear otra.
+      ⌘W cierra la pestaña vacía. Las pestañas vacías no se guardan en la
+      sesión.
+
+### D. Ajustes (engranaje y ⌘,)
+- [ ] **D.1 Ventana de Ajustes y Generales.** El engranaje de la barra y
+      *GitCRAFT → Ajustes…* (⌘,) abren los Ajustes, con las secciones
+      Generales, Identidad, Cuenta de GitHub y Atajos. En Generales:
+      - idioma (es/en), que se aplica al momento;
+      - tamaño de texto, en varios niveles, que escala toda la UI;
+      - carpeta por defecto para clonar.
+
+      Se guardan en `settings.json`.
+- [ ] **D.2 Rama inicial, pull por defecto y fetch automático.** Rama
+      inicial por defecto (validada con `git check-ref-format`) y estrategia
+      de pull por defecto (merge, rebase o solo fast-forward). Se guardan en
+      la **config global de git** (`init.defaultBranch`, `pull.rebase` /
+      `pull.ff`, con `git config --global`), así que también afectan a git en
+      la terminal, y Ajustes lo avisa. Ajustes muestra el valor actual, y el
+      modo de pull elegido por repo en GitCRAFT (6.2) sigue teniendo
+      prioridad. Fetch automático cada N minutos,
+      **desactivado por defecto**:
+      - se hace en las pestañas abiertas que tienen remoto;
+      - no se lanza si ya hay una operación remota en ese repo;
+      - sus fallos se ven en el estado remoto, sin ventanas emergentes;
+      - cada fetch aparece en el panel de operaciones.
+- [ ] **D.3 Identidad de Git.** `user.name` y `user.email` en dos ámbitos:
+      el global y el del repositorio de la pestaña activa, con el valor
+      efectivo y de dónde viene. Se pueden editar los dos y quitar el del
+      repo para heredar el global. Se lee y escribe con `git config`
+      (`--global` / `--local`, salida con `-z`). Validación básica del email.
+      *Tests de integración* con `GIT_CONFIG_GLOBAL` temporal.
+- [ ] **D.4 Cuenta de GitHub con `gh`.** Detecta si `gh` está instalado; si
+      no, explica cómo instalarlo (`brew install gh` o cli.github.com). Lee
+      el estado con `gh auth status --hostname github.com --json hosts` y
+      muestra con qué usuario hay sesión o si el token no es válido.
+      - **Iniciar sesión dentro de la app:** se lanza `gh auth login
+        --hostname github.com --web --git-protocol https`. GitCRAFT muestra el
+        código de un solo uso con un botón de copiar, abre el navegador y
+        deja cancelar.
+      - **Cerrar sesión:** `gh auth logout`, con confirmación.
+      - **Botón «Usar gh para las credenciales de Git»:** ejecuta `gh auth
+        setup-git`. Antes explica qué cambia en `~/.gitconfig`: añade gh
+        como credential helper de github.com, que hoy es `osxkeychain`.
+        Nunca se ejecuta automáticamente.
+
+      GitCRAFT **no lee ni guarda ningún token**: nunca usa `gh auth token`
+      ni `--show-token`.
+      *Tests sin red* con un `gh` simulado (script de prueba en el PATH):
+      sin instalar, sin sesión, con sesión, token caducado y cancelar el
+      inicio de sesión.
+- [ ] **D.5 Atajos (solo consulta).** Lista de todos los atajos de la app,
+      agrupados. Sale del mismo registro que usan los manejadores de teclado
+      y el menú.
+      *Test:* falla si un atajo registrado no aparece en la lista o al
+      revés. Personalizarlos queda para la fase 3.
+
+### E. Publicar un repo local en GitHub
+- [ ] **E.1 Núcleo de publicación.** El repo siempre se crea en la **cuenta
+      personal**; las organizaciones quedan para más adelante. En este orden:
+      1. Comprueba que el nombre no existe en la cuenta (`gh repo view
+         <usuario>/<nombre> --json name`). Si existe, lo explica y no toca
+         nada.
+      2. Crea el repo con `gh repo create <nombre> --private|--public
+         [--description …]`. **Privado por defecto.**
+      3. Añade `origin`.
+      4. Hace push de la rama actual con `--set-upstream`, con la misma
+         maquinaria de progreso y cancelación de la 6.x. **Nunca push
+         forzado.**
+
+      Si el push falla después de crear el repo, se explica qué ha quedado
+      hecho (repo remoto creado y `origin` añadido) y se puede reintentar con
+      Push. El repo remoto nunca se borra automáticamente.
+      *Tests sin red* con `gh` simulado y un remoto `file://` como destino:
+      creación, nombre existente (no se ejecuta ningún paso más), sin sesión,
+      fallo de push tras crear y argumentos (el nombre y la descripción van
+      como argumentos separados, nunca interpolados).
+- [ ] **E.2 Diálogo «Publicar en GitHub».** Aparece en un repo sin remotos.
+      Tiene:
+      - nombre propuesto a partir de la carpeta, ajustado a los caracteres
+        válidos en GitHub;
+      - descripción opcional;
+      - visibilidad, con **Privado** marcado por defecto;
+      - progreso por pasos.
+
+      Antes de confirmar se muestra un resumen de lo que se va a subir: rama,
+      número de commits y tamaño aproximado. Se avisa, **sin bloquear**, en
+      estos casos:
+      - el repo no tiene `.gitignore`;
+      - hay archivos de más de 50 MB en lo que se sube;
+      - hay carpetas típicas de compilación commiteadas (`build/`, `bin/`,
+        `target/`, `node_modules/`, `dist/`).
+
+      Si no hay sesión de GitHub, lleva a Ajustes → Cuenta de GitHub. Si no
+      hay commits o HEAD está separado, el botón está desactivado y explica
+      por qué.
+      *La prueba real la hace el usuario* con un repo de prueba privado que
+      luego borra.
+
+### Cierre de la fase
+- [ ] **V.1 Versión 0.2.0.** Versión 0.2.0 en `package.json`, `Cargo.toml` y
+      `tauri.conf.json`; README actualizado; `.dmg` generado. El tag anotado
+      `v0.2.0` se crea solo cuando el usuario confirme la verificación.
+
 ## Fase 2
 
 - [ ] **8. Merge/rebase con drag & drop.** Al arrastrar una rama sobre otra se
@@ -386,3 +553,5 @@ diálogo y con confirmación, con el índice intacto.
 - [ ] Submódulos · Worktrees · Git LFS · Firma GPG/SSH (verificar y mostrar) ·
       Perfiles de identidad · Atajos configurables · Tema claro/oscuro ·
       Builds de Windows y Linux · Firma y notarización en macOS.
+- [ ] Inicio de sesión de GitHub propio dentro de la app (OAuth *device
+      flow*, token guardado en el Llavero de macOS), como alternativa a `gh`.
