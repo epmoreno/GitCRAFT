@@ -13,6 +13,7 @@ import { DetailPanel } from "../detail/DetailPanel";
 import { GraphView } from "../graph/GraphView";
 import { useGraphStore, WORKTREE } from "../graph/store";
 import { changeCounts, useWorkdirStore } from "./store";
+import { useWorkdirViewPrefs } from "./viewPrefs";
 import { WorkingDirPanel } from "./WorkingDirPanel";
 
 const info = {
@@ -231,5 +232,70 @@ describe("staging files", () => {
     expect(within(alert).getByText(/index.lock/)).toHaveClass("selectable");
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("panel layout", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+    ipc.workingStatus.mockResolvedValue({ status: "ok", data: busyStatus() });
+  });
+
+  const show = (status: WorkingStatus = busyStatus()) => {
+    useWorkdirStore.setState({ statuses: { 1: { status, error: null } } });
+    return render(<WorkingDirPanel repoId={1} />);
+  };
+
+  it("says how many changes there are and on which branch", () => {
+    show();
+    expect(screen.getByText("5 cambios en main")).toBeVisible();
+  });
+
+  it("says when HEAD is detached", () => {
+    const status = busyStatus();
+    status.branch = { ...status.branch, name: null };
+    show(status);
+    expect(screen.getByText("5 cambios en HEAD separado")).toBeVisible();
+  });
+
+  it("keeps the commit box outside the scrolling list, below a divider", () => {
+    const { container } = show();
+    const unstaged = screen.getByRole("region", { name: "Sin preparar" });
+    const divider = screen.getByRole("separator", {
+      name: "Altura de la caja de commit",
+    });
+    const summary = screen.getByRole("textbox", { name: "Resumen" });
+    const list = unstaged.parentElement!;
+    expect(list).not.toContainElement(summary);
+    expect(divider.previousElementSibling).toBe(list);
+    expect(divider.nextElementSibling).toContainElement(summary);
+    expect(container).toContainElement(divider);
+  });
+
+  it("resizes the commit box with the keyboard and remembers it", async () => {
+    const user = userEvent.setup();
+    show();
+    const divider = screen.getByRole("separator");
+    const area = () => divider.nextElementSibling as HTMLElement;
+    // jsdom has no layout: the natural height reads as the minimum.
+    expect(divider).toHaveAttribute("aria-valuenow", "140");
+    // The panel is 600px high in tests (setup.ts): at most 600 - 120.
+    expect(divider).toHaveAttribute("aria-valuemax", "480");
+
+    divider.focus();
+    await user.keyboard("{ArrowUp}{ArrowUp}");
+    expect(area()).toHaveStyle({ height: "172px" });
+    expect(divider).toHaveAttribute("aria-valuenow", "172");
+    await user.keyboard("{Home}");
+    expect(area()).toHaveStyle({ height: "480px" });
+    await user.keyboard("{End}");
+    expect(area()).toHaveStyle({ height: "140px" });
+    expect(
+      JSON.parse(localStorage.getItem("gitcraft.workdir-view") ?? "{}").state,
+    ).toMatchObject({ commitBoxHeight: 140 });
+
+    await user.keyboard("{Enter}");
+    expect(area().style.height).toBe("");
+    expect(useWorkdirViewPrefs.getState().commitBoxHeight).toBeNull();
   });
 });

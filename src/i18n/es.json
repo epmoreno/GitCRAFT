@@ -238,7 +238,12 @@
     "viewChanges": "Ver cambios de {{path}}",
     "discard": "Descartar",
     "discardAll": "Descartar todo",
-    "discardFile": "Descartar los cambios de {{path}}"
+    "discardFile": "Descartar los cambios de {{path}}",
+    "summaryOnBranch_one": "{{count}} cambio en {{branch}}",
+    "summaryOnBranch_other": "{{count}} cambios en {{branch}}",
+    "summaryDetached_one": "{{count}} cambio en HEAD separado",
+    "summaryDetached_other": "{{count}} cambios en HEAD separado",
+    "resizeCommitBox": "Altura de la caja de commit"
   },
   "commit": {
     "label": "Crear commit",

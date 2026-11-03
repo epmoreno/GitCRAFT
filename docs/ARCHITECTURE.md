@@ -173,6 +173,23 @@ cabeceras `@@`) y lo aplica con
 `git apply --cached --whitespace=nowarn -` por stdin (con `-R`
 para unstage). Esta lógica es pura y se cubre con tests unitarios exhaustivos.
 
+## 5a. Panel de cambios sin confirmar
+
+`src/features/workdir/WorkingDirPanel.tsx` ocupa todo el panel derecho.
+Tiene tres partes:
+- la cabecera («N cambios en `<rama>`»);
+- la lista de cambios, con su propio scroll, que se recuerda por pestaña;
+- la caja de commit fija abajo, con un divisor redimensionable
+  (`ResizeHandle`, `role="separator"`) entre las dos.
+
+Las preferencias de vista del panel (altura de la caja de commit y, desde
+B.2–B.4, el plegado de secciones, la vista lista o árbol y el orden) están
+en `viewPrefs.ts`. Se guardan con `persist` de zustand en el `localStorage`
+del webview (`~/Library/WebKit/dev.gitcraft.app`). Son prescindibles: si se
+pierden, el panel vuelve a su aspecto por defecto. Por eso no van en
+`settings.json`, que guarda lo que sí importa (recientes, sesión, modos de
+pull).
+
 ## 5b. Descartar cambios (la única operación que destruye trabajo)
 
 `gitcraft-core/src/ops/discard.rs`. Solo afecta a cambios **sin preparar**; el

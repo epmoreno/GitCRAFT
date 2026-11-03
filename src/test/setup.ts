@@ -12,6 +12,10 @@ import { initialStashState, useStashStore } from "../features/stash/store";
 import { initialRepoState, useRepoStore } from "../features/repo/store";
 import { useViewStore } from "../features/repo/viewState";
 import { useWorkdirStore } from "../features/workdir/store";
+import {
+  initialWorkdirViewPrefs,
+  useWorkdirViewPrefs,
+} from "../features/workdir/viewPrefs";
 import { resetIpcMock } from "./ipc";
 
 // The native menu bar does not exist in tests.
@@ -105,6 +109,8 @@ beforeEach(() => {
   useCreateStore.setState(initialCreateState);
   useOperationsStore.setState(initialOperationsState);
   useGraphStore.setState({ graphs: {} });
+  localStorage.clear();
+  useWorkdirViewPrefs.setState(initialWorkdirViewPrefs);
   useWorkdirStore.setState({
     statuses: {},
     drafts: {},

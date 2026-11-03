@@ -1,15 +1,37 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ConflictEntry, StatusEntry, WorktreeArea } from "../../ipc";
+import type {
+  ConflictEntry,
+  StatusEntry,
+  WorkingStatus,
+  WorktreeArea,
+} from "../../ipc";
 import { useGraphStore } from "../graph/store";
-import { useWorkdirStore } from "./store";
+import { useRememberedScroll } from "../repo/viewState";
+import { changeCounts, useWorkdirStore } from "./store";
 import { CommitBox } from "./CommitBox";
+import { ResizeHandle } from "./ResizeHandle";
+import { useWorkdirViewPrefs } from "./viewPrefs";
 import { StatusLetter } from "./StatusLetter";
 import styles from "./workdir.module.css";
 import { ErrorReport } from "../../ui/ErrorReport";
 
-/** Right-hand panel for the "uncommitted changes" entry. */
+/** Smallest commit box, and the room always left for the list above it. */
+export const COMMIT_BOX_MIN = 140;
+const LIST_MIN = 120;
+
+/**
+ * Right-hand panel for the "uncommitted changes" entry: a header, the
+ * changes (scrolling), a divider and the commit box fixed at the bottom.
+ */
 export function WorkingDirPanel({ repoId }: { repoId: number }) {
   const { t } = useTranslation();
+  const panel = useRef<HTMLDivElement>(null);
+  const changes = useRef<HTMLDivElement>(null);
+  const commitArea = useRef<HTMLDivElement>(null);
+  const height = useWorkdirViewPrefs((s) => s.commitBoxHeight);
+  const setHeight = useWorkdirViewPrefs((s) => s.setCommitBoxHeight);
+  useRememberedScroll(changes, `${repoId}:workdir`);
   const entry = useWorkdirStore((s) => s.statuses[repoId]);
   const stage = useWorkdirStore((s) => s.stage);
   const unstage = useWorkdirStore((s) => s.unstage);
@@ -17,119 +39,168 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
   const dismissError = useWorkdirStore((s) => s.dismissError);
   const status = entry?.status ?? null;
   const busy = entry?.busy ?? false;
+  // The divider's limits depend on the panel's height: follow it.
+  const [, setPanelHeight] = useState(0);
+  const hasStatus = status !== null;
+  useLayoutEffect(() => {
+    const element = panel.current;
+    if (!element) return;
+    setPanelHeight(element.clientHeight);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() =>
+      setPanelHeight(element.clientHeight),
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [hasStatus]);
 
   if (!status) {
-    return entry?.error ? (
-      <ErrorReport error={entry.error} lead={t("workdir.failed")} />
-    ) : (
-      <p className={styles.muted}>{t("workdir.loading")}</p>
+    return (
+      <div className={styles.panelMessage}>
+        {entry?.error ? (
+          <ErrorReport error={entry.error} lead={t("workdir.failed")} />
+        ) : (
+          <p className={styles.muted}>{t("workdir.loading")}</p>
+        )}
+      </div>
     );
   }
 
   const unstaged = [...status.unstaged, ...status.untracked];
   return (
-    <div className={styles.panel}>
-      <h2 className={styles.title}>{t("workdir.row")}</h2>
-      {entry?.opError && (
-        <div className={styles.opError}>
-          <ErrorReport error={entry.opError} lead={t("workdir.opFailed")} />
-          <button
-            type="button"
-            className={styles.action}
-            onClick={() => dismissError(repoId)}
-          >
-            {t("errors.dismiss")}
-          </button>
-        </div>
-      )}
-      {status.conflicted.length > 0 && (
-        <Section
-          title={t("workdir.conflicts")}
-          count={status.conflicted.length}
-        >
-          {status.conflicted.map((c) => (
-            <ConflictRow key={c.path} entry={c} />
-          ))}
-        </Section>
-      )}
-      <Section
-        title={t("workdir.unstaged")}
-        count={unstaged.length}
-        action={
-          <>
+    <div ref={panel} className={styles.panel}>
+      <header className={styles.header}>
+        <h2 className={styles.title}>{t("workdir.row")}</h2>
+        <p className={styles.headerSummary}>{headerSummary(t, status)}</p>
+      </header>
+      <div ref={changes} className={styles.changes}>
+        {entry?.opError && (
+          <div className={styles.opError}>
+            <ErrorReport error={entry.opError} lead={t("workdir.opFailed")} />
             <button
               type="button"
-              className={`${styles.action} ${styles.danger}`}
-              disabled={busy}
-              onClick={() =>
-                void requestDiscard(repoId, {
-                  kind: "files",
-                  paths: unstaged.map((e) => e.path),
-                })
-              }
+              className={styles.action}
+              onClick={() => dismissError(repoId)}
             >
-              {t("workdir.discardAll")}
+              {t("errors.dismiss")}
             </button>
+          </div>
+        )}
+        {status.conflicted.length > 0 && (
+          <Section
+            title={t("workdir.conflicts")}
+            count={status.conflicted.length}
+          >
+            {status.conflicted.map((c) => (
+              <ConflictRow key={c.path} entry={c} />
+            ))}
+          </Section>
+        )}
+        <Section
+          title={t("workdir.unstaged")}
+          count={unstaged.length}
+          action={
+            <>
+              <button
+                type="button"
+                className={`${styles.action} ${styles.danger}`}
+                disabled={busy}
+                onClick={() =>
+                  void requestDiscard(repoId, {
+                    kind: "files",
+                    paths: unstaged.map((e) => e.path),
+                  })
+                }
+              >
+                {t("workdir.discardAll")}
+              </button>
+              <button
+                type="button"
+                className={styles.action}
+                disabled={busy}
+                onClick={() => void stage(repoId, null)}
+              >
+                {t("workdir.stageAll")}
+              </button>
+            </>
+          }
+        >
+          {unstaged.map((e) => (
+            <FileRow
+              key={`u:${e.path}`}
+              repoId={repoId}
+              area={e.status === "untracked" ? "untracked" : "unstaged"}
+              entry={e}
+              actionLabel={t("workdir.stage")}
+              actionTitle={t("workdir.stageFile", { path: e.path })}
+              disabled={busy}
+              onAction={() => void stage(repoId, [e.path])}
+              onDiscard={() =>
+                void requestDiscard(repoId, { kind: "files", paths: [e.path] })
+              }
+            />
+          ))}
+        </Section>
+        <Section
+          title={t("workdir.staged")}
+          count={status.staged.length}
+          action={
             <button
               type="button"
               className={styles.action}
               disabled={busy}
-              onClick={() => void stage(repoId, null)}
+              onClick={() => void unstage(repoId, null)}
             >
-              {t("workdir.stageAll")}
+              {t("workdir.unstageAll")}
             </button>
-          </>
-        }
+          }
+        >
+          {status.staged.map((e) => (
+            <FileRow
+              key={`s:${e.path}`}
+              repoId={repoId}
+              area="staged"
+              entry={e}
+              actionLabel={t("workdir.unstage")}
+              actionTitle={t("workdir.unstageFile", { path: e.path })}
+              disabled={busy}
+              // A staged rename lives under both names in the index.
+              onAction={() =>
+                void unstage(repoId, e.oldPath ? [e.path, e.oldPath] : [e.path])
+              }
+            />
+          ))}
+        </Section>
+      </div>
+      <ResizeHandle
+        label={t("workdir.resizeCommitBox")}
+        value={height}
+        measure={() => commitArea.current?.offsetHeight ?? COMMIT_BOX_MIN}
+        min={COMMIT_BOX_MIN}
+        max={() => (panel.current?.clientHeight ?? 0) - LIST_MIN}
+        onChange={setHeight}
+      />
+      <div
+        ref={commitArea}
+        className={styles.commitArea}
+        style={height === null ? undefined : { height }}
       >
-        {unstaged.map((e) => (
-          <FileRow
-            key={`u:${e.path}`}
-            repoId={repoId}
-            area={e.status === "untracked" ? "untracked" : "unstaged"}
-            entry={e}
-            actionLabel={t("workdir.stage")}
-            actionTitle={t("workdir.stageFile", { path: e.path })}
-            disabled={busy}
-            onAction={() => void stage(repoId, [e.path])}
-            onDiscard={() =>
-              void requestDiscard(repoId, { kind: "files", paths: [e.path] })
-            }
-          />
-        ))}
-      </Section>
-      <Section
-        title={t("workdir.staged")}
-        count={status.staged.length}
-        action={
-          <button
-            type="button"
-            className={styles.action}
-            disabled={busy}
-            onClick={() => void unstage(repoId, null)}
-          >
-            {t("workdir.unstageAll")}
-          </button>
-        }
-      >
-        {status.staged.map((e) => (
-          <FileRow
-            key={`s:${e.path}`}
-            repoId={repoId}
-            area="staged"
-            entry={e}
-            actionLabel={t("workdir.unstage")}
-            actionTitle={t("workdir.unstageFile", { path: e.path })}
-            disabled={busy}
-            // A staged rename lives under both names in the index.
-            onAction={() =>
-              void unstage(repoId, e.oldPath ? [e.path, e.oldPath] : [e.path])
-            }
-          />
-        ))}
-      </Section>
-      <CommitBox repoId={repoId} status={status} />
+        <CommitBox repoId={repoId} status={status} />
+      </div>
     </div>
   );
+}
+
+/** "3 changes on main" (or on a detached HEAD). */
+function headerSummary(
+  t: ReturnType<typeof useTranslation>["t"],
+  status: WorkingStatus,
+): string {
+  const count = changeCounts(status).total;
+  const branch = status.branch.name;
+  return branch
+    ? t("workdir.summaryOnBranch", { count, branch })
+    : t("workdir.summaryDetached", { count });
 }
 
 function Section({

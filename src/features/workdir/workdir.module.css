@@ -62,14 +62,83 @@
 /* Working directory panel */
 .panel {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: var(--space-3);
+  min-height: 0;
+}
+
+.panelMessage {
+  padding: var(--space-4);
+}
+
+.header {
+  flex: none;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  border-bottom: 1px solid var(--border);
 }
 
 .title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
+}
+
+.headerSummary {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+/* The changes scroll; the commit box below stays in place. */
+.changes {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+}
+
+.resizeHandle {
+  flex: none;
+  height: 7px;
+  margin: -3px 0;
+  position: relative;
+  z-index: 1;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.resizeHandle::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: var(--border-strong);
+}
+
+.resizeHandle:hover::after,
+.resizeHandle:focus-visible::after {
+  height: 3px;
+  top: 2px;
+  background-color: var(--accent);
+}
+
+.resizeHandle:focus-visible {
+  outline-offset: -2px;
+}
+
+.commitArea {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  min-height: 140px;
+  max-height: calc(100% - 120px);
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
 .muted {
@@ -223,10 +292,10 @@
 /* Commit box */
 .commitBox {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
+  min-height: 0;
 }
 
 .summaryRow {
@@ -250,7 +319,10 @@
 }
 
 .description {
-  resize: vertical;
+  /* The divider above the commit box sets its size. */
+  flex: 1;
+  min-height: 3.2em;
+  resize: none;
   line-height: 1.45;
 }
 

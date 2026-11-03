@@ -435,11 +435,23 @@ ningún producto.
       icono de los tres menús remotos.
 
 ### B. Panel de cambios sin confirmar
-- [ ] **B.1 Cabecera y caja de commit fija.** La cabecera dice «N cambios en
+- [x] **B.1 Cabecera y caja de commit fija.** La cabecera dice «N cambios en
       `<rama>`» (o «en HEAD separado»). La caja de commit queda fija abajo,
       separada de la lista por un divisor redimensionable con ratón y con
       teclado (`role="separator"`, flechas). Tiene límites de altura y su
       altura se recuerda.
+      *Estado:* la lista de cambios tiene su propio scroll y la caja de
+      commit queda debajo del divisor.
+      - Con el teclado: ↑/↓ cambian la altura de 16 en 16 px, Inicio/Fin van
+        a los límites, e Intro o un doble clic vuelven a la altura natural.
+      - Límites: mínimo 140 px, y siempre quedan al menos 120 px para la
+        lista.
+      - La altura se guarda en el `localStorage` del webview, junto con las
+        demás preferencias de vista del panel.
+
+      *Tests:* textos de la cabecera (con rama y con HEAD separado), la caja
+      de commit fuera de la lista, y el redimensionado con teclado y su
+      persistencia.
 - [ ] **B.2 Secciones plegables con acciones.** «Conflictos», «Sin preparar»
       y «Preparados» se pliegan y despliegan, cada una con su contador y sus
       acciones siempre visibles: *Preparar todo*, *Quitar todo* y *Descartar

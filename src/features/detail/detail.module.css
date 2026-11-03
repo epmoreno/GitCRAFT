@@ -5,6 +5,14 @@
   background: var(--surface-1);
 }
 
+/* The working directory panel lays itself out: fixed commit box at the bottom. */
+.panelFill {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
 .muted {
   margin: 0;
   color: var(--text-faint);

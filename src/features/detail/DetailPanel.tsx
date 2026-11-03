@@ -63,7 +63,15 @@ export function DetailPanel({ repoId }: { repoId: number | null }) {
   const current = loaded?.oid === selectedOid ? loaded : null;
 
   return (
-    <aside ref={panel} className={styles.panel} aria-label={t("zones.detail")}>
+    <aside
+      ref={panel}
+      className={
+        selectedOid === WORKTREE && repoId !== null
+          ? `${styles.panel} ${styles.panelFill}`
+          : styles.panel
+      }
+      aria-label={t("zones.detail")}
+    >
       {selectedOid === null || repoId === null ? (
         <p className={styles.muted}>{t("detail.empty")}</p>
       ) : selectedOid === WORKTREE ? (
