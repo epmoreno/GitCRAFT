@@ -76,6 +76,18 @@ pub enum GitError {
 
     #[error("{} already exists and is not an empty folder", .0.display())]
     DestinationNotEmpty(PathBuf),
+
+    /// GitHub CLI (`gh`) is not installed (or not where GitCRAFT looks).
+    #[error("gh executable not found")]
+    GhNotFound,
+
+    /// `gh` ran and failed.
+    #[error("`gh {}` failed with exit code {exit_code:?}: {}", args.join(" "), stderr.trim())]
+    GhFailed {
+        args: Vec<String>,
+        exit_code: Option<i32>,
+        stderr: String,
+    },
 }
 
 /// What went wrong, in terms the UI can explain. Each kind has a translated
@@ -124,6 +136,12 @@ pub enum ErrorKind {
     DiskFull,
     /// The system denied access to a file or folder of the repository.
     FilePermission,
+    /// GitHub CLI (`gh`) is not installed.
+    GhNotFound,
+    /// `gh` has no valid session for github.com.
+    GhNotLoggedIn,
+    /// `gh` failed for another reason (its output says why).
+    GhFailed,
     Cancelled,
     TimedOut,
     Unknown,
@@ -151,6 +169,8 @@ impl GitError {
             Self::DetachedHead => ErrorKind::DetachedHead,
             Self::AlreadyARepository(_) => ErrorKind::AlreadyARepository,
             Self::DestinationNotEmpty(_) => ErrorKind::DestinationNotEmpty,
+            Self::GhNotFound => ErrorKind::GhNotFound,
+            Self::GhFailed { stderr, .. } => classify_gh(stderr),
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
     }
@@ -176,6 +196,17 @@ impl GitError {
                 }
                 Some(redact_credentials(text.trim_end()).into_owned())
             }
+            Self::GhFailed {
+                args,
+                exit_code,
+                stderr,
+            } => {
+                let mut text = format!("$ gh {}\n{}", args.join(" "), stderr.trim_end());
+                if let Some(code) = exit_code {
+                    text.push_str(&format!("\n(exit code {code})"));
+                }
+                Some(redact_credentials(text.trim_end()).into_owned())
+            }
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) | Self::TimedOut(_) => {
                 Some(redact_credentials(&self.to_string()).into_owned())
             }
@@ -191,9 +222,28 @@ impl GitError {
             | Self::NothingToStash
             | Self::DetachedHead
             | Self::AlreadyARepository(_)
-            | Self::DestinationNotEmpty(_) => None,
+            | Self::DestinationNotEmpty(_)
+            | Self::GhNotFound => None,
         }
     }
+}
+
+/// Maps `gh`'s stderr to an [`ErrorKind`] (gh has no machine-readable
+/// errors; these phrases have been stable across releases).
+pub fn classify_gh(stderr: &str) -> ErrorKind {
+    const PATTERNS: &[(&str, ErrorKind)] = &[
+        ("not logged into", ErrorKind::GhNotLoggedIn),
+        ("gh auth login", ErrorKind::GhNotLoggedIn),
+        ("HTTP 401", ErrorKind::GhNotLoggedIn),
+        ("Bad credentials", ErrorKind::GhNotLoggedIn),
+        ("error connecting to", ErrorKind::RemoteUnreachable),
+        ("Could not resolve", ErrorKind::RemoteUnreachable),
+        ("no such host", ErrorKind::RemoteUnreachable),
+    ];
+    PATTERNS
+        .iter()
+        .find(|(needle, _)| stderr.contains(needle))
+        .map_or(ErrorKind::GhFailed, |(_, kind)| *kind)
 }
 
 /// Maps git's stderr (always produced with `LC_ALL=C`) to an [`ErrorKind`].

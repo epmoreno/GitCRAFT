@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import type { CommandError, ErrorKind } from "../ipc";
+import { copyText } from "./clipboard";
 import styles from "./ErrorReport.module.css";
 
 /** Every kind the backend can report; the compiler keeps it complete, and a
@@ -35,6 +36,9 @@ const KINDS = {
   notFastForward: true,
   diskFull: true,
   filePermission: true,
+  ghNotFound: true,
+  ghNotLoggedIn: true,
+  ghFailed: true,
   cancelled: true,
   timedOut: true,
   unknown: true,
@@ -58,25 +62,6 @@ export function explainError(
  * (an unrecognised error always has something to show). */
 export function errorOutput(error: CommandError): string | null {
   return error.details ?? (error.kind === "unknown" ? error.message : null);
-}
-
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Older WebKit without the async clipboard: copy through a selection.
-    const area = document.createElement("textarea");
-    area.value = text;
-    area.setAttribute("readonly", "");
-    area.style.position = "fixed";
-    area.style.opacity = "0";
-    document.body.append(area);
-    area.select();
-    const ok = document.execCommand?.("copy") ?? false;
-    area.remove();
-    return ok;
-  }
 }
 
 /** How every error is shown: what failed (`lead`), why and what to do

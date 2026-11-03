@@ -85,6 +85,30 @@ pub async fn get(
     Ok(Some(text.strip_suffix('\0').unwrap_or(&text).to_owned()))
 }
 
+/// Every value of a multi-valued `key` in `target` (e.g. credential
+/// helpers), in order.
+pub async fn get_all(
+    git: &Git,
+    target: &ConfigTarget,
+    key: &str,
+    cancel: &CancellationToken,
+) -> Result<Vec<String>> {
+    let out = git
+        .read(target.cwd())
+        .args(["config", target.flag(), "-z", "--get-all", "--", key])
+        .accept_exit_code(1)
+        .output(cancel)
+        .await?;
+    if out.exit_code != Some(0) {
+        return Ok(Vec::new());
+    }
+    Ok(out
+        .stdout_lossy()
+        .split_terminator('\0')
+        .map(str::to_owned)
+        .collect())
+}
+
 /// The value git uses for `key` in the repository at `repo`, from any file.
 pub async fn effective(
     git: &Git,

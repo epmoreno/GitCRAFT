@@ -10,6 +10,7 @@ import {
   cloneRepository,
   pickFolder,
   setUiZoom,
+  ghLogin,
   streamGraph,
   type CommandError,
   type ErrorKind,
@@ -90,6 +91,11 @@ export const ipc = {
   gitIdentity: vi.mocked(commands.gitIdentity),
   identityChanges: vi.mocked(commands.identityChanges),
   setGitIdentity: vi.mocked(commands.setGitIdentity),
+  ghStatus: vi.mocked(commands.ghStatus),
+  ghLogin: vi.mocked(ghLogin),
+  cancelGhLogin: vi.mocked(commands.cancelGhLogin),
+  ghLogout: vi.mocked(commands.ghLogout),
+  ghSetupGit: vi.mocked(commands.ghSetupGit),
 };
 
 export function resetIpcMock() {
@@ -139,6 +145,7 @@ export function resetIpcMock() {
   });
   ipc.setGeneralSettings.mockResolvedValue({ status: "ok", data: null });
   ipc.setUiZoom.mockResolvedValue(undefined);
+  ipc.cancelGhLogin.mockResolvedValue({ status: "ok", data: null });
   ipc.gitIdentity.mockResolvedValue({
     status: "ok",
     data: {

@@ -657,7 +657,7 @@ ningún producto.
       *Tests:* integración en el núcleo (el valor del repo manda hasta que se
       quita) y en la UI: origen de cada parte, confirmación, «Usar la
       global», email no válido y sin repo abierto.
-- [ ] **D.4 Cuenta de GitHub con `gh`.** Detecta si `gh` está instalado; si
+- [x] **D.4 Cuenta de GitHub con `gh`.** Detecta si `gh` está instalado; si
       no, explica cómo instalarlo (`brew install gh` o cli.github.com). Lee
       el estado con `gh auth status --hostname github.com --json hosts` y
       muestra con qué usuario hay sesión o si el token no es válido.
@@ -676,6 +676,28 @@ ningún producto.
       *Tests sin red* con un `gh` simulado (script de prueba en el PATH):
       sin instalar, sin sesión, con sesión, token caducado y cancelar el
       inicio de sesión.
+      *Estado:* se busca `gh` en cada consulta, así que instalarlo no exige
+      reiniciar la app.
+      - Al iniciar sesión, se abre el navegador en la página del código y
+        la app muestra el código con un botón de copiar. Además, sin
+        terminal, el propio gh lo copia al portapapeles.
+      - Cerrar sesión pide confirmación. Un token caducado se marca y se
+        ofrece iniciar sesión de nuevo.
+      - «Usar gh para las credenciales de Git…» muestra el bloque exacto que
+        se añade a `~/.gitconfig`, el helper que se usa ahora
+        (`osxkeychain`) y cómo deshacerlo.
+      - Errores nuevos: `ghNotFound`, `ghNotLoggedIn` y `ghFailed`, este
+        último con la salida original de gh.
+
+      *Tests:* en el núcleo, con un `gh` simulado que guarda sus argumentos
+      (sin red):
+      - sin instalar, sin sesión, con sesión y token caducado;
+      - código de un solo uso, cancelar, y fallo con la salida de gh;
+      - logout y setup-git solo para github.com;
+      - nunca se pide un token.
+
+      En la UI: los mismos estados, el flujo de inicio de sesión y las
+      confirmaciones.
 - [ ] **D.5 Atajos (solo consulta).** Lista de todos los atajos de la app,
       agrupados (incluidos los del panel de cambios, como ⌘⌫ para
       descartar). Sale del mismo registro que usan los manejadores de teclado

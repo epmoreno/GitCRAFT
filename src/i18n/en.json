@@ -117,7 +117,10 @@
     "unrelatedHistories": "The two branches have no commit in common, so Git refuses to join them.",
     "notFastForward": "Your configuration only allows moving the branch forward without a merge (fast-forward), and the branches have diverged. Choose merge or rebase for the pull.",
     "diskFull": "The disk is full. Free some space and try again.",
-    "filePermission": "The system denied access to a file or folder of the repository. Check its permissions (and that the folder isn't on a read-only drive)."
+    "filePermission": "The system denied access to a file or folder of the repository. Check its permissions (and that the folder isn't on a read-only drive).",
+    "ghNotFound": "GitHub CLI (gh) is not installed. Install it with “brew install gh” or from cli.github.com.",
+    "ghNotLoggedIn": "gh has no valid GitHub session. Sign in under Settings → GitHub account.",
+    "ghFailed": "gh could not complete the operation. Its original output explains why."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -764,6 +767,39 @@
         "other": "from {{scope}} ({{origin}})",
         "none": "not set"
       }
+    },
+    "github": {
+      "intro": "GitCRAFT uses GitHub CLI (gh) for your GitHub account. It stores no token of its own: gh keeps the session in the macOS Keychain.",
+      "failed": "Could not complete the operation with gh.",
+      "notInstalled": "GitHub CLI (gh) is not installed.",
+      "install": "Install it with Homebrew in the terminal:",
+      "installOther": "Or download it from cli.github.com. Then press “Check again”.",
+      "checkAgain": "Check again",
+      "found": "{{version}} at {{path}}",
+      "starting": "Signing in with gh…",
+      "typeCode": "{{url}} has opened in your browser. Type this one-time code there:",
+      "code": "One-time code",
+      "copy": "Copy code",
+      "copied": "Copied",
+      "waiting": "Waiting for you to confirm in the browser…",
+      "cancel": "Cancel",
+      "signedIn": "Signed in to github.com as",
+      "expired": "The session is no longer valid (expired or revoked): sign in again.",
+      "noSession": "No GitHub session.",
+      "signIn": "Sign in to GitHub",
+      "signOut": "Sign out",
+      "signOutTitle": "Sign {{login}} out?",
+      "signOutBody": "gh will forget {{login}}'s session on github.com. Git cannot use it to pull and push over HTTPS until you sign in again. Your repositories do not change.",
+      "gitTitle": "Git credentials for github.com",
+      "gitUsesGh": "Git asks gh for github.com credentials.",
+      "gitUsesHelper": "Git now uses {{helper}} for credentials (github.com's too).",
+      "gitNoHelper": "Git has no credential helper configured.",
+      "useGh": "Use gh for Git credentials…",
+      "useGhTitle": "Use gh for Git credentials?",
+      "useGhBody": "GitCRAFT will run gh auth setup-git, which adds this to your global git configuration (~/.gitconfig):",
+      "useGhNow": "Right now, for github.com, git uses: {{helper}}. The empty “helper =” line makes git stop using that helper for github.com only and ask gh instead. Other hosts do not change.",
+      "useGhUndo": "It can be undone with: git config --global --unset-all credential.https://github.com.helper (and the same for gist.github.com).",
+      "useGhConfirm": "Use gh"
     }
   }
 }

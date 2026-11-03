@@ -6,6 +6,7 @@ import {
   events,
   type CommandRecord_Serialize as CommandRecord,
   type GraphEvent,
+  type LoginEvent,
   type RepoChanged,
 } from "./bindings";
 
@@ -70,6 +71,9 @@ export type {
   EffectiveValue,
   Identity_Serialize as Identity,
   IdentityInfo_Serialize as IdentityInfo,
+  GhStatus_Serialize as GhStatus,
+  GhAccount,
+  LoginEvent,
   Language as SettingsLanguage,
   TextSize,
 } from "./bindings";
@@ -81,6 +85,13 @@ export type Lane = [column: number, color: number];
 /** Scales the whole UI (Settings → General → Text size). */
 export async function setUiZoom(factor: number): Promise<void> {
   await getCurrentWebview().setZoom(factor);
+}
+
+/** GitHub sign-in through gh; `onEvent` gets the one-time code. */
+export function ghLogin(onEvent: (event: LoginEvent) => void) {
+  const channel = new Channel<LoginEvent>();
+  channel.onmessage = onEvent;
+  return commands.ghLogin(channel);
 }
 
 export async function pickFolder(title: string): Promise<string | null> {

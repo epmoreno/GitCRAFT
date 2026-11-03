@@ -165,6 +165,20 @@ export const commands = {
 	 *  empty parts are removed.
 	 */
 	setGitIdentity: (id: number | null, identity: Identity_Deserialize) => typedError<IdentityInfo_Serialize, IpcError_Serialize>(__TAURI_INVOKE("set_git_identity", { id, identity })),
+	/**
+	 *  Settings → GitHub account: whether gh is installed, its session and how
+	 *  git gets github.com credentials. Never includes a token.
+	 */
+	ghStatus: () => typedError<GhStatus_Serialize, IpcError_Serialize>(__TAURI_INVOKE("gh_status")),
+	/**
+	 *  Signs in to GitHub with gh in the browser; the one-time code arrives on
+	 *  `on_event`. Resolves when the browser confirmed it.
+	 */
+	ghLogin: (onEvent: Channel<LoginEvent>) => typedError<GhStatus_Serialize, IpcError_Serialize>(__TAURI_INVOKE("gh_login", { onEvent })),
+	cancelGhLogin: () => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_gh_login")),
+	ghLogout: (login: string) => typedError<GhStatus_Serialize, IpcError_Serialize>(__TAURI_INVOKE("gh_logout", { login })),
+	/**  `gh auth setup-git`: git then asks gh for github.com credentials. */
+	ghSetupGit: () => typedError<GhStatus_Serialize, IpcError_Serialize>(__TAURI_INVOKE("gh_setup_git")),
 	/**  The folder name a clone of `url` gets by default. */
 	defaultCloneName: (url: string) => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("default_clone_name", { url })),
 	/**  Whether a clone can go to `parent/name` (never a folder with files). */
@@ -574,7 +588,13 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 /**  The configuration only allows fast-forward and the branches diverged. */
 "notFastForward" | "diskFull" | 
 /**  The system denied access to a file or folder of the repository. */
-"filePermission" | "cancelled" | "timedOut" | "unknown";
+"filePermission" | 
+/**  GitHub CLI (`gh`) is not installed. */
+"ghNotFound" | 
+/**  `gh` has no valid session for github.com. */
+"ghNotLoggedIn" | 
+/**  `gh` failed for another reason (its output says why). */
+"ghFailed" | "cancelled" | "timedOut" | "unknown";
 
 export type FailedRestore = FailedRestore_Serialize | FailedRestore_Deserialize;
 
@@ -713,6 +733,54 @@ export type GeneralSettings_Serialize = {
 	 *  (the default) never does.
 	 */
 	autoFetchMinutes: number | null,
+};
+
+/**  One account gh knows for github.com. */
+export type GhAccount = {
+	login: string,
+	/**  The one gh uses. */
+	active: boolean,
+	/**  The token works (false: expired or revoked; sign in again). */
+	valid: boolean,
+};
+
+/**  Settings → GitHub account. */
+export type GhStatus = GhStatus_Serialize | GhStatus_Deserialize;
+
+/**  Settings → GitHub account. */
+export type GhStatus_Deserialize = {
+	/**  Where gh is; `None`: not installed. */
+	path?: string | null,
+	version?: string | null,
+	/**  Accounts for github.com (empty: no session). */
+	accounts: GhAccount[],
+	/**  `credential.https://github.com.helper` in the global git config. */
+	githubHelpers: string[],
+	/**
+	 *  `credential.helper` in the global git config (used for every host
+	 *  without its own), e.g. `osxkeychain`.
+	 */
+	generalHelpers: string[],
+	/**  git already asks gh for github.com credentials. */
+	gitUsesGh: boolean,
+};
+
+/**  Settings → GitHub account. */
+export type GhStatus_Serialize = {
+	/**  Where gh is; `None`: not installed. */
+	path: string | null,
+	version: string | null,
+	/**  Accounts for github.com (empty: no session). */
+	accounts: GhAccount[],
+	/**  `credential.https://github.com.helper` in the global git config. */
+	githubHelpers: string[],
+	/**
+	 *  `credential.helper` in the global git config (used for every host
+	 *  without its own), e.g. `osxkeychain`.
+	 */
+	generalHelpers: string[],
+	/**  git already asks gh for github.com credentials. */
+	gitUsesGh: boolean,
 };
 
 export type GitRef = GitRef_Serialize | GitRef_Deserialize;
@@ -988,6 +1056,13 @@ export type IpcError_Serialize = {
 export type Language = "es" | "en";
 
 export type LineKind = "context" | "added" | "removed";
+
+/**  What the sign-in reports while it waits for the browser. */
+export type LoginEvent = 
+/**  The one-time code to type at `url`. */
+{ type: "code"; code: string; url: string } | 
+/**  Anything else gh said, as is (shown when no code could be read). */
+{ type: "line"; text: string };
 
 export type OpenedRepository = {
 	id: number,

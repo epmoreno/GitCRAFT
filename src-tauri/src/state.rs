@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use gitcraft_core::gh::{GITHUB_HOST, Gh, GhAccount, LoginEvent};
 use gitcraft_core::graph::{GraphLine, load_graph};
 use gitcraft_core::ops::branch::{
     self, BranchDeletion, BranchNameCheck, CheckoutOutcome, check_branch_name,
@@ -144,6 +145,26 @@ struct Inner {
     settings: Settings,
     /// The clone in progress (one at a time), to cancel it.
     clone: Option<CancellationToken>,
+    /// The GitHub sign-in waiting for the browser, to cancel it.
+    gh_login: Option<CancellationToken>,
+}
+
+/// Settings → GitHub account.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct GhStatus {
+    /// Where gh is; `None`: not installed.
+    pub path: Option<String>,
+    pub version: Option<String>,
+    /// Accounts for github.com (empty: no session).
+    pub accounts: Vec<GhAccount>,
+    /// `credential.https://github.com.helper` in the global git config.
+    pub github_helpers: Vec<String>,
+    /// `credential.helper` in the global git config (used for every host
+    /// without its own), e.g. `osxkeychain`.
+    pub general_helpers: Vec<String>,
+    /// git already asks gh for github.com credentials.
+    pub git_uses_gh: bool,
 }
 
 pub struct AppState {
@@ -1133,6 +1154,94 @@ impl AppState {
         self.open_repository(&result?).await
     }
 
+    /// gh, looked up each time so installing it needs no restart.
+    fn gh(&self) -> Result<Gh, IpcError> {
+        Ok(Gh::discover().ok_or(GitError::GhNotFound)?)
+    }
+
+    pub async fn gh_status(&self) -> Result<GhStatus, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        let global = ConfigTarget::Global;
+        let github_helpers = config::get_all(
+            git,
+            &global,
+            &format!("credential.https://{GITHUB_HOST}.helper"),
+            &cancel,
+        )
+        .await?;
+        let general_helpers = config::get_all(git, &global, "credential.helper", &cancel).await?;
+        let git_uses_gh = github_helpers
+            .iter()
+            .any(|h| h.contains("auth git-credential"));
+        let Some(gh) = Gh::discover() else {
+            return Ok(GhStatus {
+                path: None,
+                version: None,
+                accounts: Vec::new(),
+                github_helpers,
+                general_helpers,
+                git_uses_gh,
+            });
+        };
+        Ok(GhStatus {
+            path: Some(gh.exe().to_string_lossy().into_owned()),
+            version: gh.version(&cancel).await.ok(),
+            accounts: gh.accounts(&cancel).await?,
+            github_helpers,
+            general_helpers,
+            git_uses_gh,
+        })
+    }
+
+    /// Signs in through the browser: the one-time code goes to `on_event`
+    /// and the device page opens in the default browser. Cancel with
+    /// `cancel_gh_login`.
+    pub async fn gh_login(
+        &self,
+        mut on_event: impl FnMut(LoginEvent) + Send,
+    ) -> Result<GhStatus, IpcError> {
+        let gh = self.gh()?;
+        let cancel = CancellationToken::new();
+        if let Some(previous) = self.lock().gh_login.replace(cancel.clone()) {
+            previous.cancel();
+        }
+        let mut opened = false;
+        let result = gh
+            .login(
+                |event| {
+                    if let LoginEvent::Code { url, .. } = &event
+                        && !opened
+                    {
+                        opened = true;
+                        open_in_browser(url);
+                    }
+                    on_event(event);
+                },
+                &cancel,
+            )
+            .await;
+        self.lock().gh_login = None;
+        result?;
+        self.gh_status().await
+    }
+
+    pub fn cancel_gh_login(&self) {
+        if let Some(token) = self.lock().gh_login.take() {
+            token.cancel();
+        }
+    }
+
+    pub async fn gh_logout(&self, login: &str) -> Result<GhStatus, IpcError> {
+        self.gh()?.logout(login, &CancellationToken::new()).await?;
+        self.gh_status().await
+    }
+
+    pub async fn gh_setup_git(&self) -> Result<GhStatus, IpcError> {
+        self.gh()?.setup_git(&CancellationToken::new()).await?;
+        self.gh_status().await
+    }
+
     pub fn cancel_clone(&self) {
         if let Some(token) = self.lock().clone.take() {
             token.cancel();
@@ -1206,6 +1315,17 @@ impl AppState {
         if let Err(err) = self.settings_file.save(settings) {
             eprintln!("could not save settings: {err}");
         }
+    }
+}
+
+/// Opens GitHub's device page (a fixed https URL from gitcraft_core, never
+/// user input) with macOS `open`, without a shell.
+fn open_in_browser(url: &str) {
+    if !url.starts_with(&format!("https://{GITHUB_HOST}/")) {
+        return;
+    }
+    if let Err(err) = std::process::Command::new("/usr/bin/open").arg(url).spawn() {
+        eprintln!("could not open the browser: {err}");
     }
 }
 

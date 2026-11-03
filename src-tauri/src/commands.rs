@@ -29,8 +29,10 @@ use crate::error::IpcError;
 use crate::history::{CommandHistory, CommandRecord};
 use crate::settings::{GeneralSettings, RecentRepository};
 use crate::state::{
-    AppState, DiscardResult, GraphEvent, OpenedRepository, PullModeInfo, RepoId, RestoredSession,
+    AppState, DiscardResult, GhStatus, GraphEvent, OpenedRepository, PullModeInfo, RepoId,
+    RestoredSession,
 };
+use gitcraft_core::gh::LoginEvent;
 
 #[tauri::command]
 #[specta::specta]
@@ -673,6 +675,49 @@ pub async fn set_git_identity(
     identity: Identity,
 ) -> Result<IdentityInfo, IpcError> {
     state.set_identity(id, identity).await
+}
+
+/// Settings → GitHub account: whether gh is installed, its session and how
+/// git gets github.com credentials. Never includes a token.
+#[tauri::command]
+#[specta::specta]
+pub async fn gh_status(state: State<'_, AppState>) -> Result<GhStatus, IpcError> {
+    state.gh_status().await
+}
+
+/// Signs in to GitHub with gh in the browser; the one-time code arrives on
+/// `on_event`. Resolves when the browser confirmed it.
+#[tauri::command]
+#[specta::specta]
+pub async fn gh_login(
+    state: State<'_, AppState>,
+    on_event: Channel<LoginEvent>,
+) -> Result<GhStatus, IpcError> {
+    state
+        .gh_login(|event| {
+            let _ = on_event.send(event);
+        })
+        .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn cancel_gh_login(state: State<'_, AppState>) -> Result<(), IpcError> {
+    state.cancel_gh_login();
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn gh_logout(state: State<'_, AppState>, login: String) -> Result<GhStatus, IpcError> {
+    state.gh_logout(&login).await
+}
+
+/// `gh auth setup-git`: git then asks gh for github.com credentials.
+#[tauri::command]
+#[specta::specta]
+pub async fn gh_setup_git(state: State<'_, AppState>) -> Result<GhStatus, IpcError> {
+    state.gh_setup_git().await
 }
 
 /// The folder name a clone of `url` gets by default.

@@ -376,6 +376,20 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   estrategia de pull y, en D.3, identidad), nunca un «escribir clave»
   genérico. Para aislar los tests, `Git::with_env` fija
   `GIT_CONFIG_GLOBAL` en cada comando.
+- **GitHub CLI** (`gitcraft_core::gh`): GitCRAFT no guarda tokens ni los
+  lee (nunca usa `gh auth token` ni `--show-token`); gh guarda la sesión en
+  el Llavero.
+  - Se ejecuta como git: argumentos en array, sin shell, en su propio grupo
+    de procesos, con `NO_COLOR` y sin avisos de actualización.
+  - El estado sale de `gh auth status --hostname github.com --json hosts`.
+  - El inicio de sesión (`gh auth login --web --git-protocol https
+    --skip-ssh-key`) no tiene salida para máquinas. Es la única excepción
+    a «no parsear salida pensada para humanos»: solo se extrae el código
+    `XXXX-XXXX` (y la URL es fija), y todo lo demás se muestra tal cual.
+  - Se puede cancelar: se mata el grupo de procesos.
+  - El navegador se abre con `/usr/bin/open` y solo con URLs de
+    `https://github.com/`.
+  - Los tests usan un `gh` simulado (script de prueba).
 - **Fetch automático** (`src/features/remote/autoFetch.ts`): un intervalo
   en el frontend recorre las pestañas abiertas una tras otra. Usa la misma
   operación remota (con progreso y cancelación) y nunca se lanza si ya hay
