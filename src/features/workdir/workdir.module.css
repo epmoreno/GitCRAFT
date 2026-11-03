@@ -240,7 +240,24 @@
   white-space: nowrap;
 }
 
+.sectionToggle {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  margin-left: -4px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
 .sectionAction {
+  display: inline-flex;
+  gap: var(--space-1);
   margin-left: auto;
   text-transform: none;
   letter-spacing: 0;

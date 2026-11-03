@@ -212,7 +212,10 @@ describe("staging files", () => {
   it("does not offer staging for conflicts", () => {
     panel();
     const conflicts = screen.getByRole("region", { name: "Conflictos" });
-    expect(within(conflicts).queryByRole("button")).toBeNull();
+    // Only the button that folds the section.
+    expect(within(conflicts).getAllByRole("button")).toEqual([
+      within(conflicts).getByRole("button", { name: /Conflictos/ }),
+    ]);
   });
 
   it("shows failures with git's output until dismissed", async () => {
@@ -297,5 +300,84 @@ describe("panel layout", () => {
     await user.keyboard("{Enter}");
     expect(area().style.height).toBe("");
     expect(useWorkdirViewPrefs.getState().commitBoxHeight).toBeNull();
+  });
+});
+
+describe("collapsible sections", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+    ipc.workingStatus.mockResolvedValue({ status: "ok", data: busyStatus() });
+  });
+
+  it("folds a section, keeps its count and actions, and remembers it", async () => {
+    const user = userEvent.setup();
+    useWorkdirStore.setState({
+      statuses: { 1: { status: busyStatus(), error: null } },
+    });
+    const { unmount } = render(<WorkingDirPanel repoId={1} />);
+    const unstaged = screen.getByRole("region", { name: "Sin preparar" });
+    const toggle = within(unstaged).getByRole("button", {
+      name: "Sin preparar 2",
+    });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(within(unstaged).getByText("README.md")).not.toBeVisible();
+    expect(
+      within(unstaged).getByRole("button", { name: "Preparar todo" }),
+    ).toBeEnabled();
+    expect(
+      within(unstaged).getByRole("button", { name: "Descartar todo" }),
+    ).toBeEnabled();
+
+    // The staged section is not affected, and the choice survives a remount.
+    expect(
+      within(screen.getByRole("region", { name: "Preparados" })).getByText(
+        "app.ts",
+      ),
+    ).toBeVisible();
+    unmount();
+    render(<WorkingDirPanel repoId={1} />);
+    expect(
+      screen.getByRole("button", { name: "Sin preparar 2" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(
+      JSON.parse(localStorage.getItem("gitcraft.workdir-view") ?? "{}").state
+        .collapsedSections,
+    ).toEqual({ unstaged: true });
+  });
+
+  it("shows the actions of an empty section, disabled", () => {
+    useWorkdirStore.setState({
+      statuses: { 1: { status: cleanStatus(), error: null } },
+    });
+    render(<WorkingDirPanel repoId={1} />);
+    const staged = screen.getByRole("region", { name: "Preparados" });
+    expect(
+      within(staged).getByRole("button", { name: "Quitar todo" }),
+    ).toBeDisabled();
+    const unstaged = screen.getByRole("region", { name: "Sin preparar" });
+    expect(
+      within(unstaged).getByRole("button", { name: "Preparar todo" }),
+    ).toBeDisabled();
+    expect(
+      within(unstaged).getByRole("button", { name: "Descartar todo" }),
+    ).toBeDisabled();
+  });
+
+  it("discards everything unstaged through the confirmation", async () => {
+    const user = userEvent.setup();
+    ipc.discardPreview.mockReturnValue(new Promise(() => {}));
+    useWorkdirStore.setState({
+      statuses: { 1: { status: busyStatus(), error: null } },
+    });
+    render(<WorkingDirPanel repoId={1} />);
+    await user.click(screen.getByRole("button", { name: "Descartar todo" }));
+    expect(ipc.discardPreview).toHaveBeenCalledWith(1, {
+      kind: "files",
+      paths: ["README.md", "notes/"],
+    });
+    expect(ipc.discardChanges).not.toHaveBeenCalled();
   });
 });

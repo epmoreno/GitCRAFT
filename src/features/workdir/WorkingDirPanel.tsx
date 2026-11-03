@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   ConflictEntry,
@@ -11,9 +11,10 @@ import { useRememberedScroll } from "../repo/viewState";
 import { changeCounts, useWorkdirStore } from "./store";
 import { CommitBox } from "./CommitBox";
 import { ResizeHandle } from "./ResizeHandle";
-import { useWorkdirViewPrefs } from "./viewPrefs";
+import { useWorkdirViewPrefs, type WorkdirSection } from "./viewPrefs";
 import { StatusLetter } from "./StatusLetter";
 import styles from "./workdir.module.css";
+import { Chevron } from "../../ui/Chevron";
 import { ErrorReport } from "../../ui/ErrorReport";
 
 /** Smallest commit box, and the room always left for the list above it. */
@@ -88,6 +89,7 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
         )}
         {status.conflicted.length > 0 && (
           <Section
+            id="conflicts"
             title={t("workdir.conflicts")}
             count={status.conflicted.length}
           >
@@ -97,14 +99,23 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
           </Section>
         )}
         <Section
+          id="unstaged"
           title={t("workdir.unstaged")}
           count={unstaged.length}
-          action={
+          actions={
             <>
               <button
                 type="button"
+                className={styles.action}
+                disabled={busy || unstaged.length === 0}
+                onClick={() => void stage(repoId, null)}
+              >
+                {t("workdir.stageAll")}
+              </button>
+              <button
+                type="button"
                 className={`${styles.action} ${styles.danger}`}
-                disabled={busy}
+                disabled={busy || unstaged.length === 0}
                 onClick={() =>
                   void requestDiscard(repoId, {
                     kind: "files",
@@ -113,14 +124,6 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
                 }
               >
                 {t("workdir.discardAll")}
-              </button>
-              <button
-                type="button"
-                className={styles.action}
-                disabled={busy}
-                onClick={() => void stage(repoId, null)}
-              >
-                {t("workdir.stageAll")}
               </button>
             </>
           }
@@ -142,13 +145,14 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
           ))}
         </Section>
         <Section
+          id="staged"
           title={t("workdir.staged")}
           count={status.staged.length}
-          action={
+          actions={
             <button
               type="button"
               className={styles.action}
-              disabled={busy}
+              disabled={busy || status.staged.length === 0}
               onClick={() => void unstage(repoId, null)}
             >
               {t("workdir.unstageAll")}
@@ -203,31 +207,47 @@ function headerSummary(
     : t("workdir.summaryDetached", { count });
 }
 
+/** A collapsible group of changes with its count and its actions. */
 function Section({
+  id,
   title,
   count,
-  action,
+  actions,
   children,
 }: {
+  id: WorkdirSection;
   title: string;
   count: number;
-  action?: React.ReactNode;
+  /** Always shown (disabled when there is nothing to act on). */
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
+  const collapsed = useWorkdirViewPrefs((s) => !!s.collapsedSections[id]);
+  const toggle = useWorkdirViewPrefs((s) => s.toggleSection);
+  const bodyId = useId();
   return (
     <section className={styles.section} aria-label={title}>
       <h3 className={styles.sectionTitle}>
-        {title} <span className={styles.count}>{count}</span>
-        {count > 0 && action && (
-          <span className={styles.sectionAction}>{action}</span>
-        )}
+        <button
+          type="button"
+          className={styles.sectionToggle}
+          aria-expanded={!collapsed}
+          aria-controls={bodyId}
+          onClick={() => toggle(id)}
+        >
+          <Chevron direction={collapsed ? "right" : "down"} />
+          {title} <span className={styles.count}>{count}</span>
+        </button>
+        {actions && <span className={styles.sectionAction}>{actions}</span>}
       </h3>
-      {count === 0 ? (
-        <p className={styles.muted}>{t("workdir.none")}</p>
-      ) : (
-        <ul className={styles.list}>{children}</ul>
-      )}
+      <div id={bodyId} hidden={collapsed}>
+        {count === 0 ? (
+          <p className={styles.muted}>{t("workdir.none")}</p>
+        ) : (
+          <ul className={styles.list}>{children}</ul>
+        )}
+      </div>
     </section>
   );
 }

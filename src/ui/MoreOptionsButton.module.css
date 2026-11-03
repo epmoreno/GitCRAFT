@@ -6,13 +6,3 @@
   width: 28px;
   padding: 0;
 }
-
-.chevron {
-  width: 12px;
-  height: 12px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}

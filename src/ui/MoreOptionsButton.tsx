@@ -1,6 +1,7 @@
 import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import appStyles from "../app/App.module.css";
+import { Chevron } from "./Chevron";
 import { Tooltip } from "./Tooltip";
 import styles from "./MoreOptionsButton.module.css";
 
@@ -32,14 +33,7 @@ export function MoreOptionsButton({
         disabled={disabled}
         onClick={onClick}
       >
-        <svg
-          className={styles.chevron}
-          viewBox="0 0 12 12"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M2.5 4.5 6 8l3.5-3.5" />
-        </svg>
+        <Chevron />
       </button>
     </Tooltip>
   );

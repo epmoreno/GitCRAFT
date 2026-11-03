@@ -452,11 +452,18 @@ ningún producto.
       *Tests:* textos de la cabecera (con rama y con HEAD separado), la caja
       de commit fuera de la lista, y el redimensionado con teclado y su
       persistencia.
-- [ ] **B.2 Secciones plegables con acciones.** «Conflictos», «Sin preparar»
+- [x] **B.2 Secciones plegables con acciones.** «Conflictos», «Sin preparar»
       y «Preparados» se pliegan y despliegan, cada una con su contador y sus
       acciones siempre visibles: *Preparar todo*, *Quitar todo* y *Descartar
       todo*. *Descartar todo* usa la confirmación y el «Deshacer» de la 4.4.
       El plegado se recuerda.
+      *Estado:* la cabecera de cada sección es un botón con chevron
+      (`aria-expanded`). Las acciones siguen visibles con la sección plegada,
+      y se desactivan cuando no hay nada sobre lo que actuar. El plegado es
+      el mismo en todos los repositorios.
+      *Tests:* plegar y recordar al volver a montar, acciones de una sección
+      vacía desactivadas, y «Descartar todo» pasa por la vista previa del
+      descarte.
 - [ ] **B.3 Vista de árbol.** Un conmutador cambia entre lista por ruta y
       árbol de carpetas. En el árbol, las carpetas se pliegan, muestran su
       número de archivos y hay *Expandir todo* / *Plegar todo*. Se navega con
