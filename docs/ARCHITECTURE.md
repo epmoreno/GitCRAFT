@@ -190,6 +190,12 @@ pierden, el panel vuelve a su aspecto por defecto. Por eso no van en
 `settings.json`, que guarda lo que sí importa (recientes, sesión, modos de
 pull).
 
+La vista de árbol (`fileTree.ts` y `ChangeList.tsx`) agrupa en el cliente
+las rutas que devuelve `git status`. Se pinta como una lista plana de
+`treeitem` con `aria-level`, así que cada fila tiene su propio *hover*. El
+foco sigue el modelo de árbol de WAI-ARIA: solo una fila está en el orden de
+Tab a la vez (*roving tabindex*).
+
 ## 5b. Descartar cambios (la única operación que destruye trabajo)
 
 `gitcraft-core/src/ops/discard.rs`. Solo afecta a cambios **sin preparar**; el

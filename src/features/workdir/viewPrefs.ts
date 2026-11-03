@@ -14,11 +14,23 @@ type WorkdirViewPrefs = {
   /** Collapsed sections (the same in every repository). */
   collapsedSections: Partial<Record<WorkdirSection, true>>;
   toggleSection: (section: WorkdirSection) => void;
+  /** Files as a flat list of paths or as a folder tree. */
+  layout: "list" | "tree";
+  setLayout: (layout: "list" | "tree") => void;
+  /**
+   * Collapsed folders of the tree, by `<repoId>:<section>:<path>`. Only for
+   * this session: not persisted.
+   */
+  collapsedDirs: Record<string, true>;
+  toggleDir: (key: string) => void;
+  setDirsCollapsed: (keys: string[], collapsed: boolean) => void;
 };
 
 export const initialWorkdirViewPrefs = {
   commitBoxHeight: null,
   collapsedSections: {},
+  layout: "list" as const,
+  collapsedDirs: {},
 };
 
 export const useWorkdirViewPrefs = create<WorkdirViewPrefs>()(
@@ -33,10 +45,32 @@ export const useWorkdirViewPrefs = create<WorkdirViewPrefs>()(
           else collapsedSections[section] = true;
           return { collapsedSections };
         }),
+      setLayout: (layout) => set({ layout }),
+      toggleDir: (key) =>
+        set((s) => {
+          const collapsedDirs = { ...s.collapsedDirs };
+          if (collapsedDirs[key]) delete collapsedDirs[key];
+          else collapsedDirs[key] = true;
+          return { collapsedDirs };
+        }),
+      setDirsCollapsed: (keys, collapsed) =>
+        set((s) => {
+          const collapsedDirs = { ...s.collapsedDirs };
+          for (const key of keys) {
+            if (collapsed) collapsedDirs[key] = true;
+            else delete collapsedDirs[key];
+          }
+          return { collapsedDirs };
+        }),
     }),
     {
       name: "gitcraft.workdir-view",
       storage: createJSONStorage(() => localStorage),
+      partialize: ({ commitBoxHeight, collapsedSections, layout }) => ({
+        commitBoxHeight,
+        collapsedSections,
+        layout,
+      }),
     },
   ),
 );

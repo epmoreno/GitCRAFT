@@ -243,7 +243,16 @@
     "summaryOnBranch_other": "{{count}} changes on {{branch}}",
     "summaryDetached_one": "{{count}} change on a detached HEAD",
     "summaryDetached_other": "{{count}} changes on a detached HEAD",
-    "resizeCommitBox": "Commit box height"
+    "resizeCommitBox": "Commit box height",
+    "view": {
+      "label": "View",
+      "list": "List",
+      "tree": "Tree"
+    },
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "folderFiles_one": "{{count}} file",
+    "folderFiles_other": "{{count}} files"
   },
   "commit": {
     "label": "Create commit",

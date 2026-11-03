@@ -526,3 +526,54 @@
   color: var(--text-faint);
   font-size: 16px;
 }
+
+/* View controls in the panel header */
+.viewControls {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.segmented {
+  display: inline-flex;
+  margin-right: var(--space-2);
+  border: 1px solid var(--border-control);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.segment {
+  padding: 1px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.segment + .segment {
+  border-left: 1px solid var(--border-control);
+}
+
+.segment[aria-pressed="true"] {
+  background-color: var(--selected-bg);
+  color: var(--text);
+}
+
+/* Folder rows of the tree */
+.dirRow {
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.dirName {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dirCount {
+  color: var(--text-faint);
+  font-size: var(--font-size-small);
+}

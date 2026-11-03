@@ -243,7 +243,16 @@
     "summaryOnBranch_other": "{{count}} cambios en {{branch}}",
     "summaryDetached_one": "{{count}} cambio en HEAD separado",
     "summaryDetached_other": "{{count}} cambios en HEAD separado",
-    "resizeCommitBox": "Altura de la caja de commit"
+    "resizeCommitBox": "Altura de la caja de commit",
+    "view": {
+      "label": "Vista",
+      "list": "Lista",
+      "tree": "Árbol"
+    },
+    "expandAll": "Expandir todo",
+    "collapseAll": "Plegar todo",
+    "folderFiles_one": "{{count}} archivo",
+    "folderFiles_other": "{{count}} archivos"
   },
   "commit": {
     "label": "Crear commit",

@@ -1,18 +1,18 @@
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type {
-  ConflictEntry,
-  StatusEntry,
-  WorkingStatus,
-  WorktreeArea,
-} from "../../ipc";
-import { useGraphStore } from "../graph/store";
+import type { ConflictEntry, StatusEntry, WorkingStatus } from "../../ipc";
 import { useRememberedScroll } from "../repo/viewState";
 import { changeCounts, useWorkdirStore } from "./store";
+import {
+  ChangeList,
+  dirKey,
+  PathLabel,
+  type ChangeSection,
+} from "./ChangeList";
 import { CommitBox } from "./CommitBox";
+import { buildTree, dirPaths } from "./fileTree";
 import { ResizeHandle } from "./ResizeHandle";
 import { useWorkdirViewPrefs, type WorkdirSection } from "./viewPrefs";
-import { StatusLetter } from "./StatusLetter";
 import styles from "./workdir.module.css";
 import { Chevron } from "../../ui/Chevron";
 import { ErrorReport } from "../../ui/ErrorReport";
@@ -73,6 +73,7 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
       <header className={styles.header}>
         <h2 className={styles.title}>{t("workdir.row")}</h2>
         <p className={styles.headerSummary}>{headerSummary(t, status)}</p>
+        <ViewControls repoId={repoId} status={status} />
       </header>
       <div ref={changes} className={styles.changes}>
         {entry?.opError && (
@@ -93,9 +94,11 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
             title={t("workdir.conflicts")}
             count={status.conflicted.length}
           >
-            {status.conflicted.map((c) => (
-              <ConflictRow key={c.path} entry={c} />
-            ))}
+            <ul className={styles.list}>
+              {status.conflicted.map((c) => (
+                <ConflictRow key={c.path} entry={c} />
+              ))}
+            </ul>
           </Section>
         )}
         <Section
@@ -128,21 +131,13 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
             </>
           }
         >
-          {unstaged.map((e) => (
-            <FileRow
-              key={`u:${e.path}`}
-              repoId={repoId}
-              area={e.status === "untracked" ? "untracked" : "unstaged"}
-              entry={e}
-              actionLabel={t("workdir.stage")}
-              actionTitle={t("workdir.stageFile", { path: e.path })}
-              disabled={busy}
-              onAction={() => void stage(repoId, [e.path])}
-              onDiscard={() =>
-                void requestDiscard(repoId, { kind: "files", paths: [e.path] })
-              }
-            />
-          ))}
+          <ChangeList
+            repoId={repoId}
+            section="unstaged"
+            label={t("workdir.unstaged")}
+            entries={unstaged}
+            disabled={busy}
+          />
         </Section>
         <Section
           id="staged"
@@ -159,21 +154,13 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
             </button>
           }
         >
-          {status.staged.map((e) => (
-            <FileRow
-              key={`s:${e.path}`}
-              repoId={repoId}
-              area="staged"
-              entry={e}
-              actionLabel={t("workdir.unstage")}
-              actionTitle={t("workdir.unstageFile", { path: e.path })}
-              disabled={busy}
-              // A staged rename lives under both names in the index.
-              onAction={() =>
-                void unstage(repoId, e.oldPath ? [e.path, e.oldPath] : [e.path])
-              }
-            />
-          ))}
+          <ChangeList
+            repoId={repoId}
+            section="staged"
+            label={t("workdir.staged")}
+            entries={status.staged}
+            disabled={busy}
+          />
         </Section>
       </div>
       <ResizeHandle
@@ -245,115 +232,72 @@ function Section({
         {count === 0 ? (
           <p className={styles.muted}>{t("workdir.none")}</p>
         ) : (
-          <ul className={styles.list}>{children}</ul>
+          children
         )}
       </div>
     </section>
   );
 }
 
-export function PathLabel({
-  path,
-  oldPath,
-}: {
-  path: string;
-  oldPath?: string | null;
-}) {
-  const { t } = useTranslation();
-  const trimmed = path.endsWith("/") ? path.slice(0, -1) : path;
-  const slash = trimmed.lastIndexOf("/");
-  const dir = slash >= 0 ? path.slice(0, slash + 1) : "";
-  const name = path.slice(slash + 1);
-  return (
-    <span className={styles.path} title={path}>
-      {dir && <span className={styles.dir}>{dir}</span>}
-      <span>{name}</span>
-      {oldPath && (
-        <span className={styles.oldPath}>
-          {t("files.renamedFrom", { path: oldPath })}
-        </span>
-      )}
-    </span>
-  );
-}
-
-function FileRow({
+/** List or tree, and in the tree "expand all" / "collapse all". */
+function ViewControls({
   repoId,
-  area,
-  entry,
-  actionLabel,
-  actionTitle,
-  disabled,
-  onAction,
-  onDiscard,
+  status,
 }: {
   repoId: number;
-  area: WorktreeArea;
-  entry: StatusEntry;
-  actionLabel: string;
-  actionTitle: string;
-  disabled: boolean;
-  onAction: () => void;
-  /** Unstaged and untracked files only. */
-  onDiscard?: () => void;
+  status: WorkingStatus;
 }) {
   const { t } = useTranslation();
-  const open = useGraphStore((s) => s.openFileDiff);
-  const isOpen = useGraphStore((s) => {
-    const f = s.graphs[repoId]?.openFile;
-    return f?.kind === "worktree" && f.area === area && f.path === entry.path;
-  });
-  // An untracked directory has no single-file diff.
-  const hasDiff = !entry.path.endsWith("/");
+  const layout = useWorkdirViewPrefs((s) => s.layout);
+  const setLayout = useWorkdirViewPrefs((s) => s.setLayout);
+  const setDirsCollapsed = useWorkdirViewPrefs((s) => s.setDirsCollapsed);
+  const sections: [ChangeSection, StatusEntry[]][] = [
+    ["unstaged", [...status.unstaged, ...status.untracked]],
+    ["staged", status.staged],
+  ];
+  const allDirs = sections.flatMap(([section, entries]) =>
+    dirPaths(buildTree(entries)).map((path) => dirKey(repoId, section, path)),
+  );
   return (
-    <li
-      className={isOpen ? `${styles.file} ${styles.fileOpen}` : styles.file}
-      onDoubleClick={disabled ? undefined : onAction}
-    >
-      <StatusLetter status={entry.status} />
-      {hasDiff ? (
-        <button
-          type="button"
-          className={styles.pathButton}
-          aria-label={t("workdir.viewChanges", { path: entry.path })}
-          aria-current={isOpen || undefined}
-          onClick={() =>
-            open(repoId, {
-              kind: "worktree",
-              area,
-              path: entry.path,
-              oldPath: entry.oldPath,
-            })
-          }
-        >
-          <PathLabel path={entry.path} oldPath={entry.oldPath} />
-        </button>
-      ) : (
-        <PathLabel path={entry.path} oldPath={entry.oldPath} />
-      )}
-      {onDiscard && (
-        <button
-          type="button"
-          className={`${styles.rowAction} ${styles.danger}`}
-          aria-label={t("workdir.discardFile", { path: entry.path })}
-          title={t("workdir.discardFile", { path: entry.path })}
-          disabled={disabled}
-          onClick={onDiscard}
-        >
-          {t("workdir.discard")}
-        </button>
-      )}
-      <button
-        type="button"
-        className={styles.rowAction}
-        aria-label={actionTitle}
-        title={actionTitle}
-        disabled={disabled}
-        onClick={onAction}
+    <div className={styles.viewControls}>
+      <div
+        className={styles.segmented}
+        role="group"
+        aria-label={t("workdir.view.label")}
       >
-        {actionLabel}
-      </button>
-    </li>
+        {(["list", "tree"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={styles.segment}
+            aria-pressed={layout === value}
+            onClick={() => setLayout(value)}
+          >
+            {t(`workdir.view.${value}`)}
+          </button>
+        ))}
+      </div>
+      {layout === "tree" && (
+        <>
+          <button
+            type="button"
+            className={styles.action}
+            disabled={allDirs.length === 0}
+            onClick={() => setDirsCollapsed(allDirs, false)}
+          >
+            {t("workdir.expandAll")}
+          </button>
+          <button
+            type="button"
+            className={styles.action}
+            disabled={allDirs.length === 0}
+            onClick={() => setDirsCollapsed(allDirs, true)}
+          >
+            {t("workdir.collapseAll")}
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 

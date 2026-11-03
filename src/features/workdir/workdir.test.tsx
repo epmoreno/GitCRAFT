@@ -5,6 +5,7 @@ import type { WorkingStatus } from "../../ipc";
 import {
   cleanStatus,
   commandError,
+  emptyRefs,
   ipc,
   sampleLines,
   streamEvents,
@@ -379,5 +380,129 @@ describe("collapsible sections", () => {
       paths: ["README.md", "notes/"],
     });
     expect(ipc.discardChanges).not.toHaveBeenCalled();
+  });
+});
+
+describe("tree view", () => {
+  const treeStatus = (): WorkingStatus => ({
+    ...cleanStatus(),
+    unstaged: [
+      { path: "src/ui/Button.tsx", oldPath: null, status: "modified" },
+      { path: "src/ui/Menu.tsx", oldPath: null, status: "modified" },
+      { path: "src/main.ts", oldPath: null, status: "modified" },
+      { path: "README.md", oldPath: null, status: "modified" },
+    ],
+    staged: [{ path: "docs/guide.md", oldPath: null, status: "added" }],
+  });
+
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+    ipc.workingStatus.mockResolvedValue({ status: "ok", data: treeStatus() });
+    useWorkdirStore.setState({
+      statuses: { 1: { status: treeStatus(), error: null } },
+    });
+  });
+
+  const showTree = async () => {
+    const user = userEvent.setup();
+    const view = render(<WorkingDirPanel repoId={1} />);
+    await user.click(screen.getByRole("button", { name: "Árbol" }));
+    const tree = screen.getByRole("tree", { name: "Sin preparar" });
+    const item = (name: string | RegExp) =>
+      within(tree).getByRole("treeitem", { name });
+    return { user, tree, item, ...view };
+  };
+
+  it("switches between list and tree, and remembers the choice", async () => {
+    const { user, unmount } = await showTree();
+    expect(screen.getByRole("button", { name: "Árbol" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    unmount();
+    render(<WorkingDirPanel repoId={1} />);
+    expect(screen.getByRole("tree", { name: "Sin preparar" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Lista" }));
+    expect(screen.queryByRole("tree")).not.toBeInTheDocument();
+    expect(screen.getAllByText("src/ui/")).toHaveLength(2);
+  });
+
+  it("shows folders with their file count, names without the folder", async () => {
+    const { tree, item } = await showTree();
+    const rows = within(tree).getAllByRole("treeitem");
+    expect(rows.map((r) => r.getAttribute("aria-level"))).toEqual([
+      "1",
+      "2",
+      "3",
+      "3",
+      "2",
+      "1",
+    ]);
+    expect(item(/^src/)).toHaveTextContent("src3");
+    expect(item(/^ui/)).toHaveTextContent("ui2");
+    expect(within(item(/^ui/)).getByTitle("2 archivos")).toBeInTheDocument();
+    expect(item(/Button\.tsx/)).not.toHaveTextContent("src/ui/");
+  });
+
+  it("collapses folders by click, and all at once", async () => {
+    const { user, tree, item } = await showTree();
+    await user.click(item(/^ui/));
+    expect(item(/^ui/)).toHaveAttribute("aria-expanded", "false");
+    expect(within(tree).queryByText("Button.tsx")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Expandir todo" }));
+    expect(within(tree).getByText("Button.tsx")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Plegar todo" }));
+    expect(within(tree).getAllByRole("treeitem")).toHaveLength(2);
+    const staged = screen.getByRole("tree", { name: "Preparados" });
+    expect(within(staged).getAllByRole("treeitem")).toHaveLength(1);
+  });
+
+  it("is navigable with the keyboard", async () => {
+    useGraphStore.setState({
+      graphs: {
+        1: {
+          status: "done",
+          lines: [],
+          maxColumn: 0,
+          refs: emptyRefs(),
+          error: null,
+          selectedOid: WORKTREE,
+          suggestOptimize: false,
+          openFile: null,
+          loadId: 1,
+        },
+      },
+    });
+    const { user, item } = await showTree();
+    const src = item(/^src/);
+    expect(src).toHaveAttribute("tabindex", "0");
+    expect(item(/^ui/)).toHaveAttribute("tabindex", "-1");
+    src.focus();
+
+    await user.keyboard("{ArrowLeft}");
+    expect(src).toHaveAttribute("aria-expanded", "false");
+    await user.keyboard("{ArrowRight}");
+    expect(src).toHaveAttribute("aria-expanded", "true");
+    await user.keyboard("{ArrowRight}");
+    expect(item(/^ui/)).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(item(/Button\.tsx/)).toHaveFocus();
+    expect(item(/Button\.tsx/)).toHaveAttribute("tabindex", "0");
+    await user.keyboard("{ArrowLeft}");
+    expect(item(/^ui/)).toHaveFocus();
+    await user.keyboard("{End}");
+    expect(item(/README/)).toHaveFocus();
+
+    await user.keyboard("{Home}{ArrowDown}{ArrowDown}");
+    await user.keyboard("{Enter}");
+    expect(useGraphStore.getState().graphs[1]?.openFile).toMatchObject({
+      kind: "worktree",
+      area: "unstaged",
+      path: "src/ui/Button.tsx",
+    });
+    await user.keyboard(" ");
+    expect(ipc.stageFiles).toHaveBeenCalledWith(1, ["src/ui/Button.tsx"]);
   });
 });

@@ -464,11 +464,26 @@ ningún producto.
       *Tests:* plegar y recordar al volver a montar, acciones de una sección
       vacía desactivadas, y «Descartar todo» pasa por la vista previa del
       descarte.
-- [ ] **B.3 Vista de árbol.** Un conmutador cambia entre lista por ruta y
+- [x] **B.3 Vista de árbol.** Un conmutador cambia entre lista por ruta y
       árbol de carpetas. En el árbol, las carpetas se pliegan, muestran su
       número de archivos y hay *Expandir todo* / *Plegar todo*. Se navega con
       teclado (`role="tree"`: flechas para moverse, ← pliega y → despliega).
       La vista elegida se recuerda entre sesiones.
+      *Estado:* conmutador Lista/Árbol en la cabecera del panel. En el árbol
+      se muestran primero las carpetas, en orden natural (`a 2` va antes que
+      `a 10`), y cada archivo aparece solo con su nombre. Un directorio sin
+      seguimiento (`notes/`) es una hoja: git no lista su contenido.
+      - Teclado: además de las flechas, Inicio y Fin, Intro abre el diff de
+        un archivo o pliega una carpeta, y Espacio prepara o quita el
+        archivo. Los botones de cada fila no entran en el orden de Tab (solo
+        una fila a la vez), así que con el teclado el descarte por archivo
+        sigue en la vista de lista.
+      - El plegado de carpetas dura la sesión. Los conflictos se muestran
+        siempre como lista.
+
+      *Tests:* construcción del árbol (contadores, orden y rutas que empiezan
+      por `-`), conmutar y recordar la vista, plegar con clic, Expandir y
+      Plegar todo, y teclado.
 - [ ] **B.4 Ordenar y carpetas enteras.** Se ordena por nombre o por estado
       en las dos vistas, y el orden se recuerda. Desde el árbol se prepara o
       se quita una carpeta entera (botón en la fila y menú contextual). La
