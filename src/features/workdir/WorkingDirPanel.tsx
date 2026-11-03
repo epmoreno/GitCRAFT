@@ -16,6 +16,7 @@ import { useWorkdirViewPrefs, type WorkdirSection } from "./viewPrefs";
 import styles from "./workdir.module.css";
 import { Chevron } from "../../ui/Chevron";
 import { ErrorReport } from "../../ui/ErrorReport";
+import { Tooltip } from "../../ui/Tooltip";
 
 /** Smallest commit box, and the room always left for the list above it. */
 export const COMMIT_BOX_MIN = 140;
@@ -298,25 +299,51 @@ function ViewControls({
       </div>
       {layout === "tree" && (
         <>
-          <button
-            type="button"
-            className={styles.action}
+          <IconButton
+            label={t("workdir.expandAll")}
             disabled={allDirs.length === 0}
             onClick={() => setDirsCollapsed(allDirs, false)}
-          >
-            {t("workdir.expandAll")}
-          </button>
-          <button
-            type="button"
-            className={styles.action}
+            path="M3 5.5 6 2.5l3 3M3 6.5l3 3 3-3"
+          />
+          <IconButton
+            label={t("workdir.collapseAll")}
             disabled={allDirs.length === 0}
             onClick={() => setDirsCollapsed(allDirs, true)}
-          >
-            {t("workdir.collapseAll")}
-          </button>
+            path="M3 2.5l3 3 3-3M3 9.5l3-3 3 3"
+          />
         </>
       )}
     </div>
+  );
+}
+
+/** A small square button with an icon; its name is also its tooltip. */
+function IconButton({
+  label,
+  path,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  /** SVG path in a 12×12 box. */
+  path: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip label={label}>
+      <button
+        type="button"
+        className={`${styles.action} ${styles.iconAction}`}
+        aria-label={label}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+          <path d={path} />
+        </svg>
+      </button>
+    </Tooltip>
   );
 }
 

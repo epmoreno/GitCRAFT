@@ -97,7 +97,7 @@ T.2 → T.4.
       unitarios:* mensajes con saltos de línea, UTF-8, commits raíz, merges con
       más de 2 padres y firmas vacías.
 - [x] **2.2 Refs.** `git for-each-ref` produce ramas, remotos, tags y HEAD (también
-      HEAD desacoplado). *Tests unitarios + integración.*
+      HEAD separado). *Tests unitarios + integración.*
 - [x] **2.3 Layout de carriles.** Un algoritmo en Rust asigna una columna y un
       color a cada commit, con segmentos de arista por fila. *Tests:* historial
       lineal, rama + merge, octopus, ramas cruzadas; el layout es estable con la
@@ -231,7 +231,7 @@ un mensaje claro. Fetch, pull y push muestran progreso y se pueden cancelar.
       mis cambios y hacer pull» (stash que nunca se borra) o cancelar. Si
       habrá conflictos: «Hacer pull con conflictos» o cancelar. Un merge o
       rebase a medias se muestra en un aviso con «Abortar…» (con
-      confirmación). Sin upstream, upstream borrado y HEAD desacoplado se
+      confirmación). Sin upstream, upstream borrado y HEAD separado se
       explican.
       *Tests:* integración (fast-forward, merge, rebase, bloqueos por cambios
       y por archivos sin seguimiento, conflictos previstos con merge y rebase,
@@ -518,6 +518,18 @@ ningún producto.
         se preparó `src/ui/`, y al quitar `docs/` el renombrado pasa a D + ?,
         como hace git;
       - orden por estado.
+- [x] **B.5 Ajustes tras la verificación.**
+      - La barra del panel ya no recorta texto: Expandir/Plegar todo son
+        botones de icono con tooltip, y si falta ancho la barra pasa a dos
+        líneas.
+      - En toda la app se dice «HEAD separado» (en inglés, «detached HEAD»).
+      - En el árbol, Supr o ⌫ sobre un archivo sin preparar lo descarta, con
+        la confirmación y el «Deshacer» de siempre. Se añadirá a la lista de
+        atajos en D.5.
+
+      *Tests:* botones de icono con su tooltip, reglas CSS de ajuste de
+      línea (jsdom no calcula el layout) y Supr/⌫ solo en archivos sin
+      preparar.
 
 ### C. Pestaña nueva
 - [ ] **C.1 Botón «+» y ⌘T.** El botón «+» de la barra de pestañas, ⌘T y
@@ -577,7 +589,8 @@ ningún producto.
       sin instalar, sin sesión, con sesión, token caducado y cancelar el
       inicio de sesión.
 - [ ] **D.5 Atajos (solo consulta).** Lista de todos los atajos de la app,
-      agrupados. Sale del mismo registro que usan los manejadores de teclado
+      agrupados (incluidos los del árbol de cambios, como Supr/⌫ para
+      descartar). Sale del mismo registro que usan los manejadores de teclado
       y el menú.
       *Test:* falla si un atajo registrado no aparece en la lista o al
       revés. Personalizarlos queda para la fase 3.

@@ -41,7 +41,7 @@
     "noBranches": "Sin ramas",
     "noRemotes": "Sin remotos",
     "noTags": "Sin tags",
-    "detachedHead": "HEAD desacoplado",
+    "detachedHead": "HEAD separado",
     "currentBranch": "Rama actual: {{name}}",
     "noStashes": "Sin entradas",
     "filterPlaceholder": "Filtrar ramas, tags y stashes",
@@ -97,7 +97,7 @@
     "nothingToStash": "No hay cambios sin confirmar que guardar.",
     "authFailed": "Git no pudo autenticarse con el remoto. GitCRAFT no guarda ni pide contraseñas: configura un credential helper (en macOS, osxkeychain) o añade tu clave SSH al agente, y comprueba que «git fetch» funciona desde la terminal.",
     "remoteUnreachable": "No se pudo conectar con el remoto. Comprueba la conexión y la URL del remoto (git remote -v).",
-    "detachedHead": "Estás en HEAD desacoplado (no en una rama): cambia a una rama primero.",
+    "detachedHead": "Estás en un HEAD separado (no en una rama): cambia a una rama primero.",
     "alreadyARepository": "«{{path}}» ya es un repositorio Git.",
     "destinationNotEmpty": "«{{path}}» ya existe y no está vacía: no se clona encima de una carpeta con archivos.",
     "copy": "Copiar la salida",
@@ -132,7 +132,7 @@
     "moreRefs_one": "+{{count}}",
     "moreRefs_other": "+{{count}}",
     "refKind": {
-      "head": "HEAD desacoplado",
+      "head": "HEAD separado",
       "local": "Rama local {{name}}",
       "remote": "Rama remota {{name}}",
       "tag": "Tag {{name}}"
@@ -488,7 +488,7 @@
     "ahead_other": "{{count}} commits por subir (push)",
     "behind_one": "1 commit por bajar (pull)",
     "behind_other": "{{count}} commits por bajar (pull)",
-    "detached": "HEAD desacoplado: no estás en ninguna rama",
+    "detached": "HEAD separado: no estás en ninguna rama",
     "unborn": "Rama sin commits todavía"
   },
   "pull": {

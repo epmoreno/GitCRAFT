@@ -529,16 +529,18 @@
 }
 
 /* View controls in the panel header */
+/* Wraps to a second line when narrow: labels are never cut. */
 .viewControls {
   display: flex;
-  gap: var(--space-1);
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
   align-items: center;
   margin-top: var(--space-2);
 }
 
 .segmented {
   display: inline-flex;
-  margin-right: var(--space-2);
+  flex: none;
   border: 1px solid var(--border-control);
   border-radius: 3px;
   overflow: hidden;
@@ -546,6 +548,7 @@
 
 .segment {
   padding: 1px 8px;
+  white-space: nowrap;
   border: 0;
   background: transparent;
   color: var(--text-muted);
@@ -554,6 +557,25 @@
 
 .segment + .segment {
   border-left: 1px solid var(--border-control);
+}
+
+.iconAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+  padding: 0;
+}
+
+.iconAction svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .segment[aria-pressed="true"] {

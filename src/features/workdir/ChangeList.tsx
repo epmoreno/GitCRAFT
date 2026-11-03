@@ -166,7 +166,8 @@ function useFileRowProps(
  * Folder tree with the WAI-ARIA tree keyboard model: ↑/↓ move, → opens a
  * folder (or enters it), ← closes it (or goes to its parent), Home/End,
  * Enter opens a file's diff or toggles a folder, Space stages or unstages
- * the file. One row is in the tab order at a time (roving tabindex).
+ * it, Delete/⌫ discards an unstaged file (with the usual confirmation).
+ * One row is in the tab order at a time (roving tabindex).
  */
 function FileTree({
   repoId,
@@ -241,6 +242,11 @@ function FileTree({
         break;
       case " ":
         target.querySelector<HTMLElement>("[data-primary]")?.click();
+        break;
+      case "Delete":
+      case "Backspace":
+        // Unstaged files only; goes through the usual confirmation.
+        target.querySelector<HTMLElement>("[data-discard]")?.click();
         break;
       default:
         return;
@@ -468,6 +474,7 @@ function FileRow({
           title={t("workdir.discardFile", { path: entry.path })}
           disabled={disabled}
           tabIndex={inner}
+          data-discard
           onClick={onDiscard}
         >
           {t("workdir.discard")}

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
@@ -505,6 +506,32 @@ describe("tree view", () => {
     await user.keyboard(" ");
     expect(ipc.stageFiles).toHaveBeenCalledWith(1, ["src/ui/Button.tsx"]);
   });
+
+  it("discards the focused file with Delete or Backspace, after the preview", async () => {
+    ipc.discardPreview.mockReturnValue(new Promise(() => {}));
+    const { user, item } = await showTree();
+    item(/README/).focus();
+    await user.keyboard("{Delete}");
+    expect(ipc.discardPreview).toHaveBeenCalledWith(1, {
+      kind: "files",
+      paths: ["README.md"],
+    });
+    item(/main\.ts/).focus();
+    await user.keyboard("{Backspace}");
+    expect(ipc.discardPreview).toHaveBeenLastCalledWith(1, {
+      kind: "files",
+      paths: ["src/main.ts"],
+    });
+    expect(ipc.discardChanges).not.toHaveBeenCalled();
+
+    // Staged files and folders have nothing to discard from here.
+    const staged = screen.getByRole("tree", { name: "Preparados" });
+    within(staged).getByRole("treeitem", { name: /guide/ }).focus();
+    await user.keyboard("{Delete}");
+    item(/^src/).focus();
+    await user.keyboard("{Delete}");
+    expect(ipc.discardPreview).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("sorting and whole folders", () => {
@@ -606,5 +633,38 @@ describe("sorting and whole folders", () => {
       "docs/new name.md",
       "docs/old.md",
     ]);
+  });
+});
+
+describe("panel header controls", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("es");
+    useWorkdirStore.setState({
+      statuses: { 1: { status: busyStatus(), error: null } },
+    });
+  });
+
+  it("uses icon buttons with tooltips for expand and collapse all", async () => {
+    const user = userEvent.setup();
+    render(<WorkingDirPanel repoId={1} />);
+    await user.click(screen.getByRole("button", { name: "Árbol" }));
+    for (const name of ["Expandir todo", "Plegar todo"]) {
+      const button = screen.getByRole("button", { name });
+      expect(button).toHaveAccessibleDescription(name);
+      expect(button).toHaveTextContent("");
+      expect(button.querySelector("svg")).not.toBeNull();
+    }
+  });
+
+  it("wraps instead of cutting labels (no layout in jsdom: checks the CSS)", () => {
+    const css = readFileSync(
+      `${import.meta.dirname}/workdir.module.css`,
+      "utf8",
+    );
+    const rule = (selector: string) =>
+      css.match(new RegExp(`\\n\\${selector} \\{([^}]*)\\}`))?.[1] ?? "";
+    expect(rule(".viewControls")).toMatch(/flex-wrap: wrap/);
+    expect(rule(".segmented")).toMatch(/flex: none/);
+    expect(rule(".segment")).toMatch(/white-space: nowrap/);
   });
 });

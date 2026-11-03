@@ -86,9 +86,7 @@ describe("Sidebar", () => {
   it("explains empty lists and a detached HEAD", () => {
     withRefs({ ...emptyRefs(), head: { type: "detached", oid: oid("c") } });
     render(<Sidebar repoId={1} />);
-    expect(
-      screen.getByRole("button", { name: /HEAD desacoplado/ }),
-    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /HEAD separado/ })).toBeVisible();
     expect(screen.getByText("Sin remotos")).toBeVisible();
     expect(screen.getByText("Sin tags")).toBeVisible();
     // Not read yet: a dash; read and empty: said so.
