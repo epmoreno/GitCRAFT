@@ -502,6 +502,13 @@ Son reglas comunes en `tokens.css`: ningún componente las redefine.
   de reaccionar al *hover* y al pulsado. Los botones rellenos además pierden
   el relleno y quedan solo con el contorno, así que el cambio no depende solo
   del color.
+- **Tooltips** (`src/ui/Tooltip.tsx`): justo antes de mostrarse se miden y
+  se colocan con `placeTooltip`. Se desplazan en horizontal para quedar a
+  8 px del borde de la ventana, y aparecen encima del control si debajo no
+  caben y hay más sitio arriba.
+- **Menús de un botón** (`MoreOptionsButton`): un chevron dibujado en SVG,
+  en un botón cuadrado con la altura de los de la barra (28 px), y el
+  tooltip «Más opciones de …».
 
 Solo hay tema oscuro; el tema claro está en la fase 3.
 

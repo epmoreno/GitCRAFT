@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import appStyles from "../../app/App.module.css";
 import { ContextMenu } from "../../ui/ContextMenu";
-import remote from "../remote/remote.module.css";
+import { MoreOptionsButton } from "../../ui/MoreOptionsButton";
 import { useRepoStore } from "../repo/store";
 import { useCreateStore } from "./store";
 
@@ -15,19 +14,15 @@ export function NewRepositoryMenu() {
   const [at, setAt] = useState<{ x: number; y: number } | null>(null);
   return (
     <>
-      <button
-        type="button"
-        className={`${appStyles.toolButton} ${remote.menuButton}`}
-        aria-label={t("toolbar.newRepository")}
-        aria-haspopup="menu"
+      <MoreOptionsButton
+        label={t("toolbar.newRepository")}
+        action={t("toolbar.openRepo")}
         disabled={opening}
         onClick={(event) => {
           const rect = event.currentTarget.getBoundingClientRect();
           setAt({ x: rect.left, y: rect.bottom + 2 });
         }}
-      >
-        ▾
-      </button>
+      />
       {at && (
         <ContextMenu
           x={at.x}

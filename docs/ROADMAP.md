@@ -423,6 +423,16 @@ ningún producto.
 
       El usuario aprobó que el pulsado oscurezca y que el historial reciba el
       foco.
+- [x] **A.3 Tooltips y menús de la barra.**
+      - Todo tooltip se coloca justo antes de mostrarse para quedar dentro
+        de la ventana: se desplaza en horizontal y se muestra encima si no
+        cabe debajo.
+      - Los desplegables junto a Abrir repositorio, Fetch, Pull y Push usan
+        un chevron visible en un botón de 28 × 28 px, con el tooltip «Más
+        opciones de …».
+
+      *Tests:* colocación junto a cada borde y encima, y el tooltip y el
+      icono de los tres menús remotos.
 
 ### B. Panel de cambios sin confirmar
 - [ ] **B.1 Cabecera y caja de commit fija.** La cabecera dice «N cambios en

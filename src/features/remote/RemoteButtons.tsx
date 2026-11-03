@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import appStyles from "../../app/App.module.css";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
+import { MoreOptionsButton } from "../../ui/MoreOptionsButton";
 import { Tooltip } from "../../ui/Tooltip";
 import { useGraphStore } from "../graph/store";
 import { useRemoteStore } from "./store";
@@ -78,11 +79,9 @@ export function FetchButton({ repoId }: { repoId: number | null }) {
           {t("toolbar.fetch")}
         </button>
       </Tooltip>
-      <button
-        type="button"
-        className={`${appStyles.toolButton} ${styles.menuButton}`}
-        aria-label={t("remote.fetchOptions")}
-        aria-haspopup="menu"
+      <MoreOptionsButton
+        label={t("remote.fetchOptions")}
+        action={t("toolbar.fetch")}
         disabled={disabled}
         onClick={(event) => {
           if (repoId !== null)
@@ -92,9 +91,7 @@ export function FetchButton({ repoId }: { repoId: number | null }) {
               items(repoId),
             );
         }}
-      >
-        ▾
-      </button>
+      />
       {menu.element}
     </span>
   );
@@ -204,11 +201,9 @@ export function PullButton({ repoId }: { repoId: number | null }) {
           )}
         </button>
       </Tooltip>
-      <button
-        type="button"
-        className={`${appStyles.toolButton} ${styles.menuButton}`}
-        aria-label={t("remote.pullOptions")}
-        aria-haspopup="menu"
+      <MoreOptionsButton
+        label={t("remote.pullOptions")}
+        action={t("toolbar.pull")}
         disabled={repoId === null || running !== null}
         onClick={(event) => {
           if (repoId !== null)
@@ -218,9 +213,7 @@ export function PullButton({ repoId }: { repoId: number | null }) {
               items(repoId),
             );
         }}
-      >
-        ▾
-      </button>
+      />
       {menu.element}
     </span>
   );
@@ -261,11 +254,9 @@ export function PushButton({ repoId }: { repoId: number | null }) {
           {t("toolbar.push")}
         </button>
       </Tooltip>
-      <button
-        type="button"
-        className={`${appStyles.toolButton} ${styles.menuButton}`}
-        aria-label={t("push.options")}
-        aria-haspopup="menu"
+      <MoreOptionsButton
+        label={t("push.options")}
+        action={t("toolbar.push")}
         disabled={disabled}
         onClick={(event) => {
           if (repoId === null) return;
@@ -278,9 +269,7 @@ export function PushButton({ repoId }: { repoId: number | null }) {
             },
           ]);
         }}
-      >
-        ▾
-      </button>
+      />
       {menu.element}
     </span>
   );

@@ -98,6 +98,17 @@ describe("fetch", () => {
   it("fetches one remote with --prune from the menus", async () => {
     const user = userEvent.setup();
     renderToolbar();
+    // A visible chevron with a tooltip, not a bare "▾".
+    for (const [name, action] of [
+      ["Opciones de fetch", "Fetch"],
+      ["Estrategia de pull", "Pull"],
+      ["Opciones de push", "Push"],
+    ]) {
+      const button = screen.getByRole("button", { name });
+      expect(button).toHaveAccessibleDescription(`Más opciones de ${action}`);
+      expect(button.querySelector("svg")).not.toBeNull();
+      expect(button).not.toHaveTextContent("▾");
+    }
     await user.click(screen.getByRole("button", { name: "Opciones de fetch" }));
     await user.click(
       screen.getByRole("menuitem", { name: /todos y quitar ramas remotas/ }),

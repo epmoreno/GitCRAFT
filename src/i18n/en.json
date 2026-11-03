@@ -14,6 +14,7 @@
     "needsRepo": "Open a repository first",
     "notYetAvailable": "Not available yet",
     "fetch": "Fetch",
+    "moreOptions": "More options for {{action}}",
     "newRepository": "More ways to open a repository"
   },
   "tabs": {
