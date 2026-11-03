@@ -3,11 +3,12 @@ import { useTranslation } from "react-i18next";
 import { pickFolder, type SettingsLanguage, type TextSize } from "../../ipc";
 import { ErrorReport } from "../../ui/ErrorReport";
 import { GitDefaults } from "./GitDefaults";
+import { IdentitySection } from "./IdentitySection";
 import { useSettingsStore, type SettingsSection } from "./store";
 import styles from "./settings.module.css";
 
 /** Sections, in order; more are added as they exist. */
-const SECTIONS: SettingsSection[] = ["general"];
+const SECTIONS: SettingsSection[] = ["general", "identity"];
 
 /** Settings window (gear in the toolbar, GitCRAFT → Settings…, ⌘,). */
 export function SettingsDialog() {
@@ -64,6 +65,7 @@ export function SettingsDialog() {
         <div className={styles.content}>
           {error && <ErrorReport error={error} lead={t("settings.failed")} />}
           {section === "general" && <GeneralSection />}
+          {section === "identity" && <IdentitySection />}
         </div>
         <button
           type="button"

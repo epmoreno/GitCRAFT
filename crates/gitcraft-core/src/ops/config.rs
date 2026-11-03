@@ -153,6 +153,87 @@ pub async fn apply(
     Ok(())
 }
 
+/// `user.name` and `user.email` in one file.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct Identity {
+    pub name: Option<String>,
+    pub email: Option<String>,
+}
+
+/// The identity commits get, and where each part comes from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct IdentityInfo {
+    pub global: Identity,
+    /// The repository's own values (`None` without a repository).
+    pub repo: Option<Identity>,
+    /// What git uses there (or globally without a repository).
+    pub effective_name: Option<EffectiveValue>,
+    pub effective_email: Option<EffectiveValue>,
+}
+
+pub async fn identity(
+    git: &Git,
+    target: &ConfigTarget,
+    cancel: &CancellationToken,
+) -> Result<Identity> {
+    Ok(Identity {
+        name: get(git, target, "user.name", cancel).await?,
+        email: get(git, target, "user.email", cancel).await?,
+    })
+}
+
+/// The global identity and, with `repo`, the repository's and the one git
+/// would use there.
+pub async fn identity_info(
+    git: &Git,
+    repo: Option<&Path>,
+    cancel: &CancellationToken,
+) -> Result<IdentityInfo> {
+    let global = identity(git, &ConfigTarget::Global, cancel).await?;
+    let Some(repo) = repo else {
+        let from_global = |value: &Option<String>| {
+            value.clone().map(|value| EffectiveValue {
+                value,
+                scope: "global".into(),
+                origin: String::new(),
+            })
+        };
+        return Ok(IdentityInfo {
+            effective_name: from_global(&global.name),
+            effective_email: from_global(&global.email),
+            global,
+            repo: None,
+        });
+    };
+    Ok(IdentityInfo {
+        repo: Some(identity(git, &ConfigTarget::Repo(repo.to_owned()), cancel).await?),
+        effective_name: effective(git, repo, "user.name", cancel).await?,
+        effective_email: effective(git, repo, "user.email", cancel).await?,
+        global,
+    })
+}
+
+/// Writes both parts of an identity; an empty or missing part is removed
+/// (in a repository: it inherits the global one again).
+pub fn identity_changes(identity: &Identity) -> Vec<ConfigChange> {
+    let part = |key: &str, value: &Option<String>| ConfigChange {
+        key: key.to_owned(),
+        value: value
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(str::to_owned),
+    };
+    vec![
+        part("user.name", &identity.name),
+        part("user.email", &identity.email),
+    ]
+}
+
 /// What `git pull` does by default, as Settings offers it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

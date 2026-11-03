@@ -67,6 +67,9 @@ export type {
   GlobalDefaults_Serialize as GlobalDefaults,
   PullStrategy,
   ConfigChange_Serialize as ConfigChange,
+  EffectiveValue,
+  Identity_Serialize as Identity,
+  IdentityInfo_Serialize as IdentityInfo,
   Language as SettingsLanguage,
   TextSize,
 } from "./bindings";

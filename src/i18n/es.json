@@ -737,12 +737,33 @@
         "rebase": "Rebase",
         "fastForwardOnly": "Solo fast-forward"
       },
-      "confirmTitle": "¿Cambiar la configuración global de git?",
-      "confirmBody": "GitCRAFT ejecutará esto. Afecta a todos tus repositorios y también a git en la terminal:",
       "confirm": "Cambiar",
       "cancel": "Cancelar",
       "before": "Valor anterior: {{value}}",
-      "notSet": "sin configurar"
+      "notSet": "sin configurar",
+      "confirmTitle_global": "¿Cambiar la configuración global de git?",
+      "confirmTitle_local": "¿Cambiar la configuración de este repositorio?",
+      "confirmBody_global": "GitCRAFT ejecutará esto. Afecta a todos tus repositorios y también a git en la terminal:",
+      "confirmBody_local": "GitCRAFT ejecutará esto. Solo afecta a este repositorio (su .git/config), también desde la terminal:"
+    },
+    "identity": {
+      "intro": "El nombre y el email con los que se firman tus commits (user.name y user.email de git).",
+      "global": "Global",
+      "globalHint": "Para todos los repositorios que no tengan los suyos (~/.gitconfig).",
+      "repo": "Este repositorio: {{name}}",
+      "repoHint": "Solo para este repositorio. Vacío: usa la global.",
+      "name": "Nombre",
+      "email": "Email",
+      "badEmail": "Ese email no parece válido.",
+      "useGlobal": "Usar la global",
+      "effective": "Los commits de {{name}} se firman como",
+      "none": "sin identidad (git no dejará hacer commits)",
+      "from": {
+        "local": "de este repositorio",
+        "global": "de la configuración global",
+        "other": "de {{scope}} ({{origin}})",
+        "none": "sin configurar"
+      }
     }
   }
 }

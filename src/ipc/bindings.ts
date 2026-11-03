@@ -153,6 +153,18 @@ export const commands = {
 	setDefaultBranch: (name: string | null) => typedError<GlobalDefaults_Serialize, IpcError_Serialize>(__TAURI_INVOKE("set_default_branch", { name })),
 	/**  Writes the default pull strategy to git's global config. */
 	setDefaultPullStrategy: (strategy: PullStrategy | null) => typedError<GlobalDefaults_Serialize, IpcError_Serialize>(__TAURI_INVOKE("set_default_pull_strategy", { strategy })),
+	/**
+	 *  Git's identity: global, and for tab `id` the repository's own and the
+	 *  one its commits get.
+	 */
+	gitIdentity: (id: number | null) => typedError<IdentityInfo_Serialize, IpcError_Serialize>(__TAURI_INVOKE("git_identity", { id })),
+	/**  What saving `identity` writes (shown before doing it). */
+	identityChanges: (identity: Identity_Deserialize) => typedError<ConfigChange_Serialize[], IpcError_Serialize>(__TAURI_INVOKE("identity_changes", { identity })),
+	/**
+	 *  Writes the identity globally (`id: None`) or in tab `id`'s repository;
+	 *  empty parts are removed.
+	 */
+	setGitIdentity: (id: number | null, identity: Identity_Deserialize) => typedError<IdentityInfo_Serialize, IpcError_Serialize>(__TAURI_INVOKE("set_git_identity", { id, identity })),
 	/**  The folder name a clone of `url` gets by default. */
 	defaultCloneName: (url: string) => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("default_clone_name", { url })),
 	/**  Whether a clone can go to `parent/name` (never a folder with files). */
@@ -523,6 +535,15 @@ export type DiscardedFile_Serialize = {
 	fileCount: number | null,
 };
 
+/**  A value as git resolves it, and where it comes from. */
+export type EffectiveValue = {
+	value: string,
+	/**  `global`, `local`, `system`, `worktree` or `command`. */
+	scope: string,
+	/**  The file it was read from (`file:<path>`) as git reports it. */
+	origin: string,
+};
+
 /**
  *  What went wrong, in terms the UI can explain. Each kind has a translated
  *  message (`errors.<kind>` in the i18n files).
@@ -857,6 +878,44 @@ export type Hunk_Serialize = {
 	/**  Text after the second `@@` (usually the enclosing function). */
 	section: string,
 	lines: DiffLine_Serialize[],
+};
+
+/**  `user.name` and `user.email` in one file. */
+export type Identity = Identity_Serialize | Identity_Deserialize;
+
+/**  The identity commits get, and where each part comes from. */
+export type IdentityInfo = IdentityInfo_Serialize | IdentityInfo_Deserialize;
+
+/**  The identity commits get, and where each part comes from. */
+export type IdentityInfo_Deserialize = {
+	global: Identity_Deserialize,
+	/**  The repository's own values (`None` without a repository). */
+	repo?: Identity_Deserialize | null,
+	/**  What git uses there (or globally without a repository). */
+	effectiveName?: EffectiveValue | null,
+	effectiveEmail?: EffectiveValue | null,
+};
+
+/**  The identity commits get, and where each part comes from. */
+export type IdentityInfo_Serialize = {
+	global: Identity_Serialize,
+	/**  The repository's own values (`None` without a repository). */
+	repo: Identity_Serialize | null,
+	/**  What git uses there (or globally without a repository). */
+	effectiveName: EffectiveValue | null,
+	effectiveEmail: EffectiveValue | null,
+};
+
+/**  `user.name` and `user.email` in one file. */
+export type Identity_Deserialize = {
+	name?: string | null,
+	email?: string | null,
+};
+
+/**  `user.name` and `user.email` in one file. */
+export type Identity_Serialize = {
+	name: string | null,
+	email: string | null,
 };
 
 /**

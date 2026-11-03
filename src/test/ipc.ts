@@ -87,6 +87,9 @@ export const ipc = {
   pullStrategyChanges: vi.mocked(commands.pullStrategyChanges),
   setDefaultBranch: vi.mocked(commands.setDefaultBranch),
   setDefaultPullStrategy: vi.mocked(commands.setDefaultPullStrategy),
+  gitIdentity: vi.mocked(commands.gitIdentity),
+  identityChanges: vi.mocked(commands.identityChanges),
+  setGitIdentity: vi.mocked(commands.setGitIdentity),
 };
 
 export function resetIpcMock() {
@@ -136,6 +139,15 @@ export function resetIpcMock() {
   });
   ipc.setGeneralSettings.mockResolvedValue({ status: "ok", data: null });
   ipc.setUiZoom.mockResolvedValue(undefined);
+  ipc.gitIdentity.mockResolvedValue({
+    status: "ok",
+    data: {
+      global: { name: null, email: null },
+      repo: null,
+      effectiveName: null,
+      effectiveEmail: null,
+    },
+  });
   ipc.gitDefaults.mockResolvedValue({
     status: "ok",
     data: {

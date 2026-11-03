@@ -635,12 +635,28 @@ ningún producto.
         escribir, y Escape que cierra solo la confirmación;
       - fetch automático con temporizadores simulados: salta las operaciones
         en curso y marca los fallos sin avisos.
-- [ ] **D.3 Identidad de Git.** `user.name` y `user.email` en dos ámbitos:
+- [x] **D.3 Identidad de Git.** `user.name` y `user.email` en dos ámbitos:
       el global y el del repositorio de la pestaña activa, con el valor
       efectivo y de dónde viene. Se pueden editar los dos y quitar el del
       repo para heredar el global. Se lee y escribe con `git config`
       (`--global` / `--local`, salida con `-z`). Validación básica del email.
       *Tests de integración* con `GIT_CONFIG_GLOBAL` temporal.
+      *Estado:* en Ajustes → Identidad de Git hay dos bloques, Global y Este
+      repositorio.
+      - En el bloque del repo, los campos vacíos muestran el valor global
+        heredado.
+      - Debajo se ve cómo se firman los commits de ese repo y de dónde sale
+        cada parte: de este repositorio, de la configuración global o de
+        otro ámbito, con su archivo.
+      - Guardar pasa por la misma confirmación que D.2 (`--global` o
+        `--local`, comando exacto y valor anterior), mostrando solo lo que
+        cambia.
+      - «Usar la global» quita los valores del repo. Los espacios de los
+        extremos se recortan, y un campo vacío se quita.
+
+      *Tests:* integración en el núcleo (el valor del repo manda hasta que se
+      quita) y en la UI: origen de cada parte, confirmación, «Usar la
+      global», email no válido y sin repo abierto.
 - [ ] **D.4 Cuenta de GitHub con `gh`.** Detecta si `gh` está instalado; si
       no, explica cómo instalarlo (`brew install gh` o cli.github.com). Lee
       el estado con `gh auth status --hostname github.com --json hosts` y

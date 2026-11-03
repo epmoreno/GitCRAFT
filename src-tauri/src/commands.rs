@@ -10,7 +10,9 @@ use gitcraft_core::ops::branch::{BranchDeletion, BranchNameCheck, CheckoutOutcom
 use gitcraft_core::ops::clone::{self, Destination};
 use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
-use gitcraft_core::ops::config::{self, ConfigChange, GlobalDefaults, PullStrategy};
+use gitcraft_core::ops::config::{
+    self, ConfigChange, GlobalDefaults, Identity, IdentityInfo, PullStrategy,
+};
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::init::InitCheck;
 use gitcraft_core::ops::refs::RepoRefs;
@@ -641,6 +643,36 @@ pub async fn set_default_pull_strategy(
     strategy: Option<PullStrategy>,
 ) -> Result<GlobalDefaults, IpcError> {
     state.set_default_pull_strategy(strategy).await
+}
+
+/// Git's identity: global, and for tab `id` the repository's own and the
+/// one its commits get.
+#[tauri::command]
+#[specta::specta]
+pub async fn git_identity(
+    state: State<'_, AppState>,
+    id: Option<RepoId>,
+) -> Result<IdentityInfo, IpcError> {
+    state.identity(id).await
+}
+
+/// What saving `identity` writes (shown before doing it).
+#[tauri::command]
+#[specta::specta]
+pub async fn identity_changes(identity: Identity) -> Result<Vec<ConfigChange>, IpcError> {
+    Ok(config::identity_changes(&identity))
+}
+
+/// Writes the identity globally (`id: None`) or in tab `id`'s repository;
+/// empty parts are removed.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_git_identity(
+    state: State<'_, AppState>,
+    id: Option<RepoId>,
+    identity: Identity,
+) -> Result<IdentityInfo, IpcError> {
+    state.set_identity(id, identity).await
 }
 
 /// The folder name a clone of `url` gets by default.

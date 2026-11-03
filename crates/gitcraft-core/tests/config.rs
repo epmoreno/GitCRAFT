@@ -165,3 +165,67 @@ async fn sets_the_default_pull_strategy_with_one_deciding_key() {
     let defaults = global_defaults(&env.git, &c()).await.expect("read");
     assert_eq!((defaults.pull_rebase, defaults.pull_ff), (None, None));
 }
+
+#[tokio::test]
+async fn a_repository_identity_overrides_the_global_one_until_removed() {
+    use gitcraft_core::ops::config::{Identity, identity_changes, identity_info};
+    let env = isolated();
+    let repo = TestRepo::new().await;
+    let local = ConfigTarget::Repo(repo.path().to_owned());
+    let who = |name: &str, email: &str| Identity {
+        name: Some(name.into()),
+        email: Some(email.into()),
+    };
+    config::apply(
+        &env.git,
+        &ConfigTarget::Global,
+        &identity_changes(&who("Ana", "ana@casa.es")),
+        &c(),
+    )
+    .await
+    .expect("global");
+    config::apply(
+        &env.git,
+        &local,
+        &identity_changes(&who("  Ana Pérez ", "ana@trabajo.es")),
+        &c(),
+    )
+    .await
+    .expect("local");
+    let info = identity_info(&env.git, Some(repo.path()), &c())
+        .await
+        .expect("info");
+    assert_eq!(info.global, who("Ana", "ana@casa.es"));
+    assert_eq!(
+        info.repo,
+        Some(who("Ana Pérez", "ana@trabajo.es")),
+        "trimmed"
+    );
+    let email = info.effective_email.expect("email");
+    assert_eq!(
+        (email.value.as_str(), email.scope.as_str()),
+        ("ana@trabajo.es", "local")
+    );
+
+    // Empty parts are removed: the repository inherits the global identity.
+    config::apply(
+        &env.git,
+        &local,
+        &identity_changes(&Identity {
+            name: None,
+            email: Some(" ".into()),
+        }),
+        &c(),
+    )
+    .await
+    .expect("clear");
+    let info = identity_info(&env.git, Some(repo.path()), &c())
+        .await
+        .expect("info");
+    assert_eq!(info.repo, Some(Identity::default()));
+    let name = info.effective_name.expect("name");
+    assert_eq!(
+        (name.value.as_str(), name.scope.as_str()),
+        ("Ana", "global")
+    );
+}

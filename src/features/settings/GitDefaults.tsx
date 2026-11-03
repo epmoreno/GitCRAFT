@@ -7,15 +7,15 @@ import {
   type GlobalDefaults,
   type PullStrategy,
 } from "../../ipc";
-import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { ErrorReport } from "../../ui/ErrorReport";
+import { ConfigConfirm, type ConfigRow } from "./ConfigConfirm";
 import { Field } from "./SettingsDialog";
 import styles from "./settings.module.css";
 
 /** A change to git's global config waiting for confirmation. */
 type Pending = {
   /** Each key, with its value now and the one it would get. */
-  rows: { key: string; before: string | null; after: string | null }[];
+  rows: ConfigRow[];
   run: () => Promise<
     | { status: "ok"; data: GlobalDefaults }
     | { status: "error"; error: CommandError }
@@ -148,10 +148,9 @@ export function GitDefaults() {
         </div>
       </Field>
       {pending && (
-        <ConfirmDialog
-          title={t("settings.git.confirmTitle")}
-          confirmLabel={t("settings.git.confirm")}
-          cancelLabel={t("settings.git.cancel")}
+        <ConfigConfirm
+          scope="global"
+          rows={pending.rows}
           onCancel={() => setPending(null)}
           onConfirm={async () => {
             const result = await pending.run();
@@ -164,25 +163,7 @@ export function GitDefaults() {
               setError(result.error);
             }
           }}
-        >
-          <p>{t("settings.git.confirmBody")}</p>
-          <ul className={styles.changes}>
-            {pending.rows.map((row) => (
-              <li key={row.key}>
-                <code className="selectable">
-                  {row.after === null
-                    ? `git config --global --unset-all ${row.key}`
-                    : `git config --global ${row.key} ${row.after}`}
-                </code>
-                <span className={styles.hint}>
-                  {t("settings.git.before", {
-                    value: row.before ?? t("settings.git.notSet"),
-                  })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </ConfirmDialog>
+        />
       )}
     </>
   );

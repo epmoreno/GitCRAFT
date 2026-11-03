@@ -12,7 +12,9 @@ use gitcraft_core::ops::branch::{
 use gitcraft_core::ops::clone;
 use gitcraft_core::ops::commit::{CommitChanges, commit_changes, commit_details, commit_file_diff};
 use gitcraft_core::ops::commit_write::{AmendInfo, amend_info, compose_message, create_commit};
-use gitcraft_core::ops::config::{self, ConfigChange, ConfigTarget, GlobalDefaults, PullStrategy};
+use gitcraft_core::ops::config::{
+    self, ConfigChange, ConfigTarget, GlobalDefaults, Identity, IdentityInfo, PullStrategy,
+};
 use gitcraft_core::ops::discard::{
     DiscardRecord, DiscardTarget, DiscardedFile, SystemTrash, Trash, discard, preview_discard,
     undo_discard,
@@ -1062,6 +1064,34 @@ impl AppState {
         )
         .await?;
         self.git_defaults().await
+    }
+
+    /// The global identity and, for tab `id`, the repository's own.
+    pub async fn identity(&self, id: Option<RepoId>) -> Result<IdentityInfo, IpcError> {
+        let git = self.git()?;
+        let repo = id.map(|id| self.session_repo_path(id)).transpose()?;
+        Ok(config::identity_info(
+            git,
+            repo.as_deref().map(Path::new),
+            &CancellationToken::new(),
+        )
+        .await?)
+    }
+
+    /// Writes the identity globally (`id: None`) or in tab `id`'s repository.
+    pub async fn set_identity(
+        &self,
+        id: Option<RepoId>,
+        identity: Identity,
+    ) -> Result<IdentityInfo, IpcError> {
+        let git = self.git()?;
+        let target = match id {
+            Some(id) => ConfigTarget::Repo(PathBuf::from(self.session_repo_path(id)?)),
+            None => ConfigTarget::Global,
+        };
+        let changes = config::identity_changes(&identity);
+        config::apply(git, &target, &changes, &CancellationToken::new()).await?;
+        self.identity(id).await
     }
 
     pub fn general_settings(&self) -> GeneralSettings {
