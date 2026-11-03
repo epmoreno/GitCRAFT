@@ -530,6 +530,10 @@ ningún producto.
       *Tests:* botones de icono con su tooltip, reglas CSS de ajuste de
       línea (jsdom no calcula el layout) y Supr/⌫ solo en archivos sin
       preparar.
+      *Verificado manualmente:* la barra del árbol sin texto cortado, y
+      «HEAD separado» en la barra superior, la lateral y la cabecera. El
+      atajo de descartar falló: el foco quedaba en el nombre y no en la fila.
+      Se corrige en B.6.
 
 ### C. Pestaña nueva
 - [x] **C.1 Botón «+» y ⌘T.** El botón «+» de la barra de pestañas, ⌘T y
@@ -552,6 +556,13 @@ ningún producto.
       *Tests:* abrir con «+» y ⌘T (sin duplicar), convertirse al abrir,
       clonar o inicializar, ir a la pestaña existente si el repo ya está
       abierto, cerrar con × y ⌘W, y que no se guarde en la sesión.
+      *Verificado manualmente:*
+      - «+» y ⌘T abren una sola pestaña nueva con la pantalla de inicio;
+      - se convierte en la pestaña del repo al abrir, clonar e inicializar;
+      - con un repo ya abierto, va a su pestaña y la nueva se cierra;
+      - ⌘1…⌘9 y ⌃Tab la incluyen, y al cerrarla con ⌘W o × se vuelve a la
+        de la izquierda;
+      - tras ⌘Q no se restaura y queda activa la de su izquierda.
 
 ### D. Ajustes (engranaje y ⌘,)
 - [ ] **D.1 Ventana de Ajustes y Generales.** El engranaje de la barra y
