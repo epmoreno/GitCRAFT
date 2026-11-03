@@ -390,6 +390,8 @@ ningún producto.
         `--border-control` para el contorno de los controles.
       - Los carriles del grafo pasan a ser `--lane-1` … `--lane-8`.
       - El texto seleccionado se pinta siempre en `--text`.
+      *Verificado manualmente:* el contraste de los textos tenues (hashes,
+      fechas, contadores y rutas).
 - [x] **A.2 Estados de interacción.** Tokens y estilos base comunes para
       *hover*, *pulsado*, *seleccionado* (con y sin foco en la lista), *foco
       de teclado* y *deshabilitado*. Se aplican a botones, filas de listas,
@@ -413,6 +415,14 @@ ningún producto.
       *Tests:* contraste también con *hover* y pulsado. Ninguna regla de
       estado usa el atajo `background`, y quitar el `outline` exige otra señal
       visible. Al hacer clic en una fila, el historial recibe el foco.
+      *Verificado manualmente:*
+      - *hover* y pulsado en botones, filas, archivos, pestañas y menú;
+      - selección con y sin foco (commit, archivo y stash);
+      - anillo de foco con Tab;
+      - estados deshabilitados (Commit sin resumen, y Push/Pull sin remoto).
+
+      El usuario aprobó que el pulsado oscurezca y que el historial reciba el
+      foco.
 
 ### B. Panel de cambios sin confirmar
 - [ ] **B.1 Cabecera y caja de commit fija.** La cabecera dice «N cambios en
