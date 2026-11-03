@@ -23,6 +23,8 @@ import {
 } from "../features/repo/OpenErrorBanner";
 import { installAppMenu } from "./menu";
 import { StartPage } from "../features/repo/StartPage";
+import { SettingsDialog } from "../features/settings/SettingsDialog";
+import { useSettingsStore } from "../features/settings/store";
 import { Sidebar } from "../features/sidebar/Sidebar";
 import { TabBar } from "../features/repo/TabBar";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
@@ -38,6 +40,7 @@ export function App() {
   const restored = useRepoStore((s) => s.restored);
 
   useEffect(() => {
+    void useSettingsStore.getState().load();
     void restoreSession();
     void loadRecents();
   }, [restoreSession, loadRecents]);
@@ -48,6 +51,9 @@ export function App() {
     const dialogOpen = () => document.querySelector('[aria-modal="true"]');
     const tabs = useRepoStore.getState;
     void installAppMenu(t, {
+      openSettings: () => {
+        if (!dialogOpen()) useSettingsStore.getState().openSettings();
+      },
       newTab: () => {
         if (!dialogOpen()) tabs().newTab();
       },
@@ -137,6 +143,7 @@ export function App() {
         <StashDialogs />
         <RemoteDialogs />
         <CreateDialogs />
+        <SettingsDialog />
       </div>
       <OperationsPanel />
     </div>

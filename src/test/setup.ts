@@ -4,6 +4,10 @@ import { initialBranchState, useBranchStore } from "../features/branches/store";
 import { initialCreateState, useCreateStore } from "../features/create/store";
 import { useGraphStore } from "../features/graph/store";
 import {
+  initialSettingsState,
+  useSettingsStore,
+} from "../features/settings/store";
+import {
   initialOperationsState,
   useOperationsStore,
 } from "../features/operations/store";
@@ -73,7 +77,10 @@ vi.mock("../ipc", () => ({
     cancelClone: vi.fn(),
     commandHistory: vi.fn(),
     clearCommandHistory: vi.fn(),
+    generalSettings: vi.fn(),
+    setGeneralSettings: vi.fn(),
   },
+  setUiZoom: vi.fn(),
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
   optimizeRepository: vi.fn(),
@@ -109,6 +116,7 @@ beforeEach(() => {
   useCreateStore.setState(initialCreateState);
   useOperationsStore.setState(initialOperationsState);
   useGraphStore.setState({ graphs: {} });
+  useSettingsStore.setState(initialSettingsState);
   localStorage.clear();
   useWorkdirViewPrefs.setState(initialWorkdirViewPrefs);
   useWorkdirStore.setState({

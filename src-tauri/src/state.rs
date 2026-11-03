@@ -38,7 +38,7 @@ use gitcraft_core::{CancellationToken, Git, GitError};
 use serde::Serialize;
 
 use crate::error::IpcError;
-use crate::settings::{RecentRepository, SavedSession, Settings, SettingsFile};
+use crate::settings::{GeneralSettings, RecentRepository, SavedSession, Settings, SettingsFile};
 use crate::watcher::{RepoWatcher, Suppression};
 
 pub type RepoId = u32;
@@ -1004,12 +1004,31 @@ impl AppState {
         self.open_repository(path).await
     }
 
-    /// Folder suggested for a new clone: the last one used, else home.
+    /// Folder suggested for a new clone: the default one from Settings,
+    /// else the last one used, else home (skipping folders that are gone).
     pub fn clone_parent(&self) -> String {
-        let last = self.lock().settings.last_clone_parent.clone();
-        last.filter(|p| Path::new(p).is_dir())
+        let inner = self.lock();
+        let candidates = [
+            inner.settings.general.clone_folder.clone(),
+            inner.settings.last_clone_parent.clone(),
+        ];
+        drop(inner);
+        candidates
+            .into_iter()
+            .flatten()
+            .find(|p| Path::new(p).is_dir())
             .or_else(|| std::env::var("HOME").ok())
             .unwrap_or_default()
+    }
+
+    pub fn general_settings(&self) -> GeneralSettings {
+        self.lock().settings.general.clone()
+    }
+
+    pub fn set_general_settings(&self, general: GeneralSettings) {
+        let mut inner = self.lock();
+        inner.settings.general = general;
+        self.persist(&inner.settings);
     }
 
     /// Clones `url` into `parent/name` and opens it. Cancel with
@@ -1156,6 +1175,27 @@ mod tests {
 
     async fn settle() {
         tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+    }
+
+    #[test]
+    fn the_default_clone_folder_wins_over_the_last_one_used() {
+        let f = fixture();
+        let chosen = tempfile::tempdir().expect("tempdir");
+        let last = tempfile::tempdir().expect("tempdir");
+        let path = |d: &tempfile::TempDir| d.path().to_string_lossy().into_owned();
+        f.state.lock().settings.last_clone_parent = Some(path(&last));
+        assert_eq!(f.state.clone_parent(), path(&last));
+
+        let mut general = f.state.general_settings();
+        general.clone_folder = Some(path(&chosen));
+        f.state.set_general_settings(general.clone());
+        assert_eq!(f.state.clone_parent(), path(&chosen));
+        // Saved to the settings file.
+        assert_eq!(SettingsFile::new(&f.settings_path).load().general, general);
+
+        // A default folder that is gone falls back to the last one used.
+        drop(chosen);
+        assert_eq!(f.state.clone_parent(), path(&last));
     }
 
     #[tokio::test]

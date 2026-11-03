@@ -9,10 +9,12 @@ import {
   forcePushPreview,
   cloneRepository,
   pickFolder,
+  setUiZoom,
   streamGraph,
   type CommandError,
   type ErrorKind,
   type FileDiff,
+  type GeneralSettings,
   type GraphEvent,
   type GraphLine,
   type OpenedRepository,
@@ -78,6 +80,9 @@ export const ipc = {
   dropStash: vi.mocked(commands.dropStash),
   recoverPreview: vi.mocked(commands.recoverPreview),
   recoverFile: vi.mocked(commands.recoverFile),
+  generalSettings: vi.mocked(commands.generalSettings),
+  setGeneralSettings: vi.mocked(commands.setGeneralSettings),
+  setUiZoom: vi.mocked(setUiZoom),
 };
 
 export function resetIpcMock() {
@@ -121,6 +126,12 @@ export function resetIpcMock() {
     data: { base: null, files: [] },
   });
   ipc.cancelOperation.mockResolvedValue({ status: "ok", data: null });
+  ipc.generalSettings.mockResolvedValue({
+    status: "ok",
+    data: defaultGeneralSettings(),
+  });
+  ipc.setGeneralSettings.mockResolvedValue({ status: "ok", data: null });
+  ipc.setUiZoom.mockResolvedValue(undefined);
   ipc.fetchRemote.mockResolvedValue({ status: "ok", data: null });
   ipc.getPullMode.mockResolvedValue({
     status: "ok",
@@ -194,6 +205,15 @@ export function commandError(
   details: string | null = null,
 ): CommandError {
   return { kind, message: `${kind} (test)`, details };
+}
+
+export function defaultGeneralSettings(): GeneralSettings {
+  return {
+    language: null,
+    textSize: "normal",
+    cloneFolder: null,
+    autoFetchMinutes: null,
+  };
 }
 
 export function cleanStatus(): WorkingStatus {

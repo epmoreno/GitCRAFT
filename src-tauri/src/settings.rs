@@ -37,6 +37,41 @@ pub struct Settings {
     pub session: SavedSession,
     /// Folder the last clone went into (suggested for the next one).
     pub last_clone_parent: Option<String>,
+    /// GitCRAFT's own preferences (Settings → General).
+    pub general: GeneralSettings,
+}
+
+/// Settings → General. Git's own settings (identity, default branch, pull
+/// strategy) live in git's configuration, not here.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", default)]
+pub struct GeneralSettings {
+    /// UI language; `None` follows the system.
+    pub language: Option<Language>,
+    pub text_size: TextSize,
+    /// Where new clones go by default; `None`: the folder used last time.
+    pub clone_folder: Option<String>,
+    /// Fetch every open repository with a remote every N minutes; `None`
+    /// (the default) never does.
+    pub auto_fetch_minutes: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum Language {
+    Es,
+    En,
+}
+
+/// Text size levels; the whole UI scales with it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum TextSize {
+    Small,
+    #[default]
+    Normal,
+    Large,
+    Larger,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -192,5 +227,35 @@ mod tests {
         )
         .expect("write");
         assert_eq!(file.load().recent_repositories.len(), 1);
+    }
+
+    #[test]
+    fn general_settings_round_trip_and_default_to_off() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let file = SettingsFile::new(dir.path().join("settings.json"));
+        let general = file.load().general;
+        assert_eq!(general.text_size, TextSize::Normal);
+        assert_eq!(general.language, None);
+        assert_eq!(general.auto_fetch_minutes, None, "auto fetch is off");
+
+        let s = Settings {
+            general: GeneralSettings {
+                language: Some(Language::En),
+                text_size: TextSize::Larger,
+                clone_folder: Some("/Users/x/Código".into()),
+                auto_fetch_minutes: Some(15),
+            },
+            ..Settings::default()
+        };
+        file.save(&s).expect("save");
+        assert_eq!(file.load().general, s.general);
+
+        // An older file without "general" keeps its recent repositories.
+        std::fs::write(
+            dir.path().join("settings.json"),
+            r#"{"general": {"textSize": "large"}, "recentRepositories": []}"#,
+        )
+        .expect("write");
+        assert_eq!(file.load().general.text_size, TextSize::Large);
     }
 }

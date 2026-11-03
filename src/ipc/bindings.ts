@@ -142,6 +142,9 @@ export const commands = {
 	initRepository: (path: string, branch: string) => typedError<OpenedRepository, IpcError_Serialize>(__TAURI_INVOKE("init_repository", { path, branch })),
 	/**  Folder suggested for a new clone (the last one used, else home). */
 	cloneParent: () => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("clone_parent")),
+	/**  Settings → General. */
+	generalSettings: () => typedError<GeneralSettings_Serialize, IpcError_Serialize>(__TAURI_INVOKE("general_settings")),
+	setGeneralSettings: (general: GeneralSettings_Deserialize) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("set_general_settings", { general })),
 	/**  The folder name a clone of `url` gets by default. */
 	defaultCloneName: (url: string) => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("default_clone_name", { url })),
 	/**  Whether a clone can go to `parent/name` (never a folder with files). */
@@ -628,6 +631,46 @@ export type ForcePushPreview = {
 	ahead: number,
 };
 
+/**
+ *  Settings → General. Git's own settings (identity, default branch, pull
+ *  strategy) live in git's configuration, not here.
+ */
+export type GeneralSettings = GeneralSettings_Serialize | GeneralSettings_Deserialize;
+
+/**
+ *  Settings → General. Git's own settings (identity, default branch, pull
+ *  strategy) live in git's configuration, not here.
+ */
+export type GeneralSettings_Deserialize = {
+	/**  UI language; `None` follows the system. */
+	language?: Language | null,
+	textSize?: TextSize,
+	/**  Where new clones go by default; `None`: the folder used last time. */
+	cloneFolder?: string | null,
+	/**
+	 *  Fetch every open repository with a remote every N minutes; `None`
+	 *  (the default) never does.
+	 */
+	autoFetchMinutes?: number | null,
+};
+
+/**
+ *  Settings → General. Git's own settings (identity, default branch, pull
+ *  strategy) live in git's configuration, not here.
+ */
+export type GeneralSettings_Serialize = {
+	/**  UI language; `None` follows the system. */
+	language: Language | null,
+	textSize: TextSize,
+	/**  Where new clones go by default; `None`: the folder used last time. */
+	cloneFolder: string | null,
+	/**
+	 *  Fetch every open repository with a remote every N minutes; `None`
+	 *  (the default) never does.
+	 */
+	autoFetchMinutes: number | null,
+};
+
 export type GitRef = GitRef_Serialize | GitRef_Deserialize;
 
 export type GitRef_Deserialize = {
@@ -836,6 +879,8 @@ export type IpcError_Serialize = {
 	message: string,
 	details: string | null,
 };
+
+export type Language = "es" | "en";
 
 export type LineKind = "context" | "added" | "removed";
 
@@ -1135,6 +1180,9 @@ export type StatusEntry_Serialize = {
 	oldPath: string | null,
 	status: FileStatus,
 };
+
+/**  Text size levels; the whole UI scales with it. */
+export type TextSize = "small" | "normal" | "large" | "larger";
 
 export type WorkingStatus = WorkingStatus_Serialize | WorkingStatus_Deserialize;
 

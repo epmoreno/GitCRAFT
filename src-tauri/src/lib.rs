@@ -69,6 +69,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::valid_branch_name,
             commands::init_repository,
             commands::clone_parent,
+            commands::general_settings,
+            commands::set_general_settings,
             commands::default_clone_name,
             commands::check_clone_destination,
             commands::clone_repository,

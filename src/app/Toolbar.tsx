@@ -12,6 +12,7 @@ import { useOperationsStore } from "../features/operations/store";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
 import { useStashStore } from "../features/stash/store";
 import { useWorkdirStore } from "../features/workdir/store";
+import { useSettingsStore } from "../features/settings/store";
 import { Tooltip } from "../ui/Tooltip";
 import styles from "./App.module.css";
 
@@ -23,6 +24,7 @@ const PENDING = ["undo"] as const;
  */
 export function Toolbar() {
   const { t } = useTranslation();
+  const openSettings = useSettingsStore((s) => s.openSettings);
   const active = useActiveRepository();
   const opening = useRepoStore((s) => s.opening);
   const pickAndOpen = useRepoStore((s) => s.pickAndOpen);
@@ -123,6 +125,19 @@ export function Toolbar() {
           </Tooltip>
         ))}
       </div>
+      <Tooltip label={t("settings.openHint")}>
+        <button
+          type="button"
+          className={`${styles.toolButton} ${styles.iconButton}`}
+          aria-label={t("settings.title")}
+          onClick={() => openSettings()}
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M13.92 7.04 L13.92 8.96 L12.48 9.06 L11.92 10.41 L12.86 11.51 L11.51 12.86 L10.41 11.92 L9.06 12.48 L8.96 13.92 L7.04 13.92 L6.94 12.48 L5.59 11.92 L4.49 12.86 L3.14 11.51 L4.08 10.41 L3.52 9.06 L2.08 8.96 L2.08 7.04 L3.52 6.94 L4.08 5.59 L3.14 4.49 L4.49 3.14 L5.59 4.08 L6.94 3.52 L7.04 2.08 L8.96 2.08 L9.06 3.52 L10.41 4.08 L11.51 3.14 L12.86 4.49 L11.92 5.59 L12.48 6.94 Z" />
+            <circle cx="8" cy="8" r="2" />
+          </svg>
+        </button>
+      </Tooltip>
       <Tooltip label={t("operations.hint")}>
         <button
           type="button"

@@ -614,7 +614,8 @@
     "window": "Ventana",
     "closeTab": "Cerrar pestaña",
     "file": "Archivo",
-    "newTab": "Nueva pestaña"
+    "newTab": "Nueva pestaña",
+    "settings": "Ajustes…"
   },
   "init": {
     "pickerTitle": "Carpeta para el nuevo repositorio",
@@ -677,6 +678,38 @@
       "cancelled": "Cancelado",
       "timedOut": "Tiempo agotado",
       "error": "No se pudo ejecutar"
+    }
+  },
+  "settings": {
+    "title": "Ajustes",
+    "openHint": "Ajustes (⌘,)",
+    "sections": "Secciones de los ajustes",
+    "close": "Cerrar los ajustes",
+    "failed": "No se pudieron leer o guardar los ajustes.",
+    "section": {
+      "general": "Generales",
+      "identity": "Identidad de Git",
+      "github": "Cuenta de GitHub",
+      "shortcuts": "Atajos"
+    },
+    "language": {
+      "label": "Idioma",
+      "system": "El del sistema"
+    },
+    "textSize": {
+      "label": "Tamaño de texto",
+      "small": "Pequeño",
+      "normal": "Normal",
+      "large": "Grande",
+      "larger": "Muy grande"
+    },
+    "cloneFolder": {
+      "label": "Carpeta por defecto para clonar",
+      "hint": "Donde se propone crear cada clon. Sin elegir ninguna, se propone la última que usaste.",
+      "lastUsed": "La última que usaste",
+      "choose": "Elegir…",
+      "pick": "Carpeta por defecto para los clones",
+      "useLast": "Usar la última"
     }
   }
 }

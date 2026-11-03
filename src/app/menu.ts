@@ -13,13 +13,24 @@ import type { TFunction } from "i18next";
  */
 export async function installAppMenu(
   t: TFunction,
-  actions: { newTab: () => void; closeTab: () => void },
+  actions: {
+    openSettings: () => void;
+    newTab: () => void;
+    closeTab: () => void;
+  },
 ) {
   const separator = () => PredefinedMenuItem.new({ item: "Separator" });
   const app = await Submenu.new({
     text: "GitCRAFT",
     items: [
       await PredefinedMenuItem.new({ item: { About: null } }),
+      await separator(),
+      await MenuItem.new({
+        id: "settings",
+        text: t("menu.settings"),
+        accelerator: "CmdOrCtrl+,",
+        action: actions.openSettings,
+      }),
       await separator(),
       await PredefinedMenuItem.new({ item: "Services" }),
       await separator(),

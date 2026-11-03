@@ -1,4 +1,5 @@
 import { Channel } from "@tauri-apps/api/core";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   commands,
@@ -62,12 +63,20 @@ export type {
   PushReject,
   ForcePushPreview,
   SelectionAction,
+  GeneralSettings_Serialize as GeneralSettings,
+  Language as SettingsLanguage,
+  TextSize,
 } from "./bindings";
 
 /** A graph line: `[column, colour]`. */
 export type Lane = [column: number, color: number];
 
 /** Native folder picker. Resolves to `null` when the user cancels. */
+/** Scales the whole UI (Settings → General → Text size). */
+export async function setUiZoom(factor: number): Promise<void> {
+  await getCurrentWebview().setZoom(factor);
+}
+
 export async function pickFolder(title: string): Promise<string | null> {
   const selected = await open({ directory: true, multiple: false, title });
   return typeof selected === "string" ? selected : null;

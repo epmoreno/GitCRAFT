@@ -361,7 +361,13 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   y al abrir, clonar o inicializar un repo desde ella se convierte en la
   pestaña de ese repo. Mientras está activa, la sesión guarda como activa la
   pestaña de su izquierda.
-- Las preferencias: modo de pull por repo, tema e idioma.
+- Las preferencias: modo de pull por repo y los ajustes generales
+  (`general`): idioma (`null` = el del sistema), tamaño de texto, carpeta
+  por defecto para clonar y fetch automático. El tamaño de texto se aplica
+  con el zoom del webview (`setZoom`, permiso
+  `core:webview:allow-set-webview-zoom`). Lo que pertenece a git (identidad,
+  rama inicial, estrategia de pull por defecto) **no** se guarda aquí: se
+  lee y se escribe en la configuración de git.
 
 Se escribe de forma atómica (archivo temporal + rename). Si el archivo está
 corrupto, se usan los valores por defecto. **Nunca** guarda credenciales.

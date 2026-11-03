@@ -24,7 +24,7 @@ use gitcraft_core::patch::HunkSelection;
 
 use crate::error::IpcError;
 use crate::history::{CommandHistory, CommandRecord};
-use crate::settings::RecentRepository;
+use crate::settings::{GeneralSettings, RecentRepository};
 use crate::state::{
     AppState, DiscardResult, GraphEvent, OpenedRepository, PullModeInfo, RepoId, RestoredSession,
 };
@@ -587,6 +587,23 @@ pub async fn init_repository(
 #[specta::specta]
 pub async fn clone_parent(state: State<'_, AppState>) -> Result<String, IpcError> {
     Ok(state.clone_parent())
+}
+
+/// Settings → General.
+#[tauri::command]
+#[specta::specta]
+pub async fn general_settings(state: State<'_, AppState>) -> Result<GeneralSettings, IpcError> {
+    Ok(state.general_settings())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_general_settings(
+    state: State<'_, AppState>,
+    general: GeneralSettings,
+) -> Result<(), IpcError> {
+    state.set_general_settings(general);
+    Ok(())
 }
 
 /// The folder name a clone of `url` gets by default.

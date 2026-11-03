@@ -614,7 +614,8 @@
     "window": "Window",
     "closeTab": "Close tab",
     "file": "File",
-    "newTab": "New tab"
+    "newTab": "New tab",
+    "settings": "Settings…"
   },
   "init": {
     "pickerTitle": "Folder for the new repository",
@@ -677,6 +678,38 @@
       "cancelled": "Cancelled",
       "timedOut": "Timed out",
       "error": "Couldn't run"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "openHint": "Settings (⌘,)",
+    "sections": "Settings sections",
+    "close": "Close settings",
+    "failed": "Could not read or save the settings.",
+    "section": {
+      "general": "General",
+      "identity": "Git identity",
+      "github": "GitHub account",
+      "shortcuts": "Shortcuts"
+    },
+    "language": {
+      "label": "Language",
+      "system": "System language"
+    },
+    "textSize": {
+      "label": "Text size",
+      "small": "Small",
+      "normal": "Normal",
+      "large": "Large",
+      "larger": "Larger"
+    },
+    "cloneFolder": {
+      "label": "Default folder for clones",
+      "hint": "Where each clone is suggested. Without one, the folder you used last time is suggested.",
+      "lastUsed": "The one you used last",
+      "choose": "Choose…",
+      "pick": "Default folder for clones",
+      "useLast": "Use the last one"
     }
   }
 }

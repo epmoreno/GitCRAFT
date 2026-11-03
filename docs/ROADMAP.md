@@ -578,7 +578,7 @@ ningún producto.
       - tras ⌘Q no se restaura y queda activa la de su izquierda.
 
 ### D. Ajustes (engranaje y ⌘,)
-- [ ] **D.1 Ventana de Ajustes y Generales.** El engranaje de la barra y
+- [x] **D.1 Ventana de Ajustes y Generales.** El engranaje de la barra y
       *GitCRAFT → Ajustes…* (⌘,) abren los Ajustes, con las secciones
       Generales, Identidad, Cuenta de GitHub y Atajos. En Generales:
       - idioma (es/en), que se aplica al momento;
@@ -586,6 +586,19 @@ ningún producto.
       - carpeta por defecto para clonar.
 
       Se guardan en `settings.json`.
+      *Estado:*
+      - El diálogo se cierra con Escape o con ×.
+      - Idioma: el del sistema (por defecto), español o inglés.
+      - Tamaño de texto: Pequeño, Normal, Grande y Muy grande. Usa el zoom
+        del webview (0,9 / 1 / 1,15 / 1,3), así que escala toda la UI,
+        incluido el grafo.
+      - Carpeta para clonar: si está elegida y existe, gana a la última
+        usada.
+
+      *Tests:* aplicar lo guardado al arrancar, cambiar el idioma al momento,
+      el zoom por nivel, elegir o quitar la carpeta para clonar, abrir desde
+      el engranaje y desde el menú (⌘,), y en Rust la preferencia de la
+      carpeta.
 - [ ] **D.2 Rama inicial, pull por defecto y fetch automático.** Rama
       inicial por defecto (validada con `git check-ref-format`) y estrategia
       de pull por defecto (merge, rebase o solo fast-forward). Se guardan en

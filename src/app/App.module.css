@@ -38,6 +38,23 @@
   background: transparent;
 }
 
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  padding: 0;
+}
+
+.iconButton svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
 .primaryButton {
   background: var(--accent);
   color: var(--accent-contrast);
