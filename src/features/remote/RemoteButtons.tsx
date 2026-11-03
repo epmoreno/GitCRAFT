@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import appStyles from "../../app/App.module.css";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
 import { MoreOptionsButton } from "../../ui/MoreOptionsButton";
+import { explainError } from "../../ui/ErrorReport";
 import { Tooltip } from "../../ui/Tooltip";
 import { useGraphStore } from "../graph/store";
 import { useRemoteStore } from "./store";
@@ -103,11 +104,26 @@ export function CurrentBranch({ repoId }: { repoId: number | null }) {
   const refs = useGraphStore((s) =>
     repoId === null ? null : (s.graphs[repoId]?.refs ?? null),
   );
+  const autoFetchError = useRemoteStore((s) =>
+    repoId === null ? null : (s.autoFetchErrors[repoId] ?? null),
+  );
   if (!refs) return null;
+  // A failed automatic fetch is only marked here: never a dialog.
+  const failed = autoFetchError && (
+    <span
+      className={styles.noUpstream}
+      title={t("tracking.autoFetchFailed", {
+        reason: explainError(t, autoFetchError),
+      })}
+    >
+      ⚠ {t("tracking.autoFetchFailedShort")}
+    </span>
+  );
   if (refs.head.type === "detached") {
     return (
       <span className={styles.branch} title={t("tracking.detached")}>
         {t("sidebar.detachedHead")}
+        {failed}
       </span>
     );
   }
@@ -129,6 +145,7 @@ export function CurrentBranch({ repoId }: { repoId: number | null }) {
       {ref?.upstreamGone && (
         <span className={styles.noUpstream}>{t("tracking.goneShort")}</span>
       )}
+      {failed}
     </span>
   );
 }

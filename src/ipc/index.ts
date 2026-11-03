@@ -64,6 +64,9 @@ export type {
   ForcePushPreview,
   SelectionAction,
   GeneralSettings_Serialize as GeneralSettings,
+  GlobalDefaults_Serialize as GlobalDefaults,
+  PullStrategy,
+  ConfigChange_Serialize as ConfigChange,
   Language as SettingsLanguage,
   TextSize,
 } from "./bindings";

@@ -73,6 +73,8 @@ pub enum Access {
 pub struct Git {
     exe: PathBuf,
     log: Option<LogHandle>,
+    /// Environment set on every command (tests isolate git's global config).
+    envs: Vec<(OsString, OsString)>,
 }
 
 impl Git {
@@ -84,7 +86,14 @@ impl Git {
         Self {
             exe: exe.into(),
             log: None,
+            envs: Vec::new(),
         }
+    }
+
+    /// Sets `key=value` on every command run through this `Git`.
+    pub fn with_env(mut self, key: impl Into<OsString>, value: impl Into<OsString>) -> Self {
+        self.envs.push((key.into(), value.into()));
+        self
     }
 
     /// Reports every command run through this `Git` (and its clones made
@@ -168,7 +177,7 @@ impl GitCommand {
             cwd,
             access,
             args: Vec::new(),
-            envs: Vec::new(),
+            envs: git.envs.clone(),
             stdin: None,
             timeout: None,
             ok_exit_codes: vec![0],

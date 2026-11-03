@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { pickFolder, type SettingsLanguage, type TextSize } from "../../ipc";
 import { ErrorReport } from "../../ui/ErrorReport";
+import { GitDefaults } from "./GitDefaults";
 import { useSettingsStore, type SettingsSection } from "./store";
 import styles from "./settings.module.css";
 
@@ -23,7 +24,9 @@ export function SettingsDialog() {
     if (!open) return;
     dialog.current?.querySelector<HTMLElement>("[aria-current]")?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      // A confirmation open on top handles its own Escape.
+      const modals = document.querySelectorAll('[aria-modal="true"]').length;
+      if (event.key === "Escape" && modals <= 1) {
         event.stopPropagation();
         close();
       }
@@ -165,6 +168,30 @@ function GeneralSection() {
           </button>
         )}
       </Field>
+      <Field
+        label={t("settings.autoFetch.label")}
+        hint={t("settings.autoFetch.hint")}
+      >
+        <select
+          className={styles.select}
+          aria-label={t("settings.autoFetch.label")}
+          value={general.autoFetchMinutes ?? 0}
+          onChange={(event) => {
+            const minutes = Number(event.target.value);
+            void update({ autoFetchMinutes: minutes === 0 ? null : minutes });
+          }}
+        >
+          <option value={0}>{t("settings.autoFetch.off")}</option>
+          {AUTO_FETCH_MINUTES.map((m) => (
+            <option key={m} value={m}>
+              {t("settings.autoFetch.every", { count: m })}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <GitDefaults />
     </section>
   );
 }
+
+const AUTO_FETCH_MINUTES = [5, 10, 15, 30, 60];

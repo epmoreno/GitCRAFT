@@ -453,7 +453,8 @@
       "fetch": "Descargando de {{remote}}…",
       "pull": "Haciendo pull de {{remote}}…",
       "push": "Subiendo a {{remote}}…",
-      "check": "Comprobando el remoto…"
+      "check": "Comprobando el remoto…",
+      "autoFetch": "Fetch automático…"
     },
     "progress": "Progreso",
     "cancel": "Cancelar",
@@ -491,7 +492,9 @@
     "behind_one": "1 commit por bajar (pull)",
     "behind_other": "{{count}} commits por bajar (pull)",
     "detached": "HEAD separado: no estás en ninguna rama",
-    "unborn": "Rama sin commits todavía"
+    "unborn": "Rama sin commits todavía",
+    "autoFetchFailed": "El último fetch automático falló: {{reason}}",
+    "autoFetchFailedShort": "fetch falló"
   },
   "pull": {
     "cancel": "Cancelar",
@@ -710,6 +713,36 @@
       "choose": "Elegir…",
       "pick": "Carpeta por defecto para los clones",
       "useLast": "Usar la última"
+    },
+    "autoFetch": {
+      "label": "Fetch automático",
+      "hint": "Descarga los cambios de los remotos de cada repositorio abierto. Si falla, se marca junto a la rama, sin ventanas.",
+      "off": "Desactivado",
+      "every_one": "Cada minuto",
+      "every_other": "Cada {{count}} minutos"
+    },
+    "git": {
+      "title": "Git (configuración global)",
+      "globalNote": "Estos valores se guardan en tu configuración global de git (~/.gitconfig): también afectan a git en la terminal y a otros programas.",
+      "failed": "No se pudo leer o cambiar la configuración de git.",
+      "defaultBranch": "Rama inicial por defecto",
+      "defaultBranchUnset": "Sin configurar: en la terminal, git usa «master» (y avisa); al inicializar desde GitCRAFT se propone «main».",
+      "save": "Guardar",
+      "unset": "Quitar",
+      "pull": "Estrategia de pull por defecto",
+      "pullHint": "La que hayas elegido en GitCRAFT para un repositorio (menú de Pull) sigue teniendo prioridad.",
+      "strategy": {
+        "unset": "Sin configurar",
+        "merge": "Merge",
+        "rebase": "Rebase",
+        "fastForwardOnly": "Solo fast-forward"
+      },
+      "confirmTitle": "¿Cambiar la configuración global de git?",
+      "confirmBody": "GitCRAFT ejecutará esto. Afecta a todos tus repositorios y también a git en la terminal:",
+      "confirm": "Cambiar",
+      "cancel": "Cancelar",
+      "before": "Valor anterior: {{value}}",
+      "notSet": "sin configurar"
     }
   }
 }

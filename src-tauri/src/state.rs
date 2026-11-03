@@ -12,6 +12,7 @@ use gitcraft_core::ops::branch::{
 use gitcraft_core::ops::clone;
 use gitcraft_core::ops::commit::{CommitChanges, commit_changes, commit_details, commit_file_diff};
 use gitcraft_core::ops::commit_write::{AmendInfo, amend_info, compose_message, create_commit};
+use gitcraft_core::ops::config::{self, ConfigChange, ConfigTarget, GlobalDefaults, PullStrategy};
 use gitcraft_core::ops::discard::{
     DiscardRecord, DiscardTarget, DiscardedFile, SystemTrash, Trash, discard, preview_discard,
     undo_discard,
@@ -1019,6 +1020,48 @@ impl AppState {
             .find(|p| Path::new(p).is_dir())
             .or_else(|| std::env::var("HOME").ok())
             .unwrap_or_default()
+    }
+
+    /// Git's global defaults (default branch, pull strategy).
+    pub async fn git_defaults(&self) -> Result<GlobalDefaults, IpcError> {
+        Ok(config::global_defaults(self.git()?, &CancellationToken::new()).await?)
+    }
+
+    /// Sets (or removes) `init.defaultBranch` in git's global config.
+    pub async fn set_default_branch(
+        &self,
+        name: Option<String>,
+    ) -> Result<GlobalDefaults, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        if let Some(name) = &name
+            && !init::valid_branch_name(git, &std::env::temp_dir(), name, &cancel).await?
+        {
+            return Err(GitError::InvalidBranchName(name.clone()).into());
+        }
+        let change = ConfigChange {
+            key: "init.defaultBranch".into(),
+            value: name,
+        };
+        config::apply(git, &ConfigTarget::Global, &[change], &cancel).await?;
+        self.git_defaults().await
+    }
+
+    /// Sets (or removes) the default pull strategy in git's global config.
+    pub async fn set_default_pull_strategy(
+        &self,
+        strategy: Option<PullStrategy>,
+    ) -> Result<GlobalDefaults, IpcError> {
+        let git = self.git()?;
+        let changes = config::pull_strategy_changes(strategy);
+        config::apply(
+            git,
+            &ConfigTarget::Global,
+            &changes,
+            &CancellationToken::new(),
+        )
+        .await?;
+        self.git_defaults().await
     }
 
     pub fn general_settings(&self) -> GeneralSettings {

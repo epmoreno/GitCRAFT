@@ -599,7 +599,7 @@ ningún producto.
       el zoom por nivel, elegir o quitar la carpeta para clonar, abrir desde
       el engranaje y desde el menú (⌘,), y en Rust la preferencia de la
       carpeta.
-- [ ] **D.2 Rama inicial, pull por defecto y fetch automático.** Rama
+- [x] **D.2 Rama inicial, pull por defecto y fetch automático.** Rama
       inicial por defecto (validada con `git check-ref-format`) y estrategia
       de pull por defecto (merge, rebase o solo fast-forward). Se guardan en
       la **config global de git** (`init.defaultBranch`, `pull.rebase` /
@@ -612,6 +612,29 @@ ningún producto.
       - no se lanza si ya hay una operación remota en ese repo;
       - sus fallos se ven en el estado remoto, sin ventanas emergentes;
       - cada fetch aparece en el panel de operaciones.
+
+      *Estado:*
+      - Antes de escribir, una confirmación muestra el comando exacto
+        (`git config --global …`), el valor anterior de cada clave y el aviso
+        de que afecta a todos los repositorios y a la terminal.
+      - Pull: Merge → `pull.rebase=false`; Rebase → `pull.rebase=true`; Solo
+        fast-forward → `pull.ff=only`. La otra clave se quita, para que una
+        sola decida. «Sin configurar» quita las dos.
+      - El frontend no puede escribir claves arbitrarias: solo hay comandos
+        para la rama inicial y para la estrategia. Los valores van siempre
+        tras `--`.
+      - Fetch automático: desactivado, o cada 5, 10, 15, 30 o 60 minutos.
+        Las pestañas que aún no se han mostrado se consultan con `getRefs`.
+        Un fallo pone «⚠ fetch falló» junto a la rama, con la explicación
+        en el tooltip, y el siguiente fetch correcto lo quita.
+
+      *Tests:*
+      - integración en el núcleo contra un `GIT_CONFIG_GLOBAL` temporal
+        (nunca el real), con valores que empiezan por `-`;
+      - confirmación con el comando y el valor anterior, cancelar sin
+        escribir, y Escape que cierra solo la confirmación;
+      - fetch automático con temporizadores simulados: salta las operaciones
+        en curso y marca los fallos sin avisos.
 - [ ] **D.3 Identidad de Git.** `user.name` y `user.email` en dos ámbitos:
       el global y el del repositorio de la pestaña activa, con el valor
       efectivo y de dónde viene. Se pueden editar los dos y quitar el del

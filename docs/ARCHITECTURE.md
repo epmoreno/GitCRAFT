@@ -368,6 +368,19 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   `core:webview:allow-set-webview-zoom`). Lo que pertenece a git (identidad,
   rama inicial, estrategia de pull por defecto) **no** se guarda aquí: se
   lee y se escribe en la configuración de git.
+- **Configuración de git** (`gitcraft_core::ops::config`): `get` (`-z`),
+  `effective` (`--show-scope --show-origin -z`) y `apply`, que escribe con
+  `git config --global|--local -- <clave> <valor>` y quita con
+  `--unset-all` (el código 5, «no estaba», cuenta como éxito). Las claves
+  las fija GitCRAFT. La app expone comandos concretos (rama inicial,
+  estrategia de pull y, en D.3, identidad), nunca un «escribir clave»
+  genérico. Para aislar los tests, `Git::with_env` fija
+  `GIT_CONFIG_GLOBAL` en cada comando.
+- **Fetch automático** (`src/features/remote/autoFetch.ts`): un intervalo
+  en el frontend recorre las pestañas abiertas una tras otra. Usa la misma
+  operación remota (con progreso y cancelación) y nunca se lanza si ya hay
+  otra en curso. Los fallos se guardan en `autoFetchErrors` y se marcan
+  junto a la rama.
 
 Se escribe de forma atómica (archivo temporal + rename). Si el archivo está
 corrupto, se usan los valores por defecto. **Nunca** guarda credenciales.

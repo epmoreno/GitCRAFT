@@ -18,7 +18,7 @@ import { progressPercent } from "../graph/OptimizeNotice";
 import { useGraphStore } from "../graph/store";
 import { useWorkdirStore } from "../workdir/store";
 
-export type RemoteKind = "fetch" | "pull" | "push" | "check";
+export type RemoteKind = "fetch" | "autoFetch" | "pull" | "push" | "check";
 
 /** A remote operation in progress (one per window at a time). */
 export type RunningRemote = {
@@ -106,6 +106,12 @@ type RemoteState = {
   dialog: RemoteDialog | null;
   /** Pull mode in effect, per repository. */
   pullModes: Record<number, PullModeInfo>;
+  /** Why the last automatic fetch failed, per repository (shown quietly
+   * next to the branch; cleared by the next fetch that works). */
+  autoFetchErrors: Record<number, CommandError>;
+  /** The periodic fetch (Settings → General). Skipped while another remote
+   * operation runs; never shows a toast or a dialog. */
+  autoFetch: (repoId: number) => Promise<void>;
   /** Fetches from `remote` (every remote when `null`). */
   fetch: (
     repoId: number,
@@ -148,6 +154,7 @@ export const initialRemoteState = {
   notice: null,
   dialog: null,
   pullModes: {},
+  autoFetchErrors: {},
 } satisfies Partial<RemoteState>;
 
 /** History, refs and status after any remote operation. */
@@ -183,6 +190,14 @@ export const useRemoteStore = create<RemoteState>()((set, get) => {
 
   const notify = (notice: RemoteNotice) => set({ notice });
 
+  const setAutoFetchError = (repoId: number, error: CommandError | null) =>
+    set((s) => {
+      const autoFetchErrors = { ...s.autoFetchErrors };
+      if (error) autoFetchErrors[repoId] = error;
+      else delete autoFetchErrors[repoId];
+      return { autoFetchErrors };
+    });
+
   return {
     ...initialRemoteState,
 
@@ -192,6 +207,7 @@ export const useRemoteStore = create<RemoteState>()((set, get) => {
       set({ running: null });
       refreshAfterRemote(repoId);
       if (result.status === "ok") {
+        setAutoFetchError(repoId, null);
         notify({ kind: "fetched", repoId, remote });
       } else if (result.error.kind !== "cancelled") {
         notify({
@@ -200,6 +216,27 @@ export const useRemoteStore = create<RemoteState>()((set, get) => {
           operation: "fetch",
           error: result.error,
         });
+      }
+    },
+
+    autoFetch: async (repoId) => {
+      const running = get().running;
+      if (running) return;
+      set({
+        running: {
+          repoId,
+          kind: "autoFetch",
+          remote: null,
+          line: "",
+          percent: null,
+        },
+      });
+      const result = await fetchRemote(repoId, null, false, progress);
+      set({ running: null });
+      refreshAfterRemote(repoId);
+      if (result.status === "ok") setAutoFetchError(repoId, null);
+      else if (result.error.kind !== "cancelled") {
+        setAutoFetchError(repoId, result.error);
       }
     },
 
@@ -447,8 +484,11 @@ export const useRemoteStore = create<RemoteState>()((set, get) => {
       set((s) => {
         const pullModes = { ...s.pullModes };
         delete pullModes[repoId];
+        const autoFetchErrors = { ...s.autoFetchErrors };
+        delete autoFetchErrors[repoId];
         return {
           pullModes,
+          autoFetchErrors,
           notice: s.notice?.repoId === repoId ? null : s.notice,
           dialog: s.dialog?.repoId === repoId ? null : s.dialog,
         };

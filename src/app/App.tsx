@@ -7,6 +7,7 @@ import {
   InProgressBanner,
   RemoteDialogs,
 } from "../features/remote/RemoteDialogs";
+import { useAutoFetch } from "../features/remote/autoFetch";
 import { RemoteProgress, RemoteToast } from "../features/remote/RemoteStatus";
 import { StashDialogs, StashToast } from "../features/stash/StashDialogs";
 import { useStashStore } from "../features/stash/store";
@@ -38,6 +39,7 @@ export function App() {
   const loadRecents = useRepoStore((s) => s.loadRecents);
   const restoreSession = useRepoStore((s) => s.restoreSession);
   const restored = useRepoStore((s) => s.restored);
+  useAutoFetch();
 
   useEffect(() => {
     void useSettingsStore.getState().load();

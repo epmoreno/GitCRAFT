@@ -4,6 +4,7 @@ pub mod branch;
 pub mod clone;
 pub mod commit;
 pub mod commit_write;
+pub mod config;
 pub mod discard;
 pub mod init;
 pub mod log;

@@ -10,6 +10,7 @@ use gitcraft_core::ops::branch::{BranchDeletion, BranchNameCheck, CheckoutOutcom
 use gitcraft_core::ops::clone::{self, Destination};
 use gitcraft_core::ops::commit::CommitChanges;
 use gitcraft_core::ops::commit_write::AmendInfo;
+use gitcraft_core::ops::config::{self, ConfigChange, GlobalDefaults, PullStrategy};
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::init::InitCheck;
 use gitcraft_core::ops::refs::RepoRefs;
@@ -604,6 +605,42 @@ pub async fn set_general_settings(
 ) -> Result<(), IpcError> {
     state.set_general_settings(general);
     Ok(())
+}
+
+/// Git's global defaults: `init.defaultBranch` and the pull strategy.
+#[tauri::command]
+#[specta::specta]
+pub async fn git_defaults(state: State<'_, AppState>) -> Result<GlobalDefaults, IpcError> {
+    state.git_defaults().await
+}
+
+/// What setting the default pull strategy writes (shown before doing it).
+#[tauri::command]
+#[specta::specta]
+pub async fn pull_strategy_changes(
+    strategy: Option<PullStrategy>,
+) -> Result<Vec<ConfigChange>, IpcError> {
+    Ok(config::pull_strategy_changes(strategy))
+}
+
+/// Writes `init.defaultBranch` to git's global config (`None` removes it).
+#[tauri::command]
+#[specta::specta]
+pub async fn set_default_branch(
+    state: State<'_, AppState>,
+    name: Option<String>,
+) -> Result<GlobalDefaults, IpcError> {
+    state.set_default_branch(name).await
+}
+
+/// Writes the default pull strategy to git's global config.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_default_pull_strategy(
+    state: State<'_, AppState>,
+    strategy: Option<PullStrategy>,
+) -> Result<GlobalDefaults, IpcError> {
+    state.set_default_pull_strategy(strategy).await
 }
 
 /// The folder name a clone of `url` gets by default.

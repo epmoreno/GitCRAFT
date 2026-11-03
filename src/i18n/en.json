@@ -453,7 +453,8 @@
       "fetch": "Downloading from {{remote}}…",
       "pull": "Pulling from {{remote}}…",
       "push": "Pushing to {{remote}}…",
-      "check": "Checking the remote…"
+      "check": "Checking the remote…",
+      "autoFetch": "Automatic fetch…"
     },
     "progress": "Progress",
     "cancel": "Cancel",
@@ -491,7 +492,9 @@
     "behind_one": "1 commit to pull",
     "behind_other": "{{count}} commits to pull",
     "detached": "Detached HEAD: you are not on any branch",
-    "unborn": "Branch without commits yet"
+    "unborn": "Branch without commits yet",
+    "autoFetchFailed": "The last automatic fetch failed: {{reason}}",
+    "autoFetchFailedShort": "fetch failed"
   },
   "pull": {
     "cancel": "Cancel",
@@ -710,6 +713,36 @@
       "choose": "Choose…",
       "pick": "Default folder for clones",
       "useLast": "Use the last one"
+    },
+    "autoFetch": {
+      "label": "Automatic fetch",
+      "hint": "Downloads the remotes' changes for every open repository. If it fails, it is marked next to the branch, with no dialogs.",
+      "off": "Off",
+      "every_one": "Every minute",
+      "every_other": "Every {{count}} minutes"
+    },
+    "git": {
+      "title": "Git (global configuration)",
+      "globalNote": "These values are saved in your global git configuration (~/.gitconfig): they also apply to git in the terminal and to other programs.",
+      "failed": "Could not read or change git's configuration.",
+      "defaultBranch": "Default initial branch",
+      "defaultBranchUnset": "Not set: in the terminal git uses “master” (and warns); initializing from GitCRAFT suggests “main”.",
+      "save": "Save",
+      "unset": "Remove",
+      "pull": "Default pull strategy",
+      "pullHint": "The one chosen in GitCRAFT for a repository (Pull menu) still takes priority.",
+      "strategy": {
+        "unset": "Not set",
+        "merge": "Merge",
+        "rebase": "Rebase",
+        "fastForwardOnly": "Fast-forward only"
+      },
+      "confirmTitle": "Change git's global configuration?",
+      "confirmBody": "GitCRAFT will run this. It affects all your repositories and git in the terminal too:",
+      "confirm": "Change",
+      "cancel": "Cancel",
+      "before": "Previous value: {{value}}",
+      "notSet": "not set"
     }
   }
 }

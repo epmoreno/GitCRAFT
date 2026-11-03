@@ -145,6 +145,14 @@ export const commands = {
 	/**  Settings → General. */
 	generalSettings: () => typedError<GeneralSettings_Serialize, IpcError_Serialize>(__TAURI_INVOKE("general_settings")),
 	setGeneralSettings: (general: GeneralSettings_Deserialize) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("set_general_settings", { general })),
+	/**  Git's global defaults: `init.defaultBranch` and the pull strategy. */
+	gitDefaults: () => typedError<GlobalDefaults_Serialize, IpcError_Serialize>(__TAURI_INVOKE("git_defaults")),
+	/**  What setting the default pull strategy writes (shown before doing it). */
+	pullStrategyChanges: (strategy: PullStrategy | null) => typedError<ConfigChange_Serialize[], IpcError_Serialize>(__TAURI_INVOKE("pull_strategy_changes", { strategy })),
+	/**  Writes `init.defaultBranch` to git's global config (`None` removes it). */
+	setDefaultBranch: (name: string | null) => typedError<GlobalDefaults_Serialize, IpcError_Serialize>(__TAURI_INVOKE("set_default_branch", { name })),
+	/**  Writes the default pull strategy to git's global config. */
+	setDefaultPullStrategy: (strategy: PullStrategy | null) => typedError<GlobalDefaults_Serialize, IpcError_Serialize>(__TAURI_INVOKE("set_default_pull_strategy", { strategy })),
 	/**  The folder name a clone of `url` gets by default. */
 	defaultCloneName: (url: string) => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("default_clone_name", { url })),
 	/**  Whether a clone can go to `parent/name` (never a folder with files). */
@@ -376,6 +384,21 @@ export type CommitDetails = {
 	summary: string,
 	/**  Everything after the subject and its blank line; may be empty. */
 	body: string,
+};
+
+/**  One value to write (`Some`) or remove (`None`). */
+export type ConfigChange = ConfigChange_Serialize | ConfigChange_Deserialize;
+
+/**  One value to write (`Some`) or remove (`None`). */
+export type ConfigChange_Deserialize = {
+	key: string,
+	value?: string | null,
+};
+
+/**  One value to write (`Some`) or remove (`None`). */
+export type ConfigChange_Serialize = {
+	key: string,
+	value: string | null,
 };
 
 export type ConflictEntry = {
@@ -729,6 +752,29 @@ export type GitRef_Serialize = {
 	upstreamGone: boolean,
 };
 
+/**  Git's global defaults shown in Settings → General. */
+export type GlobalDefaults = GlobalDefaults_Serialize | GlobalDefaults_Deserialize;
+
+/**  Git's global defaults shown in Settings → General. */
+export type GlobalDefaults_Deserialize = {
+	/**  `init.defaultBranch`. */
+	defaultBranch?: string | null,
+	pullStrategy?: PullStrategy | null,
+	/**  The raw values, to show what changes. */
+	pullRebase?: string | null,
+	pullFf?: string | null,
+};
+
+/**  Git's global defaults shown in Settings → General. */
+export type GlobalDefaults_Serialize = {
+	/**  `init.defaultBranch`. */
+	defaultBranch: string | null,
+	pullStrategy: PullStrategy | null,
+	/**  The raw values, to show what changes. */
+	pullRebase: string | null,
+	pullFf: string | null,
+};
+
 /**  Sent over the graph channel: pages in order, then `done`. */
 export type GraphEvent = { type: "page"; lines: GraphLine[] } | { type: "done"; total: number; 
 /**
@@ -947,6 +993,15 @@ fastForward: boolean } |
  *  these files: a merge or rebase is waiting (see `InProgress`).
  */
 { type: "conflicted"; files: string[]; mode: PullMode };
+
+/**  What `git pull` does by default, as Settings offers it. */
+export type PullStrategy = 
+/**  `pull.rebase=false`: a merge commit when both sides have commits. */
+"merge" | 
+/**  `pull.rebase=true`: local commits are replayed on top. */
+"rebase" | 
+/**  `pull.ff=only`: only when no merge is needed. */
+"fastForwardOnly";
 
 export type PushOutcome = { type: "pushed"; upstream: string; 
 /**  Commits the remote did not have. */

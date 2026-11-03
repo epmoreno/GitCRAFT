@@ -83,6 +83,10 @@ export const ipc = {
   generalSettings: vi.mocked(commands.generalSettings),
   setGeneralSettings: vi.mocked(commands.setGeneralSettings),
   setUiZoom: vi.mocked(setUiZoom),
+  gitDefaults: vi.mocked(commands.gitDefaults),
+  pullStrategyChanges: vi.mocked(commands.pullStrategyChanges),
+  setDefaultBranch: vi.mocked(commands.setDefaultBranch),
+  setDefaultPullStrategy: vi.mocked(commands.setDefaultPullStrategy),
 };
 
 export function resetIpcMock() {
@@ -132,6 +136,15 @@ export function resetIpcMock() {
   });
   ipc.setGeneralSettings.mockResolvedValue({ status: "ok", data: null });
   ipc.setUiZoom.mockResolvedValue(undefined);
+  ipc.gitDefaults.mockResolvedValue({
+    status: "ok",
+    data: {
+      defaultBranch: null,
+      pullStrategy: null,
+      pullRebase: null,
+      pullFf: null,
+    },
+  });
   ipc.fetchRemote.mockResolvedValue({ status: "ok", data: null });
   ipc.getPullMode.mockResolvedValue({
     status: "ok",
