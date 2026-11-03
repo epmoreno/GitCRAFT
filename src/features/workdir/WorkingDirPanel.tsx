@@ -303,13 +303,13 @@ function ViewControls({
             label={t("workdir.expandAll")}
             disabled={allDirs.length === 0}
             onClick={() => setDirsCollapsed(allDirs, false)}
-            path="M3 5.5 6 2.5l3 3M3 6.5l3 3 3-3"
+            path="M6 1v3.5M4 2.5 6 .8 8 2.5M6 11V7.5M4 9.5l2 1.7 2-1.7M2 6h8"
           />
           <IconButton
             label={t("workdir.collapseAll")}
             disabled={allDirs.length === 0}
             onClick={() => setDirsCollapsed(allDirs, true)}
-            path="M3 2.5l3 3 3-3M3 9.5l3-3 3 3"
+            path="M6 .5V4M4 2.3 6 4l2-1.7M6 11.5V8M4 9.7 6 8l2 1.7M2 6h8"
           />
         </>
       )}

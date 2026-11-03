@@ -523,17 +523,30 @@ ningún producto.
         botones de icono con tooltip, y si falta ancho la barra pasa a dos
         líneas.
       - En toda la app se dice «HEAD separado» (en inglés, «detached HEAD»).
-      - En el árbol, Supr o ⌫ sobre un archivo sin preparar lo descarta, con
-        la confirmación y el «Deshacer» de siempre. Se añadirá a la lista de
-        atajos en D.5.
+      - En el árbol, Supr o ⌫ sobre un archivo sin preparar lo descartaba
+        (sustituido por ⌘⌫ en B.6).
 
-      *Tests:* botones de icono con su tooltip, reglas CSS de ajuste de
-      línea (jsdom no calcula el layout) y Supr/⌫ solo en archivos sin
-      preparar.
+      *Tests:* botones de icono con su tooltip y reglas CSS de ajuste de
+      línea (jsdom no calcula el layout).
       *Verificado manualmente:* la barra del árbol sin texto cortado, y
       «HEAD separado» en la barra superior, la lateral y la cabecera. El
       atajo de descartar falló: el foco quedaba en el nombre y no en la fila.
       Se corrige en B.6.
+- [x] **B.6 Atajo de descartar y foco en la fila.**
+      - El atajo para descartar pasa a ser ⌘⌫ (como «Trasladar a la
+        Papelera» en Finder), en la vista de lista y en la de árbol. Solo
+        actúa sobre archivos sin preparar y pasa por la confirmación y el
+        «Deshacer» de siempre. ⌫ y Supr solos ya no hacen nada.
+      - La lista es ahora un árbol plano: todas las filas de nivel 1, con la
+        ruta completa. Así comparte el teclado del árbol (↑/↓, Inicio/Fin,
+        Intro, Espacio, ⌘⌫).
+      - Un clic en cualquier parte de una fila enfoca la fila entera, que es
+        donde están el anillo y los atajos, y nunca el botón del nombre.
+      - Los iconos de Expandir y Plegar todo son flechas que se separan o
+        se juntan sobre una línea, con el mismo tooltip.
+
+      *Tests:* ⌘⌫ con el foco en la fila (tras clicar el nombre) abre la
+      confirmación en las dos vistas, y ⌫ y Supr solos no hacen nada.
 
 ### C. Pestaña nueva
 - [x] **C.1 Botón «+» y ⌘T.** El botón «+» de la barra de pestañas, ⌘T y
@@ -612,7 +625,7 @@ ningún producto.
       sin instalar, sin sesión, con sesión, token caducado y cancelar el
       inicio de sesión.
 - [ ] **D.5 Atajos (solo consulta).** Lista de todos los atajos de la app,
-      agrupados (incluidos los del árbol de cambios, como Supr/⌫ para
+      agrupados (incluidos los del panel de cambios, como ⌘⌫ para
       descartar). Sale del mismo registro que usan los manejadores de teclado
       y el menú.
       *Test:* falla si un atajo registrado no aparece en la lista o al

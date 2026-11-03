@@ -16,6 +16,7 @@ import { GraphView } from "../graph/GraphView";
 import { useGraphStore, WORKTREE } from "../graph/store";
 import { changeCounts, useWorkdirStore } from "./store";
 import { useWorkdirViewPrefs } from "./viewPrefs";
+import { DiscardDialog } from "./Discard";
 import { WorkingDirPanel } from "./WorkingDirPanel";
 
 const info = {
@@ -123,7 +124,7 @@ describe("uncommitted changes", () => {
     const conflicts = within(panel).getByRole("region", { name: "Conflictos" });
     expect(conflicts).toHaveTextContent("conflict.txtmodificado en ambos");
     const staged = within(panel).getByRole("region", { name: "Preparados" });
-    expect(within(staged).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(staged).getAllByRole("treeitem")).toHaveLength(2);
     expect(staged).toHaveTextContent("antes: docs/old.md");
     const unstaged = within(panel).getByRole("region", {
       name: "Sin preparar",
@@ -424,7 +425,12 @@ describe("tree view", () => {
     render(<WorkingDirPanel repoId={1} />);
     expect(screen.getByRole("tree", { name: "Sin preparar" })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Lista" }));
-    expect(screen.queryByRole("tree")).not.toBeInTheDocument();
+    // The list is a flat tree: no folders, full paths.
+    const list = screen.getByRole("tree", { name: "Sin preparar" });
+    for (const row of within(list).getAllByRole("treeitem")) {
+      expect(row).toHaveAttribute("aria-level", "1");
+      expect(row).not.toHaveAttribute("aria-expanded");
+    }
     expect(screen.getAllByText("src/ui/")).toHaveLength(2);
   });
 
@@ -507,30 +513,57 @@ describe("tree view", () => {
     expect(ipc.stageFiles).toHaveBeenCalledWith(1, ["src/ui/Button.tsx"]);
   });
 
-  it("discards the focused file with Delete or Backspace, after the preview", async () => {
-    ipc.discardPreview.mockReturnValue(new Promise(() => {}));
+  it("discards the focused file with ⌘⌫ (not ⌫ or Delete alone), after the preview", async () => {
+    ipc.discardPreview.mockResolvedValue({
+      status: "ok",
+      data: [
+        {
+          path: "README.md",
+          untracked: false,
+          added: 1,
+          removed: 0,
+          lines: null,
+          fileCount: null,
+        },
+      ],
+    });
     const { user, item } = await showTree();
-    item(/README/).focus();
-    await user.keyboard("{Delete}");
+    render(<DiscardDialog />);
+    // Clicking the name focuses the whole row, where the shortcut lives.
+    await user.click(within(item(/README/)).getByText("README.md"));
+    expect(item(/README/)).toHaveFocus();
+    await user.keyboard("{Backspace}{Delete}");
+    expect(ipc.discardPreview).not.toHaveBeenCalled();
+    await user.keyboard("{Meta>}{Backspace}{/Meta}");
     expect(ipc.discardPreview).toHaveBeenCalledWith(1, {
       kind: "files",
       paths: ["README.md"],
     });
-    item(/main\.ts/).focus();
-    await user.keyboard("{Backspace}");
-    expect(ipc.discardPreview).toHaveBeenLastCalledWith(1, {
-      kind: "files",
-      paths: ["src/main.ts"],
-    });
+    // The usual confirmation, and nothing discarded until it is accepted.
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent("README.md");
     expect(ipc.discardChanges).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
 
     // Staged files and folders have nothing to discard from here.
     const staged = screen.getByRole("tree", { name: "Preparados" });
     within(staged).getByRole("treeitem", { name: /guide/ }).focus();
-    await user.keyboard("{Delete}");
+    await user.keyboard("{Meta>}{Backspace}{/Meta}");
     item(/^src/).focus();
-    await user.keyboard("{Delete}");
-    expect(ipc.discardPreview).toHaveBeenCalledTimes(2);
+    await user.keyboard("{Meta>}{Backspace}{/Meta}");
+    expect(ipc.discardPreview).toHaveBeenCalledTimes(1);
+
+    // The same in the list view.
+    await user.click(screen.getByRole("button", { name: "Lista" }));
+    const list = screen.getByRole("tree", { name: "Sin preparar" });
+    const row = within(list).getByRole("treeitem", { name: /main\.ts/ });
+    await user.click(within(row).getByText("main.ts"));
+    expect(row).toHaveFocus();
+    await user.keyboard("{Meta>}{Backspace}{/Meta}");
+    expect(ipc.discardPreview).toHaveBeenLastCalledWith(1, {
+      kind: "files",
+      paths: ["src/main.ts"],
+    });
   });
 });
 
@@ -561,7 +594,7 @@ describe("sorting and whole folders", () => {
 
   const paths = (region: string) =>
     within(screen.getByRole("region", { name: region }))
-      .getAllByRole("listitem")
+      .getAllByRole("treeitem")
       .map((li) => li.querySelector(".path")?.getAttribute("title"));
 
   it("sorts the list by name or by status, and remembers it", async () => {

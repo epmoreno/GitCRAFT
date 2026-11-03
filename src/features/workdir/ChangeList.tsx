@@ -10,6 +10,7 @@ import {
   sortEntries,
   visibleRows,
   type DirNode,
+  type VisibleRow,
 } from "./fileTree";
 import { StatusLetter } from "./StatusLetter";
 import { useWorkdirStore } from "./store";
@@ -42,19 +43,8 @@ export function ChangeList({
   entries: StatusEntry[];
   disabled: boolean;
 }) {
-  const layout = useWorkdirViewPrefs((s) => s.layout);
-  const sort = useWorkdirViewPrefs((s) => s.sort);
   const row = useFileRowProps(repoId, section, disabled);
   const folder = useFolderAction(repoId, section, disabled);
-  if (layout === "list") {
-    return (
-      <ul className={styles.list}>
-        {sortEntries(entries, sort).map((e) => (
-          <FileRow key={e.path} {...row(e)} />
-        ))}
-      </ul>
-    );
-  }
   return (
     <FileTree
       repoId={repoId}
@@ -163,11 +153,13 @@ function useFileRowProps(
 }
 
 /**
- * Folder tree with the WAI-ARIA tree keyboard model: ↑/↓ move, → opens a
- * folder (or enters it), ← closes it (or goes to its parent), Home/End,
- * Enter opens a file's diff or toggles a folder, Space stages or unstages
- * it, Delete/⌫ discards an unstaged file (with the usual confirmation).
- * One row is in the tab order at a time (roving tabindex).
+ * The rows of a section with the WAI-ARIA tree keyboard model. The list
+ * view is the same, flat (every row at level 1, with its full path).
+ * ↑/↓ move, → opens a folder (or enters it), ← closes it (or goes to its
+ * parent), Home/End, Enter opens a file's diff or toggles a folder, Space
+ * stages or unstages it, ⌘⌫ discards an unstaged file (with the usual
+ * confirmation). One row is in the tab order at a time (roving tabindex)
+ * and clicking a row focuses the row, never the buttons inside it.
  */
 function FileTree({
   repoId,
@@ -187,11 +179,16 @@ function FileTree({
   const collapsed = useWorkdirViewPrefs((s) => s.collapsedDirs);
   const toggleDir = useWorkdirViewPrefs((s) => s.toggleDir);
   const sort = useWorkdirViewPrefs((s) => s.sort);
+  const layout = useWorkdirViewPrefs((s) => s.layout);
   const tree = useMemo(() => buildTree(entries, sort), [entries, sort]);
-  const rows = visibleRows(
-    tree,
-    (path) => !!collapsed[dirKey(repoId, section, path)],
-  );
+  const rows: VisibleRow[] =
+    layout === "list"
+      ? sortEntries(entries, sort).map((entry) => ({
+          node: { kind: "file", name: entry.path, entry },
+          level: 1,
+          parent: "",
+        }))
+      : visibleRows(tree, (path) => !!collapsed[dirKey(repoId, section, path)]);
   const [active, setActive] = useState<string | null>(null);
   const keyOf = (node: (typeof rows)[number]["node"]) =>
     node.kind === "dir" ? `d:${node.path}` : `f:${node.entry.path}`;
@@ -202,6 +199,14 @@ function FileTree({
   const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
     const target = event.target as HTMLElement;
     if (target.getAttribute("role") !== "treeitem") return;
+    // ⌘⌫, as "Move to Trash" in Finder: unstaged files only, through the
+    // usual preview, confirmation and undo.
+    if (event.key === "Backspace" && event.metaKey) {
+      event.preventDefault();
+      target.querySelector<HTMLElement>("[data-discard]")?.click();
+      return;
+    }
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
     const items = [
       ...event.currentTarget.querySelectorAll<HTMLElement>('[role="treeitem"]'),
     ];
@@ -243,11 +248,6 @@ function FileTree({
       case " ":
         target.querySelector<HTMLElement>("[data-primary]")?.click();
         break;
-      case "Delete":
-      case "Backspace":
-        // Unstaged files only; goes through the usual confirmation.
-        target.querySelector<HTMLElement>("[data-discard]")?.click();
-        break;
       default:
         return;
     }
@@ -282,7 +282,7 @@ function FileTree({
           <FileRow
             key={key}
             {...row(node.entry)}
-            name={node.name}
+            name={layout === "tree" ? node.name : undefined}
             tree={tree}
           />
         );
@@ -305,6 +305,14 @@ const treeItemProps = (tree: TreeItem) => ({
   "data-parent": tree.parent,
   onFocus: (event: React.FocusEvent) => {
     if (event.target === event.currentTarget) tree.onFocus();
+  },
+  // A click anywhere in the row focuses the row (where the keyboard
+  // shortcuts and the focus ring are), not the button that was clicked.
+  onMouseDown: (event: React.MouseEvent<HTMLElement>) => {
+    if (event.button !== 0) return;
+    const row = event.currentTarget;
+    if ((event.target as HTMLElement).closest("button")) event.preventDefault();
+    row.focus({ preventScroll: true });
   },
   style: {
     paddingLeft: `calc(var(--space-4) + ${(tree.level - 1) * INDENT}px)`,

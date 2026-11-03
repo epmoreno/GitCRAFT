@@ -194,7 +194,9 @@ La vista de árbol (`fileTree.ts` y `ChangeList.tsx`) agrupa en el cliente
 las rutas que devuelve `git status`. Se pinta como una lista plana de
 `treeitem` con `aria-level`, así que cada fila tiene su propio *hover*. El
 foco sigue el modelo de árbol de WAI-ARIA: solo una fila está en el orden de
-Tab a la vez (*roving tabindex*).
+Tab a la vez (*roving tabindex*). La vista de lista es el mismo árbol, plano
+(todas las filas de nivel 1). Un clic enfoca siempre la fila entera, no el
+botón pulsado, para que los atajos (Espacio, Intro, ⌘⌫) funcionen.
 
 ## 5b. Descartar cambios (la única operación que destruye trabajo)
 
