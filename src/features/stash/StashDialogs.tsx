@@ -1,3 +1,4 @@
+import { isShortcut } from "../../app/shortcuts";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { StashEntry } from "../../ipc";
@@ -65,7 +66,7 @@ function CreateDialog() {
   useEffect(() => {
     input.current?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (isShortcut("escape", event)) {
         event.stopPropagation();
         close();
       }

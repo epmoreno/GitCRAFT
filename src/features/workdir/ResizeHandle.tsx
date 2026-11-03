@@ -1,5 +1,14 @@
 import { useRef, type KeyboardEvent, type PointerEvent } from "react";
+import { whichShortcut } from "../../app/shortcuts";
 import styles from "./workdir.module.css";
+
+const RESIZE_KEYS = [
+  "commitBoxGrow",
+  "commitBoxShrink",
+  "commitBoxLargest",
+  "commitBoxSmallest",
+  "commitBoxReset",
+] as const;
 
 const STEP = 16;
 
@@ -43,20 +52,16 @@ export function ResizeHandle({
     drag.current = null;
   };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const action = whichShortcut(RESIZE_KEYS, event);
+    if (!action) return;
     const current = value ?? shown();
-    const next =
-      event.key === "ArrowUp"
-        ? clamp(current + STEP)
-        : event.key === "ArrowDown"
-          ? clamp(current - STEP)
-          : event.key === "Home"
-            ? clamp(max())
-            : event.key === "End"
-              ? min
-              : event.key === "Enter"
-                ? null
-                : undefined;
-    if (next === undefined) return;
+    const next = {
+      commitBoxGrow: clamp(current + STEP),
+      commitBoxShrink: clamp(current - STEP),
+      commitBoxLargest: clamp(max()),
+      commitBoxSmallest: min,
+      commitBoxReset: null,
+    }[action];
     event.preventDefault();
     onChange(next);
   };

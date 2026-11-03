@@ -800,6 +800,51 @@
       "useGhNow": "Ahora, para github.com, git usa: {{helper}}. La línea «helper =» vacía hace que, solo para github.com, git deje de usar ese helper y pida las credenciales a gh. El resto de hosts no cambia.",
       "useGhUndo": "Se puede deshacer con: git config --global --unset-all credential.https://github.com.helper (y lo mismo con gist.github.com).",
       "useGhConfirm": "Usar gh"
+    },
+    "shortcuts": {
+      "readOnly": "Solo consulta: personalizarlos llegará en una fase posterior.",
+      "group": {
+        "app": "Aplicación",
+        "tabs": "Pestañas",
+        "changes": "Panel de cambios (lista y árbol)",
+        "commit": "Caja de commit",
+        "general": "Diálogos y menús",
+        "diff": "Diff"
+      },
+      "key": {
+        " ": "Espacio",
+        "Home": "Inicio",
+        "End": "Fin",
+        "Escape": "Esc",
+        "click": "clic"
+      },
+      "action": {
+        "settings": "Abrir los ajustes",
+        "newTab": "Nueva pestaña con la pantalla de inicio",
+        "closeTab": "Cerrar la pestaña activa",
+        "tabByNumber": "Ir a la pestaña 1 a 9",
+        "nextTab": "Pestaña siguiente",
+        "previousTab": "Pestaña anterior",
+        "changesNext": "Fila siguiente",
+        "changesPrevious": "Fila anterior",
+        "changesFirst": "Primera fila",
+        "changesLast": "Última fila",
+        "changesExpand": "Desplegar la carpeta (o entrar en ella)",
+        "changesCollapse": "Plegar la carpeta (o ir a la carpeta padre)",
+        "changesOpen": "Ver el diff del archivo o plegar/desplegar la carpeta",
+        "changesStage": "Preparar o quitar el archivo o la carpeta",
+        "changesDiscard": "Descartar el archivo sin preparar (con confirmación y «Deshacer»)",
+        "commit": "Crear el commit (en el resumen o la descripción)",
+        "commitBoxGrow": "Divisor: agrandar la caja de commit",
+        "commitBoxShrink": "Divisor: achicar la caja de commit",
+        "commitBoxLargest": "Divisor: caja de commit al máximo",
+        "commitBoxSmallest": "Divisor: caja de commit al mínimo",
+        "commitBoxReset": "Divisor: altura natural",
+        "escape": "Cerrar el diálogo, el menú o el diff, o vaciar el filtro de la barra lateral",
+        "menuNext": "Menú: opción siguiente",
+        "menuPrevious": "Menú: opción anterior",
+        "diffRange": "Seleccionar varias líneas: desde la anterior hasta esta"
+      }
     }
   }
 }

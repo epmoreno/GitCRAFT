@@ -201,6 +201,49 @@
   color: var(--warning);
 }
 
+.shortcuts {
+  width: 100%;
+  margin-bottom: var(--space-4);
+  border-collapse: collapse;
+}
+
+.shortcuts caption {
+  padding-bottom: var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.shortcuts th,
+.shortcuts td {
+  padding: 5px 0;
+  border-top: 1px solid var(--border);
+  font-weight: 400;
+  text-align: left;
+  vertical-align: top;
+}
+
+.shortcuts td {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.kbd {
+  display: inline-block;
+  min-width: 22px;
+  margin-left: var(--space-1);
+  padding: 1px 6px;
+  border: 1px solid var(--border-control);
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-small);
+  text-align: center;
+}
+
 .subTitle {
   margin: var(--space-4) 0 0;
   font-size: 13px;

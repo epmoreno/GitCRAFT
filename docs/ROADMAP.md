@@ -698,12 +698,26 @@ ningún producto.
 
       En la UI: los mismos estados, el flujo de inicio de sesión y las
       confirmaciones.
-- [ ] **D.5 Atajos (solo consulta).** Lista de todos los atajos de la app,
+- [x] **D.5 Atajos (solo consulta).** Lista de todos los atajos de la app,
       agrupados (incluidos los del panel de cambios, como ⌘⌫ para
       descartar). Sale del mismo registro que usan los manejadores de teclado
       y el menú.
       *Test:* falla si un atajo registrado no aparece en la lista o al
       revés. Personalizarlos queda para la fase 3.
+      *Estado:* el registro es `src/app/shortcuts.ts`.
+      - Atajos, por grupos: ⌘, · ⌘T · ⌘W · ⌘1…9 · ⌃⇥ / ⌃⇧⇥. En el panel de
+        cambios: ↑ ↓ ← →, Inicio, Fin, ↩, Espacio y ⌘⌫. En la caja de
+        commit: ⌘↩, y en su divisor ↑, ↓, Inicio, Fin y ↩. En el diff:
+        ⇧+clic. En diálogos y menús: Esc, ↑ y ↓.
+      - Todos los manejadores de teclado y los aceleradores del menú lo
+        usan; la lista de Ajustes → Atajos se pinta desde él.
+
+      *Tests:*
+      - cada atajo con sus modificadores exactos, y su descripción en es y
+        en;
+      - la lista muestra todos los atajos;
+      - fuera del registro, ningún archivo compara teclas ni modificadores;
+      - el menú no tiene aceleradores literales.
 
 ### E. Publicar un repo local en GitHub
 - [ ] **E.1 Núcleo de publicación.** El repo siempre se crea en la **cuenta

@@ -1,3 +1,4 @@
+import { isShortcut } from "../../app/shortcuts";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { pickFolder, type SettingsLanguage, type TextSize } from "../../ipc";
@@ -5,11 +6,17 @@ import { ErrorReport } from "../../ui/ErrorReport";
 import { GitDefaults } from "./GitDefaults";
 import { GithubSection } from "./GithubSection";
 import { IdentitySection } from "./IdentitySection";
+import { ShortcutsSection } from "./ShortcutsSection";
 import { useSettingsStore, type SettingsSection } from "./store";
 import styles from "./settings.module.css";
 
 /** Sections, in order; more are added as they exist. */
-const SECTIONS: SettingsSection[] = ["general", "identity", "github"];
+const SECTIONS: SettingsSection[] = [
+  "general",
+  "identity",
+  "github",
+  "shortcuts",
+];
 
 /** Settings window (gear in the toolbar, GitCRAFT → Settings…, ⌘,). */
 export function SettingsDialog() {
@@ -28,7 +35,7 @@ export function SettingsDialog() {
     const onKey = (event: KeyboardEvent) => {
       // A confirmation open on top handles its own Escape.
       const modals = document.querySelectorAll('[aria-modal="true"]').length;
-      if (event.key === "Escape" && modals <= 1) {
+      if (isShortcut("escape", event) && modals <= 1) {
         event.stopPropagation();
         close();
       }
@@ -68,6 +75,7 @@ export function SettingsDialog() {
           {section === "general" && <GeneralSection />}
           {section === "identity" && <IdentitySection />}
           {section === "github" && <GithubSection />}
+          {section === "shortcuts" && <ShortcutsSection />}
         </div>
         <button
           type="button"

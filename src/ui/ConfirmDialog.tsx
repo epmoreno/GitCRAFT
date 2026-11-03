@@ -1,3 +1,4 @@
+import { isShortcut } from "../app/shortcuts";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import styles from "./ConfirmDialog.module.css";
 
@@ -32,7 +33,7 @@ export function ConfirmDialog({
   useEffect(() => {
     cancelRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (isShortcut("escape", event)) {
         event.stopPropagation();
         onCancel();
       }

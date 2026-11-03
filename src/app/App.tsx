@@ -23,6 +23,7 @@ import {
   RestoreFailedBanner,
 } from "../features/repo/OpenErrorBanner";
 import { installAppMenu } from "./menu";
+import { isShortcut } from "./shortcuts";
 import { StartPage } from "../features/repo/StartPage";
 import { SettingsDialog } from "../features/settings/SettingsDialog";
 import { useSettingsStore } from "../features/settings/store";
@@ -67,18 +68,15 @@ export function App() {
     });
     const onKey = (event: KeyboardEvent) => {
       if (dialogOpen()) return;
-      if (
-        event.metaKey &&
-        !event.ctrlKey &&
-        !event.altKey &&
-        !event.shiftKey &&
-        /^[1-9]$/.test(event.key)
-      ) {
+      if (isShortcut("tabByNumber", event)) {
         event.preventDefault();
         tabs().activateIndex(Number(event.key) - 1);
-      } else if (event.ctrlKey && !event.metaKey && event.key === "Tab") {
+      } else if (isShortcut("nextTab", event)) {
         event.preventDefault();
-        tabs().activateNext(event.shiftKey ? -1 : 1);
+        tabs().activateNext(1);
+      } else if (isShortcut("previousTab", event)) {
+        event.preventDefault();
+        tabs().activateNext(-1);
       }
     };
     window.addEventListener("keydown", onKey);

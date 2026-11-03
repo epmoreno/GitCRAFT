@@ -1,3 +1,4 @@
+import { isShortcut } from "../app/shortcuts";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import styles from "./ContextMenu.module.css";
 
@@ -38,7 +39,7 @@ export function ContextMenu({ x, y, label, items, onClose }: Props) {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (isShortcut("escape", event)) {
         event.stopPropagation();
         onClose();
       }
@@ -74,8 +75,8 @@ export function ContextMenu({ x, y, label, items, onClose }: Props) {
       aria-label={label}
       style={position}
       onKeyDown={(event) => {
-        if (event.key === "ArrowDown") move(1);
-        else if (event.key === "ArrowUp") move(-1);
+        if (isShortcut("menuNext", event)) move(1);
+        else if (isShortcut("menuPrevious", event)) move(-1);
         else return;
         event.preventDefault();
       }}

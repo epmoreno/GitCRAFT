@@ -1,3 +1,4 @@
+import { isRangeClick, isShortcut } from "../../app/shortcuts";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -67,7 +68,7 @@ export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close(repoId);
+      if (isShortcut("escape", event)) close(repoId);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -324,7 +325,7 @@ function DiffBody({
                     data-kind={line.kind}
                     onClick={
                       editable && changed
-                        ? (e) => toggle(h, i, e.shiftKey)
+                        ? (e) => toggle(h, i, isRangeClick(e))
                         : undefined
                     }
                   >
@@ -339,7 +340,7 @@ function DiffBody({
                             })}
                             onClick={(e) => {
                               e.stopPropagation();
-                              toggle(h, i, e.shiftKey);
+                              toggle(h, i, isRangeClick(e));
                             }}
                             onChange={() => {}}
                           />

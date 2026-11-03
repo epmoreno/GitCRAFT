@@ -5,6 +5,7 @@ import {
   Submenu,
 } from "@tauri-apps/api/menu";
 import type { TFunction } from "i18next";
+import { accelerator } from "./shortcuts";
 
 /**
  * The macOS menu bar. Replaces the default one, whose "Close Window" on ⌘W
@@ -28,7 +29,7 @@ export async function installAppMenu(
       await MenuItem.new({
         id: "settings",
         text: t("menu.settings"),
-        accelerator: "CmdOrCtrl+,",
+        accelerator: accelerator("settings"),
         action: actions.openSettings,
       }),
       await separator(),
@@ -47,7 +48,7 @@ export async function installAppMenu(
       await MenuItem.new({
         id: "new-tab",
         text: t("menu.newTab"),
-        accelerator: "CmdOrCtrl+T",
+        accelerator: accelerator("newTab"),
         action: actions.newTab,
       }),
     ],
@@ -71,7 +72,7 @@ export async function installAppMenu(
       await MenuItem.new({
         id: "close-tab",
         text: t("menu.closeTab"),
-        accelerator: "CmdOrCtrl+W",
+        accelerator: accelerator("closeTab"),
         action: actions.closeTab,
       }),
       await separator(),

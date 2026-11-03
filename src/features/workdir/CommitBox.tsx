@@ -1,3 +1,4 @@
+import { isShortcut } from "../../app/shortcuts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -78,7 +79,7 @@ export function CommitBox({
   };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+    if (isShortcut("commit", event)) {
       event.preventDefault();
       submit();
     }

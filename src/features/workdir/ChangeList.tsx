@@ -1,6 +1,7 @@
 import { useMemo, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { StatusEntry, WorktreeArea } from "../../ipc";
+import { isShortcut, whichShortcut } from "../../app/shortcuts";
 import { Chevron } from "../../ui/Chevron";
 import { ContextMenu } from "../../ui/ContextMenu";
 import { useGraphStore } from "../graph/store";
@@ -18,6 +19,17 @@ import { useWorkdirViewPrefs } from "./viewPrefs";
 import styles from "./workdir.module.css";
 
 export type ChangeSection = "unstaged" | "staged";
+
+const TREE_KEYS = [
+  "changesNext",
+  "changesPrevious",
+  "changesFirst",
+  "changesLast",
+  "changesExpand",
+  "changesCollapse",
+  "changesOpen",
+  "changesStage",
+] as const;
 
 /** Indentation per tree level, in px. */
 const INDENT = 14;
@@ -201,12 +213,11 @@ function FileTree({
     if (target.getAttribute("role") !== "treeitem") return;
     // ⌘⌫, as "Move to Trash" in Finder: unstaged files only, through the
     // usual preview, confirmation and undo.
-    if (event.key === "Backspace" && event.metaKey) {
+    if (isShortcut("changesDiscard", event)) {
       event.preventDefault();
       target.querySelector<HTMLElement>("[data-discard]")?.click();
       return;
     }
-    if (event.metaKey || event.ctrlKey || event.altKey) return;
     const items = [
       ...event.currentTarget.querySelectorAll<HTMLElement>('[role="treeitem"]'),
     ];
@@ -214,25 +225,25 @@ function FileTree({
     const dirPath = target.dataset.dir;
     const expanded = target.getAttribute("aria-expanded") === "true";
     const focus = (item: HTMLElement | undefined) => item?.focus();
-    switch (event.key) {
-      case "ArrowDown":
+    switch (whichShortcut(TREE_KEYS, event)) {
+      case "changesNext":
         focus(items[index + 1]);
         break;
-      case "ArrowUp":
+      case "changesPrevious":
         focus(items[index - 1]);
         break;
-      case "Home":
+      case "changesFirst":
         focus(items[0]);
         break;
-      case "End":
+      case "changesLast":
         focus(items[items.length - 1]);
         break;
-      case "ArrowRight":
+      case "changesExpand":
         if (dirPath === undefined) return;
         if (expanded) focus(items[index + 1]);
         else toggleDir(dirKey(repoId, section, dirPath));
         break;
-      case "ArrowLeft":
+      case "changesCollapse":
         if (dirPath !== undefined && expanded) {
           toggleDir(dirKey(repoId, section, dirPath));
         } else {
@@ -241,11 +252,11 @@ function FileTree({
           );
         }
         break;
-      case "Enter":
+      case "changesOpen":
         if (dirPath !== undefined) toggleDir(dirKey(repoId, section, dirPath));
         else target.querySelector<HTMLElement>("[data-open]")?.click();
         break;
-      case " ":
+      case "changesStage":
         target.querySelector<HTMLElement>("[data-primary]")?.click();
         break;
       default:

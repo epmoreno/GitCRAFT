@@ -390,6 +390,14 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   - El navegador se abre con `/usr/bin/open` y solo con URLs de
     `https://github.com/`.
   - Los tests usan un `gh` simulado (script de prueba).
+- **Atajos** (`src/app/shortcuts.ts`): es el único sitio que conoce teclas.
+  - Cada atajo tiene un grupo, sus combinaciones (tecla y modificadores
+    exactos) y, si está en el menú, su acelerador de Tauri.
+  - Los manejadores usan `isShortcut` y `whichShortcut`, y `menu.ts` usa
+    `accelerator(id)`. Ajustes → Atajos pinta la lista desde el mismo
+    registro.
+  - Un test falla si otro archivo compara `event.key` o modificadores. Así,
+    un atajo nuevo tiene que pasar por el registro y aparece en la lista.
 - **Fetch automático** (`src/features/remote/autoFetch.ts`): un intervalo
   en el frontend recorre las pestañas abiertas una tras otra. Usa la misma
   operación remota (con progreso y cancelación) y nunca se lanza si ya hay

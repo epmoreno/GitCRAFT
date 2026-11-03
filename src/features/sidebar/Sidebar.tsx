@@ -1,3 +1,4 @@
+import { isShortcut } from "../../app/shortcuts";
 import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { GitRef, RepoRefs, StashEntry } from "../../ipc";
@@ -61,7 +62,7 @@ export function Sidebar({ repoId }: Props) {
             onChange={(event) => setFilter(repoId, event.target.value)}
             onKeyDown={(event) => {
               // Esc clears the filter (and does nothing else, e.g. close a diff).
-              if (event.key === "Escape" && filter !== "") {
+              if (isShortcut("escape", event) && filter !== "") {
                 event.nativeEvent.stopPropagation();
                 setFilter(repoId, "");
               }

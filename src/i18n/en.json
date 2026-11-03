@@ -800,6 +800,51 @@
       "useGhNow": "Right now, for github.com, git uses: {{helper}}. The empty “helper =” line makes git stop using that helper for github.com only and ask gh instead. Other hosts do not change.",
       "useGhUndo": "It can be undone with: git config --global --unset-all credential.https://github.com.helper (and the same for gist.github.com).",
       "useGhConfirm": "Use gh"
+    },
+    "shortcuts": {
+      "readOnly": "Read-only: customizing them comes in a later phase.",
+      "group": {
+        "app": "App",
+        "tabs": "Tabs",
+        "changes": "Changes panel (list and tree)",
+        "commit": "Commit box",
+        "general": "Dialogs and menus",
+        "diff": "Diff"
+      },
+      "key": {
+        " ": "Space",
+        "Home": "Home",
+        "End": "End",
+        "Escape": "Esc",
+        "click": "click"
+      },
+      "action": {
+        "settings": "Open settings",
+        "newTab": "New tab with the start page",
+        "closeTab": "Close the active tab",
+        "tabByNumber": "Go to tab 1 to 9",
+        "nextTab": "Next tab",
+        "previousTab": "Previous tab",
+        "changesNext": "Next row",
+        "changesPrevious": "Previous row",
+        "changesFirst": "First row",
+        "changesLast": "Last row",
+        "changesExpand": "Expand the folder (or enter it)",
+        "changesCollapse": "Collapse the folder (or go to its parent)",
+        "changesOpen": "Show the file's diff or toggle the folder",
+        "changesStage": "Stage or unstage the file or folder",
+        "changesDiscard": "Discard the unstaged file (with confirmation and Undo)",
+        "commit": "Create the commit (in the summary or description)",
+        "commitBoxGrow": "Divider: grow the commit box",
+        "commitBoxShrink": "Divider: shrink the commit box",
+        "commitBoxLargest": "Divider: largest commit box",
+        "commitBoxSmallest": "Divider: smallest commit box",
+        "commitBoxReset": "Divider: natural height",
+        "escape": "Close the dialog, menu or diff, or clear the sidebar filter",
+        "menuNext": "Menu: next item",
+        "menuPrevious": "Menu: previous item",
+        "diffRange": "Select several lines: from the previous one to this one"
+      }
     }
   }
 }
