@@ -850,5 +850,47 @@
         "diffRange": "Seleccionar varias líneas: desde la anterior hasta esta"
       }
     }
+  },
+  "publish": {
+    "button": "Publicar en GitHub",
+    "hint": "Crear este repositorio en tu cuenta de GitHub y subir la rama actual",
+    "needsCommit": "Haz al menos un commit para poder publicarlo",
+    "needsBranch": "Con HEAD separado no hay rama que publicar: cambia a una rama",
+    "title": "Publicar en GitHub",
+    "loading": "Mirando qué se va a subir…",
+    "cannotPreview": "No se puede publicar este repositorio.",
+    "noSession": "No hay sesión de GitHub en gh. Inicia sesión en Ajustes → Cuenta de GitHub y vuelve aquí.",
+    "noGh": "GitHub CLI (gh) no está instalado. En Ajustes → Cuenta de GitHub se explica cómo instalarlo.",
+    "goToSettings": "Ir a Ajustes",
+    "checkAgain": "Comprobar de nuevo",
+    "name": "Nombre del repositorio",
+    "description": "Descripción (opcional)",
+    "descriptionPlaceholder": "Para qué sirve este repositorio",
+    "visibility": "Visibilidad",
+    "private": "Privado: solo tú (y quien invites)",
+    "public": "Público: cualquiera puede verlo",
+    "summaryTitle": "Qué se va a subir",
+    "summary_one": "La rama {{branch}}: {{count}} commit, unos {{size}}.",
+    "summary_other": "La rama {{branch}}: {{count}} commits, unos {{size}}.",
+    "warningsTitle": "Avisos",
+    "warn": {
+      "noGitignore": "El repositorio no tiene .gitignore: comprueba que no subes archivos que no deberían estar.",
+      "largeFile": "{{path}} ocupa {{size}} (GitHub avisa a partir de 50 MB y rechaza más de 100 MB). Sigue en el historial aunque ya lo hayas borrado.",
+      "buildDir": "La carpeta {{path}} está commiteada: suele contener archivos de compilación o dependencias."
+    },
+    "warningsHint": "Son solo avisos: puedes publicar igualmente.",
+    "submitPrivate": "Publicar como privado",
+    "submitPublic": "Publicar como público",
+    "cancel": "Cancelar",
+    "failed": "No se ha publicado.",
+    "step": {
+      "create": "Comprobar el nombre, crear el repositorio en GitHub y añadir origin",
+      "push": "Subir {{branch}} y configurar su upstream"
+    },
+    "done": "Publicado en",
+    "pushFailed": "El repositorio {{name}} se ha creado en GitHub y se ha añadido origin ({{url}}), pero el push no ha terminado. No se ha borrado nada: reinténtalo con Push.",
+    "pushFailedLead": "El push falló.",
+    "cancelPush": "Cancelar el push",
+    "close": "Cerrar"
   }
 }

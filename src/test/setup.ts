@@ -17,6 +17,10 @@ import { initialRepoState, useRepoStore } from "../features/repo/store";
 import { useViewStore } from "../features/repo/viewState";
 import { useWorkdirStore } from "../features/workdir/store";
 import {
+  initialPublishState,
+  usePublishStore,
+} from "../features/publish/store";
+import {
   initialWorkdirViewPrefs,
   useWorkdirViewPrefs,
 } from "../features/workdir/viewPrefs";
@@ -132,6 +136,7 @@ beforeEach(() => {
   useOperationsStore.setState(initialOperationsState);
   useGraphStore.setState({ graphs: {} });
   useSettingsStore.setState(initialSettingsState);
+  usePublishStore.setState(initialPublishState);
   localStorage.clear();
   useWorkdirViewPrefs.setState(initialWorkdirViewPrefs);
   useWorkdirStore.setState({

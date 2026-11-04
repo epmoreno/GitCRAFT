@@ -25,6 +25,7 @@ import {
 import { installAppMenu } from "./menu";
 import { isShortcut } from "./shortcuts";
 import { StartPage } from "../features/repo/StartPage";
+import { PublishDialog } from "../features/publish/PublishDialog";
 import { SettingsDialog } from "../features/settings/SettingsDialog";
 import { useSettingsStore } from "../features/settings/store";
 import { Sidebar } from "../features/sidebar/Sidebar";
@@ -144,6 +145,7 @@ export function App() {
         <RemoteDialogs />
         <CreateDialogs />
         <SettingsDialog />
+        <PublishDialog />
       </div>
       <OperationsPanel />
     </div>

@@ -12,6 +12,7 @@ import { useOperationsStore } from "../features/operations/store";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
 import { useStashStore } from "../features/stash/store";
 import { useWorkdirStore } from "../features/workdir/store";
+import { PublishButton } from "../features/publish/PublishButton";
 import { useSettingsStore } from "../features/settings/store";
 import { Tooltip } from "../ui/Tooltip";
 import styles from "./App.module.css";
@@ -80,6 +81,7 @@ export function Toolbar() {
         <FetchButton repoId={active?.id ?? null} />
         <PullButton repoId={active?.id ?? null} />
         <PushButton repoId={active?.id ?? null} />
+        <PublishButton repoId={active?.id ?? null} />
         <Tooltip
           label={
             !active

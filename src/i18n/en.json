@@ -850,5 +850,47 @@
         "diffRange": "Select several lines: from the previous one to this one"
       }
     }
+  },
+  "publish": {
+    "button": "Publish on GitHub",
+    "hint": "Create this repository in your GitHub account and push the current branch",
+    "needsCommit": "Make at least one commit to publish it",
+    "needsBranch": "With a detached HEAD there is no branch to publish: switch to a branch",
+    "title": "Publish on GitHub",
+    "loading": "Looking at what would be uploaded…",
+    "cannotPreview": "This repository cannot be published.",
+    "noSession": "gh has no GitHub session. Sign in under Settings → GitHub account and come back.",
+    "noGh": "GitHub CLI (gh) is not installed. Settings → GitHub account explains how to install it.",
+    "goToSettings": "Go to Settings",
+    "checkAgain": "Check again",
+    "name": "Repository name",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "What this repository is for",
+    "visibility": "Visibility",
+    "private": "Private: only you (and who you invite)",
+    "public": "Public: anyone can see it",
+    "summaryTitle": "What will be uploaded",
+    "summary_one": "Branch {{branch}}: {{count}} commit, about {{size}}.",
+    "summary_other": "Branch {{branch}}: {{count}} commits, about {{size}}.",
+    "warningsTitle": "Warnings",
+    "warn": {
+      "noGitignore": "The repository has no .gitignore: check that you are not uploading files that should not be there.",
+      "largeFile": "{{path}} is {{size}} (GitHub warns from 50 MB and refuses over 100 MB). It stays in the history even if you deleted it.",
+      "buildDir": "The folder {{path}} is committed: it usually holds build output or dependencies."
+    },
+    "warningsHint": "These are only warnings: you can publish anyway.",
+    "submitPrivate": "Publish as private",
+    "submitPublic": "Publish as public",
+    "cancel": "Cancel",
+    "failed": "Nothing was published.",
+    "step": {
+      "create": "Check the name, create the repository on GitHub and add origin",
+      "push": "Push {{branch}} and set its upstream"
+    },
+    "done": "Published at",
+    "pushFailed": "The repository {{name}} was created on GitHub and origin was added ({{url}}), but the push did not finish. Nothing was deleted: retry it with Push.",
+    "pushFailedLead": "The push failed.",
+    "cancelPush": "Cancel the push",
+    "close": "Close"
   }
 }

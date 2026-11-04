@@ -96,6 +96,9 @@ export const ipc = {
   cancelGhLogin: vi.mocked(commands.cancelGhLogin),
   ghLogout: vi.mocked(commands.ghLogout),
   ghSetupGit: vi.mocked(commands.ghSetupGit),
+  publishInfo: vi.mocked(commands.publishInfo),
+  validRepoName: vi.mocked(commands.validRepoName),
+  publishRepository: vi.mocked(commands.publishRepository),
 };
 
 export function resetIpcMock() {
@@ -146,6 +149,13 @@ export function resetIpcMock() {
   ipc.setGeneralSettings.mockResolvedValue({ status: "ok", data: null });
   ipc.setUiZoom.mockResolvedValue(undefined);
   ipc.cancelGhLogin.mockResolvedValue({ status: "ok", data: null });
+  ipc.validRepoName.mockImplementation(async (name) => ({
+    status: "ok",
+    data:
+      /^(?!-)[A-Za-z0-9._-]{1,100}$/.test(name) &&
+      name !== "." &&
+      name !== "..",
+  }));
   ipc.gitIdentity.mockResolvedValue({
     status: "ok",
     data: {

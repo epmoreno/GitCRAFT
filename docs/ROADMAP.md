@@ -778,7 +778,7 @@ ningún producto.
       - El push es el normal, con upstream y nunca forzado.
       - Errores nuevos: `noCommits`, `hasRemote`, `invalidRepoName` y
         `ghRepoExists`.
-- [ ] **E.2 Diálogo «Publicar en GitHub».** Aparece en un repo sin remotos.
+- [x] **E.2 Diálogo «Publicar en GitHub».** Aparece en un repo sin remotos.
       Tiene:
       - nombre propuesto a partir de la carpeta, ajustado a los caracteres
         válidos en GitHub;
@@ -797,6 +797,32 @@ ningún producto.
       Si no hay sesión de GitHub, lleva a Ajustes → Cuenta de GitHub. Si no
       hay commits o HEAD está separado, el botón está desactivado y explica
       por qué.
+      *Estado:* el botón «Publicar en GitHub» de la barra solo aparece en
+      repos sin remotos.
+      - El diálogo propone `@usuario / <nombre>`, valida el nombre con las
+        mismas reglas que el núcleo, y tiene descripción opcional y
+        visibilidad (Privado marcado). El botón dice «Publicar como privado»
+        o «como público».
+      - El resumen indica rama, commits y tamaño, con los avisos (sin
+        `.gitignore`, archivos de más de 50 MB y carpetas de compilación) y
+        «Son solo avisos».
+      - Progreso en dos pasos:
+        1. comprobar el nombre, crear el repo y añadir `origin`;
+        2. subir la rama con upstream, con barra de progreso y «Cancelar el
+           push».
+      - Si el nombre existe, se explica y el formulario se queda como
+        estaba, sin push. Si el push falla, se explica qué ha quedado hecho
+        y que se reintenta con Push.
+      - Sin sesión o sin gh, lleva a Ajustes → Cuenta de GitHub.
+
+      *Tests:*
+      - el botón (oculto con remotos; desactivado sin commits o con HEAD
+        separado);
+      - privado por defecto, el resumen y los avisos, y nombre no válido;
+      - crear y luego push con `publishTo: origin` y sin `forceLease`;
+      - público solo si se elige, nombre existente y push fallido;
+      - sin sesión, y el formato de los tamaños.
+
       *La prueba real la hace el usuario* con un repo de prueba privado que
       luego borra.
 

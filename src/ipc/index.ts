@@ -74,6 +74,9 @@ export type {
   GhStatus_Serialize as GhStatus,
   GhAccount,
   LoginEvent,
+  PublishInfo_Serialize as PublishInfo,
+  Published,
+  PublishPreview,
   Language as SettingsLanguage,
   TextSize,
 } from "./bindings";
@@ -81,7 +84,6 @@ export type {
 /** A graph line: `[column, colour]`. */
 export type Lane = [column: number, color: number];
 
-/** Native folder picker. Resolves to `null` when the user cancels. */
 /** Scales the whole UI (Settings → General → Text size). */
 export async function setUiZoom(factor: number): Promise<void> {
   await getCurrentWebview().setZoom(factor);
@@ -94,6 +96,7 @@ export function ghLogin(onEvent: (event: LoginEvent) => void) {
   return commands.ghLogin(channel);
 }
 
+/** Native folder picker. Resolves to `null` when the user cancels. */
 export async function pickFolder(title: string): Promise<string | null> {
   const selected = await open({ directory: true, multiple: false, title });
   return typeof selected === "string" ? selected : null;

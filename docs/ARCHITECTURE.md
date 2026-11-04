@@ -390,6 +390,20 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   - El navegador se abre con `/usr/bin/open` y solo con URLs de
     `https://github.com/`.
   - Los tests usan un `gh` simulado (script de prueba).
+- **Publicar en GitHub** (`gitcraft_core::ops::publish` y
+  `src/features/publish/`). Los pasos se hacen por separado, en este orden:
+  1. vista previa;
+  2. comprobaciones sin cambiar nada (sin remotos, sesión válida, nombre
+     válido y libre en la cuenta);
+  3. `gh repo create`;
+  4. `git remote add -- origin`;
+  5. push normal con `publishTo: "origin"`, nunca forzado.
+
+  Así cada paso tiene su propio error, y si el push falla, el repo creado y
+  `origin` se quedan para reintentar con Push: nunca se borra nada en
+  GitHub. El tamaño es el comprimido en disco (`%(objectsize:disk)`) de
+  todo lo alcanzable desde HEAD. Los archivos grandes se buscan en todo el
+  historial, porque un archivo borrado sigue subiéndose.
 - **Atajos** (`src/app/shortcuts.ts`): es el único sitio que conoce teclas.
   - Cada atajo tiene un grupo, sus combinaciones (tecla y modificadores
     exactos) y, si está en el menú, su acelerador de Tauri.
