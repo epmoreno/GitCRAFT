@@ -825,6 +825,17 @@ ningún producto.
 
       *La prueba real la hace el usuario* con un repo de prueba privado que
       luego borra.
+      *Verificado manualmente:*
+      - los avisos (sin `.gitignore`, un archivo de 60 MB y `node_modules`)
+        con «Son solo avisos», y Cancelar no publica nada;
+      - el botón desactivado, con su explicación, sin commits y con HEAD
+        separado;
+      - una publicación real: propone `@epmoreno / publicar-prueba` con
+        Privado, termina con la URL, `origin` y `main...origin/main` quedan
+        bien, y el repo aparece como privado en GitHub;
+      - con un nombre que ya existe, lo explica y no añade ningún remoto.
+
+      El repo de prueba lo borró el usuario desde la web de GitHub.
 
 ### Cierre de la fase
 - [ ] **V.1 Versión 0.2.0.** Versión 0.2.0 en `package.json`, `Cargo.toml` y
