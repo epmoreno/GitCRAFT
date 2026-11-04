@@ -838,9 +838,14 @@ ningún producto.
       El repo de prueba lo borró el usuario desde la web de GitHub.
 
 ### Cierre de la fase
-- [ ] **V.1 Versión 0.2.0.** Versión 0.2.0 en `package.json`, `Cargo.toml` y
+- [x] **V.1 Versión 0.2.0.** Versión 0.2.0 en `package.json`, `Cargo.toml` y
       `tauri.conf.json`; README actualizado; `.dmg` generado. El tag anotado
       `v0.2.0` se crea solo cuando el usuario confirme la verificación.
+      *Estado:* versión 0.2.0 en `Cargo.toml` (workspace), `package.json` y
+      `tauri.conf.json`. README con las funciones de la fase 1.5, e
+      INSTALACION.md con gh y con lo que desinstalar no deshace. El `.dmg`
+      se genera con `npm run dist`. Pendiente: la verificación del usuario y
+      el tag.
 
 ## Fase 2
 

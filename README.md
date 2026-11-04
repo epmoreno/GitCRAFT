@@ -25,12 +25,48 @@ Spanish.
 
 <!-- TODO: screenshots -->
 
-_Coming soon: commit graph, staging by hunk/line, branches and stash, the
-operations panel._
+_Coming soon: commit graph, the changes panel (list and tree), Settings, and
+publishing on GitHub._
 
 ## Status
 
-**v0.1.0: the MVP (phase 1) is complete and manually verified.** It includes:
+**v0.2.0: phase 1.5 (polish, settings and GitHub publishing) is complete
+and manually verified**, on top of the v0.1.0 MVP.
+
+New in 0.2.0:
+
+- **Look and feel**: a softer graphite/copper palette that meets WCAG AA
+  contrast (checked by tests), and consistent hover, pressed, selected,
+  keyboard-focus and disabled states everywhere. Tooltips always stay inside
+  the window.
+- **Uncommitted changes panel**: header with "N changes on <branch>", the
+  commit box fixed at the bottom with a resizable divider, collapsible
+  Unstaged/Staged sections with their actions always visible, list or folder
+  tree view (with counts, expand/collapse all and full keyboard navigation),
+  sort by name or status, stage or unstage a whole folder, and ⌘⌫ to discard
+  the focused file (with confirmation and undo).
+- **New tab** (+ or ⌘T) with the start page: open, clone, initialize or pick
+  a recent repository right there.
+- **Settings** (⚙ or ⌘,):
+  - General: language, text size (scales the whole UI), default folder for
+    clones, automatic fetch every N minutes (off by default).
+  - Git's own defaults, written to your global git config after showing the
+    exact command and the previous value: default branch, default pull
+    strategy.
+  - Git identity, global and per repository, showing where each value comes
+    from.
+  - GitHub account through [GitHub CLI](https://cli.github.com) (`gh`): see
+    who is signed in, sign in inside the app with the one-time code, sign
+    out, and optionally let git use gh for github.com credentials.
+    **GitCRAFT never stores or reads a token.**
+  - A list of every keyboard shortcut.
+- **Publish on GitHub**: for a repository without remotes, create it in your
+  personal account (**private by default**) after a summary of what will be
+  uploaded, with warnings for a missing `.gitignore`, files over 50 MB and
+  committed build folders. It checks first that the name is free and never
+  force-pushes.
+
+From v0.1.0 (the MVP):
 
 - Repositories: open, recents, tabs (reorder, restore, shortcuts), initialize
   and clone with progress and cancellation.
@@ -54,9 +90,10 @@ Next phases are listed in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 Download or build `GitCRAFT_<version>_aarch64.dmg`, open it and drag GitCRAFT
 to Applications. It needs macOS 11 or later on Apple Silicon, and Git
-installed (Xcode Command Line Tools or Homebrew).
+installed (Xcode Command Line Tools or Homebrew). GitHub features (account,
+publishing) need [GitHub CLI](https://cli.github.com): `brew install gh`.
 
-The MVP build is **not signed with an Apple developer certificate nor
+The build is **not signed with an Apple developer certificate nor
 notarized**, so macOS asks for confirmation the first time. How to open it
 without disabling Gatekeeper, and how to uninstall it:
 [docs/INSTALACION.md](docs/INSTALACION.md).

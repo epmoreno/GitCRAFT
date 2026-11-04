@@ -1,7 +1,7 @@
 # Instalar GitCRAFT en macOS (Apple Silicon)
 
 GitCRAFT se distribuye como `.dmg` para Macs con chip Apple (M1 o posterior),
-con macOS 11 o más reciente. En el MVP **no está firmado con un certificado
+con macOS 11 o más reciente. Por ahora **no está firmado con un certificado
 de desarrollador de Apple ni notarizado**: solo lleva una firma *ad-hoc*
 (local, sin identidad), que en Apple Silicon es necesaria para que macOS
 acepte ejecutar la app. Por eso la primera vez que la abras, macOS te pedirá
@@ -15,6 +15,9 @@ confirmación. No hace falta desactivar Gatekeeper.
 - Para trabajar con remotos privados: un credential helper (en macOS,
   `osxkeychain`, que viene con Git) o una clave SSH en el agente. GitCRAFT
   nunca guarda ni pide contraseñas.
+- Para la cuenta de GitHub y «Publicar en GitHub»: GitHub CLI
+  (`brew install gh`). GitCRAFT no guarda tokens; la sesión la guarda gh en
+  el Llavero.
 
 ## Generar el `.dmg`
 
@@ -67,7 +70,8 @@ No hagas nada de esto:
 1. Cierra GitCRAFT (⌘Q).
 2. Arrastra **GitCRAFT** desde Aplicaciones a la Papelera.
 3. Opcional, para borrar también sus ajustes (recientes, pestañas abiertas,
-   modo de pull por repositorio): en Finder, **Ir → Ir a la carpeta…**
+   modo de pull por repositorio, ajustes generales y vista del panel de
+   cambios): en Finder, **Ir → Ir a la carpeta…**
    (⇧⌘G) y lleva a la Papelera, si existen:
    - `~/Library/Application Support/dev.gitcraft.app`
    - `~/Library/Caches/dev.gitcraft.app`
@@ -76,3 +80,11 @@ No hagas nada de esto:
 Desinstalar GitCRAFT **no toca tus repositorios** ni la configuración de Git:
 GitCRAFT no guarda nada dentro de ellos, salvo lo que tú hagas con Git (commits,
 ramas, stashes…).
+
+Tampoco deshace lo que hayas cambiado desde Ajustes en la configuración de
+git o en gh, porque eso es configuración tuya y sigue sirviendo en la
+terminal:
+- identidad, rama inicial y estrategia de pull (`~/.gitconfig` o el
+  `.git/config` de cada repo);
+- el credential helper de gh, si lo activaste;
+- la sesión de gh.
