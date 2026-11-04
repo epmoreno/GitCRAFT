@@ -41,6 +41,8 @@ pub struct GhAccount {
     pub active: bool,
     /// The token works (false: expired or revoked; sign in again).
     pub valid: bool,
+    /// `https` or `ssh`: how git talks to GitHub for this account.
+    pub git_protocol: String,
 }
 
 /// What `gh auth status --json hosts` reports, for github.com only.
@@ -58,6 +60,8 @@ struct HostEntry {
     active: bool,
     #[serde(default)]
     state: String,
+    #[serde(default, rename = "gitProtocol")]
+    git_protocol: String,
 }
 
 /// What the sign-in reports while it waits for the browser.
@@ -214,6 +218,56 @@ impl Gh {
         Ok(())
     }
 
+    /// Whether `owner/name` exists (and the session can see it).
+    pub async fn repo_exists(
+        &self,
+        owner: &str,
+        name: &str,
+        cancel: &CancellationToken,
+    ) -> Result<bool> {
+        let full = format!("{owner}/{name}");
+        match self
+            .run(&["repo", "view", &full, "--json", "name"], cancel)
+            .await
+        {
+            Ok(_) => Ok(true),
+            Err(GitError::GhFailed { stderr, .. })
+                if stderr.contains("Could not resolve to a Repository") =>
+            {
+                Ok(false)
+            }
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Creates an empty repository `name` in the signed-in account and
+    /// returns its web URL. `name` must be valid (see
+    /// `ops::publish::valid_repo_name`): it never starts with `-`.
+    pub async fn create_repo(
+        &self,
+        name: &str,
+        description: Option<&str>,
+        private: bool,
+        cancel: &CancellationToken,
+    ) -> Result<String> {
+        let visibility = if private { "--private" } else { "--public" };
+        // `--description=…` in one argument: a description starting with
+        // `-` can never be read as another option.
+        let description = description
+            .filter(|d| !d.trim().is_empty())
+            .map(|d| format!("--description={}", d.trim()));
+        let mut args = vec!["repo", "create", name, visibility];
+        if let Some(d) = &description {
+            args.push(d);
+        }
+        let out = self.run(&args, cancel).await?;
+        out.lines()
+            .map(str::trim)
+            .rfind(|line| line.contains("://"))
+            .map(|url| url.trim_end_matches('/').to_owned())
+            .ok_or_else(|| GitError::Parse(format!("gh repo create: {out:?}")))
+    }
+
     /// Signs `login` out of github.com (gh forgets its token).
     pub async fn logout(&self, login: &str, cancel: &CancellationToken) -> Result<()> {
         self.run(
@@ -247,6 +301,11 @@ fn parse_accounts(json: &str) -> Result<Vec<GhAccount>> {
                     login: e.login.clone(),
                     active: e.active,
                     valid: e.state == "success",
+                    git_protocol: if e.git_protocol.is_empty() {
+                        "https".to_owned()
+                    } else {
+                        e.git_protocol.clone()
+                    },
                 })
                 .collect()
         })
@@ -338,12 +397,14 @@ mod tests {
                 GhAccount {
                     login: "ana".into(),
                     active: true,
-                    valid: true
+                    valid: true,
+                    git_protocol: "https".into(),
                 },
                 GhAccount {
                     login: "ana-old".into(),
                     active: false,
-                    valid: false
+                    valid: false,
+                    git_protocol: "https".into(),
                 },
             ]
         );

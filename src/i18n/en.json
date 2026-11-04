@@ -120,7 +120,11 @@
     "filePermission": "The system denied access to a file or folder of the repository. Check its permissions (and that the folder isn't on a read-only drive).",
     "ghNotFound": "GitHub CLI (gh) is not installed. Install it with “brew install gh” or from cli.github.com.",
     "ghNotLoggedIn": "gh has no valid GitHub session. Sign in under Settings → GitHub account.",
-    "ghFailed": "gh could not complete the operation. Its original output explains why."
+    "ghFailed": "gh could not complete the operation. Its original output explains why.",
+    "noCommits": "The repository has no commits yet: there is nothing to publish. Make at least one commit.",
+    "hasRemote": "This repository already has a remote; publishing would add another. Use Push to upload to the one it has.",
+    "invalidRepoName": "That name is not valid for a GitHub repository: use letters, digits, “.”, “-” or “_” (not starting with “-”), up to 100 characters.",
+    "ghRepoExists": "You already have a repository with that name on GitHub. Nothing was created or changed: choose another name."
   },
   "graph": {
     "listLabel": "History of {{name}}",

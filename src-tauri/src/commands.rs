@@ -29,10 +29,11 @@ use crate::error::IpcError;
 use crate::history::{CommandHistory, CommandRecord};
 use crate::settings::{GeneralSettings, RecentRepository};
 use crate::state::{
-    AppState, DiscardResult, GhStatus, GraphEvent, OpenedRepository, PullModeInfo, RepoId,
-    RestoredSession,
+    AppState, DiscardResult, GhStatus, GraphEvent, OpenedRepository, PublishInfo, PullModeInfo,
+    RepoId, RestoredSession,
 };
 use gitcraft_core::gh::LoginEvent;
+use gitcraft_core::ops::publish::{self, PublishRequest, Published};
 
 #[tauri::command]
 #[specta::specta]
@@ -718,6 +719,44 @@ pub async fn gh_logout(state: State<'_, AppState>, login: String) -> Result<GhSt
 #[specta::specta]
 pub async fn gh_setup_git(state: State<'_, AppState>) -> Result<GhStatus, IpcError> {
     state.gh_setup_git().await
+}
+
+/// What "Publish on GitHub" would upload from tab `id`, the suggested name
+/// and the account it goes to.
+#[tauri::command]
+#[specta::specta]
+pub async fn publish_info(state: State<'_, AppState>, id: RepoId) -> Result<PublishInfo, IpcError> {
+    state.publish_info(id).await
+}
+
+/// Whether `name` can be a GitHub repository name.
+#[tauri::command]
+#[specta::specta]
+pub async fn valid_repo_name(name: String) -> Result<bool, IpcError> {
+    Ok(publish::valid_repo_name(&name))
+}
+
+/// Creates the repository in the personal GitHub account (checking first
+/// that the name is free) and adds it as `origin`. Never pushes.
+#[tauri::command]
+#[specta::specta]
+pub async fn publish_repository(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+    description: Option<String>,
+    is_private: bool,
+) -> Result<Published, IpcError> {
+    state
+        .publish_repository(
+            id,
+            PublishRequest {
+                name,
+                description,
+                private: is_private,
+            },
+        )
+        .await
 }
 
 /// The folder name a clone of `url` gets by default.

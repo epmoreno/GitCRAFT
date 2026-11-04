@@ -77,9 +77,28 @@ pub enum GitError {
     #[error("{} already exists and is not an empty folder", .0.display())]
     DestinationNotEmpty(PathBuf),
 
+    /// The repository has no commit yet: there is nothing to publish.
+    #[error("the repository has no commits")]
+    NoCommits,
+
+    /// The repository already has remotes; publishing would add another.
+    #[error("the repository already has a remote")]
+    HasRemote,
+
+    #[error("{0:?} is not a valid GitHub repository name")]
+    InvalidRepoName(String),
+
+    /// The GitHub account already has a repository with that name.
+    #[error("{0} already exists on GitHub")]
+    GhRepoExists(String),
+
     /// GitHub CLI (`gh`) is not installed (or not where GitCRAFT looks).
     #[error("gh executable not found")]
     GhNotFound,
+
+    /// gh has no valid session for github.com.
+    #[error("gh is not signed in to github.com")]
+    GhNotLoggedIn,
 
     /// `gh` ran and failed.
     #[error("`gh {}` failed with exit code {exit_code:?}: {}", args.join(" "), stderr.trim())]
@@ -136,6 +155,11 @@ pub enum ErrorKind {
     DiskFull,
     /// The system denied access to a file or folder of the repository.
     FilePermission,
+    NoCommits,
+    HasRemote,
+    InvalidRepoName,
+    /// The name is taken in the GitHub account; nothing was created.
+    GhRepoExists,
     /// GitHub CLI (`gh`) is not installed.
     GhNotFound,
     /// `gh` has no valid session for github.com.
@@ -169,7 +193,12 @@ impl GitError {
             Self::DetachedHead => ErrorKind::DetachedHead,
             Self::AlreadyARepository(_) => ErrorKind::AlreadyARepository,
             Self::DestinationNotEmpty(_) => ErrorKind::DestinationNotEmpty,
+            Self::NoCommits => ErrorKind::NoCommits,
+            Self::HasRemote => ErrorKind::HasRemote,
+            Self::InvalidRepoName(_) => ErrorKind::InvalidRepoName,
+            Self::GhRepoExists(_) => ErrorKind::GhRepoExists,
             Self::GhNotFound => ErrorKind::GhNotFound,
+            Self::GhNotLoggedIn => ErrorKind::GhNotLoggedIn,
             Self::GhFailed { stderr, .. } => classify_gh(stderr),
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
@@ -223,7 +252,12 @@ impl GitError {
             | Self::DetachedHead
             | Self::AlreadyARepository(_)
             | Self::DestinationNotEmpty(_)
-            | Self::GhNotFound => None,
+            | Self::NoCommits
+            | Self::HasRemote
+            | Self::InvalidRepoName(_)
+            | Self::GhRepoExists(_)
+            | Self::GhNotFound
+            | Self::GhNotLoggedIn => None,
         }
     }
 }

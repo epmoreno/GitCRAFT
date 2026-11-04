@@ -63,7 +63,8 @@ async fn reads_the_session_and_its_user() {
         [GhAccount {
             login: "ana".into(),
             active: true,
-            valid: true
+            valid: true,
+            git_protocol: "https".into(),
         }]
     );
     assert_eq!(

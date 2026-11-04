@@ -24,6 +24,7 @@ use gitcraft_core::ops::init::{self, InitCheck};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
+use gitcraft_core::ops::publish::{self, PublishPreview, PublishRequest, Published};
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::remote::{self, ForcePushPreview, PullMode, PullOutcome, PushOutcome};
 use gitcraft_core::ops::repo::{self, RepoInfo};
@@ -147,6 +148,19 @@ struct Inner {
     clone: Option<CancellationToken>,
     /// The GitHub sign-in waiting for the browser, to cancel it.
     gh_login: Option<CancellationToken>,
+}
+
+/// Everything the "Publish on GitHub" dialog shows before publishing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PublishInfo {
+    pub preview: PublishPreview,
+    /// From the folder name, adjusted to GitHub's rules.
+    pub suggested_name: String,
+    /// The account it would be created in; `None`: no valid session (or gh
+    /// is not installed, see `gh_installed`).
+    pub account: Option<GhAccount>,
+    pub gh_installed: bool,
 }
 
 /// Settings → GitHub account.
@@ -1224,6 +1238,54 @@ impl AppState {
         self.lock().gh_login = None;
         result?;
         self.gh_status().await
+    }
+
+    /// What publishing tab `id` on GitHub would upload, and where.
+    pub async fn publish_info(&self, id: RepoId) -> Result<PublishInfo, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        let path = PathBuf::from(self.session_repo_path(id)?);
+        let preview = publish::preview(git, &path, publish::LARGE_FILE_BYTES, &cancel).await?;
+        let folder = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let gh = Gh::discover();
+        let account = match &gh {
+            Some(gh) => gh
+                .accounts(&cancel)
+                .await?
+                .into_iter()
+                .find(|a| a.active && a.valid),
+            None => None,
+        };
+        Ok(PublishInfo {
+            preview,
+            suggested_name: publish::suggest_repo_name(&folder),
+            account,
+            gh_installed: gh.is_some(),
+        })
+    }
+
+    /// Creates the repository on GitHub and adds it as `origin` (the push
+    /// comes next, as a normal push that publishes the branch).
+    pub async fn publish_repository(
+        &self,
+        id: RepoId,
+        request: PublishRequest,
+    ) -> Result<Published, IpcError> {
+        let git = self.git()?;
+        let path = PathBuf::from(self.session_repo_path(id)?);
+        let published =
+            publish::publish(git, &self.gh()?, &path, &request, &CancellationToken::new()).await?;
+        // The new remote shows up in the sidebar and the toolbar at once.
+        (self.notify_change)(RepoChanged {
+            id,
+            refs: true,
+            worktree: false,
+            stash: false,
+        });
+        Ok(published)
     }
 
     pub fn cancel_gh_login(&self) {

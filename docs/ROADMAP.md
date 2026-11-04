@@ -741,7 +741,7 @@ ningún producto.
       antes (diff vacío, según el usuario).
 
 ### E. Publicar un repo local en GitHub
-- [ ] **E.1 Núcleo de publicación.** El repo siempre se crea en la **cuenta
+- [x] **E.1 Núcleo de publicación.** El repo siempre se crea en la **cuenta
       personal**; las organizaciones quedan para más adelante. En este orden:
       1. Comprueba que el nombre no existe en la cuenta (`gh repo view
          <usuario>/<nombre> --json name`). Si existe, lo explica y no toca
@@ -760,6 +760,24 @@ ningún producto.
       creación, nombre existente (no se ejecuta ningún paso más), sin sesión,
       fallo de push tras crear y argumentos (el nombre y la descripción van
       como argumentos separados, nunca interpolados).
+      *Estado:* `gitcraft_core::ops::publish`.
+      - **`preview`** describe lo que se subiría: rama, commits y tamaño
+        comprimido de todo lo alcanzable desde HEAD. Detecta si falta
+        `.gitignore` en el último commit, si hay archivos de más de 50 MB
+        **en cualquier punto del historial** y si hay carpetas de
+        compilación commiteadas (solo la más alta de cada rama del árbol).
+      - **`publish`** comprueba, en este orden y sin cambiar nada:
+        1. que no hay remotos;
+        2. que hay una sesión válida;
+        3. que el nombre es válido (GitHub, y sin `-` inicial);
+        4. que el nombre está libre en la cuenta (`gh repo view`).
+
+        Después crea el repo (`gh repo create <nombre> --private|--public
+        --description=…`) y añade `origin`, con la URL https o ssh según el
+        protocolo de la cuenta en gh.
+      - El push es el normal, con upstream y nunca forzado.
+      - Errores nuevos: `noCommits`, `hasRemote`, `invalidRepoName` y
+        `ghRepoExists`.
 - [ ] **E.2 Diálogo «Publicar en GitHub».** Aparece en un repo sin remotos.
       Tiene:
       - nombre propuesto a partir de la carpeta, ajustado a los caracteres

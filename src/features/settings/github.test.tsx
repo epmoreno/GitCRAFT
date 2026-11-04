@@ -9,7 +9,7 @@ import { useSettingsStore } from "./store";
 const status = (overrides: Partial<GhStatus> = {}): GhStatus => ({
   path: "/opt/homebrew/bin/gh",
   version: "gh version 2.62.0 (2024-11-14)",
-  accounts: [{ login: "ana", active: true, valid: true }],
+  accounts: [{ login: "ana", active: true, valid: true, gitProtocol: "https" }],
   githubHelpers: [],
   generalHelpers: ["osxkeychain"],
   gitUsesGh: false,
@@ -138,7 +138,11 @@ describe("GitHub account in Settings", () => {
 
   it("asks to sign in again when the token is no longer valid", async () => {
     const section = await openGithub(
-      status({ accounts: [{ login: "ana", active: true, valid: false }] }),
+      status({
+        accounts: [
+          { login: "ana", active: true, valid: false, gitProtocol: "https" },
+        ],
+      }),
     );
     expect(await within(section).findByText(/ya no es válida/)).toBeVisible();
     expect(

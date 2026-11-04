@@ -120,7 +120,11 @@
     "filePermission": "El sistema denegó el acceso a un archivo o carpeta del repositorio. Comprueba los permisos (y que la carpeta no esté en una unidad de solo lectura).",
     "ghNotFound": "GitHub CLI (gh) no está instalado. Instálalo con «brew install gh» o desde cli.github.com.",
     "ghNotLoggedIn": "No hay una sesión válida de GitHub en gh. Inicia sesión en Ajustes → Cuenta de GitHub.",
-    "ghFailed": "gh no pudo completar la operación. Su salida original explica el motivo."
+    "ghFailed": "gh no pudo completar la operación. Su salida original explica el motivo.",
+    "noCommits": "El repositorio aún no tiene commits: no hay nada que publicar. Haz al menos un commit.",
+    "hasRemote": "Este repositorio ya tiene un remoto; publicarlo añadiría otro. Usa Push para subirlo al que tiene.",
+    "invalidRepoName": "Ese nombre no vale para un repositorio de GitHub: usa letras, números, «.», «-» o «_» (sin empezar por «-»), hasta 100 caracteres.",
+    "ghRepoExists": "Ya tienes un repositorio con ese nombre en GitHub. No se ha creado ni cambiado nada: elige otro nombre."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",

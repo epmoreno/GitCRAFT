@@ -1,0 +1,262 @@
+//! Publishing on GitHub with a simulated gh (no network) and a local bare
+//! repository as the "GitHub" remote.
+
+use std::path::{Path, PathBuf};
+
+use gitcraft_core::gh::Gh;
+use gitcraft_core::ops::publish::{self, PublishRequest};
+use gitcraft_core::ops::remote::{self, PushOutcome};
+use gitcraft_core::testing::TestRepo;
+use gitcraft_core::{CancellationToken, ErrorKind, Git};
+
+fn c() -> CancellationToken {
+    CancellationToken::new()
+}
+
+fn git() -> Git {
+    Git::discover().expect("git")
+}
+
+const SIGNED_IN: &str = r#"{"hosts":{"github.com":[{"state":"success","active":true,"login":"ana","gitProtocol":"PROTOCOL"}]}}"#;
+
+/// A `gh` that records its calls. `exists`: what `gh repo view` answers;
+/// `created`: the URL `gh repo create` prints.
+struct FakeGh {
+    dir: tempfile::TempDir,
+    gh: Gh,
+}
+
+impl FakeGh {
+    fn new(signed_in: bool, protocol: &str, exists: bool, created: &str) -> Self {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let status = if signed_in {
+            SIGNED_IN.replace("PROTOCOL", protocol)
+        } else {
+            r#"{"hosts":{}}"#.to_owned()
+        };
+        let view = if exists {
+            "echo '{\"name\":\"x\"}'".to_owned()
+        } else {
+            "echo \"GraphQL: Could not resolve to a Repository with the name '$3'. (repository)\" >&2; exit 1".to_owned()
+        };
+        let script = format!(
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"{log}\"\ncase \"$1 $2\" in\n\
+             'auth status') echo '{status}' ;;\n\
+             'repo view') {view} ;;\n\
+             'repo create') echo '{created}' ;;\n\
+             esac\n",
+            log = dir.path().join("calls.log").display(),
+        );
+        let exe = dir.path().join("gh");
+        std::fs::write(&exe, script).expect("write");
+        make_executable(&exe);
+        Self {
+            gh: Gh::at(&exe),
+            dir,
+        }
+    }
+
+    fn calls(&self) -> Vec<String> {
+        std::fs::read_to_string(self.dir.path().join("calls.log"))
+            .unwrap_or_default()
+            .lines()
+            .map(str::to_owned)
+            .collect()
+    }
+}
+
+#[cfg(unix)]
+fn make_executable(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+}
+
+/// A bare repository standing for the one GitHub creates: `<dir>/x.git`,
+/// reported by the fake as `file://<dir>/x` (gh prints it without `.git`).
+async fn github_side() -> (tempfile::TempDir, String) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let bare = dir.path().join("x.git");
+    let out = tokio::process::Command::new("git")
+        .args(["init", "--bare", "-q"])
+        .arg(&bare)
+        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .output()
+        .await
+        .expect("git init --bare");
+    assert!(out.status.success());
+    let url = format!("file://{}", dir.path().join("x").display());
+    (dir, url)
+}
+
+fn request(name: &str) -> PublishRequest {
+    PublishRequest {
+        name: name.into(),
+        description: Some("-probando, con comas".into()),
+        private: true,
+    }
+}
+
+#[tokio::test]
+async fn previews_what_would_be_uploaded_with_warnings() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("src/main.rs", "fn main() {}\n", "first")
+        .await;
+    repo.commit_file("node_modules/left-pad/index.js", "x\n", "deps")
+        .await;
+    repo.commit_file("app/target/out.bin", &"0".repeat(3000), "build")
+        .await;
+    let preview = publish::preview(&git(), repo.path(), 2000, &c())
+        .await
+        .expect("preview");
+    assert_eq!(preview.branch, "main");
+    assert_eq!(preview.commits, 3);
+    assert!(preview.size_bytes > 0);
+    assert!(!preview.has_gitignore);
+    assert_eq!(preview.build_dirs, ["app/target", "node_modules"]);
+    assert_eq!(preview.large_files.len(), 1);
+    assert_eq!(preview.large_files[0].path, "app/target/out.bin");
+    assert_eq!(preview.large_files[0].size, 3000);
+
+    repo.commit_file(".gitignore", "target/\n", "ignore").await;
+    let preview = publish::preview(&git(), repo.path(), 2000, &c())
+        .await
+        .expect("preview");
+    assert!(preview.has_gitignore);
+    // A large file stays in the history even if it is no longer in the tree.
+    repo.run(&["rm", "-q", "app/target/out.bin"]).await;
+    repo.commit_with(&["-m", "drop"]).await;
+    let preview = publish::preview(&git(), repo.path(), 2000, &c())
+        .await
+        .expect("preview");
+    assert_eq!(preview.large_files.len(), 1);
+}
+
+#[tokio::test]
+async fn refuses_without_commits_or_on_a_detached_head() {
+    let repo = TestRepo::new().await;
+    let err = publish::preview(&git(), repo.path(), 1, &c())
+        .await
+        .expect_err("no commits");
+    assert_eq!(err.kind(), ErrorKind::NoCommits);
+
+    let first = repo.commit_file("a.txt", "a\n", "a").await;
+    repo.run(&["checkout", "-q", "--detach", &first]).await;
+    let err = publish::preview(&git(), repo.path(), 1, &c())
+        .await
+        .expect_err("detached");
+    assert_eq!(err.kind(), ErrorKind::DetachedHead);
+}
+
+#[tokio::test]
+async fn creates_the_private_repository_adds_origin_and_pushes_with_upstream() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("a.txt", "a\n", "a").await;
+    let (_github, url) = github_side().await;
+    let fake = FakeGh::new(true, "https", false, &url);
+
+    let published = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
+        .await
+        .expect("publish");
+    assert_eq!(published.full_name, "ana/x");
+    assert_eq!(published.remote_url, format!("{url}.git"));
+    assert_eq!(
+        fake.calls(),
+        [
+            "auth status --hostname github.com --json hosts",
+            "repo view ana/x --json name",
+            "repo create x --private --description=-probando, con comas",
+        ]
+    );
+    assert_eq!(
+        repo.run(&["remote", "get-url", "origin"]).await.trim(),
+        format!("{url}.git")
+    );
+
+    // The normal push publishes the branch: never forced, with upstream.
+    let outcome = remote::push(&git(), repo.path(), Some("origin"), None, &c(), |_| {})
+        .await
+        .expect("push");
+    assert!(matches!(outcome, PushOutcome::Pushed { .. }), "{outcome:?}");
+    assert_eq!(
+        repo.run(&["rev-parse", "--abbrev-ref", "main@{upstream}"])
+            .await
+            .trim(),
+        "origin/main"
+    );
+}
+
+#[tokio::test]
+async fn an_existing_name_changes_nothing() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("a.txt", "a\n", "a").await;
+    let fake = FakeGh::new(true, "https", true, "unused");
+    let err = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
+        .await
+        .expect_err("exists");
+    assert_eq!(err.kind(), ErrorKind::GhRepoExists);
+    assert!(!fake.calls().iter().any(|c| c.starts_with("repo create")));
+    assert!(
+        repo.run(&["remote"]).await.trim().is_empty(),
+        "no origin added"
+    );
+}
+
+#[tokio::test]
+async fn needs_a_session_a_valid_name_and_no_remote() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("a.txt", "a\n", "a").await;
+
+    let fake = FakeGh::new(false, "https", false, "unused");
+    let err = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
+        .await
+        .expect_err("no session");
+    assert_eq!(err.kind(), ErrorKind::GhNotLoggedIn);
+
+    let fake = FakeGh::new(true, "https", false, "unused");
+    let err = publish::publish(&git(), &fake.gh, repo.path(), &request("-x"), &c())
+        .await
+        .expect_err("bad name");
+    assert_eq!(err.kind(), ErrorKind::InvalidRepoName);
+    assert!(!fake.calls().iter().any(|c| c.starts_with("repo ")));
+
+    repo.run(&["remote", "add", "other", "https://example.com/r.git"])
+        .await;
+    let fake = FakeGh::new(true, "https", false, "unused");
+    let err = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
+        .await
+        .expect_err("has remote");
+    assert_eq!(err.kind(), ErrorKind::HasRemote);
+    assert!(fake.calls().is_empty(), "gh is not even asked");
+}
+
+#[tokio::test]
+async fn a_push_that_fails_after_creating_leaves_origin_to_retry() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("a.txt", "a\n", "a").await;
+    let gone = PathBuf::from("/nonexistent/gitcraft-test/x");
+    let fake = FakeGh::new(true, "https", false, &format!("file://{}", gone.display()));
+    publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
+        .await
+        .expect("created");
+    let err = remote::push(&git(), repo.path(), Some("origin"), None, &c(), |_| {})
+        .await
+        .expect_err("push fails");
+    assert_ne!(err.kind(), ErrorKind::Cancelled);
+    assert_eq!(
+        repo.run(&["remote"]).await.trim(),
+        "origin",
+        "kept to retry"
+    );
+}
+
+#[tokio::test]
+async fn uses_the_ssh_url_when_the_account_uses_ssh() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("a.txt", "a\n", "a").await;
+    let fake = FakeGh::new(true, "ssh", false, "https://github.com/ana/x");
+    let published = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
+        .await
+        .expect("publish");
+    assert_eq!(published.remote_url, "git@github.com:ana/x.git");
+    assert_eq!(published.web_url, "https://github.com/ana/x");
+}

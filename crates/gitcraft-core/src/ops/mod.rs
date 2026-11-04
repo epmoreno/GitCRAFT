@@ -9,6 +9,7 @@ pub mod discard;
 pub mod init;
 pub mod log;
 pub mod maintenance;
+pub mod publish;
 pub mod refs;
 pub mod remote;
 pub mod repo;

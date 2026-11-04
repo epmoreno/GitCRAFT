@@ -179,6 +179,18 @@ export const commands = {
 	ghLogout: (login: string) => typedError<GhStatus_Serialize, IpcError_Serialize>(__TAURI_INVOKE("gh_logout", { login })),
 	/**  `gh auth setup-git`: git then asks gh for github.com credentials. */
 	ghSetupGit: () => typedError<GhStatus_Serialize, IpcError_Serialize>(__TAURI_INVOKE("gh_setup_git")),
+	/**
+	 *  What "Publish on GitHub" would upload from tab `id`, the suggested name
+	 *  and the account it goes to.
+	 */
+	publishInfo: (id: number) => typedError<PublishInfo_Serialize, IpcError_Serialize>(__TAURI_INVOKE("publish_info", { id })),
+	/**  Whether `name` can be a GitHub repository name. */
+	validRepoName: (name: string) => typedError<boolean, IpcError_Serialize>(__TAURI_INVOKE("valid_repo_name", { name })),
+	/**
+	 *  Creates the repository in the personal GitHub account (checking first
+	 *  that the name is free) and adds it as `origin`. Never pushes.
+	 */
+	publishRepository: (id: number, name: string, description: string | null, isPrivate: boolean) => typedError<Published, IpcError_Serialize>(__TAURI_INVOKE("publish_repository", { id, name, description, isPrivate })),
 	/**  The folder name a clone of `url` gets by default. */
 	defaultCloneName: (url: string) => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("default_clone_name", { url })),
 	/**  Whether a clone can go to `parent/name` (never a folder with files). */
@@ -588,7 +600,9 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 /**  The configuration only allows fast-forward and the branches diverged. */
 "notFastForward" | "diskFull" | 
 /**  The system denied access to a file or folder of the repository. */
-"filePermission" | 
+"filePermission" | "noCommits" | "hasRemote" | "invalidRepoName" | 
+/**  The name is taken in the GitHub account; nothing was created. */
+"ghRepoExists" | 
 /**  GitHub CLI (`gh`) is not installed. */
 "ghNotFound" | 
 /**  `gh` has no valid session for github.com. */
@@ -742,6 +756,8 @@ export type GhAccount = {
 	active: boolean,
 	/**  The token works (false: expired or revoked; sign in again). */
 	valid: boolean,
+	/**  `https` or `ssh`: how git talks to GitHub for this account. */
+	gitProtocol: string,
 };
 
 /**  Settings → GitHub account. */
@@ -1055,6 +1071,11 @@ export type IpcError_Serialize = {
 
 export type Language = "es" | "en";
 
+export type LargeFile = {
+	path: string,
+	size: number | null,
+};
+
 export type LineKind = "context" | "added" | "removed";
 
 /**  What the sign-in reports while it waits for the browser. */
@@ -1076,6 +1097,59 @@ export type OrphanCommit = {
 	author: string,
 	/**  Author date, Unix seconds. */
 	time: number,
+};
+
+/**  Everything the "Publish on GitHub" dialog shows before publishing. */
+export type PublishInfo = PublishInfo_Serialize | PublishInfo_Deserialize;
+
+/**  Everything the "Publish on GitHub" dialog shows before publishing. */
+export type PublishInfo_Deserialize = {
+	preview: PublishPreview,
+	/**  From the folder name, adjusted to GitHub's rules. */
+	suggestedName: string,
+	/**
+	 *  The account it would be created in; `None`: no valid session (or gh
+	 *  is not installed, see `gh_installed`).
+	 */
+	account?: GhAccount | null,
+	ghInstalled: boolean,
+};
+
+/**  Everything the "Publish on GitHub" dialog shows before publishing. */
+export type PublishInfo_Serialize = {
+	preview: PublishPreview,
+	/**  From the folder name, adjusted to GitHub's rules. */
+	suggestedName: string,
+	/**
+	 *  The account it would be created in; `None`: no valid session (or gh
+	 *  is not installed, see `gh_installed`).
+	 */
+	account: GhAccount | null,
+	ghInstalled: boolean,
+};
+
+/**  What publishing the current branch uploads, and what looks wrong. */
+export type PublishPreview = {
+	branch: string,
+	commits: number,
+	/**  Compressed size of everything reachable from HEAD (approximate). */
+	sizeBytes: number | null,
+	/**  The last commit has a `.gitignore` at the top. */
+	hasGitignore: boolean,
+	/**  Files over [`LARGE_FILE_BYTES`] anywhere in the history. */
+	largeFiles: LargeFile[],
+	/**  Committed folders named like [`BUILD_DIRS`] (topmost only). */
+	buildDirs: string[],
+};
+
+/**  The repository created on GitHub and the `origin` added for it. */
+export type Published = {
+	/**  `owner/name`. */
+	fullName: string,
+	/**  The repository's web page. */
+	webUrl: string,
+	/**  What `origin` points to. */
+	remoteUrl: string,
 };
 
 /**  Why uncommitted changes stop a pull. */
