@@ -94,3 +94,7 @@ usuario.
    lanzan en segundo plano con un límite de tiempo, se revisa su salida y se
    terminan. Si una comprobación tarda más de 2 minutos sin salida nueva, se
    detiene y se avisa al usuario.
+6. **Autenticación y portapapeles:** nunca se lanzan flujos de autenticación
+   (`gh auth login`, credenciales, llavero) ni se escribe en el portapapeles
+   del sistema sin pedir permiso antes al usuario, aunque sea en un entorno
+   aislado.

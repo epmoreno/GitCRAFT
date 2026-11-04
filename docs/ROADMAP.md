@@ -547,6 +547,9 @@ ningún producto.
 
       *Tests:* ⌘⌫ con el foco en la fila (tras clicar el nombre) abre la
       confirmación en las dos vistas, y ⌫ y Supr solos no hacen nada.
+      *Verificado manualmente:* el anillo en la fila entera; ⌘⌫ abre la
+      confirmación en el árbol y en la lista; ⌫ solo no hace nada; los
+      iconos de flechas.
 
 ### C. Pestaña nueva
 - [x] **C.1 Botón «+» y ⌘T.** El botón «+» de la barra de pestañas, ⌘T y
@@ -599,6 +602,9 @@ ningún producto.
       el zoom por nivel, elegir o quitar la carpeta para clonar, abrir desde
       el engranaje y desde el menú (⌘,), y en Rust la preferencia de la
       carpeta.
+      *Verificado manualmente:* ⌘, y el engranaje; el idioma cambia al
+      momento; los 4 tamaños escalan toda la UI; se propone la carpeta de
+      clonado elegida.
 - [x] **D.2 Rama inicial, pull por defecto y fetch automático.** Rama
       inicial por defecto (validada con `git check-ref-format`) y estrategia
       de pull por defecto (merge, rebase o solo fast-forward). Se guardan en
@@ -635,6 +641,10 @@ ningún producto.
         escribir, y Escape que cierra solo la confirmación;
       - fetch automático con temporizadores simulados: salta las operaciones
         en curso y marca los fallos sin avisos.
+      *Verificado manualmente:* la rama inicial y la estrategia de pull se
+      escriben en la config global, con el comando y el valor anterior
+      (comprobado en la terminal y restaurado después); el fetch automático
+      aparece en Operaciones.
 - [x] **D.3 Identidad de Git.** `user.name` y `user.email` en dos ámbitos:
       el global y el del repositorio de la pestaña activa, con el valor
       efectivo y de dónde viene. Se pueden editar los dos y quitar el del
@@ -657,6 +667,8 @@ ningún producto.
       *Tests:* integración en el núcleo (el valor del repo manda hasta que se
       quita) y en la UI: origen de cada parte, confirmación, «Usar la
       global», email no válido y sin repo abierto.
+      *Verificado manualmente:* la identidad por repositorio y «Usar la
+      global».
 - [x] **D.4 Cuenta de GitHub con `gh`.** Detecta si `gh` está instalado; si
       no, explica cómo instalarlo (`brew install gh` o cli.github.com). Lee
       el estado con `gh auth status --hostname github.com --json hosts` y
@@ -698,6 +710,10 @@ ningún producto.
 
       En la UI: los mismos estados, el flujo de inicio de sesión y las
       confirmaciones.
+      *Verificado manualmente:* sesión como @epmoreno; cerrar sesión con
+      confirmación; iniciar sesión dentro de la app con el código de un
+      solo uso, incluido cancelar. `gh auth status` en la terminal coincide
+      en cada paso.
 - [x] **D.5 Atajos (solo consulta).** Lista de todos los atajos de la app,
       agrupados (incluidos los del panel de cambios, como ⌘⌫ para
       descartar). Sale del mismo registro que usan los manejadores de teclado
@@ -718,6 +734,11 @@ ningún producto.
       - la lista muestra todos los atajos;
       - fuera del registro, ningún archivo compara teclas ni modificadores;
       - el menú no tiene aceleradores literales.
+      *Verificado manualmente:* la lista de atajos coincide con lo que
+      hacen las teclas.
+
+      Tras todas las pruebas de D, `~/.gitconfig` queda idéntico al de
+      antes (diff vacío, según el usuario).
 
 ### E. Publicar un repo local en GitHub
 - [ ] **E.1 Núcleo de publicación.** El repo siempre se crea en la **cuenta
