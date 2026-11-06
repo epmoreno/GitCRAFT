@@ -917,7 +917,7 @@ ningún producto.
       *Test:* falla si un nombre de otro cliente Git aparece en los textos
       públicos (README, i18n, metadatos); CLAUDE.md, VISION.md y
       THIRD_PARTY_NOTICES.md quedan fuera.
-- [ ] **V.2 Versión 0.2.1.** Versión, `.dmg` y README. El tag anotado `v0.2.1`
+- [x] **V.2 Versión 0.2.1.** Versión, `.dmg` y README. El tag anotado `v0.2.1`
       se crea solo cuando el usuario confirme la verificación.
 
 ## Fase P — Portabilidad

@@ -34,8 +34,16 @@ publishing on GitHub._
 
 ## Status
 
-**v0.2.0: phase 1.5 (polish, settings and GitHub publishing) is complete
-and manually verified**, on top of the v0.1.0 MVP.
+**v0.2.1.** Phase 1.5 (polish, settings and GitHub publishing) is complete and
+manually verified, on top of the v0.1.0 MVP.
+
+New in 0.2.1:
+
+- `gh` commands appear in the operations panel, with credentials redacted like
+  git's.
+- GitHub answers are read from HTTP status codes and JSON, not from `gh`'s
+  wording.
+- The publish dialog says how many warnings were left out of a long list.
 
 New in 0.2.0:
 

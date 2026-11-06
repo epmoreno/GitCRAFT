@@ -2,7 +2,7 @@
   "name": "gitcraft",
   "description": "GitCRAFT – cliente Git visual, rápido y de código abierto",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "type": "module",
   "scripts": {
