@@ -4,6 +4,14 @@ Cliente Git de escritorio original (Tauri 2 + Rust + React + TypeScript).
 Visión y alcance: `docs/VISION.md`. Tareas: `docs/ROADMAP.md`.
 Arquitectura: `docs/ARCHITECTURE.md`.
 
+## Identidad pública
+
+Descripción oficial: «GitCRAFT – cliente Git visual, rápido y de código abierto» (en inglés: «GitCRAFT – a visual, fast, open-source Git client»).
+
+En textos públicos no se menciona ningún otro cliente Git; la descripción
+oficial es la de arriba. Sí se nombran las herramientas con las que GitCRAFT se
+integra y los avisos de licencia.
+
 ## Reglas clean-room (obligatorias)
 
 - Los clientes propietarios son referencia **solo** de ideas generales de UX. No

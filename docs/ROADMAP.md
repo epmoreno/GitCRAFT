@@ -907,7 +907,7 @@ ningún producto.
       grandes o de carpetas de compilación se corta en 20, el diálogo lo dice.
       La vista previa devuelve los totales.
       *Tests:* núcleo (totales con más de 20) y diálogo (el texto).
-- [ ] **R.6 Identidad pública.** La descripción oficial, «GitCRAFT – cliente
+- [x] **R.6 Identidad pública.** La descripción oficial, «GitCRAFT – cliente
       Git visual, rápido y de código abierto», en README, VISION.md,
       `package.json`, `src-tauri/Cargo.toml`, `tauri.conf.json` y «Acerca de».
       En inglés (`en.json` y README, con la española debajo), «GitCRAFT – a

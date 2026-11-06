@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-GitCRAFT es un cliente Git de escritorio **original, rápido y visual**. Hace que el
+**GitCRAFT – cliente Git visual, rápido y de código abierto.** Hace que el
 historial y las operaciones de Git se entiendan de un vistazo y se ejecuten con
 pocos clics, sin esconder nunca lo que Git hace por debajo.
 

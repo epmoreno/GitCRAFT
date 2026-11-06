@@ -1,4 +1,7 @@
 {
+  "app": {
+    "description": "GitCRAFT – a visual, fast, open-source Git client"
+  },
   "zones": {
     "sidebar": "Sidebar",
     "graph": "History",

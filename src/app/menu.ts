@@ -24,7 +24,15 @@ export async function installAppMenu(
   const app = await Submenu.new({
     text: "GitCRAFT",
     items: [
-      await PredefinedMenuItem.new({ item: { About: null } }),
+      await PredefinedMenuItem.new({
+        item: {
+          // `credits` is what macOS shows; `comments`, Windows and Linux.
+          About: {
+            credits: t("app.description"),
+            comments: t("app.description"),
+          },
+        },
+      }),
       await separator(),
       await MenuItem.new({
         id: "settings",

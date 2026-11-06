@@ -1,6 +1,6 @@
 [package]
 name = "gitcraft"
-description = "GitCRAFT desktop app"
+description = "GitCRAFT – cliente Git visual, rápido y de código abierto"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

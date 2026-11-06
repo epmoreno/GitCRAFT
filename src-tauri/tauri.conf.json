@@ -30,6 +30,8 @@
     "active": true,
     "targets": ["app", "dmg"],
     "category": "DeveloperTool",
+    "shortDescription": "GitCRAFT – cliente Git visual, rápido y de código abierto",
+    "longDescription": "GitCRAFT – cliente Git visual, rápido y de código abierto",
     "copyright": "Copyright (c) 2026 Enrique. MIT License.",
     "icon": [
       "icons/32x32.png",

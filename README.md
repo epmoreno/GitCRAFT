@@ -1,7 +1,11 @@
 # GitCRAFT
 
-A fast, visual desktop Git client for macOS on Apple Silicon. Built with
-Tauri 2, Rust, React and TypeScript. MIT licensed.
+GitCRAFT – a visual, fast, open-source Git client
+
+GitCRAFT – cliente Git visual, rápido y de código abierto
+
+For macOS on Apple Silicon. Built with Tauri 2, Rust, React and TypeScript. MIT
+licensed.
 
 GitCRAFT makes Git's history and operations easy to read and quick to run,
 without hiding what Git does underneath:
