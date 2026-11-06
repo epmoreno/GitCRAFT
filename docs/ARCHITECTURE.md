@@ -394,6 +394,9 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   - Se puede cancelar: se mata el grupo de procesos.
   - El navegador se abre con `/usr/bin/open` y solo con URLs de
     `https://github.com/`.
+  - Cada comando va al mismo historial que git (`Gh::with_log`, misma redacción
+    de credenciales). Los que no son de ningún repo llevan la carpeta vacía y el
+    panel los muestra en todas las pestañas.
   - Los tests usan un `gh` simulado (script de prueba).
 - **Publicar en GitHub** (`gitcraft_core::ops::publish` y
   `src/features/publish/`). Los pasos se hacen por separado, en este orden:

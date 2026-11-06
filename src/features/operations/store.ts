@@ -67,5 +67,8 @@ export const useOperationsStore = create<OperationsState>()((set) => ({
 /** Whether `record` ran in the repository at `path` (or inside it). */
 export function ranIn(record: CommandRecord, path: string) {
   const root = path.replace(/\/$/, "");
+  // No folder: about no repository in particular (gh's session), so it
+  // belongs to every tab.
+  if (record.cwd === "") return true;
   return record.cwd === root || record.cwd.startsWith(`${root}/`);
 }

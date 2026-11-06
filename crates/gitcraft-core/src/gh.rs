@@ -9,12 +9,15 @@
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 
 use crate::error::GhHttp;
-use crate::{CancellationToken, GitError, Result};
+use crate::redact::redact_credentials;
+use crate::runner::log::{LogHandle, Pending, shell_line};
+use crate::{Access, CancellationToken, CommandLog, CommandOutcome, GitError, Result};
 
 /// The only host GitCRAFT signs in to.
 pub const GITHUB_HOST: &str = "github.com";
@@ -30,6 +33,9 @@ const FALLBACK_LOCATIONS: &[&str] = &["/opt/homebrew/bin/gh", "/usr/local/bin/gh
 pub struct Gh {
     exe: PathBuf,
     envs: Vec<(OsString, OsString)>,
+    log: Option<LogHandle>,
+    /// The repository these commands are about, if any.
+    repo: Option<PathBuf>,
 }
 
 /// One account gh knows for github.com.
@@ -157,7 +163,32 @@ impl Gh {
         Self {
             exe: exe.into(),
             envs: Vec::new(),
+            log: None,
+            repo: None,
         }
+    }
+
+    /// Reports every command to `log`, like [`crate::Git::with_log`].
+    pub fn with_log(mut self, log: Arc<dyn CommandLog>) -> Self {
+        self.log = Some(LogHandle(log));
+        self
+    }
+
+    /// The commands are about the repository at `repo`: they run there and
+    /// the history shows them with it. Otherwise they belong to no repository
+    /// and the history records an empty folder.
+    pub fn in_repo(mut self, repo: impl Into<PathBuf>) -> Self {
+        self.repo = Some(repo.into());
+        self
+    }
+
+    /// Records the start of a command in the history.
+    fn pending(&self, args: &[&str], access: Access) -> Option<Pending> {
+        let log = self.log.clone()?;
+        let line = shell_line(std::iter::once("gh").chain(args.iter().copied()));
+        let command = redact_credentials(&line).into_owned();
+        let cwd = self.repo.clone().unwrap_or_default();
+        Some(Pending::start(log, cwd, command, access))
     }
 
     pub fn exe(&self) -> &Path {
@@ -185,27 +216,51 @@ impl Gh {
         for (key, value) in &self.envs {
             cmd.env(key, value);
         }
+        if let Some(repo) = &self.repo {
+            cmd.current_dir(repo);
+        }
         #[cfg(unix)]
         cmd.process_group(0);
         cmd
     }
 
-    /// Runs gh to the end; a non-zero exit is an error with its stderr.
-    async fn run(&self, args: &[&str], cancel: &CancellationToken) -> Result<String> {
-        let child = self.command(args).spawn().map_err(spawn_error)?;
-        let output = tokio::select! {
-            output = child.wait_with_output() => output?,
-            () = cancel.cancelled() => return Err(GitError::Cancelled),
-        };
+    /// Runs gh to the end, recording it; a non-zero exit is an error with its
+    /// stderr.
+    async fn run(
+        &self,
+        args: &[&str],
+        access: Access,
+        cancel: &CancellationToken,
+    ) -> Result<String> {
+        let pending = self.pending(args, access);
+        let result = self.run_unlogged(args, cancel).await;
+        finish(pending, CommandOutcome::of(&result), &result);
+        result
+    }
+
+    async fn run_unlogged(&self, args: &[&str], cancel: &CancellationToken) -> Result<String> {
+        let output = self.output(args, cancel).await?;
         if !output.status.success() {
             return Err(failed(args, output.status.code(), &output.stderr));
         }
         Ok(String::from_utf8_lossy(&output.stdout).into_owned())
     }
 
+    async fn output(
+        &self,
+        args: &[&str],
+        cancel: &CancellationToken,
+    ) -> Result<std::process::Output> {
+        let child = self.command(args).spawn().map_err(spawn_error)?;
+        tokio::select! {
+            output = child.wait_with_output() => Ok(output?),
+            () = cancel.cancelled() => Err(GitError::Cancelled),
+        }
+    }
+
     /// `gh --version`'s first line ("gh version 2.62.0 (2024-11-14)").
     pub async fn version(&self, cancel: &CancellationToken) -> Result<String> {
-        let out = self.run(&["--version"], cancel).await?;
+        let out = self.run(&["--version"], Access::Read, cancel).await?;
         Ok(out.lines().next().unwrap_or_default().trim().to_owned())
     }
 
@@ -221,6 +276,7 @@ impl Gh {
                     "--json",
                     "hosts",
                 ],
+                Access::Read,
                 cancel,
             )
             .await?;
@@ -245,7 +301,20 @@ impl Gh {
             "https",
             "--skip-ssh-key",
         ];
-        let mut child = self.command(&args).spawn().map_err(spawn_error)?;
+        // Only the arguments are recorded: never the code gh prints.
+        let pending = self.pending(&args, Access::Write);
+        let result = self.login_unlogged(&args, &mut on_event, cancel).await;
+        finish(pending, CommandOutcome::of(&result), &result);
+        result
+    }
+
+    async fn login_unlogged(
+        &self,
+        args: &[&str],
+        on_event: &mut (impl FnMut(LoginEvent) + Send),
+        cancel: &CancellationToken,
+    ) -> Result<()> {
+        let mut child = self.command(args).spawn().map_err(spawn_error)?;
         let stderr = child
             .stderr
             .take()
@@ -274,21 +343,38 @@ impl Gh {
             }
         };
         if !status.success() {
-            return Err(failed(&args, status.code(), said.as_bytes()));
+            return Err(failed(args, status.code(), said.as_bytes()));
         }
         Ok(())
     }
 
     /// Runs `gh api --include …`. An HTTP answer is returned whatever its
     /// status (gh exits with 1 for 4xx and 5xx); only no answer is an error.
-    async fn api(&self, args: &[&str], cancel: &CancellationToken) -> Result<ApiResponse> {
+    /// The history counts 2xx and `expected` as success.
+    async fn api(
+        &self,
+        args: &[&str],
+        access: Access,
+        expected: &[u16],
+        cancel: &CancellationToken,
+    ) -> Result<ApiResponse> {
         let mut full = vec!["api", "--include"];
         full.extend_from_slice(args);
-        let child = self.command(&full).spawn().map_err(spawn_error)?;
-        let output = tokio::select! {
-            output = child.wait_with_output() => output?,
-            () = cancel.cancelled() => return Err(GitError::Cancelled),
+        let pending = self.pending(&full, access);
+        let result = self.api_unlogged(&full, cancel).await;
+        let outcome = match &result {
+            Ok(r) if (200..300).contains(&r.status) || expected.contains(&r.status) => {
+                CommandOutcome::Succeeded
+            }
+            Ok(_) => CommandOutcome::Failed { code: Some(1) },
+            Err(_) => CommandOutcome::of(&result),
         };
+        finish(pending, outcome, &result);
+        result
+    }
+
+    async fn api_unlogged(&self, full: &[&str], cancel: &CancellationToken) -> Result<ApiResponse> {
+        let output = self.output(full, cancel).await?;
         let stdout = String::from_utf8_lossy(&output.stdout);
         match parse_api_response(&stdout) {
             // Exit code 4: gh refused to call without a session.
@@ -310,7 +396,7 @@ impl Gh {
         cancel: &CancellationToken,
     ) -> Result<bool> {
         let path = format!("repos/{owner}/{name}");
-        let response = self.api(&[&path], cancel).await?;
+        let response = self.api(&[&path], Access::Read, &[404], cancel).await?;
         match response.status {
             200 => Ok(true),
             404 => Ok(false),
@@ -348,7 +434,7 @@ impl Gh {
         if let Some(field) = &description_field {
             args.extend(["-f", field]);
         }
-        let response = self.api(&args, cancel).await?;
+        let response = self.api(&args, Access::Write, &[], cancel).await?;
         match response.status {
             201 => serde_json::from_str(&response.body)
                 .map_err(|e| GitError::Parse(format!("POST user/repos: {e}"))),
@@ -361,6 +447,7 @@ impl Gh {
     pub async fn logout(&self, login: &str, cancel: &CancellationToken) -> Result<()> {
         self.run(
             &["auth", "logout", "--hostname", GITHUB_HOST, "--user", login],
+            Access::Write,
             cancel,
         )
         .await
@@ -370,9 +457,23 @@ impl Gh {
     /// Makes git ask gh for github.com credentials (writes the credential
     /// helper for github.com in the global git config).
     pub async fn setup_git(&self, cancel: &CancellationToken) -> Result<()> {
-        self.run(&["auth", "setup-git", "--hostname", GITHUB_HOST], cancel)
-            .await
-            .map(drop)
+        self.run(
+            &["auth", "setup-git", "--hostname", GITHUB_HOST],
+            Access::Write,
+            cancel,
+        )
+        .await
+        .map(drop)
+    }
+}
+
+/// Records the end of a command, unless it was cancelled: dropping `pending`
+/// records that.
+fn finish<T>(pending: Option<Pending>, outcome: CommandOutcome, result: &Result<T>) {
+    if !matches!(result, Err(GitError::Cancelled))
+        && let Some(pending) = pending
+    {
+        pending.finish(outcome);
     }
 }
 

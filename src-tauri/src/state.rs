@@ -1168,9 +1168,18 @@ impl AppState {
         self.open_repository(&result?).await
     }
 
-    /// gh, looked up each time so installing it needs no restart.
+    /// gh, looked up each time so installing it needs no restart. Its
+    /// commands go to the same history as git's.
+    fn find_gh(&self) -> Option<Gh> {
+        let log = self.git.as_ref().and_then(Git::command_log);
+        Gh::discover().map(|gh| match log {
+            Some(log) => gh.with_log(log),
+            None => gh,
+        })
+    }
+
     fn gh(&self) -> Result<Gh, IpcError> {
-        Ok(Gh::discover().ok_or(GitError::GhNotFound)?)
+        Ok(self.find_gh().ok_or(GitError::GhNotFound)?)
     }
 
     pub async fn gh_status(&self) -> Result<GhStatus, IpcError> {
@@ -1188,7 +1197,7 @@ impl AppState {
         let git_uses_gh = github_helpers
             .iter()
             .any(|h| h.contains("auth git-credential"));
-        let Some(gh) = Gh::discover() else {
+        let Some(gh) = self.find_gh() else {
             return Ok(GhStatus {
                 path: None,
                 version: None,
@@ -1250,7 +1259,7 @@ impl AppState {
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
-        let gh = Gh::discover();
+        let gh = self.find_gh();
         let account = match &gh {
             Some(gh) => gh
                 .accounts(&cancel)

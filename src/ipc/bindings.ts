@@ -328,10 +328,10 @@ export type CheckoutOutcome = { type: "switched" } |
  */
 changed: number };
 
-/**  How a git process ended. */
+/**  How a git or gh process ended. */
 export type CommandOutcome = CommandOutcome_Serialize | CommandOutcome_Deserialize;
 
-/**  How a git process ended. */
+/**  How a git or gh process ended. */
 export type CommandOutcome_Deserialize = { type: "succeeded" } | 
 /**
  *  Exited with a status the caller did not accept (`code` is missing
@@ -341,7 +341,7 @@ export type CommandOutcome_Deserialize = { type: "succeeded" } |
 /**  It could not be started or talked to. */
 { type: "error" };
 
-/**  How a git process ended. */
+/**  How a git or gh process ended. */
 export type CommandOutcome_Serialize = { type: "succeeded" } | 
 /**
  *  Exited with a status the caller did not accept (`code` is missing

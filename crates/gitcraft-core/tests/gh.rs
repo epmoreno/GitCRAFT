@@ -2,10 +2,13 @@
 //! or touches the real gh session.
 
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use gitcraft_core::gh::{Gh, GhAccount, LoginEvent};
-use gitcraft_core::{CancellationToken, ErrorKind, GitError};
+use gitcraft_core::{
+    Access, CancellationToken, CommandEvent, CommandLog, CommandOutcome, ErrorKind, GitError,
+};
 
 struct FakeGh {
     dir: tempfile::TempDir,
@@ -296,4 +299,161 @@ fn decisions_never_look_at_what_gh_says() {
     for phrase in ["not logged into", "gh auth login", "error connecting to"] {
         assert!(!errors.contains(phrase), "{phrase}");
     }
+}
+
+/// Keeps what the history would receive.
+#[derive(Default)]
+struct Recorder(Mutex<Vec<CommandEvent>>);
+
+impl CommandLog for Recorder {
+    fn record(&self, event: CommandEvent) {
+        self.0.lock().expect("lock").push(event);
+    }
+}
+
+fn logged(fake: &FakeGh) -> (Gh, Arc<Recorder>) {
+    let recorder = Arc::new(Recorder::default());
+    let gh = fake
+        .gh
+        .clone()
+        .with_log(Arc::clone(&recorder) as Arc<dyn CommandLog>);
+    (gh, recorder)
+}
+
+/// `(command, read or write, how it ended)` of each finished command.
+fn summary(recorder: &Recorder) -> Vec<(String, Access, Option<CommandOutcome>)> {
+    let events = recorder.0.lock().expect("lock");
+    events
+        .iter()
+        .filter_map(|event| match event {
+            CommandEvent::Started {
+                id,
+                command,
+                access,
+                ..
+            } => {
+                let outcome = events.iter().find_map(|e| match e {
+                    CommandEvent::Finished {
+                        id: end, outcome, ..
+                    } if end == id => Some(*outcome),
+                    _ => None,
+                });
+                Some((command.clone(), *access, outcome))
+            }
+            CommandEvent::Finished { .. } => None,
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn records_gh_commands_in_the_history() {
+    let fake = FakeGh::new(LOGGED_IN);
+    let (gh, recorder) = logged(&fake);
+    gh.accounts(&c()).await.expect("status");
+    assert_eq!(
+        summary(&recorder),
+        [(
+            "gh auth status --hostname github.com --json hosts".to_owned(),
+            Access::Read,
+            Some(CommandOutcome::Succeeded)
+        )]
+    );
+}
+
+#[tokio::test]
+async fn a_404_that_answers_the_question_is_not_a_failure() {
+    let fake = FakeGh::new(&answer("404 Not Found", "{}", 1));
+    let (gh, recorder) = logged(&fake);
+    assert!(!gh.repo_exists("ana", "x", &c()).await.expect("404"));
+    assert_eq!(
+        summary(&recorder)[0].2,
+        Some(CommandOutcome::Succeeded),
+        "the name is free: that is the answer"
+    );
+
+    let fake = FakeGh::new(&answer("500 Server Error", "{}", 1));
+    let (gh, recorder) = logged(&fake);
+    gh.repo_exists("ana", "x", &c()).await.expect_err("500");
+    assert_eq!(
+        summary(&recorder)[0].2,
+        Some(CommandOutcome::Failed { code: Some(1) })
+    );
+}
+
+#[tokio::test]
+async fn records_failures_and_cancelled_commands() {
+    let fake = FakeGh::new("exit 3");
+    let (gh, recorder) = logged(&fake);
+    gh.setup_git(&c()).await.expect_err("fails");
+    assert_eq!(
+        summary(&recorder),
+        [(
+            "gh auth setup-git --hostname github.com".to_owned(),
+            Access::Write,
+            Some(CommandOutcome::Failed { code: Some(3) })
+        )]
+    );
+
+    let fake = FakeGh::new("sleep 30");
+    let (gh, recorder) = logged(&fake);
+    let cancel = c();
+    cancel.cancel();
+    gh.setup_git(&cancel).await.expect_err("cancelled");
+    assert_eq!(summary(&recorder)[0].2, Some(CommandOutcome::Cancelled));
+}
+
+#[tokio::test]
+async fn the_history_redacts_credentials_and_never_shows_the_one_time_code() {
+    let body = r#"{"full_name":"a/x","html_url":"u","clone_url":"u","ssh_url":"u"}"#;
+    let fake = FakeGh::new(&answer("201 Created", body, 0));
+    let (gh, recorder) = logged(&fake);
+    gh.create_repo(
+        "x",
+        Some("mira https://ana:secreto@example.com/r.git"),
+        true,
+        &c(),
+    )
+    .await
+    .expect("created");
+    let command = summary(&recorder)[0].0.clone();
+    assert!(!command.contains("secreto"), "{command}");
+    assert!(
+        command.contains("https://***@example.com/r.git"),
+        "{command}"
+    );
+
+    let fake = FakeGh::new("echo '! One-time code (WXYZ-1234) copied to clipboard' >&2");
+    let (gh, recorder) = logged(&fake);
+    gh.login(|_| {}, &c()).await.expect("login");
+    let command = summary(&recorder)[0].0.clone();
+    assert!(command.starts_with("gh auth login"), "{command}");
+    assert!(!command.contains("WXYZ"), "{command}");
+}
+
+#[tokio::test]
+async fn gh_commands_about_a_repository_say_which_one() {
+    let fake = FakeGh::new(LOGGED_IN);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let folder = |recorder: &Recorder| {
+        recorder
+            .0
+            .lock()
+            .expect("lock")
+            .iter()
+            .find_map(|e| match e {
+                CommandEvent::Started { cwd, .. } => Some(cwd.clone()),
+                CommandEvent::Finished { .. } => None,
+            })
+    };
+    let (gh, recorder) = logged(&fake);
+    gh.accounts(&c()).await.expect("status");
+    assert_eq!(
+        folder(&recorder),
+        Some(PathBuf::new()),
+        "about no repository"
+    );
+
+    let (gh, recorder) = logged(&fake);
+    gh.in_repo(dir.path()).accounts(&c()).await.expect("status");
+    assert_eq!(folder(&recorder), Some(dir.path().to_owned()));
 }

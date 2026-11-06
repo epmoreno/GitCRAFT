@@ -7,7 +7,7 @@
 //! A [`CommandLog`] attached to [`Git`] sees every command start and end.
 
 mod discover;
-mod log;
+pub(crate) mod log;
 mod split;
 
 use std::ffi::OsString;
@@ -105,6 +105,11 @@ impl Git {
 
     pub fn exe(&self) -> &Path {
         &self.exe
+    }
+
+    /// Where this `Git` reports its commands (`Gh` reports to the same place).
+    pub fn command_log(&self) -> Option<Arc<dyn CommandLog>> {
+        self.log.as_ref().map(|handle| Arc::clone(&handle.0))
     }
 
     /// A command that only reads the repository at `cwd`.

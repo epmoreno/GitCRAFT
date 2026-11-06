@@ -667,7 +667,7 @@
   },
   "operations": {
     "button": "Operaciones",
-    "hint": "Operaciones en curso e historial de comandos de Git",
+    "hint": "Operaciones en curso e historial de comandos de Git y gh",
     "title": "Operaciones",
     "onlyActive": "Solo esta pestaña",
     "hideReads": "Ocultar lecturas",

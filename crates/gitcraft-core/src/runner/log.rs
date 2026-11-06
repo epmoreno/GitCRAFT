@@ -1,4 +1,4 @@
-//! Observes every git invocation, for the command history.
+//! Observes every git and gh invocation, for the command history.
 
 use std::fmt;
 use std::path::PathBuf;
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::Access;
 use crate::error::GitError;
 
-/// Receives an event when each git process starts and ends.
+/// Receives an event when each git or gh process starts and ends.
 pub trait CommandLog: Send + Sync {
     fn record(&self, event: CommandEvent);
 }
@@ -34,7 +34,7 @@ pub enum CommandEvent {
     },
 }
 
-/// How a git process ended.
+/// How a git or gh process ended.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
@@ -52,10 +52,12 @@ pub enum CommandOutcome {
 }
 
 impl CommandOutcome {
-    pub(super) fn of<T>(result: &Result<T, GitError>) -> Self {
+    pub(crate) fn of<T>(result: &Result<T, GitError>) -> Self {
         match result {
             Ok(_) => Self::Succeeded,
-            Err(GitError::Failed { exit_code, .. }) => Self::Failed { code: *exit_code },
+            Err(GitError::Failed { exit_code, .. } | GitError::GhFailed { exit_code, .. }) => {
+                Self::Failed { code: *exit_code }
+            }
             Err(GitError::Cancelled) => Self::Cancelled,
             Err(GitError::TimedOut(_)) => Self::TimedOut,
             Err(_) => Self::Error,
@@ -65,7 +67,7 @@ impl CommandOutcome {
 
 /// A shared [`CommandLog`], cheap to clone into every command.
 #[derive(Clone)]
-pub(super) struct LogHandle(pub(super) Arc<dyn CommandLog>);
+pub(crate) struct LogHandle(pub(crate) Arc<dyn CommandLog>);
 
 impl fmt::Debug for LogHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -77,7 +79,7 @@ static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
 /// A started command whose end has not been recorded yet. If the command's
 /// future is dropped before it ends, it is recorded as cancelled.
-pub(super) struct Pending {
+pub(crate) struct Pending {
     log: LogHandle,
     id: u64,
     start: Instant,
@@ -85,7 +87,7 @@ pub(super) struct Pending {
 }
 
 impl Pending {
-    pub(super) fn start(log: LogHandle, cwd: PathBuf, command: String, access: Access) -> Self {
+    pub(crate) fn start(log: LogHandle, cwd: PathBuf, command: String, access: Access) -> Self {
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
         log.0.record(CommandEvent::Started {
             id,
@@ -102,7 +104,7 @@ impl Pending {
         }
     }
 
-    pub(super) fn finish(mut self, outcome: CommandOutcome) {
+    pub(crate) fn finish(mut self, outcome: CommandOutcome) {
         self.record(outcome);
     }
 
@@ -126,7 +128,7 @@ impl Drop for Pending {
 
 /// `args` as one line a shell would run unchanged: arguments with special
 /// characters are single-quoted.
-pub(super) fn shell_line<'a>(args: impl IntoIterator<Item = &'a str>) -> String {
+pub(crate) fn shell_line<'a>(args: impl IntoIterator<Item = &'a str>) -> String {
     args.into_iter()
         .map(|arg| {
             let plain = !arg.is_empty()

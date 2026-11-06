@@ -121,6 +121,30 @@ describe("operations panel", () => {
     expect(texts()).toEqual(["git commit uno"]);
   });
 
+  it("shows gh commands with every tab: they are about no repository", async () => {
+    useOperationsStore.setState({
+      open: true,
+      records: [
+        record(1),
+        record(2, { cwd: "/r/dos", command: "git fetch dos" }),
+        record(3, {
+          cwd: "",
+          write: true,
+          command: "gh auth setup-git --hostname github.com",
+        }),
+      ],
+    });
+    renderPanel();
+    const texts = () =>
+      within(history())
+        .getAllByRole("listitem")
+        .map((li) => li.querySelector("code")?.textContent);
+    expect(texts()).toEqual([
+      "gh auth setup-git --hostname github.com",
+      record(1).command,
+    ]);
+  });
+
   it("shows running commands as they arrive and when they end", async () => {
     useOperationsStore.setState({ open: true });
     renderPanel();

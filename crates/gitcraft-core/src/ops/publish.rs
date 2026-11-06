@@ -237,6 +237,7 @@ pub async fn publish(
     if !remotes(git, repo, cancel).await?.is_empty() {
         return Err(GitError::HasRemote);
     }
+    let gh = gh.clone().in_repo(repo);
     let account = gh
         .accounts(cancel)
         .await?

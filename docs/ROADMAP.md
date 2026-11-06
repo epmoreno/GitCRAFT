@@ -879,11 +879,15 @@ ningún producto.
       (autorizada por el usuario), guardada como fixture en
       `tests/fixtures/gh_api_404.txt`. El resto de respuestas (200, 201, 401,
       422) son simuladas y no se han contrastado con GitHub.
-- [ ] **R.2 `gh` en el panel de Operaciones.** Cada comando de `gh` aparece en
+- [x] **R.2 `gh` en el panel de Operaciones.** Cada comando de `gh` aparece en
       el historial con su línea exacta, duración y resultado, con la misma
       redacción de credenciales que git y sin chocar con los ids de git.
       *Tests:* inicio y fin registrados, cancelado, y una URL con credenciales
       sale redactada. La línea del login no incluye el código de un solo uso.
+      *Estado:* los comandos que no son de ningún repo (sesión, `setup-git`) se
+      registran sin carpeta y salen en todas las pestañas; los de publicar, con
+      su repo. Un 404 al comprobar un nombre cuenta como correcto en el historial,
+      porque es la respuesta esperada.
 - [ ] **R.3 Tests aislados de la config global.** Un único
       `testing::isolated_git()` (config global vacía, sin config de sistema,
       identidad y fechas fijas) sustituye a los `Git::discover()` de
