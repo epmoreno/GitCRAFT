@@ -844,8 +844,16 @@ ningún producto.
       *Estado:* versión 0.2.0 en `Cargo.toml` (workspace), `package.json` y
       `tauri.conf.json`. README con las funciones de la fase 1.5, e
       INSTALACION.md con gh y con lo que desinstalar no deshace. El `.dmg`
-      se genera con `npm run dist`. Pendiente: la verificación del usuario y
-      el tag.
+      se genera con `npm run dist`.
+      *Verificado manualmente* con la app instalada desde el `.dmg` 0.2.0:
+      - «Acerca de GitCRAFT» muestra 0.2.0;
+      - se conservan pestañas, recientes, idioma, tamaño de texto y la vista
+        del panel (árbol/lista);
+      - vista de árbol y ⌘⌫ con confirmación, ⌘T, Ajustes con @epmoreno y el
+        diálogo «Publicar en GitHub» (cancelado);
+      - Fetch y Push de GitCRAFT.
+
+**Fase 1.5 completa y verificada manualmente** — versión `v0.2.0`.
 
 ## Fase 2
 
