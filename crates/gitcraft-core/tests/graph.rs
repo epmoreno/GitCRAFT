@@ -1,13 +1,13 @@
 //! Graph layout over real git history.
 
+use gitcraft_core::CancellationToken;
 use gitcraft_core::graph::{GraphLayout, GraphRow};
 use gitcraft_core::ops::log::stream_commits;
 use gitcraft_core::parse::log::Commit;
 use gitcraft_core::testing::TestRepo;
-use gitcraft_core::{CancellationToken, Git};
 
 async fn laid_out(repo: &TestRepo) -> Vec<(Commit, GraphRow)> {
-    let git = Git::discover().expect("git must be installed to run the tests");
+    let git = gitcraft_core::testing::isolated_git();
     let mut graph = GraphLayout::new();
     let mut rows = Vec::new();
     stream_commits(&git, repo.path(), false, &CancellationToken::new(), |c| {

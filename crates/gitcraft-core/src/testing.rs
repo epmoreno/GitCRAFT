@@ -21,6 +21,24 @@ pub const AUTHOR_EMAIL: &str = "test@gitcraft.invalid";
 /// 2023-11-14T22:13:20Z. The fake clock starts here.
 pub const EPOCH: u64 = 1_700_000_000;
 
+/// The `Git` every test uses: the developer's global and system git config
+/// are ignored, with a fixed identity and date, so no test depends on (or can
+/// write to) the machine's configuration. Tests that need a global config
+/// override `GIT_CONFIG_GLOBAL` with [`Git::with_env`].
+pub fn isolated_git() -> Git {
+    let date = format!("@{EPOCH} +0000");
+    Git::discover()
+        .expect("git must be installed to run tests")
+        .with_env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .with_env("GIT_CONFIG_NOSYSTEM", "1")
+        .with_env("GIT_AUTHOR_NAME", AUTHOR_NAME)
+        .with_env("GIT_AUTHOR_EMAIL", AUTHOR_EMAIL)
+        .with_env("GIT_COMMITTER_NAME", AUTHOR_NAME)
+        .with_env("GIT_COMMITTER_EMAIL", AUTHOR_EMAIL)
+        .with_env("GIT_AUTHOR_DATE", &date)
+        .with_env("GIT_COMMITTER_DATE", &date)
+}
+
 pub struct TestRepo {
     dir: TempDir,
     git: Git,
@@ -32,7 +50,7 @@ impl TestRepo {
     pub async fn new() -> Self {
         let repo = Self {
             dir: tempfile::tempdir().expect("create temp dir"),
-            git: Git::discover().expect("git must be installed to run tests"),
+            git: isolated_git(),
             clock: AtomicU64::new(0),
         };
         repo.run(&["init", "--initial-branch=main"]).await;
@@ -45,7 +63,7 @@ impl TestRepo {
     pub async fn clone_of(source: &Path) -> Self {
         let repo = Self {
             dir: tempfile::tempdir().expect("create temp dir"),
-            git: Git::discover().expect("git must be installed to run tests"),
+            git: isolated_git(),
             clock: AtomicU64::new(100),
         };
         let source = source.to_str().expect("utf-8 path");

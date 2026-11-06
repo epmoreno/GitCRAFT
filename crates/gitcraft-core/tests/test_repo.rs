@@ -87,3 +87,52 @@ async fn sample_history_is_deterministic() {
     let (_second, b) = TestRepo::sample_history().await;
     assert_eq!(a, b);
 }
+
+/// Every test goes through `testing::isolated_git()`.
+#[test]
+fn no_test_uses_the_real_git_configuration() {
+    let forbidden = concat!("Git::", "discover(");
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut files: Vec<_> = std::fs::read_dir(root.join("tests"))
+        .expect("tests dir")
+        .map(|entry| entry.expect("entry").path())
+        .filter(|path| path.extension().is_some_and(|e| e == "rs"))
+        .collect();
+    assert!(files.len() > 10, "{files:?}");
+    files.push(root.join("../../src-tauri/src/state.rs"));
+    for file in files {
+        let text = std::fs::read_to_string(&file).expect("read");
+        assert!(!text.contains(forbidden), "{}", file.display());
+    }
+}
+
+/// A global config that would change how git behaves is not even read.
+#[tokio::test]
+async fn a_hostile_global_config_has_no_effect() {
+    let home = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+        home.path().join(".gitconfig"),
+        "[pull]\n\trebase = true\n[commit]\n\tgpgsign = true\n[init]\n\tdefaultBranch = raro\n\
+         [user]\n\tname = Intruso\n",
+    )
+    .expect("write");
+    let git = gitcraft_core::testing::isolated_git()
+        .with_env("HOME", home.path())
+        .with_env("XDG_CONFIG_HOME", home.path());
+    let cancel = gitcraft_core::CancellationToken::new();
+    for key in [
+        "pull.rebase",
+        "commit.gpgsign",
+        "init.defaultBranch",
+        "user.name",
+    ] {
+        let out = git
+            .read(home.path())
+            .args(["config", "--get", key])
+            .accept_exit_code(1)
+            .output(&cancel)
+            .await
+            .expect("git config");
+        assert_eq!(out.exit_code, Some(1), "{key} must not be read");
+    }
+}

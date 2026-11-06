@@ -7,7 +7,7 @@ use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, ErrorKind, Git};
 
 fn git() -> Git {
-    Git::discover().expect("git must be installed to run the tests")
+    gitcraft_core::testing::isolated_git()
 }
 
 fn c() -> CancellationToken {
@@ -139,7 +139,7 @@ async fn identity_problems_are_recognised() {
     repo.write_file("a.txt", "a");
     repo.run(&["add", "a.txt"]).await;
     // No identity at all: isolated config and no GIT_AUTHOR_* variables.
-    let out = git()
+    let out = Git::at(git().exe())
         .write(repo.path())
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
         .env("GIT_CONFIG_NOSYSTEM", "1")

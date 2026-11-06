@@ -9,7 +9,7 @@ use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, Git};
 
 fn git() -> Git {
-    Git::discover().expect("git must be installed to run the tests")
+    gitcraft_core::testing::isolated_git()
 }
 
 async fn status(repo: &TestRepo) -> WorkingStatus {

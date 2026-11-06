@@ -14,7 +14,7 @@ fn c() -> CancellationToken {
 }
 
 fn git() -> Git {
-    Git::discover().expect("git")
+    gitcraft_core::testing::isolated_git()
 }
 
 const SIGNED_IN: &str = r#"{"hosts":{"github.com":[{"state":"success","active":true,"login":"ana","gitProtocol":"PROTOCOL"}]}}"#;

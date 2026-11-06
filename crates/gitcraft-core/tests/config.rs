@@ -16,8 +16,7 @@ struct Isolated {
 fn isolated() -> Isolated {
     let dir = tempfile::tempdir().expect("tempdir");
     let global = dir.path().join("gitconfig");
-    let git = Git::discover()
-        .expect("git")
+    let git = gitcraft_core::testing::isolated_git()
         .with_env("GIT_CONFIG_GLOBAL", &global)
         .with_env("GIT_CONFIG_NOSYSTEM", "1");
     Isolated {

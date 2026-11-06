@@ -1425,7 +1425,7 @@ mod tests {
         let changed = Arc::new(Mutex::new(Vec::new()));
         let sink = Arc::clone(&changed);
         let state = AppState::new(
-            Git::discover().ok(),
+            Some(gitcraft_core::testing::isolated_git()),
             SettingsFile::new(&settings_path),
             Arc::new(move |event: RepoChanged| sink.lock().expect("lock").push(event.id)),
         );
@@ -1930,7 +1930,7 @@ mod tests {
 
         // A new start, with the same settings file.
         let state = AppState::new(
-            Git::discover().ok(),
+            Some(gitcraft_core::testing::isolated_git()),
             SettingsFile::new(&f.settings_path),
             Arc::new(|_| {}),
         );
@@ -1969,7 +1969,7 @@ mod tests {
 
         // Forgotten: the next start only reopens the valid ones, silently.
         let state = AppState::new(
-            Git::discover().ok(),
+            Some(gitcraft_core::testing::isolated_git()),
             SettingsFile::new(&f.settings_path),
             Arc::new(|_| {}),
         );

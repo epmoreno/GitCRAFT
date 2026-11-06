@@ -888,13 +888,18 @@ ningún producto.
       registran sin carpeta y salen en todas las pestañas; los de publicar, con
       su repo. Un 404 al comprobar un nombre cuenta como correcto en el historial,
       porque es la respuesta esperada.
-- [ ] **R.3 Tests aislados de la config global.** Un único
+- [x] **R.3 Tests aislados de la config global.** Un único
       `testing::isolated_git()` (config global vacía, sin config de sistema,
       identidad y fechas fijas) sustituye a los `Git::discover()` de
       `crates/gitcraft-core/tests/` y de los tests de `src-tauri/src/state.rs`.
       *Test:* falla si aparece `Git::discover()` en un test fuera de ese
       helper. Toda la batería pasa también con un `~/.gitconfig` hostil simulado
       (`pull.rebase`, `commit.gpgsign`, `init.defaultBranch` raros).
+      *Estado:* `cargo test --workspace` pasa ejecutado con un `HOME` temporal
+      cuyo `.gitconfig` activa `pull.rebase`, `pull.ff=only`, `commit.gpgsign`,
+      `core.autocrlf`, `core.hooksPath`, `merge.ff=only`, `push.default=nothing`
+      y `color.ui=always`. Esa ejecución fue manual; en la batería queda un test
+      más pequeño que comprueba que esa configuración no se lee.
 - [ ] **R.4 Sistemas probados.** README e INSTALACION.md dicen «probado en
       macOS 27.0.1; versiones anteriores no verificadas». El mínimo técnico
       (`minimumSystemVersion` 11.0) no cambia.

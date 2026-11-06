@@ -81,7 +81,7 @@ async fn measure(git: &Git, repo: &Path, label: &str) {
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "benchmark: run with `npm run bench:graph`"]
 async fn bench_graph_loading() {
-    let git = Git::discover().expect("git");
+    let git = gitcraft_core::testing::isolated_git();
     let commits: usize = std::env::var("GITCRAFT_BENCH_COMMITS")
         .ok()
         .and_then(|v| v.parse().ok())

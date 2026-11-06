@@ -9,7 +9,7 @@ use gitcraft_core::{
 };
 
 fn git() -> Git {
-    Git::discover().expect("git must be installed to run the tests")
+    gitcraft_core::testing::isolated_git()
 }
 
 /// Isolates a command from the developer's global and system git config.

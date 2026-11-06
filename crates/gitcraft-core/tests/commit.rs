@@ -5,7 +5,7 @@ use gitcraft_core::testing::{AUTHOR_EMAIL, AUTHOR_NAME, EPOCH, TestRepo};
 use gitcraft_core::{CancellationToken, ErrorKind, Git, GitError};
 
 fn git() -> Git {
-    Git::discover().expect("git must be installed to run the tests")
+    gitcraft_core::testing::isolated_git()
 }
 
 #[tokio::test]
