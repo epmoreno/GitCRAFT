@@ -106,7 +106,18 @@ pub enum GitError {
         args: Vec<String>,
         exit_code: Option<i32>,
         stderr: String,
+        http: GhHttp,
     },
+}
+
+/// What GitHub answered to a failed `gh` command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GhHttp {
+    /// Not a `gh api` call: only its exit code says anything.
+    NotApi,
+    /// `gh api` got no HTTP response at all.
+    NoResponse,
+    Status(u16),
 }
 
 /// What went wrong, in terms the UI can explain. Each kind has a translated
@@ -199,7 +210,9 @@ impl GitError {
             Self::GhRepoExists(_) => ErrorKind::GhRepoExists,
             Self::GhNotFound => ErrorKind::GhNotFound,
             Self::GhNotLoggedIn => ErrorKind::GhNotLoggedIn,
-            Self::GhFailed { stderr, .. } => classify_gh(stderr),
+            Self::GhFailed {
+                exit_code, http, ..
+            } => classify_gh(*exit_code, *http),
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
     }
@@ -229,6 +242,7 @@ impl GitError {
                 args,
                 exit_code,
                 stderr,
+                ..
             } => {
                 let mut text = format!("$ gh {}\n{}", args.join(" "), stderr.trim_end());
                 if let Some(code) = exit_code {
@@ -262,22 +276,14 @@ impl GitError {
     }
 }
 
-/// Maps `gh`'s stderr to an [`ErrorKind`] (gh has no machine-readable
-/// errors; these phrases have been stable across releases).
-pub fn classify_gh(stderr: &str) -> ErrorKind {
-    const PATTERNS: &[(&str, ErrorKind)] = &[
-        ("not logged into", ErrorKind::GhNotLoggedIn),
-        ("gh auth login", ErrorKind::GhNotLoggedIn),
-        ("HTTP 401", ErrorKind::GhNotLoggedIn),
-        ("Bad credentials", ErrorKind::GhNotLoggedIn),
-        ("error connecting to", ErrorKind::RemoteUnreachable),
-        ("Could not resolve", ErrorKind::RemoteUnreachable),
-        ("no such host", ErrorKind::RemoteUnreachable),
-    ];
-    PATTERNS
-        .iter()
-        .find(|(needle, _)| stderr.contains(needle))
-        .map_or(ErrorKind::GhFailed, |(_, kind)| *kind)
+/// What a failed `gh` command means, from its documented exit codes (4:
+/// authentication needed) and the HTTP status. Never from its wording.
+fn classify_gh(exit_code: Option<i32>, http: GhHttp) -> ErrorKind {
+    match (exit_code, http) {
+        (Some(4), _) | (_, GhHttp::Status(401)) => ErrorKind::GhNotLoggedIn,
+        (_, GhHttp::NoResponse) => ErrorKind::RemoteUnreachable,
+        _ => ErrorKind::GhFailed,
+    }
 }
 
 /// Maps git's stderr (always produced with `LC_ALL=C`) to an [`ErrorKind`].

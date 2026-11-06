@@ -382,9 +382,14 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   - Se ejecuta como git: argumentos en array, sin shell, en su propio grupo
     de procesos, con `NO_COLOR` y sin avisos de actualización.
   - El estado sale de `gh auth status --hostname github.com --json hosts`.
+  - **Ninguna decisión depende del texto de gh.** Las llamadas a la API van con
+    `gh api --include` y se decide por el código HTTP y el JSON. Fuera de la API,
+    por los códigos de salida documentados (4 = hace falta autenticación).
+    `gh api` sin respuesta HTTP se explica como problema de red, y la salida
+    original de gh siempre está disponible.
   - El inicio de sesión (`gh auth login --web --git-protocol https
-    --skip-ssh-key`) no tiene salida para máquinas. Es la única excepción
-    a «no parsear salida pensada para humanos»: solo se extrae el código
+    --skip-ssh-key`) no tiene salida para máquinas. Es la **única excepción** a
+    «no parsear salida pensada para humanos»: solo se extrae el código
     `XXXX-XXXX` (y la URL es fija), y todo lo demás se muestra tal cual.
   - Se puede cancelar: se mata el grupo de procesos.
   - El navegador se abre con `/usr/bin/open` y solo con URLs de
@@ -395,7 +400,8 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   1. vista previa;
   2. comprobaciones sin cambiar nada (sin remotos, sesión válida, nombre
      válido y libre en la cuenta);
-  3. `gh repo create`;
+  3. `gh api -X POST user/repos`, que siempre crea en la cuenta personal y da
+     las URLs en JSON;
   4. `git remote add -- origin`;
   5. push normal con `publishTo: "origin"`, nunca forzado.
 

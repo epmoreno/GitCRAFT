@@ -8,7 +8,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::gh::{GITHUB_HOST, Gh};
+use crate::gh::Gh;
 use crate::ops::remote::{current_branch, remotes};
 use crate::{CancellationToken, Git, GitError, Result};
 
@@ -246,14 +246,16 @@ pub async fn publish(
     if !valid_repo_name(&request.name) {
         return Err(GitError::InvalidRepoName(request.name.clone()));
     }
-    let full_name = format!("{}/{}", account.login, request.name);
     if gh
         .repo_exists(&account.login, &request.name, cancel)
         .await?
     {
-        return Err(GitError::GhRepoExists(full_name));
+        return Err(GitError::GhRepoExists(format!(
+            "{}/{}",
+            account.login, request.name
+        )));
     }
-    let web_url = gh
+    let created = gh
         .create_repo(
             &request.name,
             request.description.as_deref(),
@@ -262,17 +264,17 @@ pub async fn publish(
         )
         .await?;
     let remote_url = if account.git_protocol == "ssh" {
-        format!("git@{GITHUB_HOST}:{full_name}.git")
+        created.ssh_url
     } else {
-        format!("{web_url}.git")
+        created.clone_url
     };
     git.write(repo)
         .args(["remote", "add", "--", "origin", &remote_url])
         .output(cancel)
         .await?;
     Ok(Published {
-        full_name,
-        web_url,
+        full_name: created.full_name,
+        web_url: created.html_url,
         remote_url,
     })
 }

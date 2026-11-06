@@ -19,15 +19,15 @@ fn git() -> Git {
 
 const SIGNED_IN: &str = r#"{"hosts":{"github.com":[{"state":"success","active":true,"login":"ana","gitProtocol":"PROTOCOL"}]}}"#;
 
-/// A `gh` that records its calls. `exists`: what `gh repo view` answers;
-/// `created`: the URL `gh repo create` prints.
+/// A `gh` that records its calls. `exists`: whether the name is taken;
+/// `clone_url`: what the API says about the created repository.
 struct FakeGh {
     dir: tempfile::TempDir,
     gh: Gh,
 }
 
 impl FakeGh {
-    fn new(signed_in: bool, protocol: &str, exists: bool, created: &str) -> Self {
+    fn new(signed_in: bool, protocol: &str, exists: bool, clone_url: &str) -> Self {
         let dir = tempfile::tempdir().expect("tempdir");
         let status = if signed_in {
             SIGNED_IN.replace("PROTOCOL", protocol)
@@ -35,15 +35,17 @@ impl FakeGh {
             r#"{"hosts":{}}"#.to_owned()
         };
         let view = if exists {
-            "echo '{\"name\":\"x\"}'".to_owned()
+            "printf 'HTTP/2.0 200 OK\\n\\n{}\\n'".to_owned()
         } else {
-            "echo \"GraphQL: Could not resolve to a Repository with the name '$3'. (repository)\" >&2; exit 1".to_owned()
+            "printf 'HTTP/2.0 404 Not Found\\n\\n{}\\n'; exit 1".to_owned()
         };
+        let created = format!(
+            r#"{{"full_name":"ana/x","html_url":"https://github.com/ana/x","clone_url":"{clone_url}","ssh_url":"git@github.com:ana/x.git"}}"#
+        );
         let script = format!(
             "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"{log}\"\ncase \"$1 $2\" in\n\
              'auth status') echo '{status}' ;;\n\
-             'repo view') {view} ;;\n\
-             'repo create') echo '{created}' ;;\n\
+             'api --include') if [ \"$3\" = '-X' ]; then printf 'HTTP/2.0 201 Created\\n\\n%s\\n' '{created}'; else {view}; fi ;;\n\
              esac\n",
             log = dir.path().join("calls.log").display(),
         );
@@ -71,8 +73,7 @@ fn make_executable(path: &Path) {
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
 }
 
-/// A bare repository standing for the one GitHub creates: `<dir>/x.git`,
-/// reported by the fake as `file://<dir>/x` (gh prints it without `.git`).
+/// A bare repository standing for the one GitHub creates: `<dir>/x.git`.
 async fn github_side() -> (tempfile::TempDir, String) {
     let dir = tempfile::tempdir().expect("tempdir");
     let bare = dir.path().join("x.git");
@@ -84,7 +85,7 @@ async fn github_side() -> (tempfile::TempDir, String) {
         .await
         .expect("git init --bare");
     assert!(out.status.success());
-    let url = format!("file://{}", dir.path().join("x").display());
+    let url = format!("file://{}", bare.display());
     (dir, url)
 }
 
@@ -158,19 +159,16 @@ async fn creates_the_private_repository_adds_origin_and_pushes_with_upstream() {
         .await
         .expect("publish");
     assert_eq!(published.full_name, "ana/x");
-    assert_eq!(published.remote_url, format!("{url}.git"));
+    assert_eq!(published.remote_url, url);
     assert_eq!(
         fake.calls(),
         [
             "auth status --hostname github.com --json hosts",
-            "repo view ana/x --json name",
-            "repo create x --private --description=-probando, con comas",
+            "api --include repos/ana/x",
+            "api --include -X POST user/repos -f name=x -F private=true -f description=-probando, con comas",
         ]
     );
-    assert_eq!(
-        repo.run(&["remote", "get-url", "origin"]).await.trim(),
-        format!("{url}.git")
-    );
+    assert_eq!(repo.run(&["remote", "get-url", "origin"]).await.trim(), url);
 
     // The normal push publishes the branch: never forced, with upstream.
     let outcome = remote::push(&git(), repo.path(), Some("origin"), None, &c(), |_| {})
@@ -194,7 +192,7 @@ async fn an_existing_name_changes_nothing() {
         .await
         .expect_err("exists");
     assert_eq!(err.kind(), ErrorKind::GhRepoExists);
-    assert!(!fake.calls().iter().any(|c| c.starts_with("repo create")));
+    assert!(!fake.calls().iter().any(|c| c.contains("-X POST")));
     assert!(
         repo.run(&["remote"]).await.trim().is_empty(),
         "no origin added"
@@ -217,7 +215,7 @@ async fn needs_a_session_a_valid_name_and_no_remote() {
         .await
         .expect_err("bad name");
     assert_eq!(err.kind(), ErrorKind::InvalidRepoName);
-    assert!(!fake.calls().iter().any(|c| c.starts_with("repo ")));
+    assert!(!fake.calls().iter().any(|c| c.starts_with("api ")));
 
     repo.run(&["remote", "add", "other", "https://example.com/r.git"])
         .await;
@@ -253,7 +251,7 @@ async fn a_push_that_fails_after_creating_leaves_origin_to_retry() {
 async fn uses_the_ssh_url_when_the_account_uses_ssh() {
     let repo = TestRepo::new().await;
     repo.commit_file("a.txt", "a\n", "a").await;
-    let fake = FakeGh::new(true, "ssh", false, "https://github.com/ana/x");
+    let fake = FakeGh::new(true, "ssh", false, "https://github.com/ana/x.git");
     let published = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
         .await
         .expect("publish");

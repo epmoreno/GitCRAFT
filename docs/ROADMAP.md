@@ -857,7 +857,7 @@ ningún producto.
 
 ## v0.2.1 — Deuda de la fase 1.5
 
-- [ ] **R.1 `gh` sin buscar frases.** Ninguna decisión depende del texto de
+- [x] **R.1 `gh` sin buscar frases.** Ninguna decisión depende del texto de
       `gh`. Desaparecen `classify_gh` y la búsqueda de «Could not resolve…».
       - `repo_exists`: `gh api --include repos/<dueño>/<nombre>`. Se lee solo
         el código de estado HTTP: 200 existe, 404 no existe, cualquier otro es
@@ -875,6 +875,10 @@ ningún producto.
 
       *Tests sin red* (`gh` simulado): 200, 404, 401, 422, código de salida 4 y
       sin respuesta HTTP; un test falla si vuelve a compararse texto de `gh`.
+      *Estado:* formato comprobado con una llamada real de solo lectura
+      (autorizada por el usuario), guardada como fixture en
+      `tests/fixtures/gh_api_404.txt`. El resto de respuestas (200, 201, 401,
+      422) son simuladas y no se han contrastado con GitHub.
 - [ ] **R.2 `gh` en el panel de Operaciones.** Cada comando de `gh` aparece en
       el historial con su línea exacta, duración y resultado, con la misma
       redacción de credenciales que git y sin chocar con los ids de git.

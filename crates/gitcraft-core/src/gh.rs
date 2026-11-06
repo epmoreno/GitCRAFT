@@ -13,6 +13,7 @@ use std::process::Stdio;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 
+use crate::error::GhHttp;
 use crate::{CancellationToken, GitError, Result};
 
 /// The only host GitCRAFT signs in to.
@@ -62,6 +63,66 @@ struct HostEntry {
     state: String,
     #[serde(default, rename = "gitProtocol")]
     git_protocol: String,
+}
+
+/// A repository just created on GitHub, from the API's JSON.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct CreatedRepo {
+    pub full_name: String,
+    pub html_url: String,
+    pub clone_url: String,
+    pub ssh_url: String,
+}
+
+/// An HTTP answer from `gh api --include`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ApiResponse {
+    status: u16,
+    body: String,
+}
+
+impl ApiResponse {
+    /// GitHub's validation errors name the field they are about.
+    fn rejects_field(&self, field: &str) -> bool {
+        #[derive(Deserialize)]
+        struct Validation {
+            #[serde(default)]
+            errors: Vec<FieldError>,
+        }
+        #[derive(Deserialize)]
+        struct FieldError {
+            #[serde(default)]
+            field: String,
+        }
+        serde_json::from_str::<Validation>(&self.body)
+            .is_ok_and(|v| v.errors.iter().any(|e| e.field == field))
+    }
+
+    fn into_error(self, path: &str) -> GitError {
+        GitError::GhFailed {
+            args: vec!["api".into(), path.to_owned()],
+            exit_code: Some(1),
+            stderr: self.body,
+            http: GhHttp::Status(self.status),
+        }
+    }
+}
+
+/// `HTTP/2.0 404 Not Found`, the headers, a blank line and the body.
+fn parse_api_response(text: &str) -> Option<ApiResponse> {
+    let mut status_line = text.lines().next()?.split(' ');
+    if !status_line.next()?.starts_with("HTTP/") {
+        return None;
+    }
+    let status = status_line.next()?.parse().ok()?;
+    let body = text
+        .split_once("\r\n\r\n")
+        .or_else(|| text.split_once("\n\n"))
+        .map_or("", |(_, body)| body);
+    Some(ApiResponse {
+        status,
+        body: body.to_owned(),
+    })
 }
 
 /// What the sign-in reports while it waits for the browser.
@@ -218,54 +279,82 @@ impl Gh {
         Ok(())
     }
 
-    /// Whether `owner/name` exists (and the session can see it).
+    /// Runs `gh api --include …`. An HTTP answer is returned whatever its
+    /// status (gh exits with 1 for 4xx and 5xx); only no answer is an error.
+    async fn api(&self, args: &[&str], cancel: &CancellationToken) -> Result<ApiResponse> {
+        let mut full = vec!["api", "--include"];
+        full.extend_from_slice(args);
+        let child = self.command(&full).spawn().map_err(spawn_error)?;
+        let output = tokio::select! {
+            output = child.wait_with_output() => output?,
+            () = cancel.cancelled() => return Err(GitError::Cancelled),
+        };
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        match parse_api_response(&stdout) {
+            // Exit code 4: gh refused to call without a session.
+            Some(response) if output.status.code() != Some(4) => Ok(response),
+            _ => Err(GitError::GhFailed {
+                args: full.iter().map(|a| (*a).to_owned()).collect(),
+                exit_code: output.status.code(),
+                stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+                http: GhHttp::NoResponse,
+            }),
+        }
+    }
+
+    /// Whether `owner/name` exists (and the session can see it): 200 or 404.
     pub async fn repo_exists(
         &self,
         owner: &str,
         name: &str,
         cancel: &CancellationToken,
     ) -> Result<bool> {
-        let full = format!("{owner}/{name}");
-        match self
-            .run(&["repo", "view", &full, "--json", "name"], cancel)
-            .await
-        {
-            Ok(_) => Ok(true),
-            Err(GitError::GhFailed { stderr, .. })
-                if stderr.contains("Could not resolve to a Repository") =>
-            {
-                Ok(false)
-            }
-            Err(err) => Err(err),
+        let path = format!("repos/{owner}/{name}");
+        let response = self.api(&[&path], cancel).await?;
+        match response.status {
+            200 => Ok(true),
+            404 => Ok(false),
+            _ => Err(response.into_error(&path)),
         }
     }
 
-    /// Creates an empty repository `name` in the signed-in account and
-    /// returns its web URL. `name` must be valid (see
-    /// `ops::publish::valid_repo_name`): it never starts with `-`.
+    /// Creates an empty repository `name` in the signed-in personal account
+    /// (`POST user/repos`). If the name got taken since it was checked, says
+    /// so with [`GitError::GhRepoExists`].
     pub async fn create_repo(
         &self,
         name: &str,
         description: Option<&str>,
         private: bool,
         cancel: &CancellationToken,
-    ) -> Result<String> {
-        let visibility = if private { "--private" } else { "--public" };
-        // `--description=…` in one argument: a description starting with
-        // `-` can never be read as another option.
-        let description = description
-            .filter(|d| !d.trim().is_empty())
-            .map(|d| format!("--description={}", d.trim()));
-        let mut args = vec!["repo", "create", name, visibility];
-        if let Some(d) = &description {
-            args.push(d);
-        }
-        let out = self.run(&args, cancel).await?;
-        out.lines()
+    ) -> Result<CreatedRepo> {
+        // `key=value` in one argument: a value starting with `-` can never be
+        // read as an option.
+        let name_field = format!("name={name}");
+        let private_field = format!("private={private}");
+        let description_field = description
             .map(str::trim)
-            .rfind(|line| line.contains("://"))
-            .map(|url| url.trim_end_matches('/').to_owned())
-            .ok_or_else(|| GitError::Parse(format!("gh repo create: {out:?}")))
+            .filter(|d| !d.is_empty())
+            .map(|d| format!("description={d}"));
+        let mut args = vec![
+            "-X",
+            "POST",
+            "user/repos",
+            "-f",
+            &name_field,
+            "-F",
+            &private_field,
+        ];
+        if let Some(field) = &description_field {
+            args.extend(["-f", field]);
+        }
+        let response = self.api(&args, cancel).await?;
+        match response.status {
+            201 => serde_json::from_str(&response.body)
+                .map_err(|e| GitError::Parse(format!("POST user/repos: {e}"))),
+            422 if response.rejects_field("name") => Err(GitError::GhRepoExists(name.to_owned())),
+            _ => Err(response.into_error("user/repos")),
+        }
     }
 
     /// Signs `login` out of github.com (gh forgets its token).
@@ -344,6 +433,7 @@ fn failed(args: &[&str], exit_code: Option<i32>, stderr: &[u8]) -> GitError {
         args: args.iter().map(|a| (*a).to_owned()).collect(),
         exit_code,
         stderr: String::from_utf8_lossy(stderr).into_owned(),
+        http: GhHttp::NotApi,
     }
 }
 
@@ -410,6 +500,19 @@ mod tests {
         );
         assert_eq!(parse_accounts(r#"{"hosts":{}}"#).expect("parse"), []);
         assert!(parse_accounts("You are not logged in").is_err());
+    }
+
+    #[test]
+    fn reads_the_status_and_body_of_a_real_api_answer() {
+        let real = include_str!("../tests/fixtures/gh_api_404.txt");
+        let response = parse_api_response(real).expect("response");
+        assert_eq!(response.status, 404);
+        assert!(response.body.starts_with('{'), "{}", response.body);
+
+        let crlf = parse_api_response("HTTP/2.0 201 Created\r\nA: b\r\n\r\n{}").expect("crlf");
+        assert_eq!((crlf.status, crlf.body.as_str()), (201, "{}"));
+        assert_eq!(parse_api_response("gh: something else"), None);
+        assert_eq!(parse_api_response(""), None);
     }
 
     #[test]

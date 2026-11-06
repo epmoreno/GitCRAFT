@@ -137,7 +137,7 @@ async fn cancelling_the_sign_in_stops_gh() {
 async fn a_failed_sign_in_keeps_what_gh_said() {
     let fake = FakeGh::new("echo 'error connecting to api.github.com' >&2; exit 1");
     let err = fake.gh.login(|_| {}, &c()).await.expect_err("fails");
-    assert_eq!(err.kind(), ErrorKind::RemoteUnreachable);
+    assert_eq!(err.kind(), ErrorKind::GhFailed);
     assert!(err.details().expect("details").contains("error connecting"));
 }
 
@@ -163,5 +163,137 @@ async fn never_asks_gh_for_a_token() {
     fake.gh.logout("ana", &c()).await.expect("logout");
     for call in fake.calls() {
         assert!(!call.contains("token"), "{call}");
+    }
+}
+
+/// What `gh api --include` writes for an HTTP answer.
+fn answer(status: &str, body: &str, exit: i32) -> String {
+    format!(
+        "printf 'HTTP/2.0 {status}\\nContent-Type: application/json\\n\\n%s\\n' '{body}'; exit {exit}"
+    )
+}
+
+#[tokio::test]
+async fn the_http_status_says_whether_a_repository_exists() {
+    let fake = FakeGh::new(&answer("200 OK", "{}", 0));
+    assert!(fake.gh.repo_exists("ana", "x", &c()).await.expect("200"));
+    assert_eq!(fake.calls(), ["api --include repos/ana/x"]);
+
+    // Nothing depends on gh's words: only the status counts.
+    let fake = FakeGh::new(&format!(
+        "echo 'mensaje cualquiera' >&2; {}",
+        answer("404 Not Found", "{}", 1)
+    ));
+    assert!(!fake.gh.repo_exists("ana", "x", &c()).await.expect("404"));
+
+    let fake = FakeGh::new(&format!(
+        "echo 'Could not resolve to a Repository' >&2; {}",
+        answer("500 Server Error", "{}", 1)
+    ));
+    let err = fake
+        .gh
+        .repo_exists("ana", "x", &c())
+        .await
+        .expect_err("500");
+    assert_eq!(err.kind(), ErrorKind::GhFailed);
+}
+
+#[tokio::test]
+async fn classifies_failures_by_exit_code_and_status_not_by_wording() {
+    // 401: the session is not valid, whatever gh says.
+    let fake = FakeGh::new(&answer("401 Unauthorized", "{}", 1));
+    let err = fake
+        .gh
+        .repo_exists("ana", "x", &c())
+        .await
+        .expect_err("401");
+    assert_eq!(err.kind(), ErrorKind::GhNotLoggedIn);
+
+    // Documented exit code 4: authentication needed.
+    let fake = FakeGh::new("echo 'lo que sea' >&2; exit 4");
+    let err = fake.gh.repo_exists("ana", "x", &c()).await.expect_err("4");
+    assert_eq!(err.kind(), ErrorKind::GhNotLoggedIn);
+    let err = fake
+        .gh
+        .setup_git(&c())
+        .await
+        .expect_err("4 outside the API");
+    assert_eq!(err.kind(), ErrorKind::GhNotLoggedIn);
+
+    // No HTTP answer at all: GitHub could not be reached. The output stays.
+    let fake = FakeGh::new("echo 'dial tcp: sin red' >&2; exit 1");
+    let err = fake
+        .gh
+        .repo_exists("ana", "x", &c())
+        .await
+        .expect_err("no answer");
+    assert_eq!(err.kind(), ErrorKind::RemoteUnreachable);
+    assert!(err.details().expect("details").contains("sin red"));
+
+    // Words that used to mean something no longer do.
+    let fake = FakeGh::new("echo 'not logged into github.com. gh auth login' >&2; exit 1");
+    let err = fake.gh.setup_git(&c()).await.expect_err("exit 1");
+    assert_eq!(err.kind(), ErrorKind::GhFailed);
+}
+
+#[tokio::test]
+async fn creates_in_the_personal_account_from_the_json_answer() {
+    let body = r#"{"full_name":"ana/x","html_url":"https://github.com/ana/x","clone_url":"https://github.com/ana/x.git","ssh_url":"git@github.com:ana/x.git"}"#;
+    let fake = FakeGh::new(&answer("201 Created", body, 0));
+    let created = fake
+        .gh
+        .create_repo("x", Some("  -con guion "), true, &c())
+        .await
+        .expect("created");
+    assert_eq!(created.full_name, "ana/x");
+    assert_eq!(created.ssh_url, "git@github.com:ana/x.git");
+    assert_eq!(
+        fake.calls(),
+        ["api --include -X POST user/repos -f name=x -F private=true -f description=-con guion"]
+    );
+}
+
+#[tokio::test]
+async fn a_name_taken_meanwhile_is_reported_as_existing() {
+    let taken = r#"{"message":"Repository creation failed.","errors":[{"resource":"Repository","code":"custom","field":"name"}]}"#;
+    let fake = FakeGh::new(&answer("422 Unprocessable Entity", taken, 1));
+    let err = fake
+        .gh
+        .create_repo("x", None, true, &c())
+        .await
+        .expect_err("422");
+    assert_eq!(err.kind(), ErrorKind::GhRepoExists);
+
+    // Another validation error stays a plain failure, with GitHub's answer.
+    let other = r#"{"message":"Validation Failed","errors":[{"field":"description"}]}"#;
+    let fake = FakeGh::new(&answer("422 Unprocessable Entity", other, 1));
+    let err = fake
+        .gh
+        .create_repo("x", None, false, &c())
+        .await
+        .expect_err("422");
+    assert_eq!(err.kind(), ErrorKind::GhFailed);
+    assert!(
+        err.details()
+            .expect("details")
+            .contains("Validation Failed")
+    );
+}
+
+/// The login's one-time code is the only thing read from gh's human output.
+/// (`error.rs` also matches git's messages, which `LC_ALL=C` keeps stable.)
+#[test]
+fn decisions_never_look_at_what_gh_says() {
+    for source in [
+        include_str!("../src/gh.rs"),
+        include_str!("../src/ops/publish.rs"),
+    ] {
+        for forbidden in ["stderr.contains", "said.contains", "stdout.contains"] {
+            assert!(!source.contains(forbidden), "{forbidden}");
+        }
+    }
+    let errors = include_str!("../src/error.rs");
+    for phrase in ["not logged into", "gh auth login", "error connecting to"] {
+        assert!(!errors.contains(phrase), "{phrase}");
     }
 }
