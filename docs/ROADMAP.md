@@ -900,7 +900,7 @@ ningún producto.
       `core.autocrlf`, `core.hooksPath`, `merge.ff=only`, `push.default=nothing`
       y `color.ui=always`. Esa ejecución fue manual; en la batería queda un test
       más pequeño que comprueba que esa configuración no se lee.
-- [ ] **R.4 Sistemas probados.** README e INSTALACION.md dicen «probado en
+- [x] **R.4 Sistemas probados.** README e INSTALACION.md dicen «probado en
       macOS 27.0.1; versiones anteriores no verificadas». El mínimo técnico
       (`minimumSystemVersion` 11.0) no cambia.
 - [ ] **R.5 «y N más» en los avisos de publicar.** Cuando la lista de archivos

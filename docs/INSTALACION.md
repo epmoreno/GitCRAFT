@@ -1,7 +1,7 @@
 # Instalar GitCRAFT en macOS (Apple Silicon)
 
-GitCRAFT se distribuye como `.dmg` para Macs con chip Apple (M1 o posterior),
-con macOS 11 o más reciente. Por ahora **no está firmado con un certificado
+GitCRAFT se distribuye como `.dmg` para Macs con chip Apple (M1 o posterior).
+**Probado en macOS 27.0.1; versiones anteriores no verificadas.** Por ahora **no está firmado con un certificado
 de desarrollador de Apple ni notarizado**: solo lleva una firma *ad-hoc*
 (local, sin identidad), que en Apple Silicon es necesaria para que macOS
 acepte ejecutar la app. Por eso la primera vez que la abras, macOS te pedirá

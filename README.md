@@ -89,9 +89,11 @@ Next phases are listed in [docs/ROADMAP.md](docs/ROADMAP.md).
 ## Install
 
 Download or build `GitCRAFT_<version>_aarch64.dmg`, open it and drag GitCRAFT
-to Applications. It needs macOS 11 or later on Apple Silicon, and Git
+to Applications. It needs Apple Silicon and Git
 installed (Xcode Command Line Tools or Homebrew). GitHub features (account,
 publishing) need [GitHub CLI](https://cli.github.com): `brew install gh`.
+
+Tested on macOS 27.0.1; earlier versions are not verified.
 
 The build is **not signed with an Apple developer certificate nor
 notarized**, so macOS asks for confirmation the first time. How to open it

@@ -520,7 +520,9 @@ previas que fallan dejan seguir y el error de la operación real se explica.
   alguna firma, y un `.app` sin sellar se reporta como «dañado» al
   descargarlo.
 - **`minimumSystemVersion: "11.0"`**, la primera versión de macOS para Apple
-  Silicon. Tauri lo pasa como `MACOSX_DEPLOYMENT_TARGET` a toda la
+  Silicon. Es un mínimo técnico, no una versión comprobada: solo se ha probado
+  en macOS 27.0.1. En versiones con un WebKit antiguo podrían faltar estilos que
+  dependen de `color-mix()`. Tauri lo pasa como `MACOSX_DEPLOYMENT_TARGET` a toda la
   compilación, incluidos los proc-macros. Con el toolchain actual en macOS 27,
   cualquier valor ≥ 12.0 genera dylibs de proc-macro que rustc no puede
   cargar (`E0463: can't find crate for …_macros`). Hay que volver a comprobarlo
