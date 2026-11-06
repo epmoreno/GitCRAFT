@@ -855,29 +855,174 @@ ningún producto.
 
 **Fase 1.5 completa y verificada manualmente** — versión `v0.2.0`.
 
+## v0.2.1 — Deuda de la fase 1.5
+
+- [ ] **R.1 `gh` sin buscar frases.** Ninguna decisión depende del texto de
+      `gh`. Desaparecen `classify_gh` y la búsqueda de «Could not resolve…».
+      - `repo_exists`: `gh api --include repos/<dueño>/<nombre>`. Se lee solo
+        el código de estado HTTP: 200 existe, 404 no existe, cualquier otro es
+        un error.
+      - `create_repo`: `gh api --include -X POST user/repos` con `-f`/`-F`.
+        `html_url`, `clone_url` y `ssh_url` salen del JSON, en vez de leer una
+        línea de `gh repo create` y montar la URL a mano. `user/repos` crea
+        siempre en la cuenta personal. Un 422 por nombre ocupado (otro lo creó
+        entre la comprobación y la creación) da `ghRepoExists`.
+      - Errores: código de salida 4 de `gh` o HTTP 401 → `ghNotLoggedIn`; `gh
+        api` sin respuesta HTTP → `remoteUnreachable`; el resto → `ghFailed`,
+        siempre con la salida original.
+      - El código de un solo uso del login queda como **única** excepción y se
+        corrige ARCHITECTURE.md.
+
+      *Tests sin red* (`gh` simulado): 200, 404, 401, 422, código de salida 4 y
+      sin respuesta HTTP; un test falla si vuelve a compararse texto de `gh`.
+- [ ] **R.2 `gh` en el panel de Operaciones.** Cada comando de `gh` aparece en
+      el historial con su línea exacta, duración y resultado, con la misma
+      redacción de credenciales que git y sin chocar con los ids de git.
+      *Tests:* inicio y fin registrados, cancelado, y una URL con credenciales
+      sale redactada. La línea del login no incluye el código de un solo uso.
+- [ ] **R.3 Tests aislados de la config global.** Un único
+      `testing::isolated_git()` (config global vacía, sin config de sistema,
+      identidad y fechas fijas) sustituye a los `Git::discover()` de
+      `crates/gitcraft-core/tests/` y de los tests de `src-tauri/src/state.rs`.
+      *Test:* falla si aparece `Git::discover()` en un test fuera de ese
+      helper. Toda la batería pasa también con un `~/.gitconfig` hostil simulado
+      (`pull.rebase`, `commit.gpgsign`, `init.defaultBranch` raros).
+- [ ] **R.4 Sistemas probados.** README e INSTALACION.md dicen «probado en
+      macOS 27.0.1; versiones anteriores no verificadas». El mínimo técnico
+      (`minimumSystemVersion` 11.0) no cambia.
+- [ ] **R.5 «y N más» en los avisos de publicar.** Cuando la lista de archivos
+      grandes o de carpetas de compilación se corta en 20, el diálogo lo dice.
+      La vista previa devuelve los totales.
+      *Tests:* núcleo (totales con más de 20) y diálogo (el texto).
+- [ ] **R.6 Identidad pública.** La descripción oficial, «GitCRAFT – cliente
+      Git visual, rápido y de código abierto», en README, VISION.md,
+      `package.json`, `src-tauri/Cargo.toml`, `tauri.conf.json` y «Acerca de».
+      En inglés (`en.json` y README, con la española debajo), «GitCRAFT – a
+      visual, fast, open-source Git client», que es también la descripción del
+      repo en GitHub. Las reglas clean-room de CLAUDE.md y VISION.md no se tocan.
+      Norma nueva en CLAUDE.md.
+      *Test:* falla si un nombre de otro cliente Git aparece en los textos
+      públicos (README, i18n, metadatos); CLAUDE.md, VISION.md y
+      THIRD_PARTY_NOTICES.md quedan fuera.
+- [ ] **V.2 Versión 0.2.1.** Versión, `.dmg` y README. El tag anotado `v0.2.1`
+      se crea solo cuando el usuario confirme la verificación.
+
+## Fase P — Portabilidad
+
+Objetivo: el código compila, pasa los tests y arranca en macOS, Windows y
+Linux, comprobado por el CI. La prueba manual en máquinas virtuales la hará el
+usuario más adelante. Los instaladores quedan para la fase de publicación.
+
+- [ ] **P.1 Inventario y norma.** Tabla en ARCHITECTURE.md con todo lo específico
+      de macOS, su equivalente en Windows y Linux y su tarea. Se añade a
+      CLAUDE.md: «todo código nuevo debe ser multiplataforma; lo específico de
+      un sistema va detrás de una abstracción». VISION.md actualiza el objetivo
+      de plataformas.
+- [ ] **P.2 CI en GitHub Actions.** `npm run check` con caché de Cargo y npm,
+      cancelando las ejecuciones anteriores de la misma rama. Mientras el repo
+      sea privado: `ubuntu-latest` y `windows-latest` en cada push, y
+      `macos-latest` solo bajo demanda (`workflow_dispatch`), porque en macOS ya
+      se ejecuta `npm run check` en cada commit. Mientras duren P.3–P.10, Windows
+      y Linux informan sin bloquear (`continue-on-error`).
+      *Verificable:* el workflow se ejecuta en cada push y macOS sale en verde
+      bajo demanda. Después de los primeros pushes se informa de los minutos
+      por ejecución y de una estimación mensual.
+- [ ] **P.3 Tests portables.** `.gitattributes` para los finales de línea. El
+      `gh` simulado deja de ser un script `sh` (un binario de prueba en Rust).
+      Sin `/dev/null` ni rutas de Unix en los tests; los de symlinks y permisos
+      solo donde aplican.
+      *Verificable:* los tests del núcleo pasan en los tres sistemas del CI.
+- [ ] **P.4 Atajos.** El registro único usa un modificador «principal»: ⌘ en
+      macOS y Ctrl en Windows/Linux, en manejadores, aceleradores, lista de
+      Ajustes y textos de i18n (hoy `⌘W`, `⌘T`, `⌘,`, `⌘↩` escritos a mano).
+      Descartar pasa a ser Ctrl+Supr fuera de macOS. Se revisan los choques
+      (⌃Tab en macOS).
+      *Tests:* cada atajo en las dos variantes, sin ningún `⌘` literal en i18n.
+- [ ] **P.5 Papelera.** Una implementación de `Trash` para Windows y Linux, con
+      su «Deshacer» (hoy devuelve error fuera de macOS). Se verifica la licencia
+      de cualquier crate antes de usarlo. Los textos dejan de nombrar Finder.
+      *Tests:* descartar y deshacer un archivo sin seguimiento en los tres.
+- [ ] **P.6 Localizar git y gh.** Sin depender de rutas de Homebrew: `PATH`
+      primero y ubicaciones por sistema detrás de una función (`git.exe`,
+      Program Files, `/usr/bin`). Lo mismo para `EXTRA_PATH_DIRS`. Abrir el
+      navegador deja de usar `/usr/bin/open`. Los textos de instalación («brew
+      install») dependen del sistema.
+      *Tests:* resolución por sistema con rutas simuladas.
+- [ ] **P.7 Cancelar procesos en Windows.** Job Objects en lugar de grupos de
+      procesos, en el ejecutor de git y en el de `gh`, sin ventanas de consola
+      (`CREATE_NO_WINDOW`).
+      *Test:* cancelar mata también los procesos hijos, en los tres.
+- [ ] **P.8 Rutas y finales de línea.** Separadores `\`, unidades y rutas largas
+      en sesión y recientes; `core.autocrlf` y CRLF en diffs y en el stage por
+      línea; `diff --no-index` contra `/dev/null`; bits de ejecución y symlinks
+      en descartar y deshacer; mayúsculas y minúsculas en rutas.
+      *Tests:* stage parcial y descarte con CRLF, y rutas de Windows simuladas.
+- [ ] **P.9 Menús y textos del sistema.** Barra de menús en Windows/Linux, sin
+      los elementos propios de macOS. Textos que nombran `~/.gitconfig`, Llavero
+      o Finder, según el sistema.
+- [ ] **P.10 WebView2 y WebKitGTK.** Lista de diferencias (`color-mix()`,
+      `-webkit-user-select`, zona de arrastre de la ventana, zoom, canvas,
+      fuentes) con su resolución.
+      *Verificable:* la app web pasa un test de humo en los motores del CI, y se
+      apunta lo que solo se puede ver a mano.
+- [ ] **P.11 Compila y arranca en los tres.** El CI compila la app y la arranca
+      con una bandera de humo (`xvfb` en Linux): abre la ventana, carga el
+      frontend y sale con código 0.
+      *Verificable:* los tres en verde, sin `continue-on-error` (macOS, en una
+      ejecución bajo demanda).
+
 ## Fase 2
 
-- [ ] **8. Merge/rebase con drag & drop.** Al arrastrar una rama sobre otra se
-      abre un diálogo de confirmación que muestra qué rama se mueve y cuántos
-      commits.
+Orden acordado: 9 → 10 → 8 → 11 → 12 → 13. Todo es multiplataforma desde el
+principio y toda operación destructiva pasa por confirmación.
+
 - [ ] **9. Conflictos.** Vista a tres paneles (ours / theirs / resultado),
       elección por bloque, marcar como resuelto, continuar o abortar.
       Incluye continuar un merge/rebase tras resolver conflictos desde la app
       (`git merge --continue` / `git rebase --continue` / `--skip`); hoy (6.2)
       solo se puede abortar desde la app y continuar se hace en la terminal.
+      *Tests:* parser de marcadores (también diff3 y CRLF), resolver y continuar
+      un merge y un rebase, abortar deja el repo como estaba, y archivos binarios
+      o eliminados en un lado.
 - [ ] **10. Cherry-pick, revert, reset** (soft/mixed/hard con aviso) y **crear
       tags** (ligeros y anotados).
+      *Tests:* cada operación, también cuando acaba en conflicto (usa la 9). El
+      reset hard enumera lo que se perdería antes de confirmar.
+- [ ] **8. Merge/rebase con drag & drop.** Al arrastrar una rama sobre otra se
+      abre un diálogo de confirmación que muestra qué rama se mueve y cuántos
+      commits. Hay alternativa por menú y teclado.
+      *Tests:* cálculo de lo que se mueve, cancelar no toca nada, y fast-forward,
+      merge y rebase, con y sin conflicto.
 - [ ] **11. Deshacer/rehacer** de la última operación cuando sea seguro, basado
       en el reflog. Antes de ejecutarlo se muestra qué se va a restaurar.
+      *Tests:* deshacer commit, merge, rebase y reset, y se niega con cambios
+      sin commitear que se perderían o tras un push.
 - [ ] **12. Búsqueda** por mensaje, autor, hash y archivo; **historial y blame**
       de un archivo.
+      *Tests:* parsers con fixtures, renombrados, y la búsqueda en un repo grande
+      no bloquea la UI y se puede cancelar.
 - [ ] **13. Rebase interactivo visual:** reordenar, squash, editar mensaje y
       descartar.
+      *Tests:* cada acción, conflicto a mitad (usa la 9), abortar restaura la
+      rama, y aviso si los commits ya están publicados.
 
 ## Fase 3
 
 - [ ] Submódulos · Worktrees · Git LFS · Firma GPG/SSH (verificar y mostrar) ·
-      Perfiles de identidad · Atajos configurables · Tema claro/oscuro ·
-      Builds de Windows y Linux · Firma y notarización en macOS.
+      Perfiles de identidad · Atajos configurables · Tema claro/oscuro.
 - [ ] Inicio de sesión de GitHub propio dentro de la app (OAuth *device
-      flow*, token guardado en el Llavero de macOS), como alternativa a `gh`.
+      flow*, token guardado en el almacén de credenciales del sistema: Llavero
+      en macOS), como alternativa a `gh`.
+
+## Fase final — Publicación
+
+- [ ] Instaladores de Windows y Linux.
+- [ ] Firma y notarización.
+- [ ] Repositorio público en GitHub, con revisión previa de lo que se hace
+      visible (incluidos CLAUDE.md y VISION.md, que nombran otros productos en
+      las reglas clean-room).
+- [ ] Al hacer público el repo, el CI pasa a ejecutar macOS, Windows y Linux en
+      cada push.
+- [ ] GitHub Releases.
+- [ ] Documentación para usuarios, con las capturas del README (las hará el
+      usuario).
