@@ -147,9 +147,13 @@ function PublishForm({ info }: { info: PublishInfo }) {
         size: formatSize(f.size ?? 0, i18n.language),
       }),
     ),
+    preview.moreLargeFiles > 0 &&
+      t("publish.warn.moreLargeFiles", { count: preview.moreLargeFiles }),
     ...preview.buildDirs.map((dir) =>
       t("publish.warn.buildDir", { path: dir }),
     ),
+    preview.moreBuildDirs > 0 &&
+      t("publish.warn.moreBuildDirs", { count: preview.moreBuildDirs }),
   ].filter((w): w is string => !!w);
 
   return (

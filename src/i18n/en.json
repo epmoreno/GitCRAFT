@@ -876,7 +876,11 @@
     "warn": {
       "noGitignore": "The repository has no .gitignore: check that you are not uploading files that should not be there.",
       "largeFile": "{{path}} is {{size}} (GitHub warns from 50 MB and refuses over 100 MB). It stays in the history even if you deleted it.",
-      "buildDir": "The folder {{path}} is committed: it usually holds build output or dependencies."
+      "buildDir": "The folder {{path}} is committed: it usually holds build output or dependencies.",
+      "moreLargeFiles_one": "And {{count}} more large file.",
+      "moreLargeFiles_other": "And {{count}} more large files.",
+      "moreBuildDirs_one": "And {{count}} more build folder.",
+      "moreBuildDirs_other": "And {{count}} more build folders."
     },
     "warningsHint": "These are only warnings: you can publish anyway.",
     "submitPrivate": "Publish as private",

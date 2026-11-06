@@ -1138,8 +1138,12 @@ export type PublishPreview = {
 	hasGitignore: boolean,
 	/**  Files over [`LARGE_FILE_BYTES`] anywhere in the history. */
 	largeFiles: LargeFile[],
+	/**  Large files beyond those listed. */
+	moreLargeFiles: number,
 	/**  Committed folders named like [`BUILD_DIRS`] (topmost only). */
 	buildDirs: string[],
+	/**  Build folders beyond those listed. */
+	moreBuildDirs: number,
 };
 
 /**  The repository created on GitHub and the `origin` added for it. */

@@ -16,7 +16,9 @@ const info = (overrides: Partial<PublishInfo> = {}): PublishInfo => ({
     sizeBytes: 3_400_000,
     hasGitignore: false,
     largeFiles: [{ path: "assets/video.mov", size: 72_000_000 }],
+    moreLargeFiles: 0,
     buildDirs: ["node_modules"],
+    moreBuildDirs: 0,
   },
   suggestedName: "Mi-Proyecto",
   account: { login: "ana", active: true, valid: true, gitProtocol: "https" },
@@ -132,6 +134,15 @@ describe("Publish on GitHub: the dialog", () => {
     expect(summary).toHaveTextContent(
       "Son solo avisos: puedes publicar igualmente.",
     );
+  });
+
+  it("says how many warnings were left out when the lists are cut", async () => {
+    const cut = info();
+    cut.preview = { ...cut.preview, moreLargeFiles: 3, moreBuildDirs: 1 };
+    const dialog = await openDialog(cut);
+    const warnings = within(dialog).getByRole("list", { name: "Avisos" });
+    expect(warnings).toHaveTextContent("Y 3 archivos grandes más.");
+    expect(warnings).toHaveTextContent("Y 1 carpeta de compilación más.");
   });
 
   it("has no warnings when everything looks fine", async () => {

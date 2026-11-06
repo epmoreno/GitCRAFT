@@ -876,7 +876,11 @@
     "warn": {
       "noGitignore": "El repositorio no tiene .gitignore: comprueba que no subes archivos que no deberían estar.",
       "largeFile": "{{path}} ocupa {{size}} (GitHub avisa a partir de 50 MB y rechaza más de 100 MB). Sigue en el historial aunque ya lo hayas borrado.",
-      "buildDir": "La carpeta {{path}} está commiteada: suele contener archivos de compilación o dependencias."
+      "buildDir": "La carpeta {{path}} está commiteada: suele contener archivos de compilación o dependencias.",
+      "moreLargeFiles_one": "Y {{count}} archivo grande más.",
+      "moreLargeFiles_other": "Y {{count}} archivos grandes más.",
+      "moreBuildDirs_one": "Y {{count}} carpeta de compilación más.",
+      "moreBuildDirs_other": "Y {{count}} carpetas de compilación más."
     },
     "warningsHint": "Son solo avisos: puedes publicar igualmente.",
     "submitPrivate": "Publicar como privado",

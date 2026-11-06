@@ -44,8 +44,12 @@ pub struct PublishPreview {
     pub has_gitignore: bool,
     /// Files over [`LARGE_FILE_BYTES`] anywhere in the history.
     pub large_files: Vec<LargeFile>,
+    /// Large files beyond those listed.
+    pub more_large_files: u32,
     /// Committed folders named like [`BUILD_DIRS`] (topmost only).
     pub build_dirs: Vec<String>,
+    /// Build folders beyond those listed.
+    pub more_build_dirs: u32,
 }
 
 /// Looks at the current branch's history before publishing it. Fails on a
@@ -87,7 +91,9 @@ pub async fn preview(
         .args(["ls-tree", "-r", "-d", "--name-only", "-z", "HEAD"])
         .output(cancel)
         .await?;
-    let (size_bytes, large_files) = objects(git, repo, large_file_bytes, cancel).await?;
+    let (size_bytes, large_files, more_large_files) =
+        objects(git, repo, large_file_bytes, cancel).await?;
+    let (build_dirs, more_build_dirs) = build_dirs(&dirs.stdout_lossy());
 
     Ok(PublishPreview {
         branch,
@@ -95,12 +101,22 @@ pub async fn preview(
         size_bytes,
         has_gitignore: !gitignore.stdout.is_empty(),
         large_files,
-        build_dirs: build_dirs(&dirs.stdout_lossy()),
+        more_large_files,
+        build_dirs,
+        more_build_dirs,
     })
 }
 
-/// The topmost committed folders whose name is a typical build folder.
-fn build_dirs(nul_separated: &str) -> Vec<String> {
+/// Keeps the first [`MAX_LISTED`] items; returns how many were left out.
+fn cut<T>(items: &mut Vec<T>) -> u32 {
+    let more = items.len().saturating_sub(MAX_LISTED);
+    items.truncate(MAX_LISTED);
+    u32::try_from(more).unwrap_or(u32::MAX)
+}
+
+/// The topmost committed folders whose name is a typical build folder, and
+/// how many more there are.
+fn build_dirs(nul_separated: &str) -> (Vec<String>, u32) {
     let mut found: Vec<String> = Vec::new();
     for dir in nul_separated.split_terminator('\0') {
         let name = dir.rsplit('/').next().unwrap_or(dir);
@@ -109,18 +125,19 @@ fn build_dirs(nul_separated: &str) -> Vec<String> {
             found.push(dir.to_owned());
         }
     }
-    found.truncate(MAX_LISTED);
-    found
+    let more = cut(&mut found);
+    (found, more)
 }
 
 /// Total compressed size of the objects reachable from HEAD, and the blobs
-/// larger than `limit` with a path they appear under.
+/// larger than `limit` with a path they appear under (the largest first), and
+/// how many more there are.
 async fn objects(
     git: &Git,
     repo: &Path,
     limit: u64,
     cancel: &CancellationToken,
-) -> Result<(u64, Vec<LargeFile>)> {
+) -> Result<(u64, Vec<LargeFile>, u32)> {
     let listed = git
         .read(repo)
         .args(["rev-list", "--objects", "HEAD"])
@@ -164,8 +181,8 @@ async fn objects(
         }
     }
     large.sort_by_key(|f| std::cmp::Reverse(f.size));
-    large.truncate(MAX_LISTED);
-    Ok((total, large))
+    let more = cut(&mut large);
+    Ok((total, large, more))
 }
 
 /// GitHub repository names: letters, digits, `.`, `-` and `_`, at most 100,
@@ -312,10 +329,24 @@ mod tests {
     }
 
     #[test]
+    fn says_how_many_build_folders_were_left_out() {
+        let many: String = (0..25).map(|i| format!("p{i}/dist\0")).collect();
+        let (listed, more) = build_dirs(&many);
+        assert_eq!((listed.len(), more), (20, 5));
+    }
+
+    #[test]
     fn lists_only_the_topmost_build_folders() {
         assert_eq!(
             build_dirs("src\0src/bin\0node_modules\0node_modules/x/dist\0app/target\0targets\0"),
-            ["src/bin", "node_modules", "app/target"]
+            (
+                vec![
+                    "src/bin".to_owned(),
+                    "node_modules".to_owned(),
+                    "app/target".to_owned()
+                ],
+                0
+            )
         );
     }
 }

@@ -133,6 +133,23 @@ async fn previews_what_would_be_uploaded_with_warnings() {
 }
 
 #[tokio::test]
+async fn says_how_many_large_files_were_left_out() {
+    let repo = TestRepo::new().await;
+    for i in 0..23 {
+        repo.write_file(&format!("f{i}.bin"), &"x".repeat(100 + i));
+    }
+    repo.commit_all("big files").await;
+    let preview = publish::preview(&git(), repo.path(), 50, &c())
+        .await
+        .expect("preview");
+    assert_eq!(preview.large_files.len(), 20);
+    assert_eq!(preview.more_large_files, 3);
+    assert_eq!(preview.more_build_dirs, 0);
+    // The largest ones are the ones listed.
+    assert_eq!(preview.large_files[0].path, "f22.bin");
+}
+
+#[tokio::test]
 async fn refuses_without_commits_or_on_a_detached_head() {
     let repo = TestRepo::new().await;
     let err = publish::preview(&git(), repo.path(), 1, &c())

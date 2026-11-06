@@ -903,7 +903,7 @@ ningún producto.
 - [x] **R.4 Sistemas probados.** README e INSTALACION.md dicen «probado en
       macOS 27.0.1; versiones anteriores no verificadas». El mínimo técnico
       (`minimumSystemVersion` 11.0) no cambia.
-- [ ] **R.5 «y N más» en los avisos de publicar.** Cuando la lista de archivos
+- [x] **R.5 «y N más» en los avisos de publicar.** Cuando la lista de archivos
       grandes o de carpetas de compilación se corta en 20, el diálogo lo dice.
       La vista previa devuelve los totales.
       *Tests:* núcleo (totales con más de 20) y diálogo (el texto).
