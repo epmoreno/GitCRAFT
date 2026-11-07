@@ -42,6 +42,7 @@ const KINDS = {
   ghRepoExists: true,
   ghNotFound: true,
   ghNotLoggedIn: true,
+  ghUnreachable: true,
   ghFailed: true,
   cancelled: true,
   timedOut: true,

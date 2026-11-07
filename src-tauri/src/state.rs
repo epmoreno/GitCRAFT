@@ -161,6 +161,9 @@ pub struct PublishInfo {
     /// is not installed, see `gh_installed`).
     pub account: Option<GhAccount>,
     pub gh_installed: bool,
+    /// The session could not be checked (no connection): `account` is empty
+    /// but that does not mean there is no session.
+    pub session_unreachable: bool,
 }
 
 /// Settings → GitHub account.
@@ -172,6 +175,9 @@ pub struct GhStatus {
     pub version: Option<String>,
     /// Accounts for github.com (empty: no session).
     pub accounts: Vec<GhAccount>,
+    /// GitHub could not be reached, so `accounts` says nothing about whether
+    /// the session is valid: not the same as having no session.
+    pub session_unreachable: bool,
     /// `credential.https://github.com.helper` in the global git config.
     pub github_helpers: Vec<String>,
     /// `credential.helper` in the global git config (used for every host
@@ -1202,15 +1208,18 @@ impl AppState {
                 path: None,
                 version: None,
                 accounts: Vec::new(),
+                session_unreachable: false,
                 github_helpers,
                 general_helpers,
                 git_uses_gh,
             });
         };
+        let session = gh.session(&cancel).await?;
         Ok(GhStatus {
             path: Some(gh.exe().to_string_lossy().into_owned()),
             version: gh.version(&cancel).await.ok(),
-            accounts: gh.accounts(&cancel).await?,
+            accounts: session.accounts,
+            session_unreachable: session.unreachable,
             github_helpers,
             general_helpers,
             git_uses_gh,
@@ -1260,19 +1269,20 @@ impl AppState {
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
         let gh = self.find_gh();
-        let account = match &gh {
-            Some(gh) => gh
-                .accounts(&cancel)
-                .await?
-                .into_iter()
-                .find(|a| a.active && a.valid),
+        let session = match &gh {
+            Some(gh) => Some(gh.session(&cancel).await?),
             None => None,
         };
+        let session_unreachable = session.as_ref().is_some_and(|s| s.unreachable);
+        let account = session
+            .filter(|s| !s.unreachable)
+            .and_then(|s| s.accounts.into_iter().find(|a| a.active && a.valid));
         Ok(PublishInfo {
             preview,
             suggested_name: publish::suggest_repo_name(&folder),
             account,
             gh_installed: gh.is_some(),
+            session_unreachable,
         })
     }
 

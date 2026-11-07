@@ -127,7 +127,8 @@
     "noCommits": "El repositorio aún no tiene commits: no hay nada que publicar. Haz al menos un commit.",
     "hasRemote": "Este repositorio ya tiene un remoto; publicarlo añadiría otro. Usa Push para subirlo al que tiene.",
     "invalidRepoName": "Ese nombre no vale para un repositorio de GitHub: usa letras, números, «.», «-» o «_» (sin empezar por «-»), hasta 100 caracteres.",
-    "ghRepoExists": "Ya tienes un repositorio con ese nombre en GitHub. No se ha creado ni cambiado nada: elige otro nombre."
+    "ghRepoExists": "Ya tienes un repositorio con ese nombre en GitHub. No se ha creado ni cambiado nada: elige otro nombre.",
+    "ghUnreachable": "No hay conexión con GitHub. Comprueba tu red e inténtalo de nuevo."
   },
   "graph": {
     "listLabel": "Historial de {{name}}",
@@ -806,7 +807,8 @@
       "useGhBody": "GitCRAFT ejecutará gh auth setup-git, que añade esto a tu configuración global de git (~/.gitconfig):",
       "useGhNow": "Ahora, para github.com, git usa: {{helper}}. La línea «helper =» vacía hace que, solo para github.com, git deje de usar ese helper y pida las credenciales a gh. El resto de hosts no cambia.",
       "useGhUndo": "Se puede deshacer con: git config --global --unset-all credential.https://github.com.helper (y lo mismo con gist.github.com).",
-      "useGhConfirm": "Usar gh"
+      "useGhConfirm": "Usar gh",
+      "checking": "Comprobando la sesión de GitHub…"
     },
     "shortcuts": {
       "readOnly": "Solo consulta: personalizarlos llegará en una fase posterior.",

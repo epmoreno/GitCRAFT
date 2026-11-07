@@ -931,6 +931,21 @@ ningún producto.
 
       Sin red falló a medias: no creaba nada, pero decía «No hay sesión de
       GitHub en gh» con la sesión iniciada, tras 30 s. Se corrige en R.7.
+- [x] **R.7 Sin conexión no es «sin sesión».** La comprobación de la sesión
+      distingue «no hay sesión», «la sesión no vale» y «no se pudo comprobar».
+      - Si `gh auth status` lista una cuenta que no sale como válida, una llamada
+        a `gh api user` decide por el código HTTP: 200 vale, 401 no vale, y sin
+        respuesta o con otro código no se pudo comprobar.
+      - Sin conexión, el diálogo de publicar y Ajustes → Cuenta de GitHub dicen
+        «No hay conexión con GitHub. Comprueba tu red e inténtalo de nuevo», con
+        «Comprobar de nuevo». No llevan a Ajustes ni ofrecen iniciar o cerrar
+        sesión.
+      - Las comprobaciones de solo lectura de `gh` tienen un límite de 10 s. Lo
+        que cambia algo (crear el repo, iniciar o cerrar sesión) no se corta a
+        medias.
+
+      *Tests:* `gh` simulado que tarda o falla por conexión, y los dos diálogos.
+      Falta la prueba real sin wifi del usuario.
 - [ ] **Mejora menor (sin fecha).** Si `gh auth login` falla por red, explicar
       que es la red en vez del mensaje genérico.
 

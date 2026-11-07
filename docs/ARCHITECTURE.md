@@ -387,6 +387,13 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
     por los códigos de salida documentados (4 = hace falta autenticación).
     `gh api` sin respuesta HTTP se explica como problema de red, y la salida
     original de gh siempre está disponible.
+  - **Sin conexión no es «sin sesión».** Sin red, `gh auth status` espera unos
+    30 s y da el token por no válido, igual que uno revocado. Por eso
+    `Gh::session` pregunta a `gh api user` por cualquier token que no salga como
+    válido: solo un 401 (o el código de salida 4) dice que no vale. Sin respuesta
+    HTTP o sin tiempo, la sesión es «no comprobable» (`unreachable`) y la UI
+    habla de la conexión, nunca de iniciar sesión. Los comandos de solo lectura
+    tienen un límite de 10 s (`CHECK_TIMEOUT`); los que cambian algo no se cortan.
   - El inicio de sesión (`gh auth login --web --git-protocol https
     --skip-ssh-key`) no tiene salida para máquinas. Es la **única excepción** a
     «no parsear salida pensada para humanos»: solo se extrae el código

@@ -255,9 +255,12 @@ pub async fn publish(
         return Err(GitError::HasRemote);
     }
     let gh = gh.clone().in_repo(repo);
-    let account = gh
-        .accounts(cancel)
-        .await?
+    let session = gh.session(cancel).await?;
+    if session.unreachable {
+        return Err(GitError::GhUnreachable);
+    }
+    let account = session
+        .accounts
         .into_iter()
         .find(|a| a.active && a.valid)
         .ok_or(GitError::GhNotLoggedIn)?;

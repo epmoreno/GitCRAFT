@@ -127,7 +127,8 @@
     "noCommits": "The repository has no commits yet: there is nothing to publish. Make at least one commit.",
     "hasRemote": "This repository already has a remote; publishing would add another. Use Push to upload to the one it has.",
     "invalidRepoName": "That name is not valid for a GitHub repository: use letters, digits, “.”, “-” or “_” (not starting with “-”), up to 100 characters.",
-    "ghRepoExists": "You already have a repository with that name on GitHub. Nothing was created or changed: choose another name."
+    "ghRepoExists": "You already have a repository with that name on GitHub. Nothing was created or changed: choose another name.",
+    "ghUnreachable": "No connection to GitHub. Check your network and try again."
   },
   "graph": {
     "listLabel": "History of {{name}}",
@@ -806,7 +807,8 @@
       "useGhBody": "GitCRAFT will run gh auth setup-git, which adds this to your global git configuration (~/.gitconfig):",
       "useGhNow": "Right now, for github.com, git uses: {{helper}}. The empty “helper =” line makes git stop using that helper for github.com only and ask gh instead. Other hosts do not change.",
       "useGhUndo": "It can be undone with: git config --global --unset-all credential.https://github.com.helper (and the same for gist.github.com).",
-      "useGhConfirm": "Use gh"
+      "useGhConfirm": "Use gh",
+      "checking": "Checking the GitHub session…"
     },
     "shortcuts": {
       "readOnly": "Read-only: customizing them comes in a later phase.",

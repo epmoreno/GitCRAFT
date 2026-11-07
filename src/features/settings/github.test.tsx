@@ -10,6 +10,7 @@ const status = (overrides: Partial<GhStatus> = {}): GhStatus => ({
   path: "/opt/homebrew/bin/gh",
   version: "gh version 2.62.0 (2024-11-14)",
   accounts: [{ login: "ana", active: true, valid: true, gitProtocol: "https" }],
+  sessionUnreachable: false,
   githubHelpers: [],
   generalHelpers: ["osxkeychain"],
   gitUsesGh: false,
@@ -148,6 +149,49 @@ describe("GitHub account in Settings", () => {
     expect(
       within(section).getByRole("button", { name: "Iniciar sesión en GitHub" }),
     ).toBeVisible();
+  });
+
+  it("without a connection says it could not check, never that there is no session", async () => {
+    const user = userEvent.setup();
+    const section = await openGithub(
+      status({ accounts: [], sessionUnreachable: true }),
+    );
+    expect(
+      await within(section).findByText(
+        "No hay conexión con GitHub. Comprueba tu red e inténtalo de nuevo.",
+      ),
+    ).toBeVisible();
+    expect(section).not.toHaveTextContent("No hay sesión de GitHub.");
+    expect(
+      within(section).queryByRole("button", {
+        name: "Iniciar sesión en GitHub",
+      }),
+    ).toBeNull();
+    expect(
+      within(section).queryByRole("button", { name: "Cerrar sesión" }),
+    ).toBeNull();
+
+    ipc.ghStatus.mockResolvedValue({ status: "ok", data: status() });
+    await user.click(
+      within(section).getByRole("button", { name: "Comprobar de nuevo" }),
+    );
+    expect(await within(section).findByText("@ana")).toBeVisible();
+  });
+
+  it("does not offer anything about the session while an account cannot be checked", async () => {
+    const section = await openGithub(
+      status({
+        accounts: [
+          { login: "ana", active: true, valid: false, gitProtocol: "https" },
+        ],
+        sessionUnreachable: true,
+      }),
+    );
+    await within(section).findByText(/No hay conexión con GitHub/);
+    expect(section).not.toHaveTextContent("ya no es válida");
+    expect(
+      within(section).queryByRole("button", { name: "Cerrar sesión" }),
+    ).toBeNull();
   });
 
   it("explains what gh auth setup-git changes in ~/.gitconfig before running it", async () => {

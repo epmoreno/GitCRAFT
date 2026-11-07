@@ -100,6 +100,11 @@ pub enum GitError {
     #[error("gh is not signed in to github.com")]
     GhNotLoggedIn,
 
+    /// GitHub could not be reached (no HTTP answer, or a check timed out), so
+    /// nothing is known about the session.
+    #[error("GitHub could not be reached")]
+    GhUnreachable,
+
     /// `gh` ran and failed.
     #[error("`gh {}` failed with exit code {exit_code:?}: {}", args.join(" "), stderr.trim())]
     GhFailed {
@@ -175,6 +180,8 @@ pub enum ErrorKind {
     GhNotFound,
     /// `gh` has no valid session for github.com.
     GhNotLoggedIn,
+    /// GitHub could not be reached: says nothing about the session.
+    GhUnreachable,
     /// `gh` failed for another reason (its output says why).
     GhFailed,
     Cancelled,
@@ -210,6 +217,7 @@ impl GitError {
             Self::GhRepoExists(_) => ErrorKind::GhRepoExists,
             Self::GhNotFound => ErrorKind::GhNotFound,
             Self::GhNotLoggedIn => ErrorKind::GhNotLoggedIn,
+            Self::GhUnreachable => ErrorKind::GhUnreachable,
             Self::GhFailed {
                 exit_code, http, ..
             } => classify_gh(*exit_code, *http),
@@ -271,7 +279,8 @@ impl GitError {
             | Self::InvalidRepoName(_)
             | Self::GhRepoExists(_)
             | Self::GhNotFound
-            | Self::GhNotLoggedIn => None,
+            | Self::GhNotLoggedIn
+            | Self::GhUnreachable => None,
         }
     }
 }
@@ -281,7 +290,7 @@ impl GitError {
 fn classify_gh(exit_code: Option<i32>, http: GhHttp) -> ErrorKind {
     match (exit_code, http) {
         (Some(4), _) | (_, GhHttp::Status(401)) => ErrorKind::GhNotLoggedIn,
-        (_, GhHttp::NoResponse) => ErrorKind::RemoteUnreachable,
+        (_, GhHttp::NoResponse) => ErrorKind::GhUnreachable,
         _ => ErrorKind::GhFailed,
     }
 }

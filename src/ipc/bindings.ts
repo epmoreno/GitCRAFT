@@ -607,6 +607,8 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 "ghNotFound" | 
 /**  `gh` has no valid session for github.com. */
 "ghNotLoggedIn" | 
+/**  GitHub could not be reached: says nothing about the session. */
+"ghUnreachable" | 
 /**  `gh` failed for another reason (its output says why). */
 "ghFailed" | "cancelled" | "timedOut" | "unknown";
 
@@ -770,6 +772,11 @@ export type GhStatus_Deserialize = {
 	version?: string | null,
 	/**  Accounts for github.com (empty: no session). */
 	accounts: GhAccount[],
+	/**
+	 *  GitHub could not be reached, so `accounts` says nothing about whether
+	 *  the session is valid: not the same as having no session.
+	 */
+	sessionUnreachable: boolean,
 	/**  `credential.https://github.com.helper` in the global git config. */
 	githubHelpers: string[],
 	/**
@@ -788,6 +795,11 @@ export type GhStatus_Serialize = {
 	version: string | null,
 	/**  Accounts for github.com (empty: no session). */
 	accounts: GhAccount[],
+	/**
+	 *  GitHub could not be reached, so `accounts` says nothing about whether
+	 *  the session is valid: not the same as having no session.
+	 */
+	sessionUnreachable: boolean,
 	/**  `credential.https://github.com.helper` in the global git config. */
 	githubHelpers: string[],
 	/**
@@ -1113,6 +1125,11 @@ export type PublishInfo_Deserialize = {
 	 */
 	account?: GhAccount | null,
 	ghInstalled: boolean,
+	/**
+	 *  The session could not be checked (no connection): `account` is empty
+	 *  but that does not mean there is no session.
+	 */
+	sessionUnreachable: boolean,
 };
 
 /**  Everything the "Publish on GitHub" dialog shows before publishing. */
@@ -1126,6 +1143,11 @@ export type PublishInfo_Serialize = {
 	 */
 	account: GhAccount | null,
 	ghInstalled: boolean,
+	/**
+	 *  The session could not be checked (no connection): `account` is empty
+	 *  but that does not mean there is no session.
+	 */
+	sessionUnreachable: boolean,
 };
 
 /**  What publishing the current branch uploads, and what looks wrong. */

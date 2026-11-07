@@ -23,6 +23,7 @@ const info = (overrides: Partial<PublishInfo> = {}): PublishInfo => ({
   suggestedName: "Mi-Proyecto",
   account: { login: "ana", active: true, valid: true, gitProtocol: "https" },
   ghInstalled: true,
+  sessionUnreachable: false,
   ...overrides,
 });
 
@@ -263,6 +264,52 @@ describe("Publish on GitHub: the dialog", () => {
     expect(alert).toHaveTextContent(
       "El repositorio ana/Mi-Proyecto se ha creado en GitHub y se ha añadido origin (https://github.com/ana/Mi-Proyecto.git), pero el push no ha terminado. No se ha borrado nada: reinténtalo con Push.",
     );
+  });
+
+  it("without a connection says so, and never sends you to sign in", async () => {
+    const user = userEvent.setup();
+    const dialog = await openDialog(
+      info({ account: null, sessionUnreachable: true }),
+    );
+    expect(dialog).toHaveTextContent(
+      "No hay conexión con GitHub. Comprueba tu red e inténtalo de nuevo.",
+    );
+    expect(dialog).not.toHaveTextContent("sesión");
+    expect(
+      within(dialog).queryByRole("button", { name: "Ir a Ajustes" }),
+    ).toBeNull();
+    expect(within(dialog).queryByRole("textbox")).toBeNull();
+
+    // "Check again" brings the form back once there is a connection.
+    ipc.publishInfo.mockResolvedValue({ status: "ok", data: info() });
+    await user.click(
+      within(dialog).getByRole("button", { name: "Comprobar de nuevo" }),
+    );
+    expect(
+      await within(dialog).findByRole("textbox", {
+        name: "Nombre del repositorio",
+      }),
+    ).toBeVisible();
+    expect(useSettingsStore.getState().open).toBe(false);
+  });
+
+  it("explains a connection lost while publishing and keeps the form", async () => {
+    const user = userEvent.setup();
+    ipc.publishRepository.mockResolvedValue({
+      status: "error",
+      error: commandError("ghUnreachable"),
+    });
+    const dialog = await openDialog();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Publicar como privado" }),
+    );
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "No hay conexión con GitHub",
+    );
+    expect(
+      within(dialog).getByRole("textbox", { name: "Nombre del repositorio" }),
+    ).toBeVisible();
+    expect(ipc.pushBranch).not.toHaveBeenCalled();
   });
 
   it("without a GitHub session, takes you to Settings", async () => {

@@ -245,6 +245,32 @@ async fn needs_a_session_a_valid_name_and_no_remote() {
 }
 
 #[tokio::test]
+async fn without_connection_nothing_is_created_and_it_says_so() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("a.txt", "a\n", "a").await;
+    let dir = tempfile::tempdir().expect("tempdir");
+    let exe = dir.path().join("gh");
+    std::fs::write(
+        &exe,
+        format!(
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"{log}\"\ncase \"$1 $2\" in\n\
+             'auth status') echo '{{\"hosts\":{{\"github.com\":[{{\"state\":\"error\",\"active\":true,\"login\":\"ana\"}}]}}}}' ;;\n\
+             *) echo 'dial tcp: no such host' >&2; exit 1 ;;\nesac\n",
+            log = dir.path().join("calls.log").display()
+        ),
+    )
+    .expect("write");
+    make_executable(&exe);
+    let err = publish::publish(&git(), &Gh::at(&exe), repo.path(), &request("x"), &c())
+        .await
+        .expect_err("no connection");
+    assert_eq!(err.kind(), ErrorKind::GhUnreachable);
+    let calls = std::fs::read_to_string(dir.path().join("calls.log")).expect("calls");
+    assert!(!calls.contains("POST"), "{calls}");
+    assert!(repo.run(&["remote"]).await.trim().is_empty());
+}
+
+#[tokio::test]
 async fn a_push_that_fails_after_creating_leaves_origin_to_retry() {
     let repo = TestRepo::new().await;
     repo.commit_file("a.txt", "a\n", "a").await;

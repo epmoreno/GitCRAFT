@@ -230,7 +230,7 @@ async fn classifies_failures_by_exit_code_and_status_not_by_wording() {
         .repo_exists("ana", "x", &c())
         .await
         .expect_err("no answer");
-    assert_eq!(err.kind(), ErrorKind::RemoteUnreachable);
+    assert_eq!(err.kind(), ErrorKind::GhUnreachable);
     assert!(err.details().expect("details").contains("sin red"));
 
     // Words that used to mean something no longer do.
@@ -456,4 +456,116 @@ async fn gh_commands_about_a_repository_say_which_one() {
     let (gh, recorder) = logged(&fake);
     gh.in_repo(dir.path()).accounts(&c()).await.expect("status");
     assert_eq!(folder(&recorder), Some(dir.path().to_owned()));
+}
+
+/// `gh` for the session checks: `status_body` runs for `gh auth status` and
+/// `user_body` for the `gh api … user` call.
+fn session_gh(status_body: &str, user_body: &str) -> FakeGh {
+    FakeGh::new(&format!(
+        "case \"$1 $2\" in\n'auth status') {status_body} ;;\n'api --include') {user_body} ;;\nesac"
+    ))
+}
+
+const TOKEN_NOT_WORKING: &str =
+    r#"echo '{"hosts":{"github.com":[{"state":"error","active":true,"login":"ana"}]}}'"#;
+const SHORT: Duration = Duration::from_millis(300);
+
+#[tokio::test]
+async fn no_account_is_no_session_without_asking_github() {
+    let fake = session_gh(r#"echo '{"hosts":{}}'"#, "exit 9");
+    let session = fake.gh.session(&c()).await.expect("session");
+    assert!(session.accounts.is_empty());
+    assert!(!session.unreachable);
+    assert_eq!(fake.calls().len(), 1, "{:?}", fake.calls());
+}
+
+#[tokio::test]
+async fn a_working_token_needs_no_further_check() {
+    let fake = session_gh(LOGGED_IN, "exit 9");
+    let session = fake.gh.session(&c()).await.expect("session");
+    assert!(session.accounts[0].valid);
+    assert!(!session.unreachable);
+    assert_eq!(fake.calls().len(), 1, "{:?}", fake.calls());
+}
+
+#[tokio::test]
+async fn a_slow_status_means_it_could_not_be_checked() {
+    let fake = session_gh("sleep 30", "exit 9");
+    let gh = fake.gh.clone().with_check_timeout(SHORT);
+    let started = std::time::Instant::now();
+    let session = gh.session(&c()).await.expect("session");
+    assert!(session.unreachable);
+    assert!(
+        started.elapsed() < Duration::from_secs(5),
+        "does not wait for gh"
+    );
+}
+
+#[tokio::test]
+async fn a_status_that_times_out_is_recorded_as_such() {
+    let fake = session_gh("sleep 30", "exit 9");
+    let (gh, recorder) = logged(&fake);
+    gh.with_check_timeout(SHORT)
+        .session(&c())
+        .await
+        .expect("session");
+    assert_eq!(summary(&recorder)[0].2, Some(CommandOutcome::TimedOut));
+}
+
+#[tokio::test]
+async fn without_connection_a_token_that_does_not_work_is_not_called_invalid() {
+    // What gh reports without a network: the token "does not work". Then the
+    // check against GitHub gets no HTTP answer, or the state is "timeout".
+    for status in [
+        TOKEN_NOT_WORKING,
+        r#"echo '{"hosts":{"github.com":[{"state":"timeout","active":true,"login":"ana"}]}}'"#,
+    ] {
+        let fake = session_gh(status, "echo 'dial tcp: no such host' >&2; exit 1");
+        let session = fake.gh.session(&c()).await.expect("session");
+        assert!(session.unreachable, "{status}");
+        assert_eq!(session.accounts.len(), 1);
+    }
+}
+
+#[tokio::test]
+async fn the_second_check_also_has_a_time_limit() {
+    let fake = session_gh(TOKEN_NOT_WORKING, "sleep 30");
+    let gh = fake.gh.clone().with_check_timeout(SHORT);
+    let started = std::time::Instant::now();
+    let session = gh.session(&c()).await.expect("session");
+    assert!(session.unreachable);
+    assert!(started.elapsed() < Duration::from_secs(5));
+}
+
+#[tokio::test]
+async fn only_github_can_say_a_token_is_invalid() {
+    let fake = session_gh(TOKEN_NOT_WORKING, &answer("401 Unauthorized", "{}", 1));
+    let session = fake.gh.session(&c()).await.expect("session");
+    assert!(!session.unreachable);
+    assert!(!session.accounts[0].valid, "really invalid");
+    assert!(fake.calls().contains(&"api --include user".to_owned()));
+
+    // Authentication needed, by gh's documented exit code.
+    let fake = session_gh(TOKEN_NOT_WORKING, "exit 4");
+    let session = fake.gh.session(&c()).await.expect("session");
+    assert!(!session.unreachable);
+
+    // The token works after all.
+    let fake = session_gh(TOKEN_NOT_WORKING, &answer("200 OK", "{}", 0));
+    let session = fake.gh.session(&c()).await.expect("session");
+    assert!(!session.unreachable);
+    assert!(session.accounts[0].valid);
+
+    // GitHub answered, but not about the token.
+    let fake = session_gh(TOKEN_NOT_WORKING, &answer("503 Unavailable", "{}", 1));
+    let session = fake.gh.session(&c()).await.expect("session");
+    assert!(session.unreachable);
+}
+
+#[tokio::test]
+async fn checking_a_name_also_has_a_time_limit() {
+    let fake = FakeGh::new("sleep 30");
+    let gh = fake.gh.clone().with_check_timeout(SHORT);
+    let err = gh.repo_exists("ana", "x", &c()).await.expect_err("slow");
+    assert_eq!(err.kind(), ErrorKind::GhUnreachable);
 }

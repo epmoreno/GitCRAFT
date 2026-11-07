@@ -10,6 +10,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
@@ -17,7 +18,7 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 use crate::error::GhHttp;
 use crate::redact::redact_credentials;
 use crate::runner::log::{LogHandle, Pending, shell_line};
-use crate::{Access, CancellationToken, CommandLog, CommandOutcome, GitError, Result};
+use crate::{Access, CancellationToken, CommandLog, CommandOutcome, ErrorKind, GitError, Result};
 
 /// The only host GitCRAFT signs in to.
 pub const GITHUB_HOST: &str = "github.com";
@@ -28,6 +29,10 @@ pub const GH_PATH_OVERRIDE: &str = "GITCRAFT_GH";
 /// Checked after `PATH` (apps opened from Finder get a minimal one).
 const FALLBACK_LOCATIONS: &[&str] = &["/opt/homebrew/bin/gh", "/usr/local/bin/gh"];
 
+/// How long read-only checks may take. gh itself waits about 30 s without a
+/// network before giving up.
+pub const CHECK_TIMEOUT: Duration = Duration::from_secs(10);
+
 /// A located gh executable.
 #[derive(Debug, Clone)]
 pub struct Gh {
@@ -36,6 +41,9 @@ pub struct Gh {
     log: Option<LogHandle>,
     /// The repository these commands are about, if any.
     repo: Option<PathBuf>,
+    /// Limit for read-only commands; those that change something run to the
+    /// end (stopping them halfway would leave their effect unknown).
+    check_timeout: Duration,
 }
 
 /// One account gh knows for github.com.
@@ -69,6 +77,15 @@ struct HostEntry {
     state: String,
     #[serde(default, rename = "gitProtocol")]
     git_protocol: String,
+}
+
+/// The github.com session, as far as it could be checked.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Session {
+    pub accounts: Vec<GhAccount>,
+    /// GitHub could not be reached: `accounts` says nothing about whether the
+    /// session is valid. Never to be shown as "not signed in".
+    pub unreachable: bool,
 }
 
 /// A repository just created on GitHub, from the API's JSON.
@@ -165,7 +182,14 @@ impl Gh {
             envs: Vec::new(),
             log: None,
             repo: None,
+            check_timeout: CHECK_TIMEOUT,
         }
+    }
+
+    /// Changes [`CHECK_TIMEOUT`] (tests).
+    pub fn with_check_timeout(mut self, limit: Duration) -> Self {
+        self.check_timeout = limit;
+        self
     }
 
     /// Reports every command to `log`, like [`crate::Git::with_log`].
@@ -233,13 +257,18 @@ impl Gh {
         cancel: &CancellationToken,
     ) -> Result<String> {
         let pending = self.pending(args, access);
-        let result = self.run_unlogged(args, cancel).await;
+        let result = self.run_unlogged(args, access, cancel).await;
         finish(pending, CommandOutcome::of(&result), &result);
         result
     }
 
-    async fn run_unlogged(&self, args: &[&str], cancel: &CancellationToken) -> Result<String> {
-        let output = self.output(args, cancel).await?;
+    async fn run_unlogged(
+        &self,
+        args: &[&str],
+        access: Access,
+        cancel: &CancellationToken,
+    ) -> Result<String> {
+        let output = self.output(args, access, cancel).await?;
         if !output.status.success() {
             return Err(failed(args, output.status.code(), &output.stderr));
         }
@@ -249,12 +278,28 @@ impl Gh {
     async fn output(
         &self,
         args: &[&str],
+        access: Access,
         cancel: &CancellationToken,
     ) -> Result<std::process::Output> {
         let child = self.command(args).spawn().map_err(spawn_error)?;
+        let pid = child.id();
+        let limit = async {
+            if access == Access::Read {
+                tokio::time::sleep(self.check_timeout).await;
+            } else {
+                std::future::pending::<()>().await;
+            }
+        };
         tokio::select! {
             output = child.wait_with_output() => Ok(output?),
-            () = cancel.cancelled() => Err(GitError::Cancelled),
+            () = cancel.cancelled() => {
+                kill_group(pid);
+                Err(GitError::Cancelled)
+            }
+            () = limit => {
+                kill_group(pid);
+                Err(GitError::TimedOut(self.check_timeout))
+            }
         }
     }
 
@@ -281,6 +326,49 @@ impl Gh {
             )
             .await?;
         parse_accounts(&out)
+    }
+
+    /// The session for github.com, telling "no valid session" apart from "could
+    /// not check". Without a network `gh auth status` waits and then reports
+    /// the token as not working, like a revoked one, so a token that does not
+    /// show as working is asked about directly: only an HTTP answer from
+    /// GitHub says it is invalid. All of it within [`CHECK_TIMEOUT`].
+    pub async fn session(&self, cancel: &CancellationToken) -> Result<Session> {
+        let unreachable = |accounts| Session {
+            accounts,
+            unreachable: true,
+        };
+        let start = Instant::now();
+        let mut accounts = match self.accounts(cancel).await {
+            Ok(accounts) => accounts,
+            Err(GitError::TimedOut(_)) => return Ok(unreachable(Vec::new())),
+            Err(err) => return Err(err),
+        };
+        let checked = |accounts| Session {
+            accounts,
+            unreachable: false,
+        };
+        let Some(active) = accounts.iter().position(|a| a.active && !a.valid) else {
+            return Ok(checked(accounts));
+        };
+        let mut probe = self.clone();
+        probe.check_timeout = self.check_timeout.saturating_sub(start.elapsed());
+        match probe.api(&["user"], Access::Read, &[401], cancel).await {
+            Ok(response) if response.status == 200 => {
+                if let Some(account) = accounts.get_mut(active) {
+                    account.valid = true;
+                }
+                Ok(checked(accounts))
+            }
+            Ok(response) if response.status == 401 => Ok(checked(accounts)),
+            // GitHub answered something that says nothing about the token.
+            Ok(_) | Err(GitError::TimedOut(_)) => Ok(unreachable(accounts)),
+            Err(err) => match err.kind() {
+                ErrorKind::GhUnreachable => Ok(unreachable(accounts)),
+                ErrorKind::GhNotLoggedIn => Ok(checked(accounts)),
+                _ => Err(err),
+            },
+        }
     }
 
     /// Signs in to github.com through the browser (device flow): `on_event`
@@ -338,7 +426,7 @@ impl Gh {
         let status = tokio::select! {
             status = read => status?,
             () = cancel.cancelled() => {
-                kill_group(&child);
+                kill_group(child.id());
                 return Err(GitError::Cancelled);
             }
         };
@@ -361,7 +449,7 @@ impl Gh {
         let mut full = vec!["api", "--include"];
         full.extend_from_slice(args);
         let pending = self.pending(&full, access);
-        let result = self.api_unlogged(&full, cancel).await;
+        let result = self.api_unlogged(&full, access, cancel).await;
         let outcome = match &result {
             Ok(r) if (200..300).contains(&r.status) || expected.contains(&r.status) => {
                 CommandOutcome::Succeeded
@@ -373,8 +461,13 @@ impl Gh {
         result
     }
 
-    async fn api_unlogged(&self, full: &[&str], cancel: &CancellationToken) -> Result<ApiResponse> {
-        let output = self.output(full, cancel).await?;
+    async fn api_unlogged(
+        &self,
+        full: &[&str],
+        access: Access,
+        cancel: &CancellationToken,
+    ) -> Result<ApiResponse> {
+        let output = self.output(full, access, cancel).await?;
         let stdout = String::from_utf8_lossy(&output.stdout);
         match parse_api_response(&stdout) {
             // Exit code 4: gh refused to call without a session.
@@ -396,7 +489,13 @@ impl Gh {
         cancel: &CancellationToken,
     ) -> Result<bool> {
         let path = format!("repos/{owner}/{name}");
-        let response = self.api(&[&path], Access::Read, &[404], cancel).await?;
+        let response = self
+            .api(&[&path], Access::Read, &[404], cancel)
+            .await
+            .map_err(|err| match err {
+                GitError::TimedOut(_) => GitError::GhUnreachable,
+                other => other,
+            })?;
         match response.status {
             200 => Ok(true),
             404 => Ok(false),
@@ -546,9 +645,10 @@ fn spawn_error(err: std::io::Error) -> GitError {
     }
 }
 
+/// Stops gh and whatever it started.
 #[cfg(unix)]
-fn kill_group(child: &tokio::process::Child) {
-    if let Some(pid) = child.id().and_then(|id| i32::try_from(id).ok()) {
+fn kill_group(pid: Option<u32>) {
+    if let Some(pid) = pid.and_then(|id| i32::try_from(id).ok()) {
         let _ = nix::sys::signal::killpg(
             nix::unistd::Pid::from_raw(pid),
             nix::sys::signal::Signal::SIGTERM,
@@ -557,7 +657,7 @@ fn kill_group(child: &tokio::process::Child) {
 }
 
 #[cfg(not(unix))]
-fn kill_group(_child: &tokio::process::Child) {}
+fn kill_group(_pid: Option<u32>) {}
 
 #[cfg(unix)]
 fn is_executable(path: &Path) -> bool {

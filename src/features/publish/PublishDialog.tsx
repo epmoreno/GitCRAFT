@@ -71,6 +71,8 @@ export function PublishDialog() {
           ) : (
             <p className={styles.muted}>{t("publish.loading")}</p>
           )
+        ) : dialog.info.sessionUnreachable ? (
+          <NoConnection />
         ) : !dialog.info.account ? (
           <NoSession info={dialog.info} />
         ) : dialog.step.kind === "form" ? (
@@ -80,6 +82,36 @@ export function PublishDialog() {
         )}
       </div>
     </div>
+  );
+}
+
+/** The session could not be checked: nothing here is about signing in. */
+function NoConnection() {
+  const { t } = useTranslation();
+  const close = usePublishStore((s) => s.close);
+  const reload = usePublishStore((s) => s.reload);
+  const [checking, setChecking] = useState(false);
+  return (
+    <>
+      <p role="status">{t("errors.ghUnreachable")}</p>
+      <div className={styles.actions}>
+        <button type="button" className={styles.button} onClick={close}>
+          {t("publish.cancel")}
+        </button>
+        <button
+          type="button"
+          className={styles.primary}
+          disabled={checking}
+          onClick={async () => {
+            setChecking(true);
+            await reload();
+            setChecking(false);
+          }}
+        >
+          {t("publish.checkAgain")}
+        </button>
+      </div>
+    </>
   );
 }
 

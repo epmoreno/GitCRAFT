@@ -22,6 +22,7 @@ export function GithubSection() {
   const [lines, setLines] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<"logout" | "setupGit" | null>(null);
   const [copied, setCopied] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const show = (
     result:
@@ -35,7 +36,13 @@ export function GithubSection() {
       setError(result.error);
     }
   };
-  const refresh = () => void commands.ghStatus().then(show);
+  const refresh = () => {
+    setChecking(true);
+    void commands.ghStatus().then((result) => {
+      show(result);
+      setChecking(false);
+    });
+  };
 
   useEffect(() => {
     let stale = false;
@@ -71,6 +78,9 @@ export function GithubSection() {
       <p className={styles.hint}>{t("settings.github.intro")}</p>
       {error && (
         <ErrorReport error={error} lead={t("settings.github.failed")} />
+      )}
+      {!status && !error && (
+        <p className={styles.hint}>{t("settings.github.checking")}</p>
       )}
       {status && status.path === null && (
         <div className={styles.notice} role="status">
@@ -133,6 +143,18 @@ export function GithubSection() {
                 onClick={() => void commands.cancelGhLogin()}
               >
                 {t("settings.github.cancel")}
+              </button>
+            </div>
+          ) : status.sessionUnreachable ? (
+            <div className={styles.notice} role="status">
+              <p>{t("errors.ghUnreachable")}</p>
+              <button
+                type="button"
+                className={styles.button}
+                disabled={checking}
+                onClick={refresh}
+              >
+                {t("settings.github.checkAgain")}
               </button>
             </div>
           ) : account ? (
