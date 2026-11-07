@@ -945,9 +945,69 @@ ningún producto.
         medias.
 
       *Tests:* `gh` simulado que tarda o falla por conexión, y los dos diálogos.
-      Falta la prueba real sin wifi del usuario.
+
+      Verificado manualmente sin wifi: Publicar y Ajustes muestran «No hay
+      conexión con GitHub» en menos de 10 s, sin opciones de sesión; `gh auth
+      status` sale como tiempo agotado en Operaciones; y con wifi, «Comprobar de
+      nuevo» recupera @epmoreno y el formulario de publicar.
 - [ ] **Mejora menor (sin fecha).** Si `gh auth login` falla por red, explicar
       que es la red en vez del mensaje genérico.
+
+## R.P — Abrir el repo
+
+Objetivo: GitCRAFT pasa a ser público y la gente puede usarlo como una app
+normal. Va justo después de la v0.2.1 y antes de la Fase P, para que el CI en los
+tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
+
+- [x] **R.P.1 Escaneo.** Escaneo de secretos en todo el historial (por ejemplo
+      gitleaks) y revisión de que no haya rutas personales, tokens ni datos
+      privados en archivos o mensajes de commit. Se enseña el resultado al
+      usuario.
+      *Resultado:* gitleaks sin hallazgos en el historial; en disco, solo
+      falsos positivos dentro de `target/` (ignorado). Los emails, tokens y
+      rutas de los tests son inventados. El único dato real era el email
+      antiguo, escrito en este mismo paso; se quitó antes de reescribir.
+- [ ] **R.P.2 Limpiar el email antiguo del historial.** Se enseña el plan exacto
+      de comandos antes de ejecutar nada. Solo cambia el email; el nombre del
+      autor («Enrique») se queda como está. El mailmap y cualquier archivo que
+      contenga el email antiguo van fuera del repo. Tres paradas, cada una con
+      la aprobación del usuario: escaneo; copia, ensayo y comprobaciones;
+      reescritura en el proyecto y comprobaciones otra vez.
+      - a) Copia completa antes de nada (`git clone --mirror`) en el disco
+        externo del usuario (`/Volumes/M.2/GitCRAFT-backup-pre-rewrite.git`),
+        tras comprobar que está montado y tiene espacio. Se verifica con
+        `git fsck --full` y comparando `git for-each-ref` con el del proyecto.
+        Si el disco no está, se para y se avisa; no se usa otra ruta sin
+        preguntar.
+      - b) Reescribir el historial con `git filter-repo --mailmap`: se sustituye
+        el email antiguo (autor y committer) por el email noreply de GitHub del
+        usuario en todos los commits, incluidos los locales que aún no están en
+        GitHub, y se rehacen los tags anotados `v0.1.0`, `v0.2.0` y `v0.2.1`
+        sobre los commits nuevos, manteniendo sus mensajes. Primero en un clon
+        de ensayo; en el proyecto, solo después de aprobarlo.
+      - c) Comprobar que el email antiguo no aparece en ningún sitio:
+        `git log --all --format='%ae %ce' | sort -u`, los tags
+        (`git for-each-ref refs/tags --format='%(taggeremail)'`) y una búsqueda
+        en los archivos de todas las revisiones
+        (`git rev-list --all | xargs git grep …`).
+      - d) El usuario renombra desde la web el repo actual a `GitCRAFT-antiguo`
+        (sigue privado) y crea uno nuevo `GitCRAFT`, privado y totalmente vacío
+        (sin README, licencia ni `.gitignore`). Después se añade `origin`, se
+        hace push de `main` y de los tags, sin forzar porque está vacío, y se
+        vuelve a poner la descripción oficial en inglés con
+        `gh repo edit --description`.
+      - e) Cuando el usuario compruebe que el nuevo está bien, borra él
+        `GitCRAFT-antiguo`. **Hay que recordárselo antes de hacer público el
+        nuevo (R.P.5), porque conserva el email antiguo.**
+- [ ] **R.P.3 README.** Aviso de versión temprana, qué funciona, que de momento
+      solo hay instalador para macOS, cómo compilar y la licencia MIT.
+- [ ] **R.P.4 Revisión de CLAUDE.md y VISION.md** tal como están.
+- [ ] **R.P.5 Hacer el repo público** (`gh repo edit --visibility public
+      --accept-visibility-change-consequences`), solo cuando el usuario lo
+      confirme explícitamente y después de que haya borrado
+      `GitCRAFT-antiguo`.
+- [ ] **R.P.6 CI.** Al ser público, los tres sistemas en cada push. El workflow
+      se crea en P.2.
 
 ## Fase P — Portabilidad
 
@@ -961,14 +1021,11 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       un sistema va detrás de una abstracción». VISION.md actualiza el objetivo
       de plataformas.
 - [ ] **P.2 CI en GitHub Actions.** `npm run check` con caché de Cargo y npm,
-      cancelando las ejecuciones anteriores de la misma rama. Mientras el repo
-      sea privado: `ubuntu-latest` y `windows-latest` en cada push, y
-      `macos-latest` solo bajo demanda (`workflow_dispatch`), porque en macOS ya
-      se ejecuta `npm run check` en cada commit. Mientras duren P.3–P.10, Windows
-      y Linux informan sin bloquear (`continue-on-error`).
-      *Verificable:* el workflow se ejecuta en cada push y macOS sale en verde
-      bajo demanda. Después de los primeros pushes se informa de los minutos
-      por ejecución y de una estimación mensual.
+      cancelando las ejecuciones anteriores de la misma rama. Con el repo ya
+      público (R.P): `macos-latest`, `ubuntu-latest` y `windows-latest` en cada
+      push. Mientras duren P.3–P.10, Windows y Linux informan sin bloquear
+      (`continue-on-error`).
+      *Verificable:* el workflow se ejecuta en cada push y macOS sale en verde.
 - [ ] **P.3 Tests portables.** `.gitattributes` para los finales de línea. El
       `gh` simulado deja de ser un script `sh` (un binario de prueba en Rust).
       Sin `/dev/null` ni rutas de Unix en los tests; los de symlinks y permisos
@@ -1060,11 +1117,6 @@ principio y toda operación destructiva pasa por confirmación.
 
 - [ ] Instaladores de Windows y Linux.
 - [ ] Firma y notarización.
-- [ ] Repositorio público en GitHub, con revisión previa de lo que se hace
-      visible (incluidos CLAUDE.md y VISION.md, que nombran otros productos en
-      las reglas clean-room).
-- [ ] Al hacer público el repo, el CI pasa a ejecutar macOS, Windows y Linux en
-      cada push.
 - [ ] GitHub Releases.
 - [ ] Documentación para usuarios, con las capturas del README (las hará el
       usuario).
