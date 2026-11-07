@@ -78,6 +78,8 @@ usuario.
 - **Commits:** directamente a `main`, un commit por paso del roadmap, mensaje
   en inglés estilo Conventional Commits (`feat(graph): …`, `fix(status): …`).
   Cada commit compila y pasa `npm run check`.
+  **Nunca se hace commit si `npm run check` no ha pasado:** se ejecuta siempre
+  como `npm run check && git commit …`.
 - **Comandos:** `npm run tauri dev` (app), `npm run check` (lint + tests),
   `cargo test -p gitcraft-core` (tests del núcleo).
 

@@ -919,6 +919,20 @@ ningún producto.
       THIRD_PARTY_NOTICES.md quedan fuera.
 - [x] **V.2 Versión 0.2.1.** Versión, `.dmg` y README. El tag anotado `v0.2.1`
       se crea solo cuando el usuario confirme la verificación.
+      *Verificado manualmente* con la app instalada:
+      - «Acerca de» con nombre, 0.2.1 y descripción;
+      - `gh --version` y `gh auth status` en Operaciones;
+      - publicación real como privado: URL, repo privado en la web y, en
+        Operaciones, el POST, `remote add` y push con upstream;
+      - con un nombre que ya existe, lo explica y no añade remoto (repo de
+        prueba borrado desde la web);
+      - «Y 5 carpetas de compilación más»;
+      - `gh repo view` devuelve la descripción en inglés.
+
+      Sin red falló a medias: no creaba nada, pero decía «No hay sesión de
+      GitHub en gh» con la sesión iniciada, tras 30 s. Se corrige en R.7.
+- [ ] **Mejora menor (sin fecha).** Si `gh auth login` falla por red, explicar
+      que es la red en vez del mensaje genérico.
 
 ## Fase P — Portabilidad
 
