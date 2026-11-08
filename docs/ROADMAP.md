@@ -1010,8 +1010,9 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
       descripción, los tres tags y los commits con el email noreply. El usuario
       ha borrado `GitCRAFT-antiguo` y ha activado en GitHub el bloqueo de
       pushes que expongan su email.
-- [ ] **R.P.3 README.** Aviso de versión temprana, qué funciona, que de momento
-      solo hay instalador para macOS, cómo compilar y la licencia MIT.
+- [x] **R.P.3 README.** Aviso de versión temprana, qué funciona, que de momento
+      solo hay instalador para macOS, cómo compilar y la licencia MIT. La frase
+      oficial en inglés, con la española debajo. Incluye qué falta todavía.
 - [ ] **R.P.4 Revisión de CLAUDE.md y VISION.md** tal como están.
 - [ ] **R.P.5 Hacer el repo público** (`gh repo edit --visibility public
       --accept-visibility-change-consequences`), solo cuando el usuario lo
