@@ -117,11 +117,8 @@ async fn hooks_run_and_their_output_is_reported() {
         ".git/hooks/pre-commit",
         "#!/bin/sh\necho 'lint failed: trailing spaces in a.txt' >&2\nexit 1\n",
     );
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o755)).expect("chmod");
-    }
+    // Git for Windows runs hooks through its sh without the executable bit.
+    gitcraft_core::platform::set_file_mode(&hook, 0o755).expect("chmod");
     repo.write_file("a.txt", "a ");
     repo.run(&["add", "a.txt"]).await;
     let err = create_commit(&git(), repo.path(), "Try\n", false, &c())
