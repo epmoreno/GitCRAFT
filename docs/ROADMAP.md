@@ -1034,6 +1034,19 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
       SHA-256 y el enlace a su análisis de VirusTotal en las notas. GitHub
       confirma el mismo SHA-256 del archivo subido.
       <https://github.com/epmoreno/GitCRAFT/releases/tag/v0.2.1>
+
+      Verificado manualmente por el usuario: README comprobado en GitHub en una
+      ventana de incógnito (bloque de seis idiomas, árabe a la derecha, sin HTML
+      visible, bien en ventana estrecha; enlaces «what is not there yet»,
+      «Releases» y «docs/INSTALACION.md»). Prueba de usuario nuevo: descargó el
+      `.dmg` desde la Release, lo instaló y siguió la guía para abrirlo con el
+      aviso de Gatekeeper sin problemas.
+- [x] **Documentación en dos idiomas, sin mezclarlos.** `README.md` (inglés,
+      por defecto) y `README.es.md`; `docs/INSTALL.md` y `docs/INSTALACION.md`.
+      Cada uno con la barra de idiomas al principio; ar, de, fr y pt enlazan de
+      momento a las descripciones del README inglés. Norma en CLAUDE.md: cada
+      cambio en los dos idiomas en el mismo commit. *Test:* cada par se enlaza
+      entre sí y los dos READMEs llevan la descripción oficial.
 - [ ] **R.P.6 CI.** Al ser público, los tres sistemas en cada push. El workflow
       se crea en P.2.
 
@@ -1143,6 +1156,9 @@ principio y toda operación destructiva pasa por confirmación.
       además de español e inglés, con soporte de interfaz de derecha a
       izquierda (RTL) para el árabe. El README ya tiene la descripción en esos
       idiomas.
+- [ ] **README completo en árabe, alemán, francés y portugués**
+      (`README.ar.md`, `README.de.md`, `README.fr.md`, `README.pt.md`), con el
+      árabe envuelto en `<div dir="rtl">`. La barra de idiomas pasa a enlazarlos.
 
 ## Fase final — Publicación
 
@@ -1150,7 +1166,8 @@ principio y toda operación destructiva pasa por confirmación.
 - [ ] **Sin firma de Apple (decidido).** GitCRAFT no se firma ni se notariza con
       Apple: es software libre y gratuito, y la firma exige una cuota anual de
       pago. En su lugar:
-      - [x] README y `docs/INSTALACION.md` (en español y en inglés): por qué no
+      - [x] READMEs y guías de instalación (`docs/INSTALL.md`,
+        `docs/INSTALACION.md`): por qué no
         está firmado, cómo abrirlo (Ajustes del Sistema → Privacidad y
         seguridad → Abrir igualmente) sin recomendar nunca desactivar
         Gatekeeper, y cómo comprobar la app: SHA-256 en las notas de cada
@@ -1165,5 +1182,8 @@ principio y toda operación destructiva pasa por confirmación.
 - [ ] **Firma en Windows:** estudiar la firma gratuita para proyectos de código
       abierto de SignPath Foundation.
 - [ ] GitHub Releases.
+- [ ] **Web del proyecto con GitHub Pages (objetivo firme):**
+      `epmoreno.github.io/GitCRAFT`, con selector de idioma, descargas para cada
+      sistema e instrucciones de instalación.
 - [ ] Documentación para usuarios, con las capturas del README (las hará el
       usuario).

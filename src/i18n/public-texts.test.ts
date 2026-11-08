@@ -23,6 +23,8 @@ const uiSources = readdirSync(`${ROOT}src`, {
 
 const PUBLIC_TEXTS = [
   "README.md",
+  "README.es.md",
+  "docs/INSTALL.md",
   "docs/INSTALACION.md",
   "package.json",
   "index.html",
@@ -88,6 +90,18 @@ describe("public identity", () => {
     expect(proprietaryMentions("unlike Fork")).toHaveLength(1);
   });
 
+  it("links each English public doc with its Spanish one", () => {
+    const pairs: [string, string][] = [
+      ["README.md", "README.es.md"],
+      ["docs/INSTALL.md", "docs/INSTALACION.md"],
+    ];
+    for (const [en, es] of pairs) {
+      const name = (p: string) => p.split("/").pop();
+      expect(read(en)).toContain(`[Español](${name(es)})`);
+      expect(read(es)).toContain(`[English](${name(en)})`);
+    }
+  });
+
   it("uses the official description everywhere", () => {
     expect(es.app.description).toBe(ES);
     expect(en.app.description).toBe(EN);
@@ -96,9 +110,10 @@ describe("public identity", () => {
     const bundle = JSON.parse(read("src-tauri/tauri.conf.json")).bundle;
     expect(bundle.shortDescription).toBe(ES);
     expect(bundle.longDescription).toBe(ES);
-    const readme = read("README.md");
-    expect(readme).toContain(EN);
-    expect(readme).toContain(ES);
+    for (const path of ["README.md", "README.es.md"]) {
+      expect(read(path)).toContain(EN);
+      expect(read(path)).toContain(ES);
+    }
     expect(read("docs/VISION.md")).toContain(ES);
   });
 });

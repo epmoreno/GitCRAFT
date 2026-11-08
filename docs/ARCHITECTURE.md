@@ -520,7 +520,7 @@ previas que fallan dejan seguir y el error de la operación real se explica.
   `.dmg` se cree sin automatizar Finder). Compila para la arquitectura del Mac
   que lo ejecuta (arm64 en Apple Silicon); salida en
   `target/release/bundle/{macos,dmg}`. Instalación y primer arranque:
-  `docs/INSTALACION.md`.
+  `docs/INSTALACION.md` (en inglés, `docs/INSTALL.md`).
 - **Firma ad-hoc** (`signingIdentity: "-"`): no identifica a ningún
   desarrollador ni está notarizada, así que Gatekeeper la trata como app sin
   firmar. Hace falta porque en Apple Silicon macOS solo ejecuta código con

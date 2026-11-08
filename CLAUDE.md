@@ -15,6 +15,15 @@ En textos públicos no se menciona ningún otro cliente Git; la descripción
 oficial es la de arriba. Sí se nombran las herramientas con las que GitCRAFT se
 integra y los avisos de licencia.
 
+## Idiomas de la documentación
+
+La documentación pública existe en inglés y español en archivos separados;
+cada cambio se hace en los dos idiomas en el mismo commit. Hoy son
+`README.md`/`README.es.md` y `docs/INSTALL.md`/`docs/INSTALACION.md`, cada uno
+con la barra de idiomas al principio. Un archivo no mezcla idiomas. La
+documentación de desarrollo (`docs/VISION.md`, `docs/ROADMAP.md`,
+`docs/ARCHITECTURE.md`, `docs/benchmarks.md`) sigue solo en español.
+
 ## Reglas clean-room (obligatorias)
 
 - Los clientes propietarios son referencia **solo** de ideas generales de UX. No

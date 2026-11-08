@@ -1,6 +1,10 @@
 # GitCRAFT
 
+🌐 **English** · [Español](README.es.md) · [العربية](#in-other-languages) · [Deutsch](#in-other-languages) · [Français](#in-other-languages) · [Português](#in-other-languages)
+
 GitCRAFT – a visual, fast, open-source Git client
+
+## In other languages
 
 <ul>
 <li lang="en">English: GitCRAFT – a visual, fast, open-source Git client</li>
@@ -90,8 +94,7 @@ It needs Git installed (Xcode Command Line Tools or Homebrew). GitHub features
 Tested on macOS 27.0.1; earlier versions are not verified.
 
 Step-by-step instructions and how to uninstall:
-[docs/INSTALACION.md](docs/INSTALACION.md) (in Spanish, with an English
-section on signing).
+[docs/INSTALL.md](docs/INSTALL.md).
 
 ### Why isn't GitCRAFT signed?
 
@@ -109,7 +112,10 @@ How to check the app yourself:
   `shasum -a 256 ~/Downloads/GitCRAFT_<version>_aarch64.dmg`
 - **VirusTotal**: every Release's notes link to VirusTotal's analysis of that
   same `.dmg`; check that the SHA-256 it shows is your file's.
-- **Build it yourself** from source with `npm run dist` (below).
+- **Build it yourself** from source with `npm run dist` (below). A `.dmg`
+  built by someone else has a different SHA-256 (build dates and an ad-hoc
+  signature), so building is an alternative to downloading, not a way to
+  check a downloaded file.
 
 ## Build from source
 

@@ -1,5 +1,7 @@
 # Instalar GitCRAFT en macOS (Apple Silicon)
 
+🌐 [English](INSTALL.md) · **Español**
+
 GitCRAFT se distribuye como `.dmg` para Macs con chip Apple (M1 o posterior).
 **Probado en macOS 27.0.1; versiones anteriores no verificadas.** **No está
 firmado con un certificado de desarrollador de Apple ni notarizado** (más
@@ -34,9 +36,12 @@ equipo (arm64). El resultado queda en
 
 ## Instalar
 
-1. Abre el `.dmg` con doble clic.
-2. Arrastra **GitCRAFT** a la carpeta **Aplicaciones**.
-3. Expulsa el disco «GitCRAFT» (botón ⏏ en la barra lateral de Finder).
+1. Descarga el `.dmg` de
+   [Releases](https://github.com/epmoreno/GitCRAFT/releases) o genéralo tú
+   (arriba).
+2. Ábrelo con doble clic.
+3. Arrastra **GitCRAFT** a la carpeta **Aplicaciones**.
+4. Expulsa el disco «GitCRAFT» (botón ⏏ en la barra lateral de Finder).
 
 ## Abrir por primera vez
 
@@ -96,38 +101,9 @@ Sin firma de Apple, puedes comprobar tú mismo lo que descargas:
   de tu archivo.
 - **Compilarlo tú.** El código es público: puedes generar el `.dmg` desde el
   código fuente con `npm run dist` (ver [Generar el `.dmg`](#generar-el-dmg))
-  y no descargar nada.
-
-## Why isn't GitCRAFT signed?
-
-GitCRAFT is free, open-source software (MIT license): nothing is charged for
-it. Signing and notarizing it with Apple requires a paid yearly Apple
-Developer Program membership, and the project has chosen not to pay it. That
-is why macOS shows a warning the first time you open it: it cannot check who
-made the app.
-
-To open it: open the app, press **OK** on the warning, then go to **System
-Settings → Privacy & Security → Open Anyway** (details in
-[Abrir por primera vez](#abrir-por-primera-vez)). **Never disable
-Gatekeeper:** the exception applies to GitCRAFT only.
-
-### How to check the app
-
-Without Apple's signature, you can check what you download yourself:
-
-- **SHA-256 checksum.** The notes of every GitHub Release include the `.dmg`'s
-  SHA-256. Compute the one of your download and compare; they must be
-  identical:
-
-  ```sh
-  shasum -a 256 ~/Downloads/GitCRAFT_<version>_aarch64.dmg
-  ```
-
-- **VirusTotal.** The notes of every Release link to VirusTotal's analysis of
-  that same `.dmg`. Check that the SHA-256 VirusTotal shows is your file's.
-- **Build it yourself.** The code is public: build the `.dmg` from source with
-  `npm run dist` (see [Generar el `.dmg`](#generar-el-dmg)) and download
-  nothing.
+  y no descargar nada. Un `.dmg` compilado por otra persona tiene otro SHA-256
+  (lleva fechas de compilación y una firma *ad-hoc*), así que compilar es una
+  alternativa a descargar, no una forma de comprobar un archivo descargado.
 
 ## Desinstalar
 
@@ -148,6 +124,7 @@ ramas, stashes…).
 Tampoco deshace lo que hayas cambiado desde Ajustes en la configuración de
 git o en gh, porque eso es configuración tuya y sigue sirviendo en la
 terminal:
+
 - identidad, rama inicial y estrategia de pull (`~/.gitconfig` o el
   `.git/config` de cada repo);
 - el credential helper de gh, si lo activaste;
