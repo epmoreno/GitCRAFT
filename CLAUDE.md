@@ -74,6 +74,9 @@ usuario.
 - **Idioma:** código, identificadores, comentarios y mensajes de commit en
   **inglés**. Documentación de `docs/` en **español**. Textos de la UI siempre
   mediante i18n (`src/i18n/{es,en}.json`), nunca literales en componentes.
+- **Multiplataforma:** todo código nuevo debe ser multiplataforma (macOS,
+  Windows y Linux); lo específico de un sistema va detrás de una abstracción
+  y se apunta en el inventario de `docs/ARCHITECTURE.md` (sección 8).
 - **Rust:** edition 2024, `cargo fmt`, `cargo clippy -- -D warnings`. Errores con
   `thiserror` en las librerías; nada de `unwrap()` fuera de tests. Lógica Git en
   el crate `gitcraft-core` (sin dependencias de Tauri) para poder testearla

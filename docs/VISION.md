@@ -6,7 +6,10 @@
 historial y las operaciones de Git se entiendan de un vistazo y se ejecuten con
 pocos clics, sin esconder nunca lo que Git hace por debajo.
 
-- **Plataforma:** primero macOS en Apple Silicon. Después Windows y Linux.
+- **Plataformas:** macOS, Windows y Linux, con el mismo código. Hoy solo hay
+  instalador para macOS en Apple Silicon; primero el código se hace portable y
+  se comprueba en los tres sistemas con el CI, y después llegan los
+  instaladores de Windows y Linux.
 - **Sin IA:** no hay ninguna función de IA integrada, ni ahora ni como función
   opcional.
 - **Licencia:** MIT.

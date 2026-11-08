@@ -1056,11 +1056,16 @@ Objetivo: el código compila, pasa los tests y arranca en macOS, Windows y
 Linux, comprobado por el CI. La prueba manual en máquinas virtuales la hará el
 usuario más adelante. Los instaladores quedan para la fase de publicación.
 
-- [ ] **P.1 Inventario y norma.** Tabla en ARCHITECTURE.md con todo lo específico
+- [x] **P.1 Inventario y norma.** Tabla en ARCHITECTURE.md con todo lo específico
       de macOS, su equivalente en Windows y Linux y su tarea. Se añade a
       CLAUDE.md: «todo código nuevo debe ser multiplataforma; lo específico de
       un sistema va detrás de una abstracción». VISION.md actualiza el objetivo
       de plataformas.
+      *Hecho:* sección 8 de ARCHITECTURE.md con 19 entradas, cada una con su
+      tarea (P.3–P.10 o Fase final). Dos que no estaban en el plan: los scripts
+      de npm `dist` y `bindings` usan una sintaxis que `cmd.exe` no entiende
+      (`bindings` en P.3) y el diff de archivos sin seguimiento contra
+      `/dev/null` hay que comprobarlo en Windows (P.8).
 - [ ] **P.2 CI en GitHub Actions.** `npm run check` con caché de Cargo y npm,
       cancelando las ejecuciones anteriores de la misma rama. Con el repo ya
       público (R.P): `macos-latest`, `ubuntu-latest` y `windows-latest` en cada

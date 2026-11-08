@@ -623,3 +623,38 @@ Solo hay tema oscuro; el tema claro está en la fase 3.
 | Integración (core) | `ops::*` contra repos reales | `TestRepo::new()` en `tempfile`, `GIT_CONFIG_GLOBAL=/dev/null`, fechas e identidad fijas |
 | Rendimiento | Log + layout de 100k commits | Test `#[ignore]` y bench con un repo sintético generado por `git fast-import` |
 | Frontend | Componentes y stores | Vitest + Testing Library, IPC mockeado |
+
+## 8. Plataformas
+
+GitCRAFT nació para macOS en Apple Silicon. El objetivo es que el mismo código
+compile, pase los tests y arranque en macOS, Windows y Linux (Fase P), y que
+después haya instaladores para los tres (Fase final).
+
+**Norma:** todo código nuevo es multiplataforma. Lo específico de un sistema va
+detrás de una abstracción (un trait o una función con una implementación por
+sistema bajo `#[cfg]`), nunca repartido por el código que la usa. Cada cosa
+específica de un sistema se apunta en esta tabla.
+
+### Inventario de lo específico de macOS (o de Unix)
+
+| Qué | Dónde | Hoy (macOS) | Windows | Linux | Tarea |
+| --- | --- | --- | --- | --- | --- |
+| Cancelar procesos | `runner/mod.rs` (`signal_group`), `gh.rs` (`kill_group`) | Grupo de procesos (`process_group(0)`) y `killpg` con `nix`, solo `cfg(unix)`; fuera de Unix no hace nada | Job Objects, y `CREATE_NO_WINDOW` para que no se abran consolas | Igual que macOS | P.7 |
+| Papelera al descartar | `ops/discard.rs` (`SystemTrash`) | `NSFileManager.trashItemAtURL` (`objc2-foundation`); fuera de macOS devuelve error | Papelera de reciclaje | Especificación Trash de freedesktop | P.5 |
+| Modo y symlinks al descartar y deshacer | `ops/discard.rs` | Bit de ejecución con `PermissionsExt` y `std::os::unix::fs::symlink` | Sin bit de ejecución; crear symlinks puede pedir privilegios | Igual que macOS | P.8 |
+| Localizar git | `runner/discover.rs` | `$PATH` y luego `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`; comprueba el bit de ejecución | `git.exe` en `PATH` y en `Program Files\Git` | `$PATH`, `/usr/bin` | P.6 |
+| Localizar gh | `gh.rs` (`FALLBACK_LOCATIONS`) | `$GITCRAFT_GH`, `$PATH` y luego Homebrew | `gh.exe` en `PATH` y en `Program Files\GitHub CLI` | `$PATH`, `/usr/bin` | P.6 |
+| `PATH` de los procesos hijos | `runner/mod.rs` (`EXTRA_PATH_DIRS`, `child_path`) | Añade carpetas de Homebrew y del sistema con separador `:` | Separador `;` y otras carpetas | Sin carpetas de Homebrew | P.6 |
+| Abrir el navegador | `src-tauri/src/state.rs` | `/usr/bin/open <url>` | Mecanismo del sistema (por ejemplo, un plugin de Tauri) | `xdg-open` | P.6 |
+| Atajos de teclado | `src/app/shortcuts.ts`, `src/i18n/*.json` | ⌘ como modificador principal; textos con `⌘W`, `⌘T`, `⌘,`, `⌘↩`, `⌘1…9` y `⌘⌫` escritos a mano | Ctrl; descartar con Ctrl+Supr | Ctrl | P.4 |
+| Barra de menús | `src/app/menu.ts` | Menú de la app con elementos de macOS (Servicios, Ocultar…) | Menú en la ventana o ninguno, sin esos elementos | Igual que Windows | P.9 |
+| Barra de título | `tauri.conf.json` (`titleBarStyle: Overlay`, `hiddenTitle`), `App.module.css` (hueco de 84 px para los botones de la ventana), `data-tauri-drag-region` | Barra de herramientas dentro de la barra de título | Decoraciones del sistema, sin hueco | Igual que Windows | P.9, P.10 |
+| Textos que nombran macOS | `src/i18n/*.json`: Homebrew y Xcode (`gitNotFound`, instalar gh, `ghNotFound`), Llavero (`intro` de GitHub), `osxkeychain` (`authFailed`), `~/.gitconfig`, Papelera | Correctos | Instalador de Git/gh o `winget`, Administrador de credenciales, Papelera de reciclaje, `%USERPROFILE%\.gitconfig` | Gestor de paquetes, libsecret, Papelera | P.5, P.6, P.9 |
+| Motor web | CSS: `color-mix()`, `-webkit-user-select`, `-webkit-font-smoothing`, fuentes `-apple-system`/`SF Mono`/`Menlo` | WKWebView | WebView2 (Chromium) | WebKitGTK (según versión) | P.10 |
+| Finales de línea | Sin `.gitattributes`; Prettier exige LF | LF | Un checkout con CRLF hace fallar `format:check` | LF | P.3 |
+| Tests | `testing.rs` y tests (`GIT_CONFIG_GLOBAL=/dev/null`), `gh` simulado y hooks como scripts `#!/bin/sh`, `PermissionsExt`, `nix::kill` en `tests/runner.rs` | Funcionan | `/dev/null` y los scripts `sh` no sirven | Funcionan | P.3 |
+| Diff de un archivo sin seguimiento | `ops/worktree.rs` (`diff --no-index -- /dev/null <ruta>`) | Funciona | Hay que comprobarlo con Git for Windows | Funciona | P.8 |
+| Rutas | Sesión, recientes, comparación de rutas | `/`, distingue mayúsculas según el volumen | `\`, unidades, rutas largas, no distingue mayúsculas | `/`, distingue mayúsculas | P.8 |
+| Scripts de npm | `package.json`: `dist` y `bindings` usan `VAR=1 comando` | Funcionan | `cmd.exe` no entiende esa sintaxis | Funcionan | P.3 (`bindings`), Fase final (`dist`) |
+| Empaquetado | `tauri.conf.json` (`targets: app, dmg`, `macOS.minimumSystemVersion`, firma ad-hoc), `npm run dist` | `.app` y `.dmg` | Instalador (`.msi` o NSIS) | `.deb`, AppImage… | Fase final |
+| Scripts de desarrollo | `scripts/*.sh` (`make-remote-sandbox.sh` usa `osascript` y Finder) | Funcionan | No | Parcialmente | Solo para desarrollo en macOS; sin tarea |
