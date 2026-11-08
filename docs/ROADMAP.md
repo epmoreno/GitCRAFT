@@ -1047,7 +1047,7 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
       momento a las descripciones del README inglés. Norma en CLAUDE.md: cada
       cambio en los dos idiomas en el mismo commit. *Test:* cada par se enlaza
       entre sí y los dos READMEs llevan la descripción oficial.
-- [ ] **R.P.6 CI.** Al ser público, los tres sistemas en cada push. El workflow
+- [x] **R.P.6 CI.** Al ser público, los tres sistemas en cada push. El workflow
       se crea en P.2.
 
 ## Fase P — Portabilidad
@@ -1066,12 +1066,18 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       de npm `dist` y `bindings` usan una sintaxis que `cmd.exe` no entiende
       (`bindings` en P.3) y el diff de archivos sin seguimiento contra
       `/dev/null` hay que comprobarlo en Windows (P.8).
-- [ ] **P.2 CI en GitHub Actions.** `npm run check` con caché de Cargo y npm,
+- [x] **P.2 CI en GitHub Actions.** `npm run check` con caché de Cargo y npm,
       cancelando las ejecuciones anteriores de la misma rama. Con el repo ya
       público (R.P): `macos-latest`, `ubuntu-latest` y `windows-latest` en cada
       push. Mientras duren P.3–P.10, Windows y Linux informan sin bloquear
       (`continue-on-error`).
       *Verificable:* el workflow se ejecuta en cada push y macOS sale en verde.
+      *Primera ejecución* (`.github/workflows/ci.yml`, git 2.56, Node 22):
+      macOS en verde en 4 min y Linux en verde en 6 min, los dos con los 34
+      archivos de tests web y 319 tests de Rust (2 ignorados). Windows falla en
+      el primer paso, `format:check`: el checkout con CRLF hace que Prettier
+      marque 133 archivos, así que el resto no llega a ejecutarse (P.3).
+      Necesitó añadir el permiso `workflow` a la sesión de gh del usuario.
 - [ ] **P.3 Tests portables.** `.gitattributes` para los finales de línea. El
       `gh` simulado deja de ser un script `sh` (un binario de prueba en Rust).
       Sin `/dev/null` ni rutas de Unix en los tests; los de symlinks y permisos
