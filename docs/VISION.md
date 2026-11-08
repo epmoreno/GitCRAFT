@@ -56,8 +56,9 @@ configurables y tema claro/oscuro.
 
 ### Fuera de alcance
 - Funciones de IA de cualquier tipo.
-- Alojar repositorios o integrarse con las APIs de proveedores (PRs, issues)
-  durante el MVP.
+- Alojar repositorios o integrarse con las APIs de proveedores (PRs, issues).
+  La única excepción es publicar un repositorio local en GitHub mediante `gh`
+  (GitHub CLI).
 - Una implementación propia del protocolo Git o del almacenamiento de
   credenciales.
 
@@ -66,9 +67,8 @@ configurables y tema claro/oscuro.
 GitCRAFT es una implementación **100 % clean-room**. Estas reglas no se pueden
 negociar:
 
-1. **Referencia solo de experiencia de usuario.** Los clientes Git visuales
-   modernos (GitKraken, Fork, Sublime Merge) sirven de referencia **solo** para
-   ideas generales de experiencia de usuario, como el grafo central, las
+1. **Referencia solo de experiencia de usuario.** Los clientes Git propietarios
+   sirven de referencia **solo** para ideas generales de experiencia de usuario, como el grafo central, las
    operaciones con clic o arrastrar y soltar, y el feedback inmediato.
 2. **Ingeniería inversa (REA) solo sobre objetivos permitidos.** Se usa solo a
    petición del usuario, o cuando se propone y el usuario lo aprueba.
@@ -77,9 +77,9 @@ negociar:
      aviso MIT y se registra en `THIRD_PARTY_NOTICES.md`, sin usar sus nombres,
      logos ni recursos gráficos); y los builds propios de GitCRAFT, para
      depuración, crashes y verificación.
-   - *Prohibidos:* GitKraken, Fork, Sublime Merge, Tower y cualquier software
-     propietario cuya licencia prohíba el análisis. De ellos solo se usa el
-     comportamiento observable como usuario, descrito con palabras propias.
+   - *Prohibidos:* cualquier software propietario cuya licencia no permita su
+     análisis. De ellos solo se usa el comportamiento observable como usuario,
+     descrito con palabras propias.
    - Antes de analizar cualquier otra aplicación se verifica su licencia y se
      pregunta al usuario.
 3. **Identidad propia.** No se copian nombres, logos, iconos, paletas de color,

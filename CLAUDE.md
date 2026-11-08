@@ -1,5 +1,8 @@
 # CLAUDE.md — GitCRAFT
 
+Guía de trabajo para el desarrollo asistido por IA de este proyecto. GitCRAFT,
+la aplicación, no incluye ninguna función de IA.
+
 Cliente Git de escritorio original (Tauri 2 + Rust + React + TypeScript).
 Visión y alcance: `docs/VISION.md`. Tareas: `docs/ROADMAP.md`.
 Arquitectura: `docs/ARCHITECTURE.md`.
@@ -34,9 +37,9 @@ Objetivos permitidos:
   logos ni recursos gráficos.
 - **Builds propios de GitCRAFT:** depuración, crashes y verificación.
 
-Objetivos prohibidos: **GitKraken, Fork, Sublime Merge, Tower** y cualquier
-software propietario cuya licencia prohíba el análisis. De ellos solo se usa el
-comportamiento observable como usuario, descrito con palabras propias.
+Objetivos prohibidos: **cualquier software propietario cuya licencia no permita
+su análisis.** De ellos solo se usa el comportamiento observable como usuario,
+descrito con palabras propias.
 
 Antes de analizar cualquier otra app: verificar su licencia y preguntar al
 usuario.

@@ -1013,7 +1013,16 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
 - [x] **R.P.3 README.** Aviso de versión temprana, qué funciona, que de momento
       solo hay instalador para macOS, cómo compilar y la licencia MIT. La frase
       oficial en inglés, con la española debajo. Incluye qué falta todavía.
-- [ ] **R.P.4 Revisión de CLAUDE.md y VISION.md** tal como están.
+- [x] **R.P.4 Revisión de CLAUDE.md y VISION.md** tal como están.
+      Decisiones del usuario: no se nombra ningún producto propietario (la
+      referencia de UX son «los clientes Git propietarios» y los objetivos
+      prohibidos, «cualquier software propietario cuya licencia no permita su
+      análisis»); el criterio no cambia. Se mantienen los permitidos (MIT).
+      CLAUDE.md explica que es la guía del desarrollo asistido por IA y que
+      GitCRAFT no tiene funciones de IA. «Fuera de alcance» precisa que la única
+      integración con un proveedor es publicar en GitHub mediante `gh`.
+      *Test:* CLAUDE.md, THIRD_PARTY_NOTICES.md y `docs/*.md` no nombran ningún
+      cliente propietario; los textos públicos, ningún cliente.
 - [ ] **R.P.5 Hacer el repo público** (`gh repo edit --visibility public
       --accept-visibility-change-consequences`), solo cuando el usuario lo
       confirme explícitamente y después de que haya borrado

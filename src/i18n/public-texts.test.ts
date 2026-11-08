@@ -3,9 +3,10 @@ import en from "./en.json";
 import es from "./es.json";
 
 /*
- * GitCRAFT presents itself under its own name. CLAUDE.md, VISION.md and
- * THIRD_PARTY_NOTICES.md are not public texts in this sense: the first two
- * hold the clean-room rules that name products to forbid analysing them.
+ * GitCRAFT presents itself under its own name: public texts name no other Git
+ * client. The project docs (CLAUDE.md and docs/) may name the open-source
+ * clients whose code the clean-room rules allow consulting, but no
+ * proprietary one.
  */
 const ROOT = `${import.meta.dirname}/../../`;
 const ES = "GitCRAFT – cliente Git visual, rápido y de código abierto";
@@ -30,17 +31,31 @@ const PUBLIC_TEXTS = [
   ...uiSources,
 ];
 
-const OTHER_CLIENTS =
-  /git ?kraken|sublime ?merge|sourcetree|sourcegit|github desktop|lazygit|tortoise ?git|smart ?git|git ?fiend|\bmagit\b/i;
+const PROJECT_DOCS = [
+  "CLAUDE.md",
+  "THIRD_PARTY_NOTICES.md",
+  ...readdirSync(`${ROOT}docs`)
+    .filter((p) => p.endsWith(".md"))
+    .map((p) => `docs/${p}`),
+];
+
+const PROPRIETARY_CLIENTS =
+  /git ?kraken|sublime ?merge|sourcetree|smart ?git|git ?fiend/i;
 // With their capital only: both are everyday words.
-const OTHER_CLIENTS_CASED = /\b(Fork|Tower)\b/;
+const PROPRIETARY_CLIENTS_CASED = /\b(Fork|Tower)\b/;
+const OPEN_SOURCE_CLIENTS =
+  /sourcegit|github desktop|lazygit|tortoise ?git|\bmagit\b/i;
+
+const proprietary = (line: string) =>
+  PROPRIETARY_CLIENTS.test(line) || PROPRIETARY_CLIENTS_CASED.test(line);
 
 const mentions = (text: string) =>
   text
     .split("\n")
-    .filter(
-      (line) => OTHER_CLIENTS.test(line) || OTHER_CLIENTS_CASED.test(line),
-    );
+    .filter((line) => proprietary(line) || OPEN_SOURCE_CLIENTS.test(line));
+
+const proprietaryMentions = (text: string) =>
+  text.split("\n").filter(proprietary);
 
 describe("public identity", () => {
   it("scans the UI sources", () => {
@@ -55,11 +70,22 @@ describe("public identity", () => {
     expect(found).toEqual([]);
   });
 
+  it("names no proprietary Git client in the project docs", () => {
+    expect(PROJECT_DOCS).toContain("docs/VISION.md");
+    const found = PROJECT_DOCS.flatMap((path) =>
+      proprietaryMentions(read(path)).map((line) => `${path}: ${line.trim()}`),
+    );
+    expect(found).toEqual([]);
+  });
+
   it("recognises other clients, not everyday words", () => {
     expect(mentions("works like Sublime Merge")).toHaveLength(1);
     expect(mentions("a Tower of files")).toHaveLength(1);
+    expect(mentions("code from SourceGit")).toHaveLength(1);
     expect(mentions("the tower and a fork in the road")).toEqual([]);
     expect(mentions("an open-source Git client")).toEqual([]);
+    expect(proprietaryMentions("code from SourceGit (MIT)")).toEqual([]);
+    expect(proprietaryMentions("unlike Fork")).toHaveLength(1);
   });
 
   it("uses the official description everywhere", () => {
