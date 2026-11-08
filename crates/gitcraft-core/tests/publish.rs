@@ -1,12 +1,13 @@
-//! Publishing on GitHub with a simulated gh (no network) and a local bare
-//! repository as the "GitHub" remote.
+//! Publishing on GitHub with a simulated gh (the `fake-gh` test binary, no
+//! network) and a local bare repository as the "GitHub" remote.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use gitcraft_core::gh::Gh;
 use gitcraft_core::ops::publish::{self, PublishRequest};
 use gitcraft_core::ops::remote::{self, PushOutcome};
 use gitcraft_core::testing::TestRepo;
+use gitcraft_core::testing::fake_gh::{FakeGh, Reply, Scenario};
 use gitcraft_core::{CancellationToken, ErrorKind, Git};
 
 fn c() -> CancellationToken {
@@ -19,58 +20,50 @@ fn git() -> Git {
 
 const SIGNED_IN: &str = r#"{"hosts":{"github.com":[{"state":"success","active":true,"login":"ana","gitProtocol":"PROTOCOL"}]}}"#;
 
+const FAKE_GH: &str = env!("CARGO_BIN_EXE_fake-gh");
+
 /// A `gh` that records its calls. `exists`: whether the name is taken;
 /// `clone_url`: what the API says about the created repository.
-struct FakeGh {
-    dir: tempfile::TempDir,
+struct Fake {
+    sim: FakeGh,
     gh: Gh,
 }
 
-impl FakeGh {
+impl Fake {
     fn new(signed_in: bool, protocol: &str, exists: bool, clone_url: &str) -> Self {
-        let dir = tempfile::tempdir().expect("tempdir");
         let status = if signed_in {
             SIGNED_IN.replace("PROTOCOL", protocol)
         } else {
             r#"{"hosts":{}}"#.to_owned()
         };
         let view = if exists {
-            "printf 'HTTP/2.0 200 OK\\n\\n{}\\n'".to_owned()
+            Reply::ok().stdout("HTTP/2.0 200 OK\n\n{}\n")
         } else {
-            "printf 'HTTP/2.0 404 Not Found\\n\\n{}\\n'; exit 1".to_owned()
+            Reply::ok().stdout("HTTP/2.0 404 Not Found\n\n{}\n").exit(1)
         };
         let created = format!(
             r#"{{"full_name":"ana/x","html_url":"https://github.com/ana/x","clone_url":"{clone_url}","ssh_url":"git@github.com:ana/x.git"}}"#
         );
-        let script = format!(
-            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"{log}\"\ncase \"$1 $2\" in\n\
-             'auth status') echo '{status}' ;;\n\
-             'api --include') if [ \"$3\" = '-X' ]; then printf 'HTTP/2.0 201 Created\\n\\n%s\\n' '{created}'; else {view}; fi ;;\n\
-             esac\n",
-            log = dir.path().join("calls.log").display(),
-        );
-        let exe = dir.path().join("gh");
-        std::fs::write(&exe, script).expect("write");
-        make_executable(&exe);
-        Self {
-            gh: Gh::at(&exe),
-            dir,
-        }
+        Self::with(
+            Scenario::always(Reply::ok())
+                .when(&["auth", "status"], Reply::ok().out_line(&status))
+                .when(
+                    &["api", "--include", "-X"],
+                    Reply::ok().stdout(&format!("HTTP/2.0 201 Created\n\n{created}\n")),
+                )
+                .when(&["api", "--include"], view),
+        )
+    }
+
+    fn with(scenario: Scenario) -> Self {
+        let sim = FakeGh::new(FAKE_GH, &scenario);
+        let gh = Gh::at(sim.path());
+        Self { sim, gh }
     }
 
     fn calls(&self) -> Vec<String> {
-        std::fs::read_to_string(self.dir.path().join("calls.log"))
-            .unwrap_or_default()
-            .lines()
-            .map(str::to_owned)
-            .collect()
+        self.sim.calls()
     }
-}
-
-#[cfg(unix)]
-fn make_executable(path: &Path) {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
 }
 
 /// A bare repository standing for the one GitHub creates: `<dir>/x.git`.
@@ -170,7 +163,7 @@ async fn creates_the_private_repository_adds_origin_and_pushes_with_upstream() {
     let repo = TestRepo::new().await;
     repo.commit_file("a.txt", "a\n", "a").await;
     let (_github, url) = github_side().await;
-    let fake = FakeGh::new(true, "https", false, &url);
+    let fake = Fake::new(true, "https", false, &url);
 
     let published = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
         .await
@@ -204,7 +197,7 @@ async fn creates_the_private_repository_adds_origin_and_pushes_with_upstream() {
 async fn an_existing_name_changes_nothing() {
     let repo = TestRepo::new().await;
     repo.commit_file("a.txt", "a\n", "a").await;
-    let fake = FakeGh::new(true, "https", true, "unused");
+    let fake = Fake::new(true, "https", true, "unused");
     let err = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
         .await
         .expect_err("exists");
@@ -221,13 +214,13 @@ async fn needs_a_session_a_valid_name_and_no_remote() {
     let repo = TestRepo::new().await;
     repo.commit_file("a.txt", "a\n", "a").await;
 
-    let fake = FakeGh::new(false, "https", false, "unused");
+    let fake = Fake::new(false, "https", false, "unused");
     let err = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
         .await
         .expect_err("no session");
     assert_eq!(err.kind(), ErrorKind::GhNotLoggedIn);
 
-    let fake = FakeGh::new(true, "https", false, "unused");
+    let fake = Fake::new(true, "https", false, "unused");
     let err = publish::publish(&git(), &fake.gh, repo.path(), &request("-x"), &c())
         .await
         .expect_err("bad name");
@@ -236,7 +229,7 @@ async fn needs_a_session_a_valid_name_and_no_remote() {
 
     repo.run(&["remote", "add", "other", "https://example.com/r.git"])
         .await;
-    let fake = FakeGh::new(true, "https", false, "unused");
+    let fake = Fake::new(true, "https", false, "unused");
     let err = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
         .await
         .expect_err("has remote");
@@ -248,24 +241,19 @@ async fn needs_a_session_a_valid_name_and_no_remote() {
 async fn without_connection_nothing_is_created_and_it_says_so() {
     let repo = TestRepo::new().await;
     repo.commit_file("a.txt", "a\n", "a").await;
-    let dir = tempfile::tempdir().expect("tempdir");
-    let exe = dir.path().join("gh");
-    std::fs::write(
-        &exe,
-        format!(
-            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"{log}\"\ncase \"$1 $2\" in\n\
-             'auth status') echo '{{\"hosts\":{{\"github.com\":[{{\"state\":\"error\",\"active\":true,\"login\":\"ana\"}}]}}}}' ;;\n\
-             *) echo 'dial tcp: no such host' >&2; exit 1 ;;\nesac\n",
-            log = dir.path().join("calls.log").display()
+    let fake = Fake::with(
+        Scenario::always(Reply::ok().err_line("dial tcp: no such host").exit(1)).when(
+            &["auth", "status"],
+            Reply::ok().out_line(
+                r#"{"hosts":{"github.com":[{"state":"error","active":true,"login":"ana"}]}}"#,
+            ),
         ),
-    )
-    .expect("write");
-    make_executable(&exe);
-    let err = publish::publish(&git(), &Gh::at(&exe), repo.path(), &request("x"), &c())
+    );
+    let err = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
         .await
         .expect_err("no connection");
     assert_eq!(err.kind(), ErrorKind::GhUnreachable);
-    let calls = std::fs::read_to_string(dir.path().join("calls.log")).expect("calls");
+    let calls = fake.calls().join("\n");
     assert!(!calls.contains("POST"), "{calls}");
     assert!(repo.run(&["remote"]).await.trim().is_empty());
 }
@@ -275,7 +263,7 @@ async fn a_push_that_fails_after_creating_leaves_origin_to_retry() {
     let repo = TestRepo::new().await;
     repo.commit_file("a.txt", "a\n", "a").await;
     let gone = PathBuf::from("/nonexistent/gitcraft-test/x");
-    let fake = FakeGh::new(true, "https", false, &format!("file://{}", gone.display()));
+    let fake = Fake::new(true, "https", false, &format!("file://{}", gone.display()));
     publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
         .await
         .expect("created");
@@ -294,7 +282,7 @@ async fn a_push_that_fails_after_creating_leaves_origin_to_retry() {
 async fn uses_the_ssh_url_when_the_account_uses_ssh() {
     let repo = TestRepo::new().await;
     repo.commit_file("a.txt", "a\n", "a").await;
-    let fake = FakeGh::new(true, "ssh", false, "https://github.com/ana/x.git");
+    let fake = Fake::new(true, "ssh", false, "https://github.com/ana/x.git");
     let published = publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
         .await
         .expect("publish");

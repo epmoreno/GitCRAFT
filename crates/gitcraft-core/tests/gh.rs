@@ -1,55 +1,56 @@
-//! gh, simulated: a script stands in for it, so no test needs the network
-//! or touches the real gh session.
+//! gh, simulated: the `fake-gh` test binary stands in for it, so no test
+//! needs the network or touches the real gh session.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use gitcraft_core::gh::{Gh, GhAccount, LoginEvent};
+use gitcraft_core::testing::fake_gh::{FakeGh, Reply, Scenario};
 use gitcraft_core::{
     Access, CancellationToken, CommandEvent, CommandLog, CommandOutcome, ErrorKind, GitError,
 };
 
-struct FakeGh {
-    dir: tempfile::TempDir,
+const FAKE_GH: &str = env!("CARGO_BIN_EXE_fake-gh");
+
+struct Fake {
+    sim: FakeGh,
     gh: Gh,
 }
 
-impl FakeGh {
-    /// A `gh` that records its arguments and runs `body` (sh) for them.
-    fn new(body: &str) -> Self {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let exe = dir.path().join("gh");
-        let script = format!(
-            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"{log}\"\n{body}\n",
-            log = dir.path().join("calls.log").display()
-        );
-        std::fs::write(&exe, script).expect("write fake gh");
-        make_executable(&exe);
-        let gh = Gh::at(&exe);
-        Self { dir, gh }
+impl Fake {
+    /// A `gh` that records its arguments and answers as `scenario` says.
+    fn new(scenario: Scenario) -> Self {
+        let sim = FakeGh::new(FAKE_GH, &scenario);
+        let gh = Gh::at(sim.path());
+        Self { sim, gh }
+    }
+
+    /// A `gh` that gives `reply` to every call.
+    fn always(reply: Reply) -> Self {
+        Self::new(Scenario::always(reply))
     }
 
     fn calls(&self) -> Vec<String> {
-        std::fs::read_to_string(self.dir.path().join("calls.log"))
-            .unwrap_or_default()
-            .lines()
-            .map(str::to_owned)
-            .collect()
+        self.sim.calls()
     }
-}
-
-#[cfg(unix)]
-fn make_executable(path: &Path) {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
 }
 
 fn c() -> CancellationToken {
     CancellationToken::new()
 }
 
-const LOGGED_IN: &str = r#"echo '{"hosts":{"github.com":[{"state":"success","active":true,"host":"github.com","login":"ana","tokenSource":"keyring"}]}}'"#;
+/// `gh auth status --json hosts` with a working session for "ana".
+fn logged_in() -> Reply {
+    Reply::ok().out_line(
+        r#"{"hosts":{"github.com":[{"state":"success","active":true,"host":"github.com","login":"ana","tokenSource":"keyring"}]}}"#,
+    )
+}
+
+/// Waits far longer than any test: only a time limit or a cancel ends it.
+fn forever() -> Reply {
+    Reply::ok().sleep(Duration::from_secs(30))
+}
 
 #[tokio::test]
 async fn a_missing_gh_is_reported_as_not_installed() {
@@ -60,7 +61,7 @@ async fn a_missing_gh_is_reported_as_not_installed() {
 
 #[tokio::test]
 async fn reads_the_session_and_its_user() {
-    let fake = FakeGh::new(LOGGED_IN);
+    let fake = Fake::always(logged_in());
     assert_eq!(
         fake.gh.accounts(&c()).await.expect("status"),
         [GhAccount {
@@ -78,23 +79,27 @@ async fn reads_the_session_and_its_user() {
 
 #[tokio::test]
 async fn no_session_and_an_expired_token() {
-    let fake =
-        FakeGh::new(r#"echo '{"hosts":{}}'; echo 'You are not logged into any GitHub hosts.' >&2"#);
+    let fake = Fake::always(
+        Reply::ok()
+            .out_line(r#"{"hosts":{}}"#)
+            .err_line("You are not logged into any GitHub hosts."),
+    );
     assert!(fake.gh.accounts(&c()).await.expect("status").is_empty());
 
-    let fake = FakeGh::new(
-        r#"echo '{"hosts":{"github.com":[{"state":"error","active":true,"login":"ana"}]}}'"#,
-    );
+    let fake = Fake::always(token_not_working());
     let accounts = fake.gh.accounts(&c()).await.expect("status");
     assert!(!accounts[0].valid, "expired or revoked token");
 }
 
 #[tokio::test]
 async fn signs_in_reporting_the_one_time_code() {
-    let fake = FakeGh::new(
-        "echo '! One-time code (WXYZ-1234) copied to clipboard' >&2\n\
-         echo 'Open this URL to continue in your web browser: https://github.com/login/device' >&2\n\
-         echo '✓ Logged in as ana' >&2",
+    let fake = Fake::always(
+        Reply::ok()
+            .err_line("! One-time code (WXYZ-1234) copied to clipboard")
+            .err_line(
+                "Open this URL to continue in your web browser: https://github.com/login/device",
+            )
+            .err_line("✓ Logged in as ana"),
     );
     let mut events = Vec::new();
     fake.gh
@@ -116,7 +121,7 @@ async fn signs_in_reporting_the_one_time_code() {
 
 #[tokio::test]
 async fn cancelling_the_sign_in_stops_gh() {
-    let fake = FakeGh::new("echo '! One-time code (WXYZ-1234) copied' >&2\nsleep 30");
+    let fake = Fake::always(forever().err_line("! One-time code (WXYZ-1234) copied"));
     let cancel = c();
     let stop = cancel.clone();
     let started = std::time::Instant::now();
@@ -138,7 +143,11 @@ async fn cancelling_the_sign_in_stops_gh() {
 
 #[tokio::test]
 async fn a_failed_sign_in_keeps_what_gh_said() {
-    let fake = FakeGh::new("echo 'error connecting to api.github.com' >&2; exit 1");
+    let fake = Fake::always(
+        Reply::ok()
+            .err_line("error connecting to api.github.com")
+            .exit(1),
+    );
     let err = fake.gh.login(|_| {}, &c()).await.expect_err("fails");
     assert_eq!(err.kind(), ErrorKind::GhFailed);
     assert!(err.details().expect("details").contains("error connecting"));
@@ -146,7 +155,7 @@ async fn a_failed_sign_in_keeps_what_gh_said() {
 
 #[tokio::test]
 async fn signs_out_and_sets_up_git_for_one_user_on_github_com() {
-    let fake = FakeGh::new("true");
+    let fake = Fake::always(Reply::ok());
     fake.gh.logout("-ana", &c()).await.expect("logout");
     fake.gh.setup_git(&c()).await.expect("setup-git");
     assert_eq!(
@@ -160,7 +169,7 @@ async fn signs_out_and_sets_up_git_for_one_user_on_github_com() {
 
 #[tokio::test]
 async fn never_asks_gh_for_a_token() {
-    let fake = FakeGh::new(LOGGED_IN);
+    let fake = Fake::always(logged_in());
     fake.gh.version(&c()).await.expect("version");
     fake.gh.accounts(&c()).await.expect("status");
     fake.gh.logout("ana", &c()).await.expect("logout");
@@ -169,30 +178,19 @@ async fn never_asks_gh_for_a_token() {
     }
 }
 
-/// What `gh api --include` writes for an HTTP answer.
-fn answer(status: &str, body: &str, exit: i32) -> String {
-    format!(
-        "printf 'HTTP/2.0 {status}\\nContent-Type: application/json\\n\\n%s\\n' '{body}'; exit {exit}"
-    )
-}
-
 #[tokio::test]
 async fn the_http_status_says_whether_a_repository_exists() {
-    let fake = FakeGh::new(&answer("200 OK", "{}", 0));
+    let fake = Fake::always(Reply::http("200 OK", "{}", 0));
     assert!(fake.gh.repo_exists("ana", "x", &c()).await.expect("200"));
     assert_eq!(fake.calls(), ["api --include repos/ana/x"]);
 
     // Nothing depends on gh's words: only the status counts.
-    let fake = FakeGh::new(&format!(
-        "echo 'mensaje cualquiera' >&2; {}",
-        answer("404 Not Found", "{}", 1)
-    ));
+    let fake = Fake::always(Reply::http("404 Not Found", "{}", 1).err_line("mensaje cualquiera"));
     assert!(!fake.gh.repo_exists("ana", "x", &c()).await.expect("404"));
 
-    let fake = FakeGh::new(&format!(
-        "echo 'Could not resolve to a Repository' >&2; {}",
-        answer("500 Server Error", "{}", 1)
-    ));
+    let fake = Fake::always(
+        Reply::http("500 Server Error", "{}", 1).err_line("Could not resolve to a Repository"),
+    );
     let err = fake
         .gh
         .repo_exists("ana", "x", &c())
@@ -204,7 +202,7 @@ async fn the_http_status_says_whether_a_repository_exists() {
 #[tokio::test]
 async fn classifies_failures_by_exit_code_and_status_not_by_wording() {
     // 401: the session is not valid, whatever gh says.
-    let fake = FakeGh::new(&answer("401 Unauthorized", "{}", 1));
+    let fake = Fake::always(Reply::http("401 Unauthorized", "{}", 1));
     let err = fake
         .gh
         .repo_exists("ana", "x", &c())
@@ -213,7 +211,7 @@ async fn classifies_failures_by_exit_code_and_status_not_by_wording() {
     assert_eq!(err.kind(), ErrorKind::GhNotLoggedIn);
 
     // Documented exit code 4: authentication needed.
-    let fake = FakeGh::new("echo 'lo que sea' >&2; exit 4");
+    let fake = Fake::always(Reply::ok().err_line("lo que sea").exit(4));
     let err = fake.gh.repo_exists("ana", "x", &c()).await.expect_err("4");
     assert_eq!(err.kind(), ErrorKind::GhNotLoggedIn);
     let err = fake
@@ -224,7 +222,7 @@ async fn classifies_failures_by_exit_code_and_status_not_by_wording() {
     assert_eq!(err.kind(), ErrorKind::GhNotLoggedIn);
 
     // No HTTP answer at all: GitHub could not be reached. The output stays.
-    let fake = FakeGh::new("echo 'dial tcp: sin red' >&2; exit 1");
+    let fake = Fake::always(Reply::ok().err_line("dial tcp: sin red").exit(1));
     let err = fake
         .gh
         .repo_exists("ana", "x", &c())
@@ -234,7 +232,11 @@ async fn classifies_failures_by_exit_code_and_status_not_by_wording() {
     assert!(err.details().expect("details").contains("sin red"));
 
     // Words that used to mean something no longer do.
-    let fake = FakeGh::new("echo 'not logged into github.com. gh auth login' >&2; exit 1");
+    let fake = Fake::always(
+        Reply::ok()
+            .err_line("not logged into github.com. gh auth login")
+            .exit(1),
+    );
     let err = fake.gh.setup_git(&c()).await.expect_err("exit 1");
     assert_eq!(err.kind(), ErrorKind::GhFailed);
 }
@@ -242,7 +244,7 @@ async fn classifies_failures_by_exit_code_and_status_not_by_wording() {
 #[tokio::test]
 async fn creates_in_the_personal_account_from_the_json_answer() {
     let body = r#"{"full_name":"ana/x","html_url":"https://github.com/ana/x","clone_url":"https://github.com/ana/x.git","ssh_url":"git@github.com:ana/x.git"}"#;
-    let fake = FakeGh::new(&answer("201 Created", body, 0));
+    let fake = Fake::always(Reply::http("201 Created", body, 0));
     let created = fake
         .gh
         .create_repo("x", Some("  -con guion "), true, &c())
@@ -259,7 +261,7 @@ async fn creates_in_the_personal_account_from_the_json_answer() {
 #[tokio::test]
 async fn a_name_taken_meanwhile_is_reported_as_existing() {
     let taken = r#"{"message":"Repository creation failed.","errors":[{"resource":"Repository","code":"custom","field":"name"}]}"#;
-    let fake = FakeGh::new(&answer("422 Unprocessable Entity", taken, 1));
+    let fake = Fake::always(Reply::http("422 Unprocessable Entity", taken, 1));
     let err = fake
         .gh
         .create_repo("x", None, true, &c())
@@ -269,7 +271,7 @@ async fn a_name_taken_meanwhile_is_reported_as_existing() {
 
     // Another validation error stays a plain failure, with GitHub's answer.
     let other = r#"{"message":"Validation Failed","errors":[{"field":"description"}]}"#;
-    let fake = FakeGh::new(&answer("422 Unprocessable Entity", other, 1));
+    let fake = Fake::always(Reply::http("422 Unprocessable Entity", other, 1));
     let err = fake
         .gh
         .create_repo("x", None, false, &c())
@@ -311,7 +313,7 @@ impl CommandLog for Recorder {
     }
 }
 
-fn logged(fake: &FakeGh) -> (Gh, Arc<Recorder>) {
+fn logged(fake: &Fake) -> (Gh, Arc<Recorder>) {
     let recorder = Arc::new(Recorder::default());
     let gh = fake
         .gh
@@ -347,7 +349,7 @@ fn summary(recorder: &Recorder) -> Vec<(String, Access, Option<CommandOutcome>)>
 
 #[tokio::test]
 async fn records_gh_commands_in_the_history() {
-    let fake = FakeGh::new(LOGGED_IN);
+    let fake = Fake::always(logged_in());
     let (gh, recorder) = logged(&fake);
     gh.accounts(&c()).await.expect("status");
     assert_eq!(
@@ -362,7 +364,7 @@ async fn records_gh_commands_in_the_history() {
 
 #[tokio::test]
 async fn a_404_that_answers_the_question_is_not_a_failure() {
-    let fake = FakeGh::new(&answer("404 Not Found", "{}", 1));
+    let fake = Fake::always(Reply::http("404 Not Found", "{}", 1));
     let (gh, recorder) = logged(&fake);
     assert!(!gh.repo_exists("ana", "x", &c()).await.expect("404"));
     assert_eq!(
@@ -371,7 +373,7 @@ async fn a_404_that_answers_the_question_is_not_a_failure() {
         "the name is free: that is the answer"
     );
 
-    let fake = FakeGh::new(&answer("500 Server Error", "{}", 1));
+    let fake = Fake::always(Reply::http("500 Server Error", "{}", 1));
     let (gh, recorder) = logged(&fake);
     gh.repo_exists("ana", "x", &c()).await.expect_err("500");
     assert_eq!(
@@ -382,7 +384,7 @@ async fn a_404_that_answers_the_question_is_not_a_failure() {
 
 #[tokio::test]
 async fn records_failures_and_cancelled_commands() {
-    let fake = FakeGh::new("exit 3");
+    let fake = Fake::always(Reply::ok().exit(3));
     let (gh, recorder) = logged(&fake);
     gh.setup_git(&c()).await.expect_err("fails");
     assert_eq!(
@@ -394,7 +396,7 @@ async fn records_failures_and_cancelled_commands() {
         )]
     );
 
-    let fake = FakeGh::new("sleep 30");
+    let fake = Fake::always(forever());
     let (gh, recorder) = logged(&fake);
     let cancel = c();
     cancel.cancel();
@@ -405,7 +407,7 @@ async fn records_failures_and_cancelled_commands() {
 #[tokio::test]
 async fn the_history_redacts_credentials_and_never_shows_the_one_time_code() {
     let body = r#"{"full_name":"a/x","html_url":"u","clone_url":"u","ssh_url":"u"}"#;
-    let fake = FakeGh::new(&answer("201 Created", body, 0));
+    let fake = Fake::always(Reply::http("201 Created", body, 0));
     let (gh, recorder) = logged(&fake);
     gh.create_repo(
         "x",
@@ -422,7 +424,8 @@ async fn the_history_redacts_credentials_and_never_shows_the_one_time_code() {
         "{command}"
     );
 
-    let fake = FakeGh::new("echo '! One-time code (WXYZ-1234) copied to clipboard' >&2");
+    let fake =
+        Fake::always(Reply::ok().err_line("! One-time code (WXYZ-1234) copied to clipboard"));
     let (gh, recorder) = logged(&fake);
     gh.login(|_| {}, &c()).await.expect("login");
     let command = summary(&recorder)[0].0.clone();
@@ -432,7 +435,7 @@ async fn the_history_redacts_credentials_and_never_shows_the_one_time_code() {
 
 #[tokio::test]
 async fn gh_commands_about_a_repository_say_which_one() {
-    let fake = FakeGh::new(LOGGED_IN);
+    let fake = Fake::always(logged_in());
     let dir = tempfile::tempdir().expect("tempdir");
     let folder = |recorder: &Recorder| {
         recorder
@@ -458,21 +461,26 @@ async fn gh_commands_about_a_repository_say_which_one() {
     assert_eq!(folder(&recorder), Some(dir.path().to_owned()));
 }
 
-/// `gh` for the session checks: `status_body` runs for `gh auth status` and
-/// `user_body` for the `gh api … user` call.
-fn session_gh(status_body: &str, user_body: &str) -> FakeGh {
-    FakeGh::new(&format!(
-        "case \"$1 $2\" in\n'auth status') {status_body} ;;\n'api --include') {user_body} ;;\nesac"
-    ))
+/// `gh` for the session checks: `status` answers `gh auth status` and
+/// `user` the `gh api … user` call.
+fn session_gh(status: Reply, user: Reply) -> Fake {
+    Fake::new(
+        Scenario::always(Reply::ok())
+            .when(&["auth", "status"], status)
+            .when(&["api", "--include"], user),
+    )
 }
 
-const TOKEN_NOT_WORKING: &str =
-    r#"echo '{"hosts":{"github.com":[{"state":"error","active":true,"login":"ana"}]}}'"#;
+/// `gh auth status` when the token does not work (revoked, or no network).
+fn token_not_working() -> Reply {
+    Reply::ok()
+        .out_line(r#"{"hosts":{"github.com":[{"state":"error","active":true,"login":"ana"}]}}"#)
+}
 const SHORT: Duration = Duration::from_millis(300);
 
 #[tokio::test]
 async fn no_account_is_no_session_without_asking_github() {
-    let fake = session_gh(r#"echo '{"hosts":{}}'"#, "exit 9");
+    let fake = session_gh(Reply::ok().out_line(r#"{"hosts":{}}"#), Reply::ok().exit(9));
     let session = fake.gh.session(&c()).await.expect("session");
     assert!(session.accounts.is_empty());
     assert!(!session.unreachable);
@@ -481,7 +489,7 @@ async fn no_account_is_no_session_without_asking_github() {
 
 #[tokio::test]
 async fn a_working_token_needs_no_further_check() {
-    let fake = session_gh(LOGGED_IN, "exit 9");
+    let fake = session_gh(logged_in(), Reply::ok().exit(9));
     let session = fake.gh.session(&c()).await.expect("session");
     assert!(session.accounts[0].valid);
     assert!(!session.unreachable);
@@ -490,7 +498,7 @@ async fn a_working_token_needs_no_further_check() {
 
 #[tokio::test]
 async fn a_slow_status_means_it_could_not_be_checked() {
-    let fake = session_gh("sleep 30", "exit 9");
+    let fake = session_gh(forever(), Reply::ok().exit(9));
     let gh = fake.gh.clone().with_check_timeout(SHORT);
     let started = std::time::Instant::now();
     let session = gh.session(&c()).await.expect("session");
@@ -503,7 +511,7 @@ async fn a_slow_status_means_it_could_not_be_checked() {
 
 #[tokio::test]
 async fn a_status_that_times_out_is_recorded_as_such() {
-    let fake = session_gh("sleep 30", "exit 9");
+    let fake = session_gh(forever(), Reply::ok().exit(9));
     let (gh, recorder) = logged(&fake);
     gh.with_check_timeout(SHORT)
         .session(&c())
@@ -517,19 +525,25 @@ async fn without_connection_a_token_that_does_not_work_is_not_called_invalid() {
     // What gh reports without a network: the token "does not work". Then the
     // check against GitHub gets no HTTP answer, or the state is "timeout".
     for status in [
-        TOKEN_NOT_WORKING,
-        r#"echo '{"hosts":{"github.com":[{"state":"timeout","active":true,"login":"ana"}]}}'"#,
+        token_not_working(),
+        Reply::ok().out_line(
+            r#"{"hosts":{"github.com":[{"state":"timeout","active":true,"login":"ana"}]}}"#,
+        ),
     ] {
-        let fake = session_gh(status, "echo 'dial tcp: no such host' >&2; exit 1");
+        let label = status.stdout.clone();
+        let fake = session_gh(
+            status,
+            Reply::ok().err_line("dial tcp: no such host").exit(1),
+        );
         let session = fake.gh.session(&c()).await.expect("session");
-        assert!(session.unreachable, "{status}");
+        assert!(session.unreachable, "{label}");
         assert_eq!(session.accounts.len(), 1);
     }
 }
 
 #[tokio::test]
 async fn the_second_check_also_has_a_time_limit() {
-    let fake = session_gh(TOKEN_NOT_WORKING, "sleep 30");
+    let fake = session_gh(token_not_working(), forever());
     let gh = fake.gh.clone().with_check_timeout(SHORT);
     let started = std::time::Instant::now();
     let session = gh.session(&c()).await.expect("session");
@@ -539,32 +553,35 @@ async fn the_second_check_also_has_a_time_limit() {
 
 #[tokio::test]
 async fn only_github_can_say_a_token_is_invalid() {
-    let fake = session_gh(TOKEN_NOT_WORKING, &answer("401 Unauthorized", "{}", 1));
+    let fake = session_gh(
+        token_not_working(),
+        Reply::http("401 Unauthorized", "{}", 1),
+    );
     let session = fake.gh.session(&c()).await.expect("session");
     assert!(!session.unreachable);
     assert!(!session.accounts[0].valid, "really invalid");
     assert!(fake.calls().contains(&"api --include user".to_owned()));
 
     // Authentication needed, by gh's documented exit code.
-    let fake = session_gh(TOKEN_NOT_WORKING, "exit 4");
+    let fake = session_gh(token_not_working(), Reply::ok().exit(4));
     let session = fake.gh.session(&c()).await.expect("session");
     assert!(!session.unreachable);
 
     // The token works after all.
-    let fake = session_gh(TOKEN_NOT_WORKING, &answer("200 OK", "{}", 0));
+    let fake = session_gh(token_not_working(), Reply::http("200 OK", "{}", 0));
     let session = fake.gh.session(&c()).await.expect("session");
     assert!(!session.unreachable);
     assert!(session.accounts[0].valid);
 
     // GitHub answered, but not about the token.
-    let fake = session_gh(TOKEN_NOT_WORKING, &answer("503 Unavailable", "{}", 1));
+    let fake = session_gh(token_not_working(), Reply::http("503 Unavailable", "{}", 1));
     let session = fake.gh.session(&c()).await.expect("session");
     assert!(session.unreachable);
 }
 
 #[tokio::test]
 async fn checking_a_name_also_has_a_time_limit() {
-    let fake = FakeGh::new("sleep 30");
+    let fake = Fake::always(forever());
     let gh = fake.gh.clone().with_check_timeout(SHORT);
     let err = gh.repo_exists("ana", "x", &c()).await.expect_err("slow");
     assert_eq!(err.kind(), ErrorKind::GhUnreachable);

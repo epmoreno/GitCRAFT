@@ -12,6 +12,14 @@ testing = ["dep:tempfile"]
 # Derives specta::Type on public types so the app can export TypeScript bindings.
 specta = ["dep:specta"]
 
+# A simulated `gh` for the tests (testing::fake_gh); never built for the app.
+[[bin]]
+name = "fake-gh"
+path = "src/bin/fake_gh.rs"
+required-features = ["testing"]
+test = false
+doctest = false
+
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true

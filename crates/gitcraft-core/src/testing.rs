@@ -14,6 +14,7 @@ use tempfile::TempDir;
 
 use crate::{CancellationToken, Git, GitCommand};
 
+pub mod fake_gh;
 pub mod synthetic;
 
 pub const AUTHOR_NAME: &str = "GitCRAFT Test";
