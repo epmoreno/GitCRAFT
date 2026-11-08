@@ -1187,3 +1187,7 @@ principio y toda operación destructiva pasa por confirmación.
       sistema e instrucciones de instalación.
 - [ ] Documentación para usuarios, con las capturas del README (las hará el
       usuario).
+- [ ] `CONTRIBUTING.md` en inglés y español (`CONTRIBUTING.es.md`).
+- [ ] Traducir `docs/ARCHITECTURE.md` al inglés cuando empiece a haber
+      colaboradores. Hasta entonces, la documentación de desarrollo sigue solo
+      en español.
