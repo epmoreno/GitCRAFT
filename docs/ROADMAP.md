@@ -1023,10 +1023,12 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
       integración con un proveedor es publicar en GitHub mediante `gh`.
       *Test:* CLAUDE.md, THIRD_PARTY_NOTICES.md y `docs/*.md` no nombran ningún
       cliente propietario; los textos públicos, ningún cliente.
-- [ ] **R.P.5 Hacer el repo público** (`gh repo edit --visibility public
+- [x] **R.P.5 Hacer el repo público** (`gh repo edit --visibility public
       --accept-visibility-change-consequences`), solo cuando el usuario lo
       confirme explícitamente y después de que haya borrado
       `GitCRAFT-antiguo`.
+      *Hecho* con la confirmación del usuario: `GitCRAFT-antiguo` daba 404 y
+      `gh repo view` devuelve `PUBLIC`.
 - [ ] **R.P.6 CI.** Al ser público, los tres sistemas en cada push. El workflow
       se crea en P.2.
 
