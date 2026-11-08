@@ -1,6 +1,6 @@
 # npm run check (format, lint, types and every test, web and Rust) on macOS,
 # Windows and Linux. While phase P makes the code portable (P.3–P.10), Windows
-# and Linux report without blocking.
+# reports without blocking.
 name: CI
 
 on:
@@ -21,7 +21,7 @@ jobs:
     name: check (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
-    continue-on-error: ${{ matrix.os != 'macos-latest' }}
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     strategy:
       fail-fast: false
       matrix:

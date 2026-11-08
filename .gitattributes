@@ -1,0 +1,11 @@
+# Text files are stored and checked out with LF on every system, so Prettier,
+# rustfmt and the generated bindings see the same bytes on Windows too.
+* text=auto eol=lf
+
+# Binary: never converted.
+*.png binary
+*.ico binary
+*.icns binary
+
+# Real git output used by the parser tests (NUL-separated): exact bytes.
+crates/gitcraft-core/tests/fixtures/** -text
