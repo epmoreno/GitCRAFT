@@ -16,7 +16,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "check:web": "npm run format:check && npm run lint && npm run typecheck && npm run test",
-    "check:rust": "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace",
+    "check:rust": "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace --no-fail-fast",
     "check": "npm run check:web && npm run check:rust",
     "bindings": "UPDATE_BINDINGS=1 cargo test -q -p gitcraft typescript_bindings_are_up_to_date",
     "bench:graph": "cargo test -p gitcraft-core --release --test bench_graph -- --ignored --nocapture"
