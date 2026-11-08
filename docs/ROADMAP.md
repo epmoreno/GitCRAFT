@@ -967,7 +967,7 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
       falsos positivos dentro de `target/` (ignorado). Los emails, tokens y
       rutas de los tests son inventados. El único dato real era el email
       antiguo, escrito en este mismo paso; se quitó antes de reescribir.
-- [ ] **R.P.2 Limpiar el email antiguo del historial.** Se enseña el plan exacto
+- [x] **R.P.2 Limpiar el email antiguo del historial.** Se enseña el plan exacto
       de comandos antes de ejecutar nada. Solo cambia el email; el nombre del
       autor («Enrique») se queda como está. El mailmap y cualquier archivo que
       contenga el email antiguo van fuera del repo. Tres paradas, cada una con
@@ -999,6 +999,17 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
       - e) Cuando el usuario compruebe que el nuevo está bien, borra él
         `GitCRAFT-antiguo`. **Hay que recordárselo antes de hacer público el
         nuevo (R.P.5), porque conserva el email antiguo.**
+
+      *Hecho:* copia de seguridad en el disco externo verificada con `fsck` y
+      `for-each-ref`; ensayo en un clon y reescritura en el proyecto con los
+      mismos hashes; en las 89 revisiones, los tags, los mensajes y todos los
+      objetos el email antiguo aparece 0 veces; árboles, fechas, nombres y
+      mensajes idénticos a la copia. Push de `main` y de los tres tags al repo
+      nuevo vacío, y descripción oficial puesta con `gh repo edit`.
+      Comprobado por el usuario en la web: el repo nuevo tiene el código, la
+      descripción, los tres tags y los commits con el email noreply. El usuario
+      ha borrado `GitCRAFT-antiguo` y ha activado en GitHub el bloqueo de
+      pushes que expongan su email.
 - [ ] **R.P.3 README.** Aviso de versión temprana, qué funciona, que de momento
       solo hay instalador para macOS, cómo compilar y la licencia MIT.
 - [ ] **R.P.4 Revisión de CLAUDE.md y VISION.md** tal como están.
