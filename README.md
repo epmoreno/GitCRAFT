@@ -70,19 +70,39 @@ light theme are planned. The next phases are in
 Linux are planned: the code is being made portable first, then their
 installers.
 
-1. Get `GitCRAFT_<version>_aarch64.dmg` (until downloads are published, build
-   it as explained below).
+1. Download `GitCRAFT_<version>_aarch64.dmg` from
+   [Releases](https://github.com/epmoreno/GitCRAFT/releases), or build it as
+   explained below.
 2. Open it and drag GitCRAFT to Applications.
+3. The first time, macOS warns that it cannot verify the app (see below):
+   press **OK**, then **System Settings → Privacy & Security → Open Anyway**.
 
 It needs Git installed (Xcode Command Line Tools or Homebrew). GitHub features
 (account, publishing) need GitHub CLI: `brew install gh`.
 
 Tested on macOS 27.0.1; earlier versions are not verified.
 
-The app is **not signed with an Apple developer certificate nor notarized**,
-so macOS asks for confirmation the first time. How to open it without
-disabling Gatekeeper, and how to uninstall it:
-[docs/INSTALACION.md](docs/INSTALACION.md) (in Spanish).
+Step-by-step instructions and how to uninstall:
+[docs/INSTALACION.md](docs/INSTALACION.md) (in Spanish, with an English
+section on signing).
+
+### Why isn't GitCRAFT signed?
+
+GitCRAFT is free, open-source software (MIT license): nothing is charged for
+it. Signing and notarizing it with Apple requires a paid yearly Apple
+Developer Program membership, and the project has chosen not to pay it. That
+is why macOS shows a warning the first time you open it. Open it with
+**System Settings → Privacy & Security → Open Anyway**; never disable
+Gatekeeper.
+
+How to check the app yourself:
+
+- **SHA-256 checksum**: every Release's notes include the `.dmg`'s SHA-256.
+  Compare it with your download's:
+  `shasum -a 256 ~/Downloads/GitCRAFT_<version>_aarch64.dmg`
+- **VirusTotal**: every Release's notes link to VirusTotal's analysis of that
+  same `.dmg`; check that the SHA-256 it shows is your file's.
+- **Build it yourself** from source with `npm run dist` (below).
 
 ## Build from source
 

@@ -1088,8 +1088,7 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
 - [ ] **P.11 Compila y arranca en los tres.** El CI compila la app y la arranca
       con una bandera de humo (`xvfb` en Linux): abre la ventana, carga el
       frontend y sale con código 0.
-      *Verificable:* los tres en verde, sin `continue-on-error` (macOS, en una
-      ejecución bajo demanda).
+      *Verificable:* los tres en verde, sin `continue-on-error`.
 
 ## Fase 2
 
@@ -1137,7 +1136,23 @@ principio y toda operación destructiva pasa por confirmación.
 ## Fase final — Publicación
 
 - [ ] Instaladores de Windows y Linux.
-- [ ] Firma y notarización.
+- [ ] **Sin firma de Apple (decidido).** GitCRAFT no se firma ni se notariza con
+      Apple: es software libre y gratuito, y la firma exige una cuota anual de
+      pago. En su lugar:
+      - [x] README y `docs/INSTALACION.md` (en español y en inglés): por qué no
+        está firmado, cómo abrirlo (Ajustes del Sistema → Privacidad y
+        seguridad → Abrir igualmente) sin recomendar nunca desactivar
+        Gatekeeper, y cómo comprobar la app: SHA-256 en las notas de cada
+        Release con `shasum -a 256`, enlace al análisis de VirusTotal de cada
+        `.dmg` (lo sube el usuario a mano; nunca se suben archivos a servicios
+        externos) y compilar desde el código con `npm run dist`. Solo hechos
+        verificables, nunca «garantizado sin malware».
+      - [ ] Construir los `.dmg` de las Releases en GitHub Actions con
+        atestaciones de origen (`actions/attest-build-provenance`) y
+        documentar `gh attestation verify` para comprobarlas. Puede adelantarse
+        a la Fase P si el CI ya construye el `.dmg`.
+- [ ] **Firma en Windows:** estudiar la firma gratuita para proyectos de código
+      abierto de SignPath Foundation.
 - [ ] GitHub Releases.
 - [ ] Documentación para usuarios, con las capturas del README (las hará el
       usuario).
