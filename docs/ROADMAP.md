@@ -1029,6 +1029,11 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
       `GitCRAFT-antiguo`.
       *Hecho* con la confirmación del usuario: `GitCRAFT-antiguo` daba 404 y
       `gh repo view` devuelve `PUBLIC`.
+- [x] **Pre-release v0.2.1** (adelantada de la Fase final): primera GitHub
+      Release, marcada como pre-release, con `GitCRAFT_0.2.1_aarch64.dmg`, su
+      SHA-256 y el enlace a su análisis de VirusTotal en las notas. GitHub
+      confirma el mismo SHA-256 del archivo subido.
+      <https://github.com/epmoreno/GitCRAFT/releases/tag/v0.2.1>
 - [ ] **R.P.6 CI.** Al ser público, los tres sistemas en cada push. El workflow
       se crea en P.2.
 
@@ -1134,6 +1139,10 @@ principio y toda operación destructiva pasa por confirmación.
 - [ ] Inicio de sesión de GitHub propio dentro de la app (OAuth *device
       flow*, token guardado en el almacén de credenciales del sistema: Llavero
       en macOS), como alternativa a `gh`.
+- [ ] **Más idiomas.** Traducir la app a árabe, alemán, francés y portugués,
+      además de español e inglés, con soporte de interfaz de derecha a
+      izquierda (RTL) para el árabe. El README ya tiene la descripción en esos
+      idiomas.
 
 ## Fase final — Publicación
 

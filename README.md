@@ -2,7 +2,14 @@
 
 GitCRAFT – a visual, fast, open-source Git client
 
-GitCRAFT – cliente Git visual, rápido y de código abierto
+<ul>
+<li lang="en">English: GitCRAFT – a visual, fast, open-source Git client</li>
+<li lang="es">Español: GitCRAFT – cliente Git visual, rápido y de código abierto</li>
+<li lang="ar" dir="rtl">العربية: GitCRAFT – عميل Git مرئي وسريع ومفتوح المصدر</li>
+<li lang="de">Deutsch: GitCRAFT – ein visueller, schneller Open-Source-Git-Client</li>
+<li lang="fr">Français: GitCRAFT – un client Git visuel, rapide et open source</li>
+<li lang="pt">Português: GitCRAFT – um cliente Git visual, rápido e de código aberto</li>
+</ul>
 
 > **Early version (v0.2.1).** GitCRAFT is usable day to day for the features
 > listed below, but it is young: expect rough edges and missing features (see
