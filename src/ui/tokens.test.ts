@@ -1,7 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { SRC_DIR as SRC, srcFiles } from "../test/sources";
 
 // Read from disk: Vitest does not load CSS contents into modules.
-const SRC = `${import.meta.dirname}/../`;
 const tokensCss = readFileSync(`${SRC}ui/tokens.css`, "utf8");
 
 /*
@@ -249,7 +249,7 @@ describe("design tokens: contrast (WCAG AA)", () => {
  * is set on each chip and cannot be precomputed at :root.
  */
 const sources = Object.fromEntries(
-  readdirSync(SRC, { recursive: true, encoding: "utf8" })
+  srcFiles()
     .filter((path) => /\.(css|ts|tsx)$/.test(path))
     .map((path) => [`/${path}`, readFileSync(`${SRC}${path}`, "utf8")]),
 );

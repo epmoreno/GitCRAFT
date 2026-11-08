@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
+import { srcFiles } from "../test/sources";
 import en from "./en.json";
 import es from "./es.json";
 
@@ -14,10 +15,7 @@ const EN = "GitCRAFT – a visual, fast, open-source Git client";
 
 const read = (path: string) => readFileSync(`${ROOT}${path}`, "utf8");
 
-const uiSources = readdirSync(`${ROOT}src`, {
-  recursive: true,
-  encoding: "utf8",
-})
+const uiSources = srcFiles()
   .filter((p) => /\.(ts|tsx|json|css)$/.test(p) && !p.includes("test"))
   .map((p) => `src/${p}`);
 

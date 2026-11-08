@@ -56,4 +56,12 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run check
+      # The two halves of `npm run check`, as separate steps: the Rust one
+      # also runs when the web one fails, so every run shows both. Either
+      # failing still fails the job.
+      - name: npm run check:web
+        run: npm run check:web
+
+      - name: npm run check:rust
+        if: success() || failure()
+        run: npm run check:rust

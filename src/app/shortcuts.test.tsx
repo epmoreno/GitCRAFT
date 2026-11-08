@@ -1,6 +1,7 @@
 import { act, render, screen, within } from "@testing-library/react";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import i18n from "../i18n";
+import { SRC_DIR, srcFiles } from "../test/sources";
 import { SettingsDialog } from "../features/settings/SettingsDialog";
 import { useSettingsStore } from "../features/settings/store";
 import en from "../i18n/en.json";
@@ -90,11 +91,10 @@ describe("shortcut registry", () => {
  * a literal accelerator in the menu would do the same.
  */
 describe("no shortcut outside the registry", () => {
-  const SRC = `${import.meta.dirname}/../`;
-  const sources = readdirSync(SRC, { recursive: true, encoding: "utf8" })
+  const sources = srcFiles()
     .filter((p) => /\.(ts|tsx)$/.test(p) && !/\.test\.tsx?$/.test(p))
     .filter((p) => !p.startsWith("test/") && p !== "app/shortcuts.ts")
-    .map((p) => [p, readFileSync(`${SRC}${p}`, "utf8")] as const);
+    .map((p) => [p, readFileSync(`${SRC_DIR}${p}`, "utf8")] as const);
 
   it("finds the sources", () => {
     expect(sources.map(([p]) => p)).toContain(
