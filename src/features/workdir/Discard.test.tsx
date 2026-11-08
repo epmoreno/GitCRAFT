@@ -42,6 +42,7 @@ const loss = (overrides: Partial<DiscardedFile>): DiscardedFile => ({
   removed: 1,
   lines: null,
   fileCount: null,
+  undoUnsupported: false,
   ...overrides,
 });
 
@@ -125,6 +126,34 @@ describe("discarding changes", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(ipc.discardChanges).not.toHaveBeenCalled();
+  });
+
+  it("warns before confirming when this system cannot undo something", async () => {
+    const user = userEvent.setup();
+    const button = () =>
+      screen.getByRole("button", {
+        name: "Descartar los cambios de src/main.rs",
+      });
+    const warning =
+      "En este sistema no se podrá deshacer con el botón; la copia queda en el stash.";
+    ipc.discardPreview.mockResolvedValue({ status: "ok", data: [loss({})] });
+    renderWorkspace();
+
+    await user.click(button());
+    expect(screen.getByRole("alertdialog")).not.toHaveTextContent(warning);
+    await user.keyboard("{Escape}");
+
+    ipc.discardPreview.mockResolvedValue({
+      status: "ok",
+      data: [loss({ undoUnsupported: true })],
+    });
+    await user.click(button());
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toHaveTextContent(warning);
+    // It still saves the copy and can be confirmed.
+    expect(dialog).toHaveTextContent(/copia en el stash/);
+    await user.click(within(dialog).getByRole("button", { name: "Descartar" }));
+    expect(ipc.discardChanges).toHaveBeenCalled();
   });
 
   it("explains that untracked files go to the Trash", async () => {

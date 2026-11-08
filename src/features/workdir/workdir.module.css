@@ -470,6 +470,14 @@
   font-size: var(--font-size-small);
 }
 
+/* Something "Undo" cannot put back on this system */
+.lossWarning {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius);
+  background: var(--warning-bg);
+}
+
 /* "Discarded — Undo" toast */
 .toast {
   position: absolute;

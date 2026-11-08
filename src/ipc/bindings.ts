@@ -542,6 +542,11 @@ export type DiscardedFile_Deserialize = {
 	lines?: number | null,
 	/**  Untracked directory: how many files it contains. */
 	fileCount?: number | null,
+	/**
+	 *  "Undo" cannot put it back on this system (a symbolic link where they
+	 *  cannot be created); the stash copy is still kept.
+	 */
+	undoUnsupported: boolean,
 };
 
 /**  What a discard loses, file by file (shown before confirming). */
@@ -559,6 +564,11 @@ export type DiscardedFile_Serialize = {
 	lines: number | null,
 	/**  Untracked directory: how many files it contains. */
 	fileCount: number | null,
+	/**
+	 *  "Undo" cannot put it back on this system (a symbolic link where they
+	 *  cannot be created); the stash copy is still kept.
+	 */
+	undoUnsupported: boolean,
 };
 
 /**  A value as git resolves it, and where it comes from. */
@@ -576,7 +586,7 @@ export type EffectiveValue = {
  */
 export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | 
 /**  No user.name / user.email configured. */
-"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "invalidBranchName" | "branchExists" | "branchChanged" | 
+"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "undoUnsupported" | "invalidBranchName" | "branchExists" | "branchChanged" | 
 /**  The branch is checked out in another worktree. */
 "branchInWorktree" | "stashChanged" | "nothingToStash" | 
 /**

@@ -7,9 +7,13 @@ use std::sync::Mutex;
 use gitcraft_core::ops::discard::{
     DiscardTarget, SystemTrash, Trash, discard, preview_discard, undo_discard,
 };
+#[cfg(unix)]
+use gitcraft_core::ops::discard::{preview_discard_with, undo_discard_with};
 use gitcraft_core::ops::worktree::{WorktreeArea, worktree_file_diff};
 use gitcraft_core::parse::diff::LineKind;
 use gitcraft_core::patch::HunkSelection;
+#[cfg(unix)]
+use gitcraft_core::platform::FileSupport;
 use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, ErrorKind, Git};
 
@@ -78,11 +82,10 @@ fn snapshot(root: &Path) -> Vec<(String, Vec<u8>, u32, Option<PathBuf>)> {
             } else if meta.is_dir() {
                 walk(root, &path, out);
             } else {
-                use std::os::unix::fs::PermissionsExt;
                 out.push((
                     rel,
                     std::fs::read(&path).expect("read"),
-                    meta.permissions().mode(),
+                    gitcraft_core::platform::file_mode(&meta),
                     None,
                 ));
             }
@@ -97,6 +100,16 @@ async fn index_tree(repo: &TestRepo) -> String {
     repo.run(&["write-tree"]).await
 }
 
+/// `name` as a symbolic link to `target` where the system creates them; a
+/// file holding the target elsewhere (what git checks out without symlink
+/// support).
+fn make_link(repo: &TestRepo, target: &str, name: &str) {
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(target, repo.path().join(name)).expect("symlink");
+    #[cfg(not(unix))]
+    repo.write_file(name, target);
+}
+
 /// Tracked files with awkward content, then modified in the working tree.
 async fn awkward_repo() -> TestRepo {
     let repo = TestRepo::new().await;
@@ -106,7 +119,7 @@ async fn awkward_repo() -> TestRepo {
     repo.write_file("script.sh", "#!/bin/sh\necho hola\n");
     repo.write_file("ñandú/acentos.md", "café\n");
     repo.write_file("gone.txt", "will be deleted\n");
-    std::os::unix::fs::symlink("crlf.txt", repo.path().join("link")).expect("symlink");
+    make_link(&repo, "crlf.txt", "link");
     repo.commit_all("base").await;
     // Line endings converted on checkout must not affect the backup.
     repo.run(&["config", "core.autocrlf", "true"]).await;
@@ -115,19 +128,56 @@ async fn awkward_repo() -> TestRepo {
     repo.write_file("no-newline.txt", "a\nb\nc");
     std::fs::write(repo.path().join("data.bin"), [1u8, 2, 3, 0, 0, 7]).expect("bin");
     repo.write_file("script.sh", "#!/bin/sh\necho adiós\n");
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(
-            repo.path().join("script.sh"),
-            std::fs::Permissions::from_mode(0o755),
-        )
-        .expect("chmod");
-    }
+    gitcraft_core::platform::set_file_mode(&repo.path().join("script.sh"), 0o755).expect("chmod");
     repo.write_file("ñandú/acentos.md", "café con leche\n");
     std::fs::remove_file(repo.path().join("gone.txt")).expect("rm");
     std::fs::remove_file(repo.path().join("link")).expect("rm link");
-    std::os::unix::fs::symlink("no-newline.txt", repo.path().join("link")).expect("relink");
+    make_link(&repo, "no-newline.txt", "link");
     repo
+}
+
+/// Where symbolic links cannot be created, the dialog warns before the
+/// discard, and "Undo" refuses without touching anything (the stash copy
+/// stays).
+#[cfg(unix)]
+#[tokio::test]
+async fn without_symlink_support_undo_refuses_and_changes_nothing() {
+    let repo = awkward_repo().await;
+    let trash = FakeTrash::new();
+    let none = FileSupport { symlinks: false };
+    let paths = ["link", "script.sh"];
+
+    let preview = preview_discard_with(&git(), repo.path(), &files(&paths), none, &c())
+        .await
+        .expect("preview");
+    let flagged: Vec<_> = preview
+        .iter()
+        .map(|f| (f.path.as_str(), f.undo_unsupported))
+        .collect();
+    assert_eq!(flagged, [("link", true), ("script.sh", false)]);
+    let here = preview_discard(&git(), repo.path(), &files(&paths), &c())
+        .await
+        .expect("preview here");
+    assert!(
+        here.iter().all(|f| !f.undo_unsupported),
+        "Unix restores links"
+    );
+
+    let (_, record) = discard(&git(), repo.path(), &files(&paths), &trash, &c())
+        .await
+        .expect("discard");
+    assert!(record.stash.is_some(), "the stash copy is kept");
+    let after_discard = snapshot(repo.path());
+
+    let err = undo_discard_with(&git(), repo.path(), &record, none, &c())
+        .await
+        .expect_err("cannot recreate the link");
+    assert_eq!(err.kind(), ErrorKind::UndoUnsupported);
+    assert_eq!(snapshot(repo.path()), after_discard, "nothing was touched");
+    assert_eq!(
+        repo.run(&["stash", "list", "--format=%gs"]).await,
+        "GitCRAFT: descarte de link, script.sh"
+    );
 }
 
 #[tokio::test]

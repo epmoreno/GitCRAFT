@@ -82,6 +82,9 @@ export function DiscardDialog() {
       {tracked.length > 0 && (
         <p>{t("discard.backup", { seconds: UNDO_SECONDS })}</p>
       )}
+      {pending.files.some((f) => f.undoUnsupported) && (
+        <p className={styles.lossWarning}>{t("discard.undoUnsupported")}</p>
+      )}
       {untracked.length > 0 && <p>{t("discard.trashRecovery")}</p>}
       {tracked.length > 0 && <p>{t("discard.stagedKept")}</p>}
     </ConfirmDialog>

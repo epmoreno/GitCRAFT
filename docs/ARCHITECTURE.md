@@ -220,7 +220,10 @@ botón pulsado, para que los atajos (Espacio, Intro, ⌘⌫) funcionen.
 4. **Deshacer** (aviso de 10 s): restaura los blobs y devuelve los archivos de
    la Papelera, pero solo si ninguno cambió desde el descarte; si no, no toca
    nada (`UndoConflict`). Tras deshacer se elimina la entrada de stash, que ya
-   es redundante.
+   es redundante. Si el sistema no puede volver a crear algo (hoy, un enlace
+   simbólico en Windows; `platform::FileSupport`), el diálogo lo avisa antes
+   de confirmar (`undo_unsupported` en la vista previa) y «Deshacer» se niega
+   sin tocar nada (`UndoUnsupported`); la copia en el stash se guarda igual.
 5. **Recuperación tardía** (pasado el aviso): siempre **por archivo**, con
    `git restore --source=<stash> --worktree -- <ruta>`, que devuelve el
    contenido que tenía el archivo justo antes del descarte y no toca el índice.
@@ -641,7 +644,7 @@ específica de un sistema se apunta en esta tabla.
 | --- | --- | --- | --- | --- | --- |
 | Cancelar procesos | `runner/mod.rs` (`signal_group`), `gh.rs` (`kill_group`) | Grupo de procesos (`process_group(0)`) y `killpg` con `nix`, solo `cfg(unix)`; fuera de Unix no hace nada | Job Objects, y `CREATE_NO_WINDOW` para que no se abran consolas | Igual que macOS | P.7 |
 | Papelera al descartar | `ops/discard.rs` (`SystemTrash`) | `NSFileManager.trashItemAtURL` (`objc2-foundation`); fuera de macOS devuelve error | Papelera de reciclaje | Especificación Trash de freedesktop | P.5 |
-| Modo y symlinks al descartar y deshacer | `ops/discard.rs` | Bit de ejecución con `PermissionsExt` y `std::os::unix::fs::symlink` | Sin bit de ejecución; crear symlinks puede pedir privilegios | Igual que macOS | P.8 |
+| Modo y symlinks al descartar y deshacer | `platform.rs` (`file_mode`, `set_file_mode`, `create_symlink`, `FileSupport`), usado por `ops/discard.rs` | Aplica el modo y vuelve a crear los symlinks | Sin bit de ejecución (no se aplica, como Git para Windows). Los symlinks aún no se crean: el diálogo avisa antes de descartar y «Deshacer» se niega sin tocar nada, con la copia en el stash | Igual que macOS | P.8 (restaurar symlinks en Windows) |
 | Localizar git | `runner/discover.rs` | `$PATH` y luego `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`; comprueba el bit de ejecución | `git.exe` en `PATH` y en `Program Files\Git` | `$PATH`, `/usr/bin` | P.6 |
 | Localizar gh | `gh.rs` (`FALLBACK_LOCATIONS`) | `$GITCRAFT_GH`, `$PATH` y luego Homebrew | `gh.exe` en `PATH` y en `Program Files\GitHub CLI` | `$PATH`, `/usr/bin` | P.6 |
 | `PATH` de los procesos hijos | `runner/mod.rs` (`EXTRA_PATH_DIRS`, `child_path`) | Añade carpetas de Homebrew y del sistema con separador `:` | Separador `;` y otras carpetas | Sin carpetas de Homebrew | P.6 |

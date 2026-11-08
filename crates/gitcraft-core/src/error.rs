@@ -51,6 +51,11 @@ pub enum GitError {
     #[error("cannot undo the discard of {0}: it changed since")]
     UndoConflict(String),
 
+    /// A discard cannot be undone because this system cannot recreate what
+    /// was there (a symbolic link on Windows); nothing was modified.
+    #[error("cannot undo the discard of {0}: this system cannot recreate a symbolic link")]
+    UndoUnsupported(String),
+
     #[error("{0:?} is not a valid branch name")]
     InvalidBranchName(String),
 
@@ -142,6 +147,7 @@ pub enum ErrorKind {
     EmptyMessage,
     StaleDiff,
     UndoConflict,
+    UndoUnsupported,
     InvalidBranchName,
     BranchExists,
     BranchChanged,
@@ -203,6 +209,7 @@ impl GitError {
             } => classify_output(stderr, stdout_tail),
             Self::StaleDiff => ErrorKind::StaleDiff,
             Self::UndoConflict(_) => ErrorKind::UndoConflict,
+            Self::UndoUnsupported(_) => ErrorKind::UndoUnsupported,
             Self::InvalidBranchName(_) => ErrorKind::InvalidBranchName,
             Self::BranchExists(_) => ErrorKind::BranchExists,
             Self::BranchChanged(_) => ErrorKind::BranchChanged,
@@ -261,7 +268,7 @@ impl GitError {
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) | Self::TimedOut(_) => {
                 Some(redact_credentials(&self.to_string()).into_owned())
             }
-            Self::UndoConflict(_) => Some(self.to_string()),
+            Self::UndoConflict(_) | Self::UndoUnsupported(_) => Some(self.to_string()),
             Self::GitNotFound
             | Self::PathNotFound(_)
             | Self::Cancelled

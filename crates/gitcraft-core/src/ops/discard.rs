@@ -22,6 +22,7 @@ use crate::ops::worktree::{WorktreeArea, worktree_file_diff};
 use crate::parse::diff::{LineKind, fingerprint};
 use crate::parse::diff_tree::parse_numstat;
 use crate::patch::{Direction, HunkSelection, build_patch};
+use crate::platform::{FileSupport, create_symlink, file_mode, set_file_mode};
 use crate::{CancellationToken, Git, GitError, Result};
 
 /// Moves files to the system Trash, returning where each one ended up.
@@ -95,6 +96,9 @@ pub struct DiscardedFile {
     pub lines: Option<u32>,
     /// Untracked directory: how many files it contains.
     pub file_count: Option<u32>,
+    /// "Undo" cannot put it back on this system (a symbolic link where they
+    /// cannot be created); the stash copy is still kept.
+    pub undo_unsupported: bool,
 }
 
 /// A file's state before the discard and a fingerprint of it right after.
@@ -189,6 +193,17 @@ pub async fn preview_discard(
     target: &DiscardTarget,
     cancel: &CancellationToken,
 ) -> Result<Vec<DiscardedFile>> {
+    preview_discard_with(git, repo, target, FileSupport::current(), cancel).await
+}
+
+/// [`preview_discard`] for a system that supports `support`.
+pub async fn preview_discard_with(
+    git: &Git,
+    repo: &Path,
+    target: &DiscardTarget,
+    support: FileSupport,
+    cancel: &CancellationToken,
+) -> Result<Vec<DiscardedFile>> {
     match target {
         DiscardTarget::Files { paths } => {
             check_paths(paths)?;
@@ -203,6 +218,8 @@ pub async fn preview_discard(
                 let stats = parse_numstat(&out.stdout)?;
                 for path in &tracked {
                     let stat = stats.iter().find(|s| &s.path == path);
+                    let is_link = std::fs::symlink_metadata(repo.join(path))
+                        .is_ok_and(|m| m.file_type().is_symlink());
                     files.push(DiscardedFile {
                         path: path.clone(),
                         untracked: false,
@@ -210,6 +227,7 @@ pub async fn preview_discard(
                         removed: stat.and_then(|s| s.deletions),
                         lines: None,
                         file_count: None,
+                        undo_unsupported: is_link && !support.symlinks,
                     });
                 }
             }
@@ -230,6 +248,8 @@ pub async fn preview_discard(
                     removed: None,
                     lines,
                     file_count,
+                    // Put back from the Trash by moving it: always possible.
+                    undo_unsupported: false,
                 });
             }
             Ok(files)
@@ -264,6 +284,8 @@ pub async fn preview_discard(
                 removed: Some(removed),
                 lines: None,
                 file_count: None,
+                // Lines are only selected in text files, never in links.
+                undo_unsupported: false,
             }])
         }
     }
@@ -294,16 +316,9 @@ async fn capture(
         .stdin(bytes)
         .output(cancel)
         .await?;
-    #[cfg(unix)]
-    let mode = {
-        use std::os::unix::fs::PermissionsExt;
-        meta.permissions().mode()
-    };
-    #[cfg(not(unix))]
-    let mode = 0o644;
     Ok(Content::File {
         blob: out.stdout_lossy().trim().to_owned(),
-        mode,
+        mode: file_mode(&meta),
     })
 }
 
@@ -445,15 +460,34 @@ pub async fn discard(
 }
 
 /// Puts back what `record` discarded, byte for byte. Refuses (changing
-/// nothing) if any of those files changed since the discard.
+/// nothing) if any of those files changed since the discard, or if this
+/// system cannot recreate one of them.
 pub async fn undo_discard(
     git: &Git,
     repo: &Path,
     record: &DiscardRecord,
     cancel: &CancellationToken,
 ) -> Result<()> {
+    undo_discard_with(git, repo, record, FileSupport::current(), cancel).await
+}
+
+/// [`undo_discard`] for a system that supports `support`.
+pub async fn undo_discard_with(
+    git: &Git,
+    repo: &Path,
+    record: &DiscardRecord,
+    support: FileSupport,
+    cancel: &CancellationToken,
+) -> Result<()> {
     for item in &record.saved {
         match item {
+            Saved::Tracked {
+                path,
+                before: Content::Link(_),
+                ..
+            } if !support.symlinks => {
+                return Err(GitError::UndoUnsupported(path.clone()));
+            }
             Saved::Tracked { path, after, .. } => {
                 if &snapshot(repo, path) != after {
                     return Err(GitError::UndoConflict(path.clone()));
@@ -504,18 +538,13 @@ pub async fn undo_discard(
                             std::fs::remove_file(&abs)?;
                         }
                         std::fs::write(&abs, &blobs[blob])?;
-                        #[cfg(unix)]
-                        {
-                            use std::os::unix::fs::PermissionsExt;
-                            std::fs::set_permissions(&abs, std::fs::Permissions::from_mode(*mode))?;
-                        }
+                        set_file_mode(&abs, *mode)?;
                     }
                     Content::Link(target) => {
                         if std::fs::symlink_metadata(&abs).is_ok() {
                             std::fs::remove_file(&abs)?;
                         }
-                        #[cfg(unix)]
-                        std::os::unix::fs::symlink(target, &abs)?;
+                        create_symlink(target, &abs)?;
                     }
                 }
             }

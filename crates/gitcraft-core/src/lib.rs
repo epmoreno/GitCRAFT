@@ -8,6 +8,7 @@ pub mod graph;
 pub mod ops;
 pub mod parse;
 pub mod patch;
+pub mod platform;
 pub mod redact;
 pub mod runner;
 #[cfg(feature = "testing")]

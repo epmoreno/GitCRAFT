@@ -524,6 +524,7 @@ describe("tree view", () => {
           removed: 0,
           lines: null,
           fileCount: null,
+          undoUnsupported: false,
         },
       ],
     });
