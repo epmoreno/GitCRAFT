@@ -65,3 +65,18 @@ jobs:
       - name: npm run check:rust
         if: success() || failure()
         run: npm run check:rust
+
+      # src-tauri/build.rs swaps Tauri's manifest for one embedded by the
+      # linker; the app's own executable must still carry it.
+      - name: The Windows app carries its manifest
+        if: runner.os == 'Windows' && (success() || failure())
+        shell: pwsh
+        run: |
+          cargo build -p gitcraft --bin gitcraft
+          $exe = [IO.File]::ReadAllBytes("target/debug/gitcraft.exe")
+          $text = [Text.Encoding]::ASCII.GetString($exe)
+          if (-not $text.Contains("Microsoft.Windows.Common-Controls")) {
+            Write-Error "gitcraft.exe has no Common Controls v6 manifest"
+            exit 1
+          }
+          Write-Output "gitcraft.exe carries the Common Controls v6 manifest"
