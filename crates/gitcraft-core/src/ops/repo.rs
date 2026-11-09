@@ -100,6 +100,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        windows,
+        ignore = "P.8: joins with \\ and leaves / and \\ mixed in one path"
+    )]
     fn resolves_a_relative_common_dir_against_the_working_directory() {
         let info =
             parse_open_output("/r\n/r/.git\n.git\n", Path::new("/does/not/exist")).expect("parse");

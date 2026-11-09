@@ -1121,6 +1121,25 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       frontend y sale con código 0.
       *Verificable:* los tres en verde, sin `continue-on-error`.
 
+### Tests ignorados en Windows
+
+Mientras duran P.3–P.10, un test de Rust que falla en Windows por una tarea
+pendiente se ignora solo en Windows, con la tarea al principio del motivo:
+`#[cfg_attr(windows, ignore = "P.x: …")]`, y se apunta aquí. El test
+`src/test/windows-ignores.test.ts` comprueba que esta lista y el código
+coinciden y que no queda ninguno cuando se marca P.10. **Mientras quede alguno,
+no se publica ningún instalador para Windows** (Fase final).
+
+| Test | Archivo | Tarea | Qué falla en Windows |
+| --- | --- | --- | --- |
+| `opens_a_repository_root` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** Git da `C:/Users/…` y `canonicalize` da `\\?\C:\Users\…`: el mismo repo con dos rutas, así que se duplicaría en recientes y pestañas y no se reconocería como ya abierto |
+| `opening_a_subdirectory_opens_the_enclosing_repository` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** La misma causa |
+| `a_linked_worktree_shares_the_main_common_dir` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** La misma causa |
+| `opens_a_repository_with_history` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** La misma causa |
+| `resolves_a_relative_common_dir_against_the_working_directory` | `crates/gitcraft-core/src/ops/repo.rs` | P.8 | **FALLO DE LA APP en Windows.** Al resolver el `common dir` relativo, la ruta queda con `/` y `\` mezcladas (`/does/not/exist\.git`) |
+| `helpers_are_found_when_launched_from_finder` | `crates/gitcraft-core/src/runner/mod.rs` | P.6 | El `PATH` de los procesos hijos recibe carpetas de Homebrew y de Unix, que en Windows no existen |
+| `can_be_cancelled` | `crates/gitcraft-core/tests/clone.rs` | P.7 | **FALLO DE LA APP en Windows.** Un clon cancelado deja una carpeta a medias (`.git` incluido): en Windows el proceso muere sin limpiar |
+
 ## Fase 2
 
 Orden acordado: 9 → 10 → 8 → 11 → 12 → 13. Todo es multiplataforma desde el
@@ -1173,7 +1192,9 @@ principio y toda operación destructiva pasa por confirmación.
 
 ## Fase final — Publicación
 
-- [ ] Instaladores de Windows y Linux.
+- [ ] Instaladores de Windows y Linux. **No se publica ningún instalador para
+      Windows mientras quede algún test de la lista «Tests ignorados en
+      Windows» de la Fase P.**
 - [ ] **Sin firma de Apple (decidido).** GitCRAFT no se firma ni se notariza con
       Apple: es software libre y gratuito, y la firma exige una cuota anual de
       pago. En su lugar:

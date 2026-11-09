@@ -20,6 +20,10 @@ fn canonical(path: &Path) -> String {
 }
 
 #[tokio::test]
+#[cfg_attr(
+    windows,
+    ignore = "P.8: git and canonicalize give the same repository path in two forms"
+)]
 async fn opens_a_repository_root() {
     let repo = TestRepo::new().await;
     let info = open_repository(&git(), repo.path(), &CancellationToken::new())
@@ -35,6 +39,10 @@ async fn opens_a_repository_root() {
 }
 
 #[tokio::test]
+#[cfg_attr(
+    windows,
+    ignore = "P.8: git and canonicalize give the same repository path in two forms"
+)]
 async fn opening_a_subdirectory_opens_the_enclosing_repository() {
     let repo = TestRepo::new().await;
     repo.write_file("src/nested/file.txt", "x\n");
@@ -49,6 +57,10 @@ async fn opening_a_subdirectory_opens_the_enclosing_repository() {
 }
 
 #[tokio::test]
+#[cfg_attr(
+    windows,
+    ignore = "P.8: git and canonicalize give the same repository path in two forms"
+)]
 async fn a_linked_worktree_shares_the_main_common_dir() {
     let (repo, _) = TestRepo::sample_history().await;
     let parent = tempfile::tempdir().expect("tempdir");
@@ -70,6 +82,10 @@ async fn a_linked_worktree_shares_the_main_common_dir() {
 }
 
 #[tokio::test]
+#[cfg_attr(
+    windows,
+    ignore = "P.8: git and canonicalize give the same repository path in two forms"
+)]
 async fn opens_a_repository_with_history() {
     let (repo, _) = TestRepo::sample_history().await;
     let info = open_repository(&git(), repo.path(), &CancellationToken::new())

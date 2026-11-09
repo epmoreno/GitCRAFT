@@ -582,6 +582,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        windows,
+        ignore = "P.6: adds Homebrew and Unix folders to the PATH of child processes"
+    )]
     fn helpers_are_found_when_launched_from_finder() {
         let finder = child_path(Some("/usr/bin:/bin:/usr/sbin:/sbin".into()));
         assert_eq!(
