@@ -753,3 +753,70 @@ mod freedesktop {
         );
     }
 }
+
+/// Every entry of the Recycle Bin folders this user can read on `drive`
+/// (`desktop.ini`, which Windows creates on first use, aside).
+#[cfg(windows)]
+fn recycle_bin(drive: &Path) -> Vec<PathBuf> {
+    let mut entries = Vec::new();
+    for user in std::fs::read_dir(drive.join("$Recycle.Bin"))
+        .into_iter()
+        .flatten()
+        .flatten()
+    {
+        for entry in std::fs::read_dir(user.path())
+            .into_iter()
+            .flatten()
+            .flatten()
+        {
+            if entry.file_name() != "desktop.ini" {
+                entries.push(entry.path());
+            }
+        }
+    }
+    entries.sort();
+    entries
+}
+
+/// P.5: discard → Recycle Bin → Undo with the real Recycle Bin: every file
+/// comes back byte for byte and the Recycle Bin is left as it was. Always
+/// runs in CI; elsewhere only when asked:
+/// `cargo test -p gitcraft-core --test discard -- --ignored`.
+#[cfg(windows)]
+#[tokio::test]
+#[cfg_attr(not(ci), ignore = "touches the real Recycle Bin")]
+async fn the_recycle_bin_round_trips_and_is_left_as_it_was() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("keep.txt", "k\n", "base").await;
+    let all_bytes: Vec<u8> = (0..=255).collect();
+    std::fs::write(repo.path().join("bytes.bin"), &all_bytes).expect("bin");
+    repo.write_file("año nuevo & más.txt", "uno\r\ndos");
+    repo.write_file("build/out/a.o", "a");
+    repo.write_file("build/b.o", "b");
+    let before = snapshot(repo.path());
+    let drive: PathBuf = repo.path().components().take(2).collect();
+    let bin_before = recycle_bin(&drive);
+
+    let (_, record) = discard(
+        &git(),
+        repo.path(),
+        &files(&["bytes.bin", "año nuevo & más.txt", "build/"]),
+        &SystemTrash,
+        &c(),
+    )
+    .await
+    .expect("discard");
+    let left: Vec<String> = snapshot(repo.path()).into_iter().map(|f| f.0).collect();
+    assert_eq!(left, ["keep.txt"]);
+    assert_eq!(
+        recycle_bin(&drive).len(),
+        bin_before.len() + 6,
+        "three items, each with its $R and $I entries"
+    );
+
+    undo_discard(&git(), repo.path(), &record, &c())
+        .await
+        .expect("undo");
+    assert_eq!(snapshot(repo.path()), before, "byte for byte");
+    assert_eq!(recycle_bin(&drive), bin_before, "the Recycle Bin as it was");
+}

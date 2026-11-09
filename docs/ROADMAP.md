@@ -1123,17 +1123,28 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       *Verificado manualmente en macOS:* pestañas (⌘T, ⌘W, ⌘1…9, ⌃Tab, ⌃⇧Tab,
       ⌘,), pistas con ⌘, ⌘⌫ para descartar, ⌘↩ para confirmar y la lista de
       Atajos: todo igual que antes.
-- [ ] **P.5 Papelera.** Una implementación de `Trash` para Windows y Linux, con
+- [x] **P.5 Papelera.** Una implementación de `Trash` para Windows y Linux, con
       su «Deshacer» (hoy devuelve error fuera de macOS). Se verifica la licencia
       de cualquier crate antes de usarlo. Los textos dejan de nombrar Finder.
       *Tests:* descartar y deshacer un archivo sin seguimiento en los tres.
-      *En curso:* Linux hecho, con implementación propia de la especificación
+      *Hecho:* Linux, con implementación propia de la especificación
       de freedesktop (sin dependencias nuevas): Papelera de casa o la del
       volumen, y si no hay ninguna, error `TrashFailed` sin tocar nada (nunca
       se borra en su lugar). `discard` mueve ahora primero los archivos sin
       seguimiento a la Papelera y, si algo falla después, los devuelve: no
       queda nada a medias. Tests de ida y vuelta byte a byte con la Papelera
-      real en una carpeta temporal. Falta Windows (Papelera de reciclaje).
+      real en una carpeta temporal. Windows: Papelera de reciclaje con
+      `IFileOperation` (crates `windows` y `windows-core` 0.62.2, los que ya
+      usa Tauri); el receptor de progreso cancela cualquier elemento que se
+      borraría para siempre y dice dónde queda cada uno, así que «Deshacer» es
+      un `rename`, como en macOS. Test con la Papelera de reciclaje real:
+      siempre en el CI (`cfg(ci)`), en un ordenador solo con `--ignored`, y
+      comprueba que la Papelera queda como estaba. Los textos que dicen
+      «Papelera» se adaptan a cada sistema en P.9.
+      *Verificado manualmente en macOS* (tras cambiar el orden de `discard`):
+      un archivo con seguimiento, uno sin seguimiento y una carpeta nueva;
+      diálogo igual que antes, los dos sin seguimiento a la Papelera de Finder
+      y «Deshacer» los devuelve todos idénticos y los quita de la Papelera.
 - [ ] **P.6 Localizar git y gh.** Sin depender de rutas de Homebrew: `PATH`
       primero y ubicaciones por sistema detrás de una función (`git.exe`,
       Program Files, `/usr/bin`). Lo mismo para `EXTRA_PATH_DIRS`. Abrir el

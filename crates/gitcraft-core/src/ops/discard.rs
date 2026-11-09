@@ -30,8 +30,9 @@ pub trait Trash: Send + Sync {
     fn trash(&self, path: &Path) -> io::Result<PathBuf>;
 }
 
-/// The system Trash: the macOS Trash (Finder's "Put Back" works too), or
-/// the freedesktop Trash on Linux and other Unix systems.
+/// The system Trash: the macOS Trash (Finder's "Put Back" works too), the
+/// Windows Recycle Bin, or the freedesktop Trash on Linux and other Unix
+/// systems.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SystemTrash;
 
@@ -58,6 +59,13 @@ impl Trash for SystemTrash {
     }
 }
 
+#[cfg(windows)]
+impl Trash for SystemTrash {
+    fn trash(&self, path: &Path) -> io::Result<PathBuf> {
+        crate::windows_trash::trash(path)
+    }
+}
+
 #[cfg(unix)]
 impl Trash for crate::freedesktop_trash::FreedesktopTrash {
     fn trash(&self, path: &Path) -> io::Result<PathBuf> {
@@ -70,11 +78,13 @@ impl Trash for crate::freedesktop_trash::FreedesktopTrash {
 fn forget_trashed(trashed_to: &Path) -> io::Result<()> {
     #[cfg(all(unix, not(target_os = "macos")))]
     crate::freedesktop_trash::forget(trashed_to)?;
+    #[cfg(windows)]
+    crate::windows_trash::forget(trashed_to)?;
     let _ = trashed_to;
     Ok(())
 }
 
-#[cfg(not(unix))]
+#[cfg(not(any(unix, windows)))]
 impl Trash for SystemTrash {
     fn trash(&self, _path: &Path) -> io::Result<PathBuf> {
         Err(io::Error::new(

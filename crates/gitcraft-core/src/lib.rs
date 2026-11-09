@@ -15,6 +15,8 @@ pub mod redact;
 pub mod runner;
 #[cfg(feature = "testing")]
 pub mod testing;
+#[cfg(windows)]
+pub mod windows_trash;
 
 pub use error::{ErrorKind, GitError, Result};
 pub use runner::{

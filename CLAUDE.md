@@ -80,7 +80,10 @@ usuario.
 - **Rust:** edition 2024, `cargo fmt`, `cargo clippy -- -D warnings`. Errores con
   `thiserror` en las librerías; nada de `unwrap()` fuera de tests. Lógica Git en
   el crate `gitcraft-core` (sin dependencias de Tauri) para poder testearla
-  aislada.
+  aislada. `unsafe` está prohibido (`unsafe_code = "deny"`) salvo en módulos de
+  plataforma (p. ej. `windows_trash.rs`), con `#[allow(unsafe_code)]` acotado
+  a ese módulo o función y un comentario `SAFETY` que lo justifique en cada
+  bloque; nunca en la lógica de la app.
 - **TypeScript:** `strict`, ESLint + Prettier. Los tipos de los comandos Tauri se
   generan desde Rust (`specta`/`ts-rs`), no se escriben a mano.
 - **Tests:**
