@@ -85,23 +85,27 @@ struct Outcome {
 }
 
 fn recycle(path: &Path) -> io::Result<PathBuf> {
+    let wide = HSTRING::from(path.as_os_str());
+    // SAFETY: COM is initialised on this thread (see `trash`); the path is a
+    // NUL-terminated string that outlives the call.
+    let item: IShellItem = unsafe { SHCreateItemFromParsingName(&wide, None) }.map_err(to_io)?;
     let outcome = Rc::new(RefCell::new(Outcome::default()));
     let sink: IFileOperationProgressSink = Sink {
-        source: path.to_path_buf(),
+        // As the shell writes it (long names, not 8.3 ones like RUNNER~1), so
+        // it matches the item the sink is told about.
+        source: item_path(&item).unwrap_or_else(|| path.to_path_buf()),
         outcome: Rc::clone(&outcome),
     }
     .into();
-    let wide = HSTRING::from(path.as_os_str());
     // SAFETY: COM is initialised on this thread (see `trash`); every argument
-    // is a valid interface or a NUL-terminated string that outlives the
-    // call, and the interfaces are released when dropped.
+    // is a valid interface that outlives the call, and the interfaces are
+    // released when dropped.
     let performed = unsafe {
         let operation: IFileOperation =
             CoCreateInstance(&FileOperation, None, CLSCTX_ALL).map_err(to_io)?;
         operation
             .SetOperationFlags(FOF_NO_UI | FOF_ALLOWUNDO | FOFX_RECYCLEONDELETE | FOFX_EARLYFAILURE)
             .map_err(to_io)?;
-        let item: IShellItem = SHCreateItemFromParsingName(&wide, None).map_err(to_io)?;
         operation.DeleteItem(&item, &sink).map_err(to_io)?;
         operation.PerformOperations()
     };
