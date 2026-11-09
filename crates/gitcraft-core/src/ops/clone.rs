@@ -91,15 +91,52 @@ pub async fn clone_repository(
         Destination::NotEmpty => return Err(GitError::DestinationNotEmpty(parent.join(name))),
     }
     let destination = parent.join(name);
-    git.write(parent)
+    let existed = destination.exists();
+    let cloned = git
+        .write(parent)
         .args(["clone", "--progress"])
         .env("GIT_PROGRESS_DELAY", "0")
         .arg("--")
         .arg(url)
         .arg(&destination)
         .output_with_progress(cancel, on_progress)
-        .await?;
+        .await;
+    if let Err(err) = cloned {
+        if matches!(err, GitError::Cancelled | GitError::TimedOut(_)) {
+            clean_up_stopped_clone(&destination, existed);
+        }
+        return Err(err);
+    }
     Ok(destination)
+}
+
+/// After a clone was stopped. On Unix git gets SIGTERM and removes what it
+/// had written itself; on Windows it is ended at once and cannot, so
+/// GitCRAFT does the same: the folder goes if the clone created it, and
+/// only its contents if it was an empty folder before (it was checked to
+/// be empty, so nothing but the clone is removed).
+fn clean_up_stopped_clone(destination: &Path, existed: bool) {
+    #[cfg(windows)]
+    {
+        if existed {
+            for entry in std::fs::read_dir(destination)
+                .into_iter()
+                .flatten()
+                .flatten()
+            {
+                let path = entry.path();
+                let _ = if path.is_dir() {
+                    std::fs::remove_dir_all(&path)
+                } else {
+                    std::fs::remove_file(&path)
+                };
+            }
+        } else {
+            let _ = std::fs::remove_dir_all(destination);
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = (destination, existed);
 }
 
 #[cfg(test)]

@@ -225,6 +225,68 @@ async fn cancelling_kills_the_whole_process_group() {
     let _ = grandchild;
 }
 
+/// git → sh → a loop that appends to `beat` every 50 ms until stopped.
+fn beating_command(dir: &Path) -> GitCommand {
+    read_in(dir).env("BEAT", dir.join("beat")).args([
+        "-c",
+        r#"alias.beat=!while :; do echo x >> "$BEAT"; sleep 0.05; done"#,
+        "beat",
+    ])
+}
+
+fn beats(dir: &Path) -> u64 {
+    std::fs::metadata(dir.join("beat")).map_or(0, |m| m.len())
+}
+
+async fn wait_for_beats(dir: &Path) {
+    for _ in 0..200 {
+        if beats(dir) >= 4 {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+    panic!("the loop never started");
+}
+
+/// Nothing git started is still writing.
+async fn assert_stopped_beating(dir: &Path) {
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let before = beats(dir);
+    tokio::time::sleep(Duration::from_millis(600)).await;
+    assert_eq!(beats(dir), before, "something git started is still running");
+}
+
+/// P.7: cancelling stops git and what it started (process group on Unix,
+/// Job Object on Windows), checked the same way on every system.
+#[tokio::test]
+async fn cancelling_stops_everything_git_started() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cancel = CancellationToken::new();
+    let run = tokio::spawn({
+        let cancel = cancel.clone();
+        let cmd = beating_command(dir.path());
+        async move { cmd.output(&cancel).await }
+    });
+    wait_for_beats(dir.path()).await;
+    cancel.cancel();
+    let result = run.await.expect("join");
+    assert!(matches!(result, Err(GitError::Cancelled)), "{result:?}");
+    assert_stopped_beating(dir.path()).await;
+}
+
+/// P.7: the same when the time limit runs out.
+#[tokio::test]
+async fn a_time_limit_stops_everything_git_started() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let result = beating_command(dir.path())
+        .timeout(Duration::from_millis(600))
+        .output(&CancellationToken::new())
+        .await;
+    assert!(matches!(result, Err(GitError::TimedOut(_))), "{result:?}");
+    assert!(beats(dir.path()) > 0, "the loop ran");
+    assert_stopped_beating(dir.path()).await;
+}
+
 #[tokio::test]
 async fn times_out_long_commands() {
     let dir = tempfile::tempdir().expect("tempdir");

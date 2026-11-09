@@ -11,10 +11,13 @@ pub mod ops;
 pub mod parse;
 pub mod patch;
 pub mod platform;
+pub mod process_tree;
 pub mod redact;
 pub mod runner;
 #[cfg(feature = "testing")]
 pub mod testing;
+#[cfg(windows)]
+pub mod windows_job;
 #[cfg(windows)]
 pub mod windows_trash;
 

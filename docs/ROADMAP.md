@@ -1164,10 +1164,22 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       tests de localizar git funcionan ya en Windows (salvo el del bit de
       ejecución, que no existe allí). Ya no se ignora
       `helpers_are_found_when_launched_from_finder` en Windows.
-- [ ] **P.7 Cancelar procesos en Windows.** Job Objects en lugar de grupos de
+- [x] **P.7 Cancelar procesos en Windows.** Job Objects en lugar de grupos de
       procesos, en el ejecutor de git y en el de `gh`, sin ventanas de consola
       (`CREATE_NO_WINDOW`).
       *Test:* cancelar mata también los procesos hijos, en los tres.
+      *Hecho:* `process_tree.rs` reúne «parar un comando y lo que ha
+      lanzado» para el ejecutor de git y el de gh. En Unix, el grupo de
+      procesos de siempre (SIGTERM, gracia y SIGKILL; en macOS no cambia
+      nada). En Windows, un Job Object (crate `windows`, features
+      `Win32_System_JobObjects` y `Win32_Security`) y `CREATE_NO_WINDOW`;
+      parar es inmediato. Como git no puede limpiar un clon parado en
+      Windows, lo hace GitCRAFT: borra la carpeta si la creó el clon, o solo
+      su contenido si era una carpeta vacía. Tests nuevos, iguales en los
+      tres: git lanza un bucle que escribe un latido y, tras cancelar o
+      agotar el tiempo, el latido se detiene (comprobado también que fallan
+      si no se para el grupo). Ya no se ignora `can_be_cancelled` en
+      Windows.
 - [ ] **P.8 Rutas y finales de línea.** Separadores `\`, unidades y rutas largas
       en sesión y recientes; `core.autocrlf` y CRLF en diffs y en el stage por
       línea; `diff --no-index` contra `/dev/null`; bits de ejecución y symlinks
@@ -1202,7 +1214,6 @@ no se publica ningún instalador para Windows** (Fase final).
 | `a_linked_worktree_shares_the_main_common_dir` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** La misma causa |
 | `opens_a_repository_with_history` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** La misma causa |
 | `resolves_a_relative_common_dir_against_the_working_directory` | `crates/gitcraft-core/src/ops/repo.rs` | P.8 | **FALLO DE LA APP en Windows.** Al resolver el `common dir` relativo, la ruta queda con `/` y `\` mezcladas (`/does/not/exist\.git`) |
-| `can_be_cancelled` | `crates/gitcraft-core/tests/clone.rs` | P.7 | **FALLO DE LA APP en Windows.** Un clon cancelado deja una carpeta a medias (`.git` incluido): en Windows el proceso muere sin limpiar |
 
 ## Fase 2
 

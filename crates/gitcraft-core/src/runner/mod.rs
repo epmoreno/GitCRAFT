@@ -27,6 +27,7 @@ use log::{LogHandle, Pending, shell_line};
 use split::Splitter;
 
 use crate::error::{GitError, Result};
+use crate::process_tree::ProcessTree;
 use crate::redact::redact_credentials;
 
 /// Config overrides applied to every invocation.
@@ -313,10 +314,9 @@ impl GitCommand {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .kill_on_drop(true);
-        // Own process group, so cancelling also reaches hooks and ssh.
-        // Windows (future): use a Job Object instead.
-        #[cfg(unix)]
-        cmd.process_group(0);
+        // So cancelling also reaches hooks and ssh (process group or Job
+        // Object).
+        crate::process_tree::prepare(&mut cmd);
         cmd
     }
 
@@ -342,7 +342,7 @@ impl GitCommand {
         mut on_progress: impl FnMut(&str),
     ) -> Result<GitOutput> {
         let mut child = self.build().spawn().map_err(GitError::Spawn)?;
-        let pid = child.id();
+        let tree = ProcessTree::adopt(&child);
         let (Some(mut stdout), Some(mut stderr)) = (child.stdout.take(), child.stderr.take())
         else {
             return Err(GitError::Io(io::Error::other("git stdio was not captured")));
@@ -430,15 +430,15 @@ impl GitCommand {
         let result = match outcome {
             Outcome::Finished(Ok(result)) => result,
             Outcome::Finished(Err(err)) => {
-                terminate(&mut child, pid).await;
+                terminate(&mut child, &tree).await;
                 return Err(GitError::Io(err));
             }
             Outcome::Cancelled => {
-                terminate(&mut child, pid).await;
+                terminate(&mut child, &tree).await;
                 return Err(GitError::Cancelled);
             }
             Outcome::TimedOut(limit) => {
-                terminate(&mut child, pid).await;
+                terminate(&mut child, &tree).await;
                 return Err(GitError::TimedOut(limit));
             }
         };
@@ -480,44 +480,19 @@ fn child_path_for(os: crate::platform::Os, path: Option<OsString>) -> Option<OsS
     std::env::join_paths(dirs).ok()
 }
 
-/// Asks git's process group to stop, then forces it after [`KILL_GRACE`].
-async fn terminate(child: &mut Child, pid: Option<u32>) {
-    signal_group(pid, GroupSignal::Terminate);
-    if tokio::time::timeout(KILL_GRACE, child.wait())
-        .await
-        .is_err()
+/// Asks git and what it started to stop, then forces it after
+/// [`KILL_GRACE`] (at once where there is no polite way to ask).
+async fn terminate(child: &mut Child, tree: &ProcessTree) {
+    tree.terminate();
+    if !ProcessTree::POLITE_STOP
+        || tokio::time::timeout(KILL_GRACE, child.wait())
+            .await
+            .is_err()
     {
-        signal_group(pid, GroupSignal::Kill);
-        // Also covers platforms without process groups.
+        tree.kill();
+        // Also covers a child the tree could not take hold of.
         let _ = child.kill().await;
     }
-}
-
-enum GroupSignal {
-    Terminate,
-    Kill,
-}
-
-#[cfg(unix)]
-fn signal_group(pid: Option<u32>, signal: GroupSignal) {
-    use nix::sys::signal::{Signal, killpg};
-    use nix::unistd::Pid;
-
-    let Some(pgid) = pid.and_then(|p| i32::try_from(p).ok()) else {
-        return;
-    };
-    let signal = match signal {
-        GroupSignal::Terminate => Signal::SIGTERM,
-        GroupSignal::Kill => Signal::SIGKILL,
-    };
-    // ESRCH just means the group is already gone.
-    let _ = killpg(Pid::from_raw(pgid), signal);
-}
-
-#[cfg(not(unix))]
-fn signal_group(_pid: Option<u32>, _signal: GroupSignal) {
-    // Windows: Job Objects will replace process groups (future phase).
-    // Until then `terminate` falls back to killing the direct child.
 }
 
 #[cfg(test)]

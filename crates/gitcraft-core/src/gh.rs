@@ -17,6 +17,7 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 
 use crate::error::GhHttp;
 use crate::platform::{Os, is_executable};
+use crate::process_tree::ProcessTree;
 use crate::redact::redact_credentials;
 use crate::runner::log::{LogHandle, Pending, shell_line};
 use crate::{Access, CancellationToken, CommandLog, CommandOutcome, ErrorKind, GitError, Result};
@@ -244,8 +245,7 @@ impl Gh {
         if let Some(repo) = &self.repo {
             cmd.current_dir(repo);
         }
-        #[cfg(unix)]
-        cmd.process_group(0);
+        crate::process_tree::prepare(&mut cmd);
         cmd
     }
 
@@ -283,7 +283,7 @@ impl Gh {
         cancel: &CancellationToken,
     ) -> Result<std::process::Output> {
         let child = self.command(args).spawn().map_err(spawn_error)?;
-        let pid = child.id();
+        let tree = ProcessTree::adopt(&child);
         let limit = async {
             if access == Access::Read {
                 tokio::time::sleep(self.check_timeout).await;
@@ -294,11 +294,11 @@ impl Gh {
         tokio::select! {
             output = child.wait_with_output() => Ok(output?),
             () = cancel.cancelled() => {
-                kill_group(pid);
+                tree.terminate();
                 Err(GitError::Cancelled)
             }
             () = limit => {
-                kill_group(pid);
+                tree.terminate();
                 Err(GitError::TimedOut(self.check_timeout))
             }
         }
@@ -404,6 +404,7 @@ impl Gh {
         cancel: &CancellationToken,
     ) -> Result<()> {
         let mut child = self.command(args).spawn().map_err(spawn_error)?;
+        let tree = ProcessTree::adopt(&child);
         let stderr = child
             .stderr
             .take()
@@ -427,7 +428,7 @@ impl Gh {
         let status = tokio::select! {
             status = read => status?,
             () = cancel.cancelled() => {
-                kill_group(child.id());
+                tree.terminate();
                 return Err(GitError::Cancelled);
             }
         };
@@ -645,20 +646,6 @@ fn spawn_error(err: std::io::Error) -> GitError {
         GitError::Spawn(err)
     }
 }
-
-/// Stops gh and whatever it started.
-#[cfg(unix)]
-fn kill_group(pid: Option<u32>) {
-    if let Some(pid) = pid.and_then(|id| i32::try_from(id).ok()) {
-        let _ = nix::sys::signal::killpg(
-            nix::unistd::Pid::from_raw(pid),
-            nix::sys::signal::Signal::SIGTERM,
-        );
-    }
-}
-
-#[cfg(not(unix))]
-fn kill_group(_pid: Option<u32>) {}
 
 #[cfg(test)]
 mod tests {

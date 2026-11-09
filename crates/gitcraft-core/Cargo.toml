@@ -32,11 +32,12 @@ tokio-util.workspace = true
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.31", features = ["signal", "process", "user"] }
 
-# The Recycle Bin (IFileOperation) for discarded untracked files. The same
+# The Recycle Bin (IFileOperation) for discarded untracked files, and Job
+# Objects to cancel a command with everything it started. The same
 # version Tauri already uses on Windows; windows-core because #[implement]
 # names it.
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_System_Com", "Win32_UI_Shell"] }
+windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Com", "Win32_System_JobObjects", "Win32_UI_Shell"] }
 windows-core = "0.62.2"
 
 # Moving discarded untracked files to the Trash (and back, for undo).
