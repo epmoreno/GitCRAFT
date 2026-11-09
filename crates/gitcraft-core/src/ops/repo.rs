@@ -99,20 +99,32 @@ fn resolve(joined: &Path) -> String {
 mod tests {
     use super::*;
 
+    /// What git prints on this system for `path` (written with "/"), and
+    /// the form GitCRAFT keeps: on Windows, a drive and "\\".
+    fn sample(path: &str) -> (String, String) {
+        if cfg!(windows) {
+            (
+                format!("Q:{path}"),
+                format!("Q:{}", path.replace('/', "\\")),
+            )
+        } else {
+            (path.to_owned(), path.to_owned())
+        }
+    }
+
     #[test]
     fn parses_toplevel_git_dir_and_common_dir() {
-        let info = parse_open_output(
-            "/Users/ana/src/my app\n/Users/ana/src/my app/.git\n/Users/ana/src/my app/.git\n",
-            Path::new("/Users/ana/src/my app"),
-        )
-        .expect("parse");
+        let (top, top_kept) = sample("/Users/ana/src/my app");
+        let (dir, dir_kept) = sample("/Users/ana/src/my app/.git");
+        let info =
+            parse_open_output(&format!("{top}\n{dir}\n{dir}\n"), Path::new(&top)).expect("parse");
         assert_eq!(
             info,
             RepoInfo {
-                path: "/Users/ana/src/my app".into(),
+                path: top_kept,
                 name: "my app".into(),
-                git_dir: "/Users/ana/src/my app/.git".into(),
-                common_dir: "/Users/ana/src/my app/.git".into(),
+                git_dir: dir_kept.clone(),
+                common_dir: dir_kept,
             }
         );
     }
@@ -146,8 +158,11 @@ mod tests {
 
     #[test]
     fn uses_the_path_as_name_for_the_filesystem_root() {
-        let info = parse_open_output("/\n/.git\n/.git\n", Path::new("/")).expect("parse");
-        assert_eq!(info.name, "/");
+        let (root, root_kept) = sample("/");
+        let (dir, _) = sample("/.git");
+        let info =
+            parse_open_output(&format!("{root}\n{dir}\n{dir}\n"), Path::new(&root)).expect("parse");
+        assert_eq!(info.name, root_kept);
     }
 
     #[test]
