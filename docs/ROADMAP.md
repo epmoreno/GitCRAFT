@@ -1141,6 +1141,9 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       siempre en el CI (`cfg(ci)`), en un ordenador solo con `--ignored`, y
       comprueba que la Papelera queda como estaba. Los textos que dicen
       «Papelera» se adaptan a cada sistema en P.9.
+      *CI* (`6f25ddc`, con el arreglo de la ruta corta 8.3 de Windows): los
+      tres en verde; el test de la Papelera de reciclaje real se ejecuta y
+      pasa en Windows.
       *Verificado manualmente en macOS* (tras cambiar el orden de `discard`):
       un archivo con seguimiento, uno sin seguimiento y una carpeta nueva;
       diálogo igual que antes, los dos sin seguimiento a la Papelera de Finder
@@ -1164,6 +1167,7 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       tests de localizar git funcionan ya en Windows (salvo el del bit de
       ejecución, que no existe allí). Ya no se ignora
       `helpers_are_found_when_launched_from_finder` en Windows.
+      *CI* (`1ec7fc5`): los tres en verde.
 - [x] **P.7 Cancelar procesos en Windows.** Job Objects en lugar de grupos de
       procesos, en el ejecutor de git y en el de `gh`, sin ventanas de consola
       (`CREATE_NO_WINDOW`).
@@ -1180,6 +1184,7 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       agotar el tiempo, el latido se detiene (comprobado también que fallan
       si no se para el grupo). Ya no se ignora `can_be_cancelled` en
       Windows.
+      *CI* (`55d2c96`): los tres en verde.
 - [ ] **P.8 Rutas y finales de línea.** Separadores `\`, unidades y rutas largas
       en sesión y recientes; `core.autocrlf` y CRLF en diffs y en el stage por
       línea; `diff --no-index` contra `/dev/null`; bits de ejecución y symlinks
@@ -1197,6 +1202,8 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       sin seguimiento contra `/dev/null` ya los cubrían tests que pasan en
       Windows. Bit de ejecución: Windows no tiene (como Git for Windows,
       `core.fileMode=false`). Falta decidir los symlinks en Windows.
+      *CI* (`8d9e46f`): los tres en verde; Rust: 334 tests y 2 ignorados en
+      macOS y Linux, 329 y 2 ignorados en Windows (ninguno de la Fase P).
 - [ ] **P.9 Menús y textos del sistema.** Barra de menús en Windows/Linux, sin
       los elementos propios de macOS. Textos que nombran `~/.gitconfig`, Llavero
       o Finder, según el sistema.
