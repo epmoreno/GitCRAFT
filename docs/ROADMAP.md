@@ -1145,12 +1145,25 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       un archivo con seguimiento, uno sin seguimiento y una carpeta nueva;
       diálogo igual que antes, los dos sin seguimiento a la Papelera de Finder
       y «Deshacer» los devuelve todos idénticos y los quita de la Papelera.
-- [ ] **P.6 Localizar git y gh.** Sin depender de rutas de Homebrew: `PATH`
+- [x] **P.6 Localizar git y gh.** Sin depender de rutas de Homebrew: `PATH`
       primero y ubicaciones por sistema detrás de una función (`git.exe`,
       Program Files, `/usr/bin`). Lo mismo para `EXTRA_PATH_DIRS`. Abrir el
       navegador deja de usar `/usr/bin/open`. Los textos de instalación («brew
       install») dependen del sistema.
       *Tests:* resolución por sistema con rutas simuladas.
+      *Hecho:* `platform::Os` reúne, por sistema, dónde buscar git y gh, qué
+      carpetas añadir al `PATH` de los procesos hijos y cómo abrir el
+      navegador; cada función recibe el sistema y el entorno, así que los
+      tests comprueban los tres desde cualquiera. En macOS todo sigue igual
+      (mismas listas, `/usr/bin/open`). Windows busca `git.exe`/`gh.exe`
+      (antes buscaba `gh` sin `.exe`) en `PATH` y en Program Files y
+      `%LOCALAPPDATA%\Programs`, sin carpetas extra en el `PATH`, y abre el
+      navegador con `explorer.exe`; Linux, sin Homebrew de macOS y con
+      `xdg-open`. Los textos de instalación tienen variante para Windows
+      (winget) y Linux (gestor de paquetes); en macOS, los de siempre. Los
+      tests de localizar git funcionan ya en Windows (salvo el del bit de
+      ejecución, que no existe allí). Ya no se ignora
+      `helpers_are_found_when_launched_from_finder` en Windows.
 - [ ] **P.7 Cancelar procesos en Windows.** Job Objects en lugar de grupos de
       procesos, en el ejecutor de git y en el de `gh`, sin ventanas de consola
       (`CREATE_NO_WINDOW`).
@@ -1189,7 +1202,6 @@ no se publica ningún instalador para Windows** (Fase final).
 | `a_linked_worktree_shares_the_main_common_dir` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** La misma causa |
 | `opens_a_repository_with_history` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** La misma causa |
 | `resolves_a_relative_common_dir_against_the_working_directory` | `crates/gitcraft-core/src/ops/repo.rs` | P.8 | **FALLO DE LA APP en Windows.** Al resolver el `common dir` relativo, la ruta queda con `/` y `\` mezcladas (`/does/not/exist\.git`) |
-| `helpers_are_found_when_launched_from_finder` | `crates/gitcraft-core/src/runner/mod.rs` | P.6 | El `PATH` de los procesos hijos recibe carpetas de Homebrew y de Unix, que en Windows no existen |
 | `can_be_cancelled` | `crates/gitcraft-core/tests/clone.rs` | P.7 | **FALLO DE LA APP en Windows.** Un clon cancelado deja una carpeta a medias (`.git` incluido): en Windows el proceso muere sin limpiar |
 
 ## Fase 2

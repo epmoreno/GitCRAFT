@@ -42,18 +42,6 @@ const BLOCKED_ENV: &[&str] = &[
     "GIT_NAMESPACE",
 ];
 
-/// Added to the end of git's `PATH` when missing: apps launched from Finder
-/// get a minimal `PATH`, and git runs helpers (credential helpers such as
-/// `gh`, git-lfs, ssh) that are often installed with Homebrew.
-const EXTRA_PATH_DIRS: &[&str] = &[
-    "/opt/homebrew/bin",
-    "/usr/local/bin",
-    "/usr/bin",
-    "/bin",
-    "/usr/sbin",
-    "/sbin",
-];
-
 /// Time git gets to exit after SIGTERM before the group is SIGKILLed.
 const KILL_GRACE: Duration = Duration::from_secs(2);
 
@@ -473,14 +461,18 @@ impl GitCommand {
     }
 }
 
-/// `path` with [`EXTRA_PATH_DIRS`] appended (those not already in it), so the
-/// user's own order still wins.
+/// `path` with this system's [`Os::extra_path_dirs`] appended (those not
+/// already in it), so the user's own order still wins.
 fn child_path(path: Option<OsString>) -> Option<OsString> {
+    child_path_for(crate::platform::Os::current(), path)
+}
+
+fn child_path_for(os: crate::platform::Os, path: Option<OsString>) -> Option<OsString> {
     let mut dirs: Vec<PathBuf> = path
         .as_deref()
         .map(|p| std::env::split_paths(p).collect())
         .unwrap_or_default();
-    for extra in EXTRA_PATH_DIRS {
+    for extra in os.extra_path_dirs() {
         if !dirs.iter().any(|d| d == Path::new(extra)) {
             dirs.push(PathBuf::from(extra));
         }
@@ -581,25 +573,65 @@ mod tests {
         );
     }
 
+    /// P.6: each system adds its own folders. macOS: Homebrew and the system
+    /// folders an app started from Finder misses. Linux: no Homebrew. Windows:
+    /// nothing (apps get the user's full PATH).
     #[test]
-    #[cfg_attr(
-        windows,
-        ignore = "P.6: adds Homebrew and Unix folders to the PATH of child processes"
-    )]
     fn helpers_are_found_when_launched_from_finder() {
-        let finder = child_path(Some("/usr/bin:/bin:/usr/sbin:/sbin".into()));
+        use crate::platform::Os;
+        let dirs = |os: Os, path: &str| -> Vec<String> {
+            let mut dirs: Vec<String> = path.split(':').map(str::to_owned).collect();
+            for extra in os.extra_path_dirs() {
+                if !dirs.iter().any(|d| d == extra) {
+                    dirs.push((*extra).to_owned());
+                }
+            }
+            dirs
+        };
         assert_eq!(
-            finder.as_deref(),
-            Some(std::ffi::OsStr::new(
-                "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin"
-            ))
+            dirs(Os::MacOs, "/usr/bin:/bin:/usr/sbin:/sbin"),
+            [
+                "/usr/bin",
+                "/bin",
+                "/usr/sbin",
+                "/sbin",
+                "/opt/homebrew/bin",
+                "/usr/local/bin"
+            ]
         );
-        let terminal = child_path(Some("/Users/ana/bin:/usr/local/bin:/usr/bin".into()));
         assert_eq!(
-            terminal.as_deref(),
-            Some(std::ffi::OsStr::new(
-                "/Users/ana/bin:/usr/local/bin:/usr/bin:/opt/homebrew/bin:/bin:/usr/sbin:/sbin"
-            ))
+            dirs(Os::MacOs, "/Users/ana/bin:/usr/local/bin:/usr/bin"),
+            [
+                "/Users/ana/bin",
+                "/usr/local/bin",
+                "/usr/bin",
+                "/opt/homebrew/bin",
+                "/bin",
+                "/usr/sbin",
+                "/sbin"
+            ]
+        );
+        assert_eq!(
+            dirs(Os::Linux, "/home/ana/bin:/usr/bin"),
+            [
+                "/home/ana/bin",
+                "/usr/bin",
+                "/usr/local/bin",
+                "/bin",
+                "/usr/sbin",
+                "/sbin"
+            ]
+        );
+        assert!(Os::Windows.extra_path_dirs().is_empty());
+
+        // On this system, with its own separator.
+        let os = Os::current();
+        let here = std::env::join_paths(["first", "second"]).expect("join");
+        let mut expected = vec![PathBuf::from("first"), PathBuf::from("second")];
+        expected.extend(os.extra_path_dirs().iter().map(PathBuf::from));
+        assert_eq!(
+            child_path(Some(here)),
+            Some(std::env::join_paths(expected).expect("join"))
         );
     }
 

@@ -2,6 +2,8 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import type { CommandError, ErrorKind } from "../ipc";
+import i18n from "../i18n";
+import { osKey } from "../app/platform";
 import { copyText } from "./clipboard";
 import styles from "./ErrorReport.module.css";
 
@@ -54,15 +56,15 @@ const KINDS = {
 export const ERROR_KINDS = Object.keys(KINDS) as ErrorKind[];
 
 /** The clear explanation of `error`. Messages that name a folder use the
- * `_noPath` variant when there is none to name. */
+ * `_noPath` variant when there is none to name; those that say how to
+ * install something have a variant per system. */
 export function explainError(
   t: TFunction,
   error: CommandError,
   path?: string,
 ): string {
-  return path
-    ? t(`errors.${error.kind}`, { path })
-    : t(`errors.${error.kind}`, { context: "noPath" });
+  const key = osKey(`errors.${error.kind}`, (k) => i18n.exists(k));
+  return path ? t(key, { path }) : t(key, { context: "noPath" });
 }
 
 /** git's original output, or the technical message when git said nothing

@@ -84,7 +84,7 @@ describe("shortcut registry", () => {
 
   // P.4: what Windows and Linux use instead.
   describe("outside macOS", () => {
-    beforeEach(() => setPlatformForTests("other"));
+    beforeEach(() => setPlatformForTests("windows"));
 
     it("uses Ctrl where macOS uses ⌘", () => {
       expect(isShortcut("newTab", key("t", { ctrlKey: true }))).toBe(true);

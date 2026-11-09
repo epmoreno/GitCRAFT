@@ -1400,12 +1400,14 @@ impl AppState {
 }
 
 /// Opens GitHub's device page (a fixed https URL from gitcraft_core, never
-/// user input) with macOS `open`, without a shell.
+/// user input) with the system's opener (`open`, `xdg-open`, `explorer`),
+/// without a shell.
 fn open_in_browser(url: &str) {
     if !url.starts_with(&format!("https://{GITHUB_HOST}/")) {
         return;
     }
-    if let Err(err) = std::process::Command::new("/usr/bin/open").arg(url).spawn() {
+    let (program, args) = gitcraft_core::platform::Os::current().open_url_command(url);
+    if let Err(err) = std::process::Command::new(program).args(args).spawn() {
         eprintln!("could not open the browser: {err}");
     }
 }

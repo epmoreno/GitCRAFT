@@ -1,36 +1,29 @@
 use std::ffi::OsString;
 use std::fmt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+
+use crate::platform::{Os, is_executable};
 
 /// Environment variable that forces a specific git executable.
 pub const GIT_PATH_OVERRIDE: &str = "GITCRAFT_GIT";
 
-/// Checked after `PATH`. Apps launched from Finder get a minimal `PATH`, so
-/// Homebrew installs would otherwise be missed.
-const FALLBACK_LOCATIONS: &[&str] = &[
-    "/opt/homebrew/bin/git",
-    "/usr/local/bin/git",
-    "/usr/bin/git",
-];
-
-#[cfg(windows)]
-const GIT_EXE: &str = "git.exe";
-#[cfg(not(windows))]
-const GIT_EXE: &str = "git";
-
-/// Finds the git executable: `$GITCRAFT_GIT`, then `$PATH`, then well-known locations.
+/// Finds the git executable: `$GITCRAFT_GIT`, then `$PATH`, then where each
+/// system usually installs it ([`Os::git_locations`]).
 pub fn find_git() -> Option<PathBuf> {
+    let os = Os::current();
     find_git_in(
         std::env::var_os(GIT_PATH_OVERRIDE),
         std::env::var_os("PATH"),
-        FALLBACK_LOCATIONS,
+        &os.exe("git"),
+        &os.git_locations(&|var| std::env::var_os(var)),
     )
 }
 
 fn find_git_in(
     override_path: Option<OsString>,
     path_var: Option<OsString>,
-    fallbacks: &[&str],
+    exe: &str,
+    fallbacks: &[PathBuf],
 ) -> Option<PathBuf> {
     // An explicit override that does not point to an executable is an error,
     // not a hint to silently pick another git.
@@ -41,22 +34,9 @@ fn find_git_in(
     path_var
         .iter()
         .flat_map(std::env::split_paths)
-        .map(|dir| dir.join(GIT_EXE))
-        .chain(fallbacks.iter().map(PathBuf::from))
+        .map(|dir| dir.join(exe))
+        .chain(fallbacks.iter().cloned())
         .find(|candidate| is_executable(candidate))
-}
-
-#[cfg(unix)]
-fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    path.metadata()
-        .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
-        .unwrap_or(false)
-}
-
-#[cfg(not(unix))]
-fn is_executable(path: &Path) -> bool {
-    path.is_file()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -149,17 +129,18 @@ mod tests {
         assert_eq!(v(2, 39, 5).to_string(), "2.39.5");
     }
 
-    #[cfg(unix)]
-    fn fake_git(dir: &Path, executable: bool) -> PathBuf {
-        use std::os::unix::fs::PermissionsExt;
-        let path = dir.join(GIT_EXE);
+    fn exe() -> String {
+        Os::current().exe("git")
+    }
+
+    fn fake_git(dir: &std::path::Path, executable: bool) -> PathBuf {
+        let path = dir.join(exe());
         std::fs::write(&path, "#!/bin/sh\n").expect("write fake git");
         let mode = if executable { 0o755 } else { 0o644 };
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode)).expect("chmod");
+        crate::platform::set_file_mode(&path, mode).expect("chmod");
         path
     }
 
-    #[cfg(unix)]
     #[test]
     fn finds_git_on_path_before_fallbacks() {
         let empty = tempfile::tempdir().expect("tempdir");
@@ -167,11 +148,33 @@ mod tests {
         let git = fake_git(bin.path(), true);
         let path_var = std::env::join_paths([empty.path(), bin.path()]).expect("join");
         assert_eq!(
-            find_git_in(None, Some(path_var), &["/nonexistent/git"]),
+            find_git_in(
+                None,
+                Some(path_var),
+                &exe(),
+                &[PathBuf::from("/nonexistent/git")]
+            ),
             Some(git)
         );
     }
 
+    #[test]
+    fn uses_the_fallbacks_when_path_has_no_git() {
+        let empty = tempfile::tempdir().expect("tempdir");
+        let fallback_dir = tempfile::tempdir().expect("tempdir");
+        let fallback = fake_git(fallback_dir.path(), true);
+        assert_eq!(
+            find_git_in(
+                None,
+                Some(empty.path().into()),
+                &exe(),
+                std::slice::from_ref(&fallback)
+            ),
+            Some(fallback)
+        );
+    }
+
+    /// Only Unix has an executable bit to check.
     #[cfg(unix)]
     #[test]
     fn skips_non_executable_files_and_uses_fallback() {
@@ -179,26 +182,30 @@ mod tests {
         fake_git(bin.path(), false);
         let fallback_dir = tempfile::tempdir().expect("tempdir");
         let fallback = fake_git(fallback_dir.path(), true);
-        let fallback_str = fallback.to_str().expect("utf8 path");
         assert_eq!(
-            find_git_in(None, Some(bin.path().into()), &[fallback_str]),
-            Some(fallback.clone())
+            find_git_in(
+                None,
+                Some(bin.path().into()),
+                &exe(),
+                std::slice::from_ref(&fallback)
+            ),
+            Some(fallback)
         );
     }
 
-    #[cfg(unix)]
     #[test]
     fn explicit_override_wins_or_fails() {
         let bin = tempfile::tempdir().expect("tempdir");
         let git = fake_git(bin.path(), true);
         assert_eq!(
-            find_git_in(Some(git.clone().into()), None, &[]),
+            find_git_in(Some(git.clone().into()), None, &exe(), &[]),
             Some(git.clone())
         );
         assert_eq!(
             find_git_in(
                 Some("/nonexistent/git".into()),
                 Some(bin.path().into()),
+                &exe(),
                 &[]
             ),
             None

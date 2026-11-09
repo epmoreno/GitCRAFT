@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import i18n from "../../i18n";
 import type { GhStatus, LoginEvent } from "../../ipc";
 import { commandError, ipc } from "../../test/ipc";
+import { setPlatformForTests } from "../../app/platform";
 import { SettingsDialog } from "./SettingsDialog";
 import { useSettingsStore } from "./store";
 
@@ -46,6 +47,31 @@ describe("GitHub account in Settings", () => {
     );
     expect(await within(section).findByText("@ana")).toBeVisible();
   });
+
+  // P.6: the install hint follows the system's package manager.
+  it.each([
+    [
+      "windows",
+      "Instálalo con winget en la terminal:",
+      "winget install --id GitHub.cli",
+    ],
+    [
+      "linux",
+      "Instálalo con el gestor de paquetes de tu distribución; por ejemplo, en Debian o Ubuntu:",
+      "sudo apt install gh",
+    ],
+  ] as const)(
+    "on %s, explains how to install gh there",
+    async (system, text, command) => {
+      setPlatformForTests(system);
+      const section = await openGithub(
+        status({ path: null, version: null, accounts: [] }),
+      );
+      expect(await within(section).findByText(text)).toBeVisible();
+      expect(within(section).getByText(command)).toHaveClass("selectable");
+      expect(section).not.toHaveTextContent("brew");
+    },
+  );
 
   it("shows who is signed in, and signs out after confirming", async () => {
     const user = userEvent.setup();

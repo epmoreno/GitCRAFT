@@ -4,7 +4,17 @@ import { commands, ghLogin, type CommandError, type GhStatus } from "../../ipc";
 import { copyText } from "../../ui/clipboard";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { ErrorReport } from "../../ui/ErrorReport";
+import { os, osKey, type Os } from "../../app/platform";
+import i18n from "../../i18n";
 import styles from "./settings.module.css";
+
+/** The command that installs gh, as each system's usual package manager
+ * writes it (shown, never run). */
+const INSTALL_GH: Record<Os, string> = {
+  mac: "brew install gh",
+  windows: "winget install --id GitHub.cli",
+  linux: "sudo apt install gh",
+};
 
 type Login =
   { step: "waiting" } | { step: "code"; code: string; url: string } | null;
@@ -86,8 +96,8 @@ export function GithubSection() {
         <div className={styles.notice} role="status">
           <p>{t("settings.github.notInstalled")}</p>
           <p>
-            {t("settings.github.install")}{" "}
-            <code className="selectable">brew install gh</code>
+            {t(osKey("settings.github.install", (k) => i18n.exists(k)))}{" "}
+            <code className="selectable">{INSTALL_GH[os()]}</code>
           </p>
           <p className={styles.hint}>{t("settings.github.installOther")}</p>
           <button type="button" className={styles.button} onClick={refresh}>

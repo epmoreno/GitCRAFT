@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 
 use crate::error::GhHttp;
+use crate::platform::{Os, is_executable};
 use crate::redact::redact_credentials;
 use crate::runner::log::{LogHandle, Pending, shell_line};
 use crate::{Access, CancellationToken, CommandLog, CommandOutcome, ErrorKind, GitError, Result};
@@ -25,9 +26,6 @@ pub const GITHUB_HOST: &str = "github.com";
 
 /// Environment variable that forces a specific gh executable (tests).
 pub const GH_PATH_OVERRIDE: &str = "GITCRAFT_GH";
-
-/// Checked after `PATH` (apps opened from Finder get a minimal one).
-const FALLBACK_LOCATIONS: &[&str] = &["/opt/homebrew/bin/gh", "/usr/local/bin/gh"];
 
 /// How long read-only checks may take. gh itself waits about 30 s without a
 /// network before giving up.
@@ -160,18 +158,21 @@ pub enum LoginEvent {
 }
 
 impl Gh {
-    /// `$GITCRAFT_GH`, then `$PATH`, then the Homebrew locations; `None` when
+    /// `$GITCRAFT_GH`, then `$PATH`, then where each system usually installs
+    /// it ([`Os::gh_locations`]); `None` when
     /// gh is not installed.
     pub fn discover() -> Option<Self> {
         if let Some(path) = std::env::var_os(GH_PATH_OVERRIDE).filter(|p| !p.is_empty()) {
             let path = PathBuf::from(path);
             return is_executable(&path).then(|| Self::at(path));
         }
+        let os = Os::current();
+        let exe = os.exe("gh");
         std::env::var_os("PATH")
             .iter()
             .flat_map(std::env::split_paths)
-            .map(|dir| dir.join("gh"))
-            .chain(FALLBACK_LOCATIONS.iter().map(PathBuf::from))
+            .map(|dir| dir.join(&exe))
+            .chain(os.gh_locations(&|var| std::env::var_os(var)))
             .find(|candidate| is_executable(candidate))
             .map(Self::at)
     }
@@ -658,19 +659,6 @@ fn kill_group(pid: Option<u32>) {
 
 #[cfg(not(unix))]
 fn kill_group(_pid: Option<u32>) {}
-
-#[cfg(unix)]
-fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    path.metadata()
-        .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
-        .unwrap_or(false)
-}
-
-#[cfg(not(unix))]
-fn is_executable(path: &Path) -> bool {
-    path.is_file()
-}
 
 #[cfg(test)]
 mod tests {

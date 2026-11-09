@@ -2,7 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n, { resources } from "../i18n";
 import { commandError } from "../test/ipc";
-import { ERROR_KINDS, ErrorReport } from "./ErrorReport";
+import { setPlatformForTests } from "../app/platform";
+import { ERROR_KINDS, ErrorReport, explainError } from "./ErrorReport";
 
 describe("ErrorReport", () => {
   beforeEach(async () => {
@@ -22,6 +23,39 @@ describe("ErrorReport", () => {
           ).toBeTruthy();
           expect(errors[`${kind}_noPath`]).not.toContain("{{path}}");
         }
+      }
+    }
+  });
+
+  // P.6: how to install git or gh depends on the system.
+  it("explains how to install git the way each system does it", () => {
+    const t = i18n.t.bind(i18n);
+    const error = commandError("gitNotFound");
+    expect(explainError(t, error)).toContain("Homebrew");
+    setPlatformForTests("windows");
+    expect(explainError(t, error)).toContain("winget install --id Git.Git");
+    setPlatformForTests("linux");
+    expect(explainError(t, error)).toContain("sudo apt install git");
+    // A kind without a variant keeps its only text.
+    expect(explainError(t, commandError("staleDiff"))).toBe(
+      i18n.t("errors.staleDiff"),
+    );
+  });
+
+  it("has every system variant in both languages, next to its base text", () => {
+    for (const [language, { translation }] of Object.entries(resources)) {
+      const errors = translation.errors as Record<string, string>;
+      for (const key of Object.keys(errors)) {
+        const variant = /^(.*)_(windows|linux)$/.exec(key);
+        if (!variant) continue;
+        const [, base, system] = variant;
+        const other = system === "windows" ? "linux" : "windows";
+        expect(errors[base!], `${language}: ${base}`).toBeTruthy();
+        expect(
+          errors[`${base}_${other}`],
+          `${language}: ${base}_${other}`,
+        ).toBeTruthy();
+        expect(errors[key]).not.toMatch(/Homebrew|Xcode|brew /);
       }
     }
   });
