@@ -1349,7 +1349,10 @@ export type RepoChanged = {
 
 /**  A repository with a working tree, identified by its top-level directory. */
 export type RepoInfo = {
-	/**  Absolute path of the working tree root, as git reports it. */
+	/**
+	 *  Absolute path of the working tree root, as git reports it (in the
+	 *  system's own form: [`native_path`]).
+	 */
 	path: string,
 	/**  Directory name, used as the tab title. */
 	name: string,

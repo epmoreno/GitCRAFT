@@ -1,3 +1,4 @@
+import { os } from "../../app/platform";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -40,9 +41,11 @@ function outcomeText(t: TFunction, outcome: CommandOutcome): string {
   }
 }
 
-/** Last folder of a path, to tell repositories apart. */
-function folderName(path: string) {
-  return path.replace(/\/$/, "").split("/").pop() || path;
+/** Last folder of a path, to tell repositories apart. Windows paths use
+ * "\\" (elsewhere it is a valid character in a folder name). */
+export function folderName(path: string) {
+  const separator = os() === "windows" ? /[\\/]/ : /\//;
+  return path.split(separator).filter(Boolean).pop() || path;
 }
 
 /** Operations in progress (with progress and cancel) and the history of

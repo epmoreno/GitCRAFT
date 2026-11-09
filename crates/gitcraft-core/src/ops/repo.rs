@@ -1,8 +1,9 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 
 use serde::Serialize;
 
+use crate::platform::native_path;
 use crate::{CancellationToken, Git, GitError, Result};
 
 /// Opening only reads a couple of paths, but network volumes can hang.
@@ -13,7 +14,8 @@ const OPEN_TIMEOUT: Duration = Duration::from_secs(20);
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct RepoInfo {
-    /// Absolute path of the working tree root, as git reports it.
+    /// Absolute path of the working tree root, as git reports it (in the
+    /// system's own form: [`native_path`]).
     pub path: String,
     /// Directory name, used as the tab title.
     pub name: String,
@@ -61,20 +63,36 @@ fn parse_open_output(stdout: &str, cwd: &Path) -> Result<RepoInfo> {
         )));
     };
     let common_dir = if Path::new(common_dir).is_absolute() {
-        PathBuf::from(common_dir)
+        native_path(common_dir)
     } else {
-        let joined = cwd.join(common_dir);
-        joined.canonicalize().unwrap_or(joined)
+        resolve(&cwd.join(common_dir))
     };
-    let name = Path::new(toplevel)
+    let toplevel = native_path(toplevel);
+    let name = Path::new(&toplevel)
         .file_name()
-        .map_or_else(|| toplevel.to_owned(), |n| n.to_string_lossy().into_owned());
+        .map_or_else(|| toplevel.clone(), |n| n.to_string_lossy().into_owned());
     Ok(RepoInfo {
-        path: toplevel.to_owned(),
         name,
-        git_dir: git_dir.to_owned(),
-        common_dir: common_dir.to_string_lossy().into_owned(),
+        path: toplevel,
+        git_dir: native_path(git_dir),
+        common_dir,
     })
+}
+
+/// A path relative to the working directory, resolved where it exists.
+fn resolve(joined: &Path) -> String {
+    #[cfg(windows)]
+    {
+        native_path(&joined.to_string_lossy())
+    }
+    #[cfg(not(windows))]
+    {
+        joined
+            .canonicalize()
+            .unwrap_or_else(|_| joined.to_path_buf())
+            .to_string_lossy()
+            .into_owned()
+    }
 }
 
 #[cfg(test)]
@@ -100,14 +118,30 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(
-        windows,
-        ignore = "P.8: joins with \\ and leaves / and \\ mixed in one path"
-    )]
     fn resolves_a_relative_common_dir_against_the_working_directory() {
         let info =
             parse_open_output("/r\n/r/.git\n.git\n", Path::new("/does/not/exist")).expect("parse");
-        assert_eq!(info.common_dir, "/does/not/exist/.git");
+        // One separator only: the system's.
+        let expected = if cfg!(windows) {
+            r"\does\not\exist\.git"
+        } else {
+            "/does/not/exist/.git"
+        };
+        assert_eq!(info.common_dir, expected);
+    }
+
+    #[test]
+    fn strips_the_verbatim_prefix() {
+        use crate::platform::without_verbatim_prefix;
+        assert_eq!(
+            without_verbatim_prefix(r"\\?\C:\Users\ana"),
+            r"C:\Users\ana"
+        );
+        assert_eq!(
+            without_verbatim_prefix(r"\\?\UNC\server\share\repo"),
+            r"\\server\share\repo"
+        );
+        assert_eq!(without_verbatim_prefix("/Users/ana"), "/Users/ana");
     }
 
     #[test]

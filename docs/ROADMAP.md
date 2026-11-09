@@ -1185,6 +1185,18 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       línea; `diff --no-index` contra `/dev/null`; bits de ejecución y symlinks
       en descartar y deshacer; mayúsculas y minúsculas en rutas.
       *Tests:* stage parcial y descarte con CRLF, y rutas de Windows simuladas.
+      *En curso:* rutas hechas. `platform::native_path` da a cada carpeta una
+      sola forma: en Windows, la ruta real (con `\`, sin el prefijo `\\?\`,
+      con los nombres largos en vez de los 8.3 como `RUNNER~1` y con las
+      mayúsculas de verdad), así que un repo ya no se duplica en recientes ni
+      en pestañas; en macOS y Linux, la de git, como antes. El panel de
+      operaciones separa las carpetas con `\` en Windows. Ya no se ignoran
+      en Windows los cinco tests de rutas. CRLF: tests nuevos de stage
+      parcial con `core.autocrlf=false` (CR guardados tal cual) y `true` (LF
+      en el índice), byte a byte; el descarte con CRLF y el diff de archivos
+      sin seguimiento contra `/dev/null` ya los cubrían tests que pasan en
+      Windows. Bit de ejecución: Windows no tiene (como Git for Windows,
+      `core.fileMode=false`). Falta decidir los symlinks en Windows.
 - [ ] **P.9 Menús y textos del sistema.** Barra de menús en Windows/Linux, sin
       los elementos propios de macOS. Textos que nombran `~/.gitconfig`, Llavero
       o Finder, según el sistema.
@@ -1207,13 +1219,11 @@ pendiente se ignora solo en Windows, con la tarea al principio del motivo:
 coinciden y que no queda ninguno cuando se marca P.10. **Mientras quede alguno,
 no se publica ningún instalador para Windows** (Fase final).
 
+Ahora mismo no queda ninguno: los de P.6 y P.7 se resolvieron en su tarea y
+los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
+
 | Test | Archivo | Tarea | Qué falla en Windows |
 | --- | --- | --- | --- |
-| `opens_a_repository_root` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** Git da `C:/Users/…` y `canonicalize` da `\\?\C:\Users\…`: el mismo repo con dos rutas, así que se duplicaría en recientes y pestañas y no se reconocería como ya abierto |
-| `opening_a_subdirectory_opens_the_enclosing_repository` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** La misma causa |
-| `a_linked_worktree_shares_the_main_common_dir` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** La misma causa |
-| `opens_a_repository_with_history` | `crates/gitcraft-core/tests/open_repo.rs` | P.8 | **FALLO DE LA APP en Windows.** La misma causa |
-| `resolves_a_relative_common_dir_against_the_working_directory` | `crates/gitcraft-core/src/ops/repo.rs` | P.8 | **FALLO DE LA APP en Windows.** Al resolver el `common dir` relativo, la ruta queda con `/` y `\` mezcladas (`/does/not/exist\.git`) |
 
 ## Fase 2
 

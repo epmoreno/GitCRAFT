@@ -315,3 +315,74 @@ async fn rejects_impossible_combinations() {
     assert!(unstage_unstaged.is_err());
     assert_eq!(index(&repo, "f.txt").await, BASE);
 }
+
+/// CRLF base with lines 1–15.
+fn crlf(lines: &[&str]) -> String {
+    lines.iter().map(|l| format!("{l}\r\n")).collect()
+}
+
+const NUMBERS: [&str; 15] = [
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15",
+];
+
+/// P.8: a file with CRLF line endings stored as such (core.autocrlf=false):
+/// staging one hunk puts exactly that change in the index, CRs included,
+/// and leaves the working tree alone.
+#[tokio::test]
+async fn stages_one_hunk_of_a_crlf_file_byte_for_byte() {
+    let repo = TestRepo::new().await;
+    repo.run(&["config", "core.autocrlf", "false"]).await;
+    repo.commit_file("f.txt", &crlf(&NUMBERS), "base").await;
+    let mut edited = NUMBERS.to_vec();
+    edited[1] = "TWO";
+    edited[13] = "FOURTEEN";
+    repo.write_file("f.txt", &crlf(&edited));
+    apply(
+        &repo,
+        "f.txt",
+        WorktreeArea::Unstaged,
+        vec![hunk(1)],
+        SelectionAction::Stage,
+    )
+    .await;
+    let mut expected = NUMBERS.to_vec();
+    expected[13] = "FOURTEEN";
+    assert_eq!(
+        index_bytes(&repo, "f.txt").await,
+        crlf(&expected).into_bytes()
+    );
+    assert_eq!(
+        std::fs::read(repo.path().join("f.txt")).expect("read"),
+        crlf(&edited).into_bytes()
+    );
+}
+
+/// P.8: with core.autocrlf=true (Git for Windows' default) the index keeps
+/// LF while the working tree has CRLF; staging one hunk keeps it that way.
+#[tokio::test]
+async fn stages_one_hunk_with_autocrlf_keeping_lf_in_the_index() {
+    let repo = TestRepo::new().await;
+    repo.run(&["config", "core.autocrlf", "true"]).await;
+    repo.write_file("f.txt", &crlf(&NUMBERS));
+    repo.run(&["add", "f.txt"]).await;
+    repo.run(&["commit", "-q", "-m", "base"]).await;
+    let mut edited = NUMBERS.to_vec();
+    edited[1] = "TWO";
+    edited[13] = "FOURTEEN";
+    repo.write_file("f.txt", &crlf(&edited));
+    apply(
+        &repo,
+        "f.txt",
+        WorktreeArea::Unstaged,
+        vec![hunk(0)],
+        SelectionAction::Stage,
+    )
+    .await;
+    let mut expected = NUMBERS.to_vec();
+    expected[1] = "TWO";
+    let lf: String = expected.iter().map(|l| format!("{l}\n")).collect();
+    assert_eq!(index_bytes(&repo, "f.txt").await, lf.into_bytes());
+    let rest = diff(&repo, "f.txt", WorktreeArea::Unstaged).await;
+    assert_eq!(rest.hunks.len(), 1);
+    assert!(rest.hunks[0].lines.iter().any(|l| l.content == "FOURTEEN"));
+}

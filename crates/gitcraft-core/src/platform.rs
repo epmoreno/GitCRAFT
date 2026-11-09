@@ -131,6 +131,38 @@ fn windows_paths(env: &dyn Fn(&str) -> Option<OsString>, list: &[(&str, &str)]) 
     out
 }
 
+/// How GitCRAFT writes a path that git printed, so one folder always has one
+/// form (recent repositories, tabs, "already open").
+///
+/// Windows: git prints `C:/Users/…`, sometimes with an 8.3 short name or
+/// another case than the folder's; this gives the real path, with `\`
+/// and without the `\\?\` prefix of `canonicalize`. Elsewhere git already
+/// prints the resolved path: unchanged.
+pub fn native_path(git_path: &str) -> String {
+    #[cfg(windows)]
+    {
+        let path = PathBuf::from(git_path.replace('/', "\\"));
+        match path.canonicalize() {
+            Ok(real) => without_verbatim_prefix(&real.to_string_lossy()),
+            Err(_) => path.to_string_lossy().into_owned(),
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        git_path.to_owned()
+    }
+}
+
+/// `C:\x` for `\\?\C:\x`, and `\\server\share` for
+/// `\\?\UNC\server\share`: the form people and git read.
+pub fn without_verbatim_prefix(path: &str) -> String {
+    if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{unc}")
+    } else {
+        path.strip_prefix(r"\\?\").unwrap_or(path).to_owned()
+    }
+}
+
 /// Whether `path` is a file this system can run: the executable bit on Unix,
 /// any file elsewhere.
 pub fn is_executable(path: &Path) -> bool {
