@@ -1117,6 +1117,9 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       de cambios, no en un campo de texto (donde borra una palabra).
       *Tests:* las dos variantes de cada atajo, sus etiquetas, la lista de
       Ajustes fuera de macOS y ningún modificador escrito a mano en i18n.
+      *CI* (`ffb8159`): los tres en verde; Rust: 321 tests y 2 ignorados en
+      macOS y Linux, 310 y 9 ignorados en Windows. Con `actions/checkout` y
+      `actions/setup-node` en v7 (`fa25a9a`) ya no sale el aviso de Node.js 20.
 - [ ] **P.5 Papelera.** Una implementación de `Trash` para Windows y Linux, con
       su «Deshacer» (hoy devuelve error fuera de macOS). Se verifica la licencia
       de cualquier crate antes de usarlo. Los textos dejan de nombrar Finder.
