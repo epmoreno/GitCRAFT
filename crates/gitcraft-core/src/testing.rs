@@ -22,6 +22,10 @@ pub const AUTHOR_EMAIL: &str = "test@gitcraft.invalid";
 /// 2023-11-14T22:13:20Z. The fake clock starts here.
 pub const EPOCH: u64 = 1_700_000_000;
 
+/// The system's empty, unwritable file, for `GIT_CONFIG_GLOBAL`: tests read
+/// no global config and cannot write one.
+pub const NO_CONFIG: &str = if cfg!(windows) { "NUL" } else { "/dev/null" };
+
 /// The `Git` every test uses: the developer's global and system git config
 /// are ignored, with a fixed identity and date, so no test depends on (or can
 /// write to) the machine's configuration. Tests that need a global config
@@ -30,7 +34,7 @@ pub fn isolated_git() -> Git {
     let date = format!("@{EPOCH} +0000");
     Git::discover()
         .expect("git must be installed to run tests")
-        .with_env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .with_env("GIT_CONFIG_GLOBAL", NO_CONFIG)
         .with_env("GIT_CONFIG_NOSYSTEM", "1")
         .with_env("GIT_AUTHOR_NAME", AUTHOR_NAME)
         .with_env("GIT_AUTHOR_EMAIL", AUTHOR_EMAIL)
@@ -92,7 +96,7 @@ impl TestRepo {
 
     fn isolate(&self, cmd: GitCommand) -> GitCommand {
         let date = format!("@{} +0000", EPOCH + self.clock.load(Ordering::SeqCst) * 60);
-        cmd.env("GIT_CONFIG_GLOBAL", "/dev/null")
+        cmd.env("GIT_CONFIG_GLOBAL", NO_CONFIG)
             .env("GIT_CONFIG_NOSYSTEM", "1")
             .env("GIT_AUTHOR_NAME", AUTHOR_NAME)
             .env("GIT_AUTHOR_EMAIL", AUTHOR_EMAIL)

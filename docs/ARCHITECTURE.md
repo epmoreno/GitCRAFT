@@ -623,7 +623,7 @@ Solo hay tema oscuro; el tema claro está en la fase 3.
 | Nivel | Qué | Cómo |
 | --- | --- | --- |
 | Unitario (core) | Parsers, layout del grafo, generación de parches, clasificador de errores | Fixtures con salida real de git + snapshots `insta` |
-| Integración (core) | `ops::*` contra repos reales | `TestRepo::new()` en `tempfile`, `GIT_CONFIG_GLOBAL=/dev/null`, fechas e identidad fijas |
+| Integración (core) | `ops::*` contra repos reales | `TestRepo::new()` en `tempfile`, `GIT_CONFIG_GLOBAL` al dispositivo nulo (`testing::NO_CONFIG`: `/dev/null` o `NUL`), fechas e identidad fijas |
 | Rendimiento | Log + layout de 100k commits | Test `#[ignore]` y bench con un repo sintético generado por `git fast-import` |
 | Frontend | Componentes y stores | Vitest + Testing Library, IPC mockeado |
 
@@ -654,11 +654,11 @@ específica de un sistema se apunta en esta tabla.
 | Barra de título | `tauri.conf.json` (`titleBarStyle: Overlay`, `hiddenTitle`), `App.module.css` (hueco de 84 px para los botones de la ventana), `data-tauri-drag-region` | Barra de herramientas dentro de la barra de título | Decoraciones del sistema, sin hueco | Igual que Windows | P.9, P.10 |
 | Textos que nombran macOS | `src/i18n/*.json`: Homebrew y Xcode (`gitNotFound`, instalar gh, `ghNotFound`), Llavero (`intro` de GitHub), `osxkeychain` (`authFailed`), `~/.gitconfig`, Papelera | Correctos | Instalador de Git/gh o `winget`, Administrador de credenciales, Papelera de reciclaje, `%USERPROFILE%\.gitconfig` | Gestor de paquetes, libsecret, Papelera | P.5, P.6, P.9 |
 | Motor web | CSS: `color-mix()`, `-webkit-user-select`, `-webkit-font-smoothing`, fuentes `-apple-system`/`SF Mono`/`Menlo` | WKWebView | WebView2 (Chromium) | WebKitGTK (según versión) | P.10 |
-| Finales de línea | Sin `.gitattributes`; Prettier exige LF | LF | Un checkout con CRLF hace fallar `format:check` | LF | P.3 |
-| Tests | `testing.rs` y tests (`GIT_CONFIG_GLOBAL=/dev/null`), `gh` simulado y hooks como scripts `#!/bin/sh`, `PermissionsExt`, `nix::kill` en `tests/runner.rs` | Funcionan | `/dev/null` y los scripts `sh` no sirven | Funcionan | P.3 |
+| Finales de línea | `.gitattributes` (`* text=auto eol=lf`, fixtures sin conversión) | LF | LF en el checkout, como exige Prettier | LF | Hecho en P.3 |
+| Tests | `testing.rs` (`NO_CONFIG`: `/dev/null` o `NUL` en `GIT_CONFIG_GLOBAL`), `gh` simulado con el binario de prueba `fake-gh`, `platform::set_file_mode` para el hook, `#[cfg(unix)]` en lo que solo existe en Unix (`nix::kill`, bit de ejecución, symlinks) | Funcionan | Funcionan; los que dependen de tareas pendientes se ignoran con su tarea (lista en el ROADMAP) | Funcionan | Hecho en P.3 |
 | Diff de un archivo sin seguimiento | `ops/worktree.rs` (`diff --no-index -- /dev/null <ruta>`) | Funciona | Hay que comprobarlo con Git for Windows | Funciona | P.8 |
 | Rutas | Sesión, recientes, comparación de rutas | `/`, distingue mayúsculas según el volumen | `\`, unidades, rutas largas, no distingue mayúsculas | `/`, distingue mayúsculas | P.8 |
 | Manifest de la app en Windows | `src-tauri/build.rs`, `src-tauri/windows-app-manifest.xml` | Sin efecto | tauri-build solo incrusta el manifest (Common Controls v6) en el ejecutable de la app y los binarios de tests no arrancan (`STATUS_ENTRYPOINT_NOT_FOUND`). Se desactiva el suyo y el enlazador incrusta una copia (`/MANIFEST:EMBED`, `/MANIFESTINPUT`) en todos los ejecutables del crate; el CI comprueba que `gitcraft.exe` lo lleva. Arreglo provisional de [tauri#13419](https://github.com/tauri-apps/tauri/issues/13419), pendiente de [tauri#16320](https://github.com/tauri-apps/tauri/pull/16320) | Sin efecto | Quitar cuando Tauri lo resuelva; al actualizar tauri-build, comprobar que su manifest por defecto no ha cambiado |
-| Scripts de npm | `package.json`: `dist` y `bindings` usan `VAR=1 comando` | Funcionan | `cmd.exe` no entiende esa sintaxis | Funcionan | P.3 (`bindings`), Fase final (`dist`) |
+| Scripts de npm | `package.json`: `bindings` es `node scripts/bindings.mjs`; `dist` sigue con `CI=true comando` | Funcionan | `bindings` funciona; `dist` no, porque `cmd.exe` no entiende `VAR=1` | Funcionan | Hecho en P.3 (`bindings`); Fase final (`dist`) |
 | Empaquetado | `tauri.conf.json` (`targets: app, dmg`, `macOS.minimumSystemVersion`, firma ad-hoc), `npm run dist` | `.app` y `.dmg` | Instalador (`.msi` o NSIS) | `.deb`, AppImage… | Fase final |
 | Scripts de desarrollo | `scripts/*.sh` (`make-remote-sandbox.sh` usa `osascript` y Finder) | Funcionan | No | Parcialmente | Solo para desarrollo en macOS; sin tarea |

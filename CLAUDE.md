@@ -88,7 +88,8 @@ usuario.
     fixtures (`crates/gitcraft-core/tests/fixtures/`).
   - Integración contra repos temporales creados en el propio test (`tempfile`) con
     identidad y fechas fijas (`GIT_AUTHOR_DATE`, `GIT_COMMITTER_DATE`), aislados
-    de la config global (`GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1`).
+    de la config global (`GIT_CONFIG_GLOBAL` al dispositivo nulo del sistema,
+    `testing::NO_CONFIG`, y `GIT_CONFIG_NOSYSTEM=1`).
   - Frontend: Vitest + Testing Library.
 - **Commits:** directamente a `main`, un commit por paso del roadmap, mensaje
   en inglés estilo Conventional Commits (`feat(graph): …`, `fix(status): …`).

@@ -138,7 +138,7 @@ async fn identity_problems_are_recognised() {
     // No identity at all: isolated config and no GIT_AUTHOR_* variables.
     let out = Git::at(git().exe())
         .write(repo.path())
-        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .env("GIT_CONFIG_GLOBAL", gitcraft_core::testing::NO_CONFIG)
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("EMAIL", "")
         .env("GIT_AUTHOR_NAME", "")

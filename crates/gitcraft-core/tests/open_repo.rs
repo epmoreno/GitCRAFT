@@ -136,7 +136,7 @@ async fn bare_repositories_are_rejected() {
     let dir = tempfile::tempdir().expect("tempdir");
     git()
         .write(dir.path())
-        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .env("GIT_CONFIG_GLOBAL", gitcraft_core::testing::NO_CONFIG)
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .args(["init", "--bare", "--quiet"])
         .output(&CancellationToken::new())

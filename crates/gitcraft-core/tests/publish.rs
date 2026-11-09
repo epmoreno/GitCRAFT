@@ -76,7 +76,7 @@ async fn github_side() -> (tempfile::TempDir, String) {
     let out = tokio::process::Command::new("git")
         .args(["init", "--bare", "-q"])
         .arg(&bare)
-        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .env("GIT_CONFIG_GLOBAL", gitcraft_core::testing::NO_CONFIG)
         .output()
         .await
         .expect("git init --bare");

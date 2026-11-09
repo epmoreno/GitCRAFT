@@ -14,7 +14,7 @@ fn git() -> Git {
 
 /// Isolates a command from the developer's global and system git config.
 fn isolated(cmd: GitCommand) -> GitCommand {
-    cmd.env("GIT_CONFIG_GLOBAL", "/dev/null")
+    cmd.env("GIT_CONFIG_GLOBAL", gitcraft_core::testing::NO_CONFIG)
         .env("GIT_CONFIG_NOSYSTEM", "1")
 }
 

@@ -1078,11 +1078,28 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       el primer paso, `format:check`: el checkout con CRLF hace que Prettier
       marque 133 archivos, así que el resto no llega a ejecutarse (P.3).
       Necesitó añadir el permiso `workflow` a la sesión de gh del usuario.
-- [ ] **P.3 Tests portables.** `.gitattributes` para los finales de línea. El
+- [x] **P.3 Tests portables.** `.gitattributes` para los finales de línea. El
       `gh` simulado deja de ser un script `sh` (un binario de prueba en Rust).
       Sin `/dev/null` ni rutas de Unix en los tests; los de symlinks y permisos
       solo donde aplican.
       *Verificable:* los tests del núcleo pasan en los tres sistemas del CI.
+      *Hecho:*
+      - `.gitattributes`; rutas con `/` en los tests web (`srcFiles()`);
+        `platform.rs` para el modo y los symlinks (deshacer un descarte ya no
+        pierde un symlink fuera de Unix: se niega, `UndoUnsupported`);
+      - `gh` simulado con el binario `fake-gh`;
+      - `GIT_CONFIG_GLOBAL` al dispositivo nulo de cada sistema
+        (`testing::NO_CONFIG`); `npm run bindings` con Node;
+      - manifest de Windows incrustado por el enlazador para que arranquen los
+        tests de la app (tauri#13419);
+      - nombres de archivo y URLs válidos en Windows en los tests;
+      - el CI ejecuta todos los binarios de tests (`--no-fail-fast`) y separa
+        web y Rust.
+
+      Siete tests se ignoran en Windows por P.6, P.7 y P.8 (lista abajo).
+      *CI* (`a11e03e`): macOS y Linux en verde, 321 tests de Rust y 2
+      ignorados; Windows en verde, 310 y 9 ignorados (4 tests solo existen en
+      Unix); los 35 archivos de tests web en los tres.
 - [ ] **P.4 Atajos.** El registro único usa un modificador «principal»: ⌘ en
       macOS y Ctrl en Windows/Linux, en manejadores, aceleradores, lista de
       Ajustes y textos de i18n (hoy `⌘W`, `⌘T`, `⌘,`, `⌘↩` escritos a mano).
