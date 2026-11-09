@@ -1,7 +1,7 @@
 //! Publishing on GitHub with a simulated gh (the `fake-gh` test binary, no
 //! network) and a local bare repository as the "GitHub" remote.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use gitcraft_core::gh::Gh;
 use gitcraft_core::ops::publish::{self, PublishRequest};
@@ -41,9 +41,12 @@ impl Fake {
         } else {
             Reply::ok().stdout("HTTP/2.0 404 Not Found\n\n{}\n").exit(1)
         };
-        let created = format!(
-            r#"{{"full_name":"ana/x","html_url":"https://github.com/ana/x","clone_url":"{clone_url}","ssh_url":"git@github.com:ana/x.git"}}"#
-        );
+        let created = serde_json::json!({
+            "full_name": "ana/x",
+            "html_url": "https://github.com/ana/x",
+            "clone_url": clone_url,
+            "ssh_url": "git@github.com:ana/x.git",
+        });
         Self::with(
             Scenario::always(Reply::ok())
                 .when(&["auth", "status"], Reply::ok().out_line(&status))
@@ -78,8 +81,17 @@ async fn github_side() -> (tempfile::TempDir, String) {
         .await
         .expect("git init --bare");
     assert!(out.status.success());
-    let url = format!("file://{}", bare.display());
-    (dir, url)
+    (dir, file_url(&bare))
+}
+
+/// `file:///tmp/x.git` on Unix, `file:///C:/Users/…/x.git` on Windows.
+fn file_url(path: &Path) -> String {
+    let path = path.display().to_string().replace('\\', "/");
+    if path.starts_with('/') {
+        format!("file://{path}")
+    } else {
+        format!("file:///{path}")
+    }
 }
 
 fn request(name: &str) -> PublishRequest {
@@ -263,7 +275,7 @@ async fn a_push_that_fails_after_creating_leaves_origin_to_retry() {
     let repo = TestRepo::new().await;
     repo.commit_file("a.txt", "a\n", "a").await;
     let gone = PathBuf::from("/nonexistent/gitcraft-test/x");
-    let fake = Fake::new(true, "https", false, &format!("file://{}", gone.display()));
+    let fake = Fake::new(true, "https", false, &file_url(&gone));
     publish::publish(&git(), &fake.gh, repo.path(), &request("x"), &c())
         .await
         .expect("created");

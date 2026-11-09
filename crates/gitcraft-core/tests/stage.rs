@@ -142,21 +142,26 @@ async fn unstage_all_keeps_an_in_progress_merge() {
     assert!(repo.path().join(".git/MERGE_HEAD").exists(), "merge kept");
 }
 
+/// A file name git would take as a glob if paths were not literal. Windows
+/// does not allow `*` in file names; `[ab]` is a glob too, and would match
+/// a.txt.
+const GLOB_NAME: &str = if cfg!(windows) { "[ab].txt" } else { "*.txt" };
+
 #[tokio::test]
 async fn paths_are_literal() {
     let repo = TestRepo::new().await;
     repo.commit_file("keep.txt", "k\n", "base").await;
     repo.write_file("a.txt", "a\n");
-    repo.write_file("*.txt", "star\n");
+    repo.write_file(GLOB_NAME, "star\n");
     repo.write_file("-n", "dash\n");
-    stage(&git(), repo.path(), &p(&["*.txt", "-n"]), &c())
+    stage(&git(), repo.path(), &p(&[GLOB_NAME, "-n"]), &c())
         .await
         .expect("stage");
     let s = status(&repo).await;
-    assert_eq!(
-        names(&s.staged),
-        [("*.txt", FileStatus::Added), ("-n", FileStatus::Added)]
-    );
+    // Git lists paths in byte order: "*.txt" < "-n" < "[ab].txt".
+    let mut expected = [(GLOB_NAME, FileStatus::Added), ("-n", FileStatus::Added)];
+    expected.sort_by_key(|(name, _)| *name);
+    assert_eq!(names(&s.staged), expected);
     assert_eq!(names(&s.untracked), [("a.txt", FileStatus::Untracked)]);
 }
 

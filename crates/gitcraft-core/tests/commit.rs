@@ -359,22 +359,46 @@ mod diffs {
         assert_eq!(d.hunks[0].lines.len() as u32, DIFF_LINE_LIMIT + 10);
     }
 
+    /// A file name git would take as a glob if paths were not literal.
+    /// Windows does not allow `*` in file names; `[ab]` is a glob too, and
+    /// would match a.txt.
+    const GLOB_NAME: &str = if cfg!(windows) { "[ab].txt" } else { "*.txt" };
+
     #[tokio::test]
     async fn paths_are_literal_never_globs_or_magic() {
         let repo = TestRepo::new().await;
         repo.write_file("a.txt", "a\n");
-        repo.write_file("*.txt", "star\n");
+        repo.write_file(GLOB_NAME, "star\n");
+        // Windows does not allow ':' in file names.
+        #[cfg(not(windows))]
         repo.write_file(":(icase)X", "magic\n");
         repo.write_file("-dash", "dash\n");
         let oid = repo.commit_all("odd names").await;
 
-        let star = diff(&repo, &oid, "*.txt", None, false).await;
-        assert_eq!(star.hunks.len(), 1, "only the file literally named *.txt");
+        let star = diff(&repo, &oid, GLOB_NAME, None, false).await;
+        assert_eq!(
+            star.hunks.len(),
+            1,
+            "only the file literally named {GLOB_NAME}"
+        );
         assert_eq!(star.hunks[0].lines[0].content, "star");
+        #[cfg(not(windows))]
         assert_eq!(
             diff(&repo, &oid, ":(icase)X", None, false).await.hunks[0].lines[0].content,
             "magic"
         );
+        // As magic, this would name a.txt; taken literally it names nothing.
+        let magic = commit_file_diff(
+            &git(),
+            repo.path(),
+            &oid,
+            ":(icase)A.TXT",
+            None,
+            false,
+            &CancellationToken::new(),
+        )
+        .await;
+        assert!(!matches!(&magic, Ok(d) if !d.hunks.is_empty()), "{magic:?}");
         assert_eq!(
             diff(&repo, &oid, "-dash", None, false).await.hunks[0].lines[0].content,
             "dash"
