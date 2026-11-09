@@ -211,8 +211,8 @@ function FileTree({
   const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
     const target = event.target as HTMLElement;
     if (target.getAttribute("role") !== "treeitem") return;
-    // ⌘⌫, as "Move to Trash" in Finder: unstaged files only, through the
-    // usual preview, confirmation and undo.
+    // ⌘⌫ on macOS (as "Move to Trash" in Finder), Ctrl+Delete elsewhere:
+    // unstaged files only, through the usual preview, confirmation and undo.
     if (isShortcut("changesDiscard", event)) {
       event.preventDefault();
       target.querySelector<HTMLElement>("[data-discard]")?.click();

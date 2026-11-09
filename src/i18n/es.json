@@ -28,14 +28,14 @@
     "moveRight": "Mover a la derecha",
     "alreadyFirst": "Ya es la primera",
     "alreadyLast": "Ya es la última",
-    "closeTab": "Cerrar pestaña (⌘W)",
-    "titleWithShortcut": "{{path}}\n⌘{{number}}",
+    "closeTab": "Cerrar pestaña ({{shortcut}})",
+    "titleWithShortcut": "{{path}}\n{{shortcut}}",
     "restoreFailed_one": "No se pudo reabrir 1 repositorio de la sesión anterior",
     "restoreFailed_other": "No se pudieron reabrir {{count}} repositorios de la sesión anterior",
     "restoreForgotten": "Se ha quitado de las pestañas guardadas; si vuelve a existir, ábrelo de nuevo desde «Abrir repositorio» o los recientes.",
     "restoreError": "No se pudo leer la sesión anterior, así que GitCRAFT empieza sin pestañas.",
     "newTab": "Nueva pestaña",
-    "newTabHint": "Nueva pestaña (⌘T)"
+    "newTabHint": "Nueva pestaña ({{shortcut}})"
   },
   "sidebar": {
     "local": "Ramas locales",
@@ -287,7 +287,7 @@
     "button_one": "Commit de {{count}} archivo",
     "button_other": "Commit de {{count}} archivos",
     "amendButton": "Modificar el último commit",
-    "shortcut": "⌘↩ para confirmar",
+    "shortcut": "{{shortcut}} para confirmar",
     "blockedConflicts": "Resuelve los conflictos antes de hacer commit.",
     "blockedNothingStaged": "Prepara algún cambio para poder hacer commit.",
     "blockedNoSummary": "Escribe un resumen para el commit.",
@@ -698,7 +698,7 @@
   },
   "settings": {
     "title": "Ajustes",
-    "openHint": "Ajustes (⌘,)",
+    "openHint": "Ajustes ({{shortcut}})",
     "sections": "Secciones de los ajustes",
     "close": "Cerrar los ajustes",
     "failed": "No se pudieron leer o guardar los ajustes.",
@@ -827,7 +827,12 @@
         "Home": "Inicio",
         "End": "Fin",
         "Escape": "Esc",
-        "click": "clic"
+        "click": "clic",
+        "Enter": "Intro",
+        "Backspace": "Retroceso",
+        "Delete": "Supr",
+        "Tab": "Tab",
+        "Shift": "Mayús"
       },
       "action": {
         "settings": "Abrir los ajustes",

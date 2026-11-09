@@ -28,14 +28,14 @@
     "moveRight": "Move right",
     "alreadyFirst": "Already the first one",
     "alreadyLast": "Already the last one",
-    "closeTab": "Close tab (⌘W)",
-    "titleWithShortcut": "{{path}}\n⌘{{number}}",
+    "closeTab": "Close tab ({{shortcut}})",
+    "titleWithShortcut": "{{path}}\n{{shortcut}}",
     "restoreFailed_one": "1 repository from the previous session could not be reopened",
     "restoreFailed_other": "{{count}} repositories from the previous session could not be reopened",
     "restoreForgotten": "It was removed from the saved tabs; if it exists again, open it from “Open repository” or the recent list.",
     "restoreError": "Couldn't read the previous session, so GitCRAFT starts with no tabs.",
     "newTab": "New tab",
-    "newTabHint": "New tab (⌘T)"
+    "newTabHint": "New tab ({{shortcut}})"
   },
   "sidebar": {
     "local": "Local branches",
@@ -287,7 +287,7 @@
     "button_one": "Commit {{count}} file",
     "button_other": "Commit {{count}} files",
     "amendButton": "Amend the last commit",
-    "shortcut": "⌘↩ to confirm",
+    "shortcut": "{{shortcut}} to confirm",
     "blockedConflicts": "Resolve the conflicts before committing.",
     "blockedNothingStaged": "Stage some changes to commit.",
     "blockedNoSummary": "Write a summary for the commit.",
@@ -698,7 +698,7 @@
   },
   "settings": {
     "title": "Settings",
-    "openHint": "Settings (⌘,)",
+    "openHint": "Settings ({{shortcut}})",
     "sections": "Settings sections",
     "close": "Close settings",
     "failed": "Could not read or save the settings.",
@@ -827,7 +827,12 @@
         "Home": "Home",
         "End": "End",
         "Escape": "Esc",
-        "click": "click"
+        "click": "click",
+        "Enter": "Enter",
+        "Backspace": "Backspace",
+        "Delete": "Delete",
+        "Tab": "Tab",
+        "Shift": "Shift"
       },
       "action": {
         "settings": "Open settings",

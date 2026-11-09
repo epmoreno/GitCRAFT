@@ -16,6 +16,7 @@ import { PublishButton } from "../features/publish/PublishButton";
 import { useSettingsStore } from "../features/settings/store";
 import { Tooltip } from "../ui/Tooltip";
 import styles from "./App.module.css";
+import { useShortcutLabel } from "./useShortcutLabel";
 
 const PENDING = ["undo"] as const;
 
@@ -25,6 +26,7 @@ const PENDING = ["undo"] as const;
  */
 export function Toolbar() {
   const { t } = useTranslation();
+  const label = useShortcutLabel();
   const openSettings = useSettingsStore((s) => s.openSettings);
   const active = useActiveRepository();
   const opening = useRepoStore((s) => s.opening);
@@ -127,7 +129,7 @@ export function Toolbar() {
           </Tooltip>
         ))}
       </div>
-      <Tooltip label={t("settings.openHint")}>
+      <Tooltip label={t("settings.openHint", { shortcut: label("settings") })}>
         <button
           type="button"
           className={`${styles.toolButton} ${styles.iconButton}`}

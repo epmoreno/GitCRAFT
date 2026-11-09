@@ -11,6 +11,7 @@ import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { ErrorReport } from "../../ui/ErrorReport";
 import { useWorkdirStore } from "./store";
 import styles from "./workdir.module.css";
+import { useShortcutLabel } from "../../app/useShortcutLabel";
 
 /** Summaries longer than this are hard to read in one-line logs. */
 export const SUMMARY_LIMIT = 72;
@@ -24,6 +25,7 @@ export function CommitBox({
   status: WorkingStatus;
 }) {
   const { t } = useTranslation();
+  const label = useShortcutLabel();
   const draft = useWorkdirStore((s) => s.drafts[repoId]) ?? {
     summary: "",
     description: "",
@@ -152,7 +154,7 @@ export function CommitBox({
         type="submit"
         className={styles.commitButton}
         disabled={blocked !== null || busy}
-        title={t("commit.shortcut")}
+        title={t("commit.shortcut", { shortcut: label("commit") })}
       >
         {draft.amend
           ? t("commit.amendButton")

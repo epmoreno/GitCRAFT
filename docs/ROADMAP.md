@@ -1100,12 +1100,23 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       *CI* (`a11e03e`): macOS y Linux en verde, 321 tests de Rust y 2
       ignorados; Windows en verde, 310 y 9 ignorados (4 tests solo existen en
       Unix); los 35 archivos de tests web en los tres.
-- [ ] **P.4 Atajos.** El registro único usa un modificador «principal»: ⌘ en
+- [x] **P.4 Atajos.** El registro único usa un modificador «principal»: ⌘ en
       macOS y Ctrl en Windows/Linux, en manejadores, aceleradores, lista de
       Ajustes y textos de i18n (hoy `⌘W`, `⌘T`, `⌘,`, `⌘↩` escritos a mano).
       Descartar pasa a ser Ctrl+Supr fuera de macOS. Se revisan los choques
       (⌃Tab en macOS).
       *Tests:* cada atajo en las dos variantes, sin ningún `⌘` literal en i18n.
+      *Hecho:* `primary` (⌘ en macOS, Ctrl fuera) y combinaciones propias de
+      cada sistema en el registro; el sistema se lee de `navigator.platform`
+      (`src/app/platform.ts`). Fuera de macOS: Ctrl+T, Ctrl+W, Ctrl+,,
+      Ctrl+1…9, Ctrl+Intro y descartar con Ctrl+Supr; Ctrl+Tab y Ctrl+Mayús+Tab
+      siguen igual. Las pistas de i18n reciben la etiqueta (`{{shortcut}}`) en
+      lugar de llevar `⌘` escrito. En macOS no cambia nada: un test fija los
+      textos de antes. Choques revisados: ninguno obliga a cambiar. ⌃Tab en
+      macOS se queda como está; Ctrl+Supr solo actúa con el foco en la lista
+      de cambios, no en un campo de texto (donde borra una palabra).
+      *Tests:* las dos variantes de cada atajo, sus etiquetas, la lista de
+      Ajustes fuera de macOS y ningún modificador escrito a mano en i18n.
 - [ ] **P.5 Papelera.** Una implementación de `Trash` para Windows y Linux, con
       su «Deshacer» (hoy devuelve error fuera de macOS). Se verifica la licencia
       de cualquier crate antes de usarlo. Los textos dejan de nombrar Finder.

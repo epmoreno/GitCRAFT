@@ -1,10 +1,12 @@
 import { useTranslation } from "react-i18next";
 import {
   chordLabel,
+  chordsOf,
   SHORTCUT_IDS,
   SHORTCUTS,
   type ShortcutGroup,
 } from "../../app/shortcuts";
+import { useKeyNames } from "../../app/useShortcutLabel";
 import styles from "./settings.module.css";
 
 const GROUPS: ShortcutGroup[] = [
@@ -20,7 +22,7 @@ const GROUPS: ShortcutGroup[] = [
  * for now (customizing them is planned for phase 3). */
 export function ShortcutsSection() {
   const { t } = useTranslation();
-  const named = (key: string) => t(`settings.shortcuts.key.${key}`);
+  const named = useKeyNames();
   return (
     <section aria-label={t("settings.section.shortcuts")}>
       <h3 className={styles.sectionTitle}>{t("settings.section.shortcuts")}</h3>
@@ -34,7 +36,7 @@ export function ShortcutsSection() {
                 <tr key={id}>
                   <th scope="row">{t(`settings.shortcuts.action.${id}`)}</th>
                   <td>
-                    {SHORTCUTS[id].chords.map((chord, i) => (
+                    {chordsOf(id).map((chord, i) => (
                       <kbd key={i} className={styles.kbd}>
                         {chordLabel(chord, named)}
                       </kbd>

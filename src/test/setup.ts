@@ -25,6 +25,7 @@ import {
   useWorkdirViewPrefs,
 } from "../features/workdir/viewPrefs";
 import { resetIpcMock } from "./ipc";
+import { setPlatformForTests } from "../app/platform";
 
 // The native menu bar does not exist in tests.
 vi.mock("../app/menu", () => ({
@@ -126,6 +127,8 @@ HTMLCanvasElement.prototype.getContext = (() =>
   null) as unknown as HTMLCanvasElement["getContext"];
 
 beforeEach(() => {
+  // Tests run as on macOS unless they choose otherwise.
+  setPlatformForTests("mac");
   resetIpcMock();
   useRepoStore.setState(initialRepoState);
   useViewStore.setState({ collapsed: {}, filters: {} });

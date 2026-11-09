@@ -4,6 +4,7 @@ import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
 import { Tooltip } from "../../ui/Tooltip";
 import { useRepoStore } from "./store";
 import styles from "./repo.module.css";
+import { useShortcutLabel } from "../../app/useShortcutLabel";
 
 /** Pixels the pointer must move before a press becomes a drag. */
 const DRAG_THRESHOLD = 5;
@@ -15,6 +16,7 @@ type Menu = { x: number; y: number; label: string; items: MenuItem[] };
  * (and closing) from the keyboard or without dragging. */
 export function TabBar() {
   const { t } = useTranslation();
+  const label = useShortcutLabel();
   const tabs = useRepoStore((s) => s.tabs);
   const activeId = useRepoStore((s) => s.activeId);
   const activate = useRepoStore((s) => s.activate);
@@ -89,7 +91,7 @@ export function TabBar() {
             hint: t("tabs.alreadyLast"),
           },
           {
-            label: t("tabs.closeTab"),
+            label: t("tabs.closeTab", { shortcut: label("closeTab") }),
             onSelect: () => void closeTab(id),
           },
         ];
@@ -129,7 +131,7 @@ export function TabBar() {
                 index < 9
                   ? t("tabs.titleWithShortcut", {
                       path: info.path,
-                      number: index + 1,
+                      shortcut: label("tabByNumber", String(index + 1)),
                     })
                   : info.path
               }
@@ -178,7 +180,7 @@ export function TabBar() {
           </button>
         </div>
       )}
-      <Tooltip label={t("tabs.newTabHint")}>
+      <Tooltip label={t("tabs.newTabHint", { shortcut: label("newTab") })}>
         <button
           type="button"
           className={styles.newTab}
