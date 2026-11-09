@@ -3,6 +3,8 @@
 //! This crate has no Tauri dependency so it can be tested in isolation.
 
 pub mod error;
+#[cfg(unix)]
+pub mod freedesktop_trash;
 pub mod gh;
 pub mod graph;
 pub mod ops;

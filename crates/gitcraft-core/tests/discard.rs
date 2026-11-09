@@ -585,3 +585,171 @@ async fn the_system_trash_round_trips() {
         .expect("undo");
     assert_eq!(snapshot(repo.path()), before);
 }
+
+/// A Trash that takes `ok` files and then refuses, as a volume without a
+/// Trash would.
+struct FailingTrash {
+    inner: FakeTrash,
+    ok: Mutex<u32>,
+}
+
+impl Trash for FailingTrash {
+    fn trash(&self, path: &Path) -> io::Result<PathBuf> {
+        let mut ok = self.ok.lock().expect("lock");
+        if *ok == 0 {
+            return Err(io::Error::other("there is no Trash on this volume"));
+        }
+        *ok -= 1;
+        self.inner.trash(path)
+    }
+}
+
+/// P.5: if any untracked file cannot go to the Trash, the discard stops with
+/// a clear error and nothing has changed: the files already trashed come
+/// back, tracked changes stay and no stash entry is made. Nothing is ever
+/// deleted instead.
+#[tokio::test]
+async fn when_a_file_cannot_go_to_the_trash_nothing_changes() {
+    let repo = TestRepo::new().await;
+    repo.commit_file("tracked.txt", "base\n", "base").await;
+    repo.write_file("tracked.txt", "edited\n");
+    repo.write_file("a-new.txt", "first\n");
+    repo.write_file("b-new.txt", "second\n");
+    let before = snapshot(repo.path());
+    let trash = FailingTrash {
+        inner: FakeTrash::new(),
+        ok: Mutex::new(1),
+    };
+    let err = discard(
+        &git(),
+        repo.path(),
+        &files(&["tracked.txt", "a-new.txt", "b-new.txt"]),
+        &trash,
+        &c(),
+    )
+    .await
+    .expect_err("the second file has no Trash");
+    assert_eq!(err.kind(), ErrorKind::TrashFailed, "{err}");
+    assert!(err.to_string().contains("b-new.txt"), "{err}");
+    assert_eq!(snapshot(repo.path()), before, "nothing changed");
+    assert!(repo.run(&["stash", "list"]).await.trim().is_empty());
+}
+
+#[cfg(unix)]
+mod freedesktop {
+    use super::*;
+    use gitcraft_core::freedesktop_trash::FreedesktopTrash;
+
+    /// The real freedesktop Trash code, with its home Trash in a temporary
+    /// folder (on the same volume as the test repositories).
+    fn trash() -> (tempfile::TempDir, PathBuf, FreedesktopTrash) {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let home = dir.path().join("Trash");
+        let uid = std::fs::metadata(dir.path())
+            .map(|m| std::os::unix::fs::MetadataExt::uid(&m))
+            .expect("uid");
+        let trash = FreedesktopTrash::with_home_trash(home.clone(), uid);
+        (dir, home, trash)
+    }
+
+    fn listing(dir: &Path) -> Vec<String> {
+        let mut names: Vec<String> = std::fs::read_dir(dir)
+            .map(|d| {
+                d.flatten()
+                    .map(|e| e.file_name().to_string_lossy().into_owned())
+                    .collect()
+            })
+            .unwrap_or_default();
+        names.sort();
+        names
+    }
+
+    /// P.5: discard → Trash → Undo gives back every file byte for byte,
+    /// folders and odd names included, and the Trash records each one as
+    /// the spec says.
+    #[tokio::test]
+    async fn discard_to_the_trash_and_undo_byte_for_byte() {
+        let repo = TestRepo::new().await;
+        repo.commit_file("keep.txt", "k\n", "base").await;
+        let all_bytes: Vec<u8> = (0..=255).collect();
+        std::fs::write(repo.path().join("bytes.bin"), &all_bytes).expect("bin");
+        repo.write_file("año nuevo & más.txt", "uno\r\ndos");
+        repo.write_file("build/out/a.o", "a");
+        repo.write_file("build/b.o", "b");
+        let before = snapshot(repo.path());
+        let (_dir, home, trash) = trash();
+
+        let (_, record) = discard(
+            &git(),
+            repo.path(),
+            &files(&["bytes.bin", "año nuevo & más.txt", "build/"]),
+            &trash,
+            &c(),
+        )
+        .await
+        .expect("discard");
+        let left: Vec<String> = snapshot(repo.path()).into_iter().map(|f| f.0).collect();
+        assert_eq!(left, ["keep.txt"]);
+        assert_eq!(
+            listing(&home.join("files")),
+            ["año nuevo & más.txt", "build", "bytes.bin"]
+        );
+        let info =
+            std::fs::read_to_string(home.join("info/año nuevo & más.txt.trashinfo")).expect("info");
+        assert!(info.starts_with("[Trash Info]\nPath=/"), "{info}");
+        assert!(
+            info.contains("/a%C3%B1o%20nuevo%20%26%20m%C3%A1s.txt\nDeletionDate="),
+            "{info}"
+        );
+
+        undo_discard(&git(), repo.path(), &record, &c())
+            .await
+            .expect("undo");
+        assert_eq!(snapshot(repo.path()), before, "byte for byte");
+        assert!(listing(&home.join("files")).is_empty());
+        #[cfg(not(target_os = "macos"))]
+        assert!(
+            listing(&home.join("info")).is_empty(),
+            "the info files go with the undo"
+        );
+    }
+
+    /// Two discards of files with the same name keep both in the Trash, and
+    /// each undo brings back its own.
+    #[tokio::test]
+    async fn same_names_do_not_collide() {
+        let repo = TestRepo::new().await;
+        repo.commit_file("keep.txt", "k\n", "base").await;
+        let (_dir, home, trash) = trash();
+
+        repo.write_file("notes.txt", "first\n");
+        let (_, first) = discard(&git(), repo.path(), &files(&["notes.txt"]), &trash, &c())
+            .await
+            .expect("first");
+        repo.write_file("notes.txt", "second\n");
+        let (_, second) = discard(&git(), repo.path(), &files(&["notes.txt"]), &trash, &c())
+            .await
+            .expect("second");
+        assert_eq!(listing(&home.join("files")), ["notes.txt", "notes.txt.2"]);
+        assert_eq!(
+            listing(&home.join("info")),
+            ["notes.txt.2.trashinfo", "notes.txt.trashinfo"]
+        );
+
+        undo_discard(&git(), repo.path(), &second, &c())
+            .await
+            .expect("undo second");
+        assert_eq!(
+            std::fs::read_to_string(repo.path().join("notes.txt")).expect("read"),
+            "second\n"
+        );
+        std::fs::remove_file(repo.path().join("notes.txt")).expect("rm");
+        undo_discard(&git(), repo.path(), &first, &c())
+            .await
+            .expect("undo first");
+        assert_eq!(
+            std::fs::read_to_string(repo.path().join("notes.txt")).expect("read"),
+            "first\n"
+        );
+    }
+}

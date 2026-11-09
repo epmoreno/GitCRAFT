@@ -30,7 +30,8 @@ pub trait Trash: Send + Sync {
     fn trash(&self, path: &Path) -> io::Result<PathBuf>;
 }
 
-/// The macOS Trash (Finder's "Put Back" works too).
+/// The system Trash: the macOS Trash (Finder's "Put Back" works too), or
+/// the freedesktop Trash on Linux and other Unix systems.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SystemTrash;
 
@@ -50,12 +51,35 @@ impl Trash for SystemTrash {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(all(unix, not(target_os = "macos")))]
+impl Trash for SystemTrash {
+    fn trash(&self, path: &Path) -> io::Result<PathBuf> {
+        crate::freedesktop_trash::FreedesktopTrash::for_current_user()?.trash(path)
+    }
+}
+
+#[cfg(unix)]
+impl Trash for crate::freedesktop_trash::FreedesktopTrash {
+    fn trash(&self, path: &Path) -> io::Result<PathBuf> {
+        crate::freedesktop_trash::FreedesktopTrash::trash(self, path)
+    }
+}
+
+/// Once a trashed file is back in place, what the Trash kept about it goes
+/// (the freedesktop info file; nothing on macOS).
+fn forget_trashed(trashed_to: &Path) -> io::Result<()> {
+    #[cfg(all(unix, not(target_os = "macos")))]
+    crate::freedesktop_trash::forget(trashed_to)?;
+    let _ = trashed_to;
+    Ok(())
+}
+
+#[cfg(not(unix))]
 impl Trash for SystemTrash {
     fn trash(&self, _path: &Path) -> io::Result<PathBuf> {
         Err(io::Error::new(
             io::ErrorKind::Unsupported,
-            "moving files to the Trash is only implemented on macOS",
+            "moving files to the Trash is not implemented on this system yet",
         ))
     }
 }
@@ -415,13 +439,8 @@ pub async fn discard(
         }
     };
 
-    // 1. Back up everything that is about to change.
+    // 1. Read what the tracked files hold now (nothing changes yet).
     let mut saved = Vec::new();
-    let stash = if tracked.is_empty() {
-        None
-    } else {
-        stash_backup(git, repo, &label(&all), cancel).await?
-    };
     for path in &tracked {
         saved.push(Saved::Tracked {
             path: path.clone(),
@@ -430,33 +449,80 @@ pub async fn discard(
         });
     }
 
-    // 2. Discard.
-    if let Some(patch) = patch {
+    // 2. Untracked files to the Trash: if one cannot go, the ones
+    //    already there come back and nothing else has been touched.
+    let mut trashed = Vec::new();
+    for path in &untracked {
+        let original = repo.join(path.trim_end_matches('/'));
+        match trash.trash(&original) {
+            Ok(trashed_to) => trashed.push(Saved::Untracked {
+                path: path.clone(),
+                trashed_to,
+            }),
+            Err(e) => {
+                put_back(repo, &trashed);
+                return Err(GitError::TrashFailed {
+                    path: path.clone(),
+                    reason: e.to_string(),
+                });
+            }
+        }
+    }
+
+    // 3. Back up the tracked files in the stash too.
+    let stash = if tracked.is_empty() {
+        None
+    } else {
+        match stash_backup(git, repo, &label(&all), cancel).await {
+            Ok(stash) => stash,
+            Err(e) => {
+                put_back(repo, &trashed);
+                return Err(e);
+            }
+        }
+    };
+
+    // 4. Discard.
+    let discarded = if let Some(patch) = patch {
         git.write(repo)
             .args(["apply", "-R", "--whitespace=nowarn", "-"])
             .stdin(patch)
             .output(cancel)
-            .await?;
+            .await
+            .map(drop)
     } else if !tracked.is_empty() {
         literal(git.write(repo))
             .args(["restore", "--worktree", "--"])
             .args(&tracked)
             .output(cancel)
-            .await?;
+            .await
+            .map(drop)
+    } else {
+        Ok(())
+    };
+    if let Err(e) = discarded {
+        put_back(repo, &trashed);
+        return Err(e);
     }
     for item in &mut saved {
         if let Saved::Tracked { path, after, .. } = item {
             *after = snapshot(repo, path);
         }
     }
-    for path in &untracked {
-        let trashed_to = trash.trash(&repo.join(path.trim_end_matches('/')))?;
-        saved.push(Saved::Untracked {
-            path: path.clone(),
-            trashed_to,
-        });
-    }
+    saved.extend(trashed);
     Ok((files, DiscardRecord { stash, saved }))
+}
+
+/// Best effort, after a failed discard: moves what was already trashed back.
+fn put_back(repo: &Path, trashed: &[Saved]) {
+    for item in trashed {
+        if let Saved::Untracked { path, trashed_to } = item {
+            let original = repo.join(path.trim_end_matches('/'));
+            if std::fs::rename(trashed_to, &original).is_ok() {
+                let _ = forget_trashed(trashed_to);
+            }
+        }
+    }
 }
 
 /// Puts back what `record` discarded, byte for byte. Refuses (changing
@@ -554,6 +620,7 @@ pub async fn undo_discard_with(
                     std::fs::create_dir_all(parent)?;
                 }
                 std::fs::rename(trashed_to, &original)?;
+                forget_trashed(trashed_to)?;
             }
         }
     }

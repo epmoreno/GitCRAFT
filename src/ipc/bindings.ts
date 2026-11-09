@@ -586,7 +586,7 @@ export type EffectiveValue = {
  */
 export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | 
 /**  No user.name / user.email configured. */
-"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "undoUnsupported" | "invalidBranchName" | "branchExists" | "branchChanged" | 
+"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "undoUnsupported" | "trashFailed" | "invalidBranchName" | "branchExists" | "branchChanged" | 
 /**  The branch is checked out in another worktree. */
 "branchInWorktree" | "stashChanged" | "nothingToStash" | 
 /**

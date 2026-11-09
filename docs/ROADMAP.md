@@ -1127,6 +1127,13 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       su «Deshacer» (hoy devuelve error fuera de macOS). Se verifica la licencia
       de cualquier crate antes de usarlo. Los textos dejan de nombrar Finder.
       *Tests:* descartar y deshacer un archivo sin seguimiento en los tres.
+      *En curso:* Linux hecho, con implementación propia de la especificación
+      de freedesktop (sin dependencias nuevas): Papelera de casa o la del
+      volumen, y si no hay ninguna, error `TrashFailed` sin tocar nada (nunca
+      se borra en su lugar). `discard` mueve ahora primero los archivos sin
+      seguimiento a la Papelera y, si algo falla después, los devuelve: no
+      queda nada a medias. Tests de ida y vuelta byte a byte con la Papelera
+      real en una carpeta temporal. Falta Windows (Papelera de reciclaje).
 - [ ] **P.6 Localizar git y gh.** Sin depender de rutas de Homebrew: `PATH`
       primero y ubicaciones por sistema detrás de una función (`git.exe`,
       Program Files, `/usr/bin`). Lo mismo para `EXTRA_PATH_DIRS`. Abrir el

@@ -95,6 +95,7 @@
     "staleDiff": "The file changed since its diff was shown. It has been refreshed: select again what you want.",
     "undoConflict": "A file changed since the discard, so nothing was touched. The copy is still in the stash (“GitCRAFT: descarte de …” in git stash list): recover each file with “Recover” on that entry (sidebar → Stashes). Untracked files are in the Trash.",
     "undoUnsupported": "This system cannot create a symbolic link again, so “Undo” touched nothing. The copy is still in the stash (“GitCRAFT: descarte de …” in git stash list): recover each file with “Recover” on that entry (sidebar → Stashes).",
+    "trashFailed": "An untracked file couldn’t be moved to the Trash (for example, because its disk has no Trash), so nothing was discarded. GitCRAFT never deletes a file instead of moving it to the Trash.",
     "invalidBranchName": "That is not a valid branch name.",
     "branchExists": "A branch with that name already exists.",
     "branchChanged": "The branch changed since it was shown (it was moved, renamed or deleted). Nothing was done; check the sidebar and try again.",

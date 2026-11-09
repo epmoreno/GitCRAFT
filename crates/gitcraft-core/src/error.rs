@@ -56,6 +56,11 @@ pub enum GitError {
     #[error("cannot undo the discard of {0}: this system cannot recreate a symbolic link")]
     UndoUnsupported(String),
 
+    /// An untracked file could not go to the Trash (no Trash on its volume,
+    /// for instance). Nothing was discarded; nothing is ever deleted instead.
+    #[error("cannot move {path} to the Trash: {reason}")]
+    TrashFailed { path: String, reason: String },
+
     #[error("{0:?} is not a valid branch name")]
     InvalidBranchName(String),
 
@@ -148,6 +153,7 @@ pub enum ErrorKind {
     StaleDiff,
     UndoConflict,
     UndoUnsupported,
+    TrashFailed,
     InvalidBranchName,
     BranchExists,
     BranchChanged,
@@ -210,6 +216,7 @@ impl GitError {
             Self::StaleDiff => ErrorKind::StaleDiff,
             Self::UndoConflict(_) => ErrorKind::UndoConflict,
             Self::UndoUnsupported(_) => ErrorKind::UndoUnsupported,
+            Self::TrashFailed { .. } => ErrorKind::TrashFailed,
             Self::InvalidBranchName(_) => ErrorKind::InvalidBranchName,
             Self::BranchExists(_) => ErrorKind::BranchExists,
             Self::BranchChanged(_) => ErrorKind::BranchChanged,
@@ -268,7 +275,9 @@ impl GitError {
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) | Self::TimedOut(_) => {
                 Some(redact_credentials(&self.to_string()).into_owned())
             }
-            Self::UndoConflict(_) | Self::UndoUnsupported(_) => Some(self.to_string()),
+            Self::UndoConflict(_) | Self::UndoUnsupported(_) | Self::TrashFailed { .. } => {
+                Some(self.to_string())
+            }
             Self::GitNotFound
             | Self::PathNotFound(_)
             | Self::Cancelled

@@ -19,6 +19,7 @@ const KINDS = {
   staleDiff: true,
   undoConflict: true,
   undoUnsupported: true,
+  trashFailed: true,
   invalidBranchName: true,
   branchExists: true,
   branchChanged: true,
