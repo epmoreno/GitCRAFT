@@ -15,6 +15,8 @@ use tempfile::TempDir;
 
 const SCENARIO: &str = "scenario.json";
 const CALLS: &str = "calls.log";
+/// Answered with exit code 0 and not recorded: checks the copy can run.
+const PROBE: &str = "--fake-gh-probe";
 
 /// What the simulated `gh` writes and how it ends.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -127,7 +129,14 @@ impl FakeGh {
         let exe = dir
             .path()
             .join(format!("gh{}", std::env::consts::EXE_SUFFIX));
-        std::fs::copy(binary, &exe).expect("copy the fake-gh binary");
+        // A hard link never has the file open for writing. A copy does, and
+        // on Linux a process another test forks meanwhile inherits that until
+        // it runs its own program: running the copy then fails with "Text
+        // file busy" (ETXTBSY). So after copying, wait until it runs.
+        if std::fs::hard_link(binary, &exe).is_err() {
+            std::fs::copy(binary, &exe).expect("copy the fake-gh binary");
+            wait_until_it_runs(&exe);
+        }
         let json = serde_json::to_string(scenario).expect("scenario as JSON");
         std::fs::write(dir.path().join(SCENARIO), json).expect("write the scenario");
         Self { dir, exe }
@@ -148,10 +157,28 @@ impl FakeGh {
     }
 }
 
+fn wait_until_it_runs(exe: &Path) {
+    for _ in 0..100 {
+        match std::process::Command::new(exe).arg(PROBE).status() {
+            Err(e) if e.kind() == std::io::ErrorKind::ExecutableFileBusy => {
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            result => {
+                assert!(result.is_ok_and(|s| s.success()), "fake-gh does not run");
+                return;
+            }
+        }
+    }
+    panic!("fake-gh stays busy");
+}
+
 /// What the `fake-gh` binary does: records the call, then answers it as its
 /// scenario says. Returns the exit code.
 pub fn run() -> i32 {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().is_some_and(|a| a == PROBE) {
+        return 0;
+    }
     let dir = std::env::current_exe()
         .ok()
         .and_then(|exe| exe.parent().map(Path::to_owned))
