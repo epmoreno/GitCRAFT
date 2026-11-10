@@ -1263,6 +1263,15 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       con una bandera de humo (`xvfb` en Linux): abre la ventana, carga el
       frontend y sale con código 0.
       *Verificable:* los tres en verde, sin `continue-on-error`.
+      *En curso:* bandera `--smoke` (`src-tauri/src/smoke.rs` y
+      `src/app/smoke.ts`): la app abre la ventana, carga la interfaz en el
+      motor web del sistema, comprueba lo que necesita de él (`color-mix()`,
+      `user-select`, canvas 2D, tokens de diseño, que la interfaz se haya
+      pintado) y sale con 0, o con 1 y la lista de problemas; si no informa en
+      120 s, sale con 2. Sin la bandera no hace nada. El CI compila la app con
+      la interfaz incluida (`tauri build --debug --no-bundle`) y la ejecuta
+      con `--smoke` en los tres sistemas (Linux, con `xvfb-run`). Se quita
+      `continue-on-error` de Windows.
 
 ### Tests ignorados en Windows
 

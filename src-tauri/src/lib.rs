@@ -4,6 +4,7 @@ mod commands;
 mod error;
 mod history;
 mod settings;
+mod smoke;
 mod state;
 mod watcher;
 
@@ -92,6 +93,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::cancel_clone,
             commands::command_history,
             commands::clear_command_history,
+            smoke::smoke_mode,
+            smoke::smoke_report,
         ])
 }
 
@@ -114,6 +117,9 @@ pub fn run() {
             let git = Git::discover().ok().map(|git| {
                 git.with_log(Arc::clone(&history) as Arc<dyn gitcraft_core::CommandLog>)
             });
+            let smoke = smoke::Smoke::from_args();
+            smoke.start_deadline();
+            app.manage(smoke);
             app.manage(Arc::clone(&history));
             app.manage(AppState::new(
                 git,

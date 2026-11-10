@@ -283,6 +283,9 @@ describe("design tokens: no colours outside tokens.css", () => {
       .filter(
         ([path]) =>
           !path.endsWith("/ui/tokens.css") &&
+          // Asks the engine whether it supports color-mix(): a feature
+          // test, not a colour of the interface.
+          path !== "/app/smoke.ts" &&
           !/\.test\.tsx?$/.test(path) &&
           !path.includes("/test/"),
       )

@@ -206,6 +206,13 @@ export const commands = {
 	commandHistory: () => typedError<CommandRecord_Serialize[], IpcError_Serialize>(__TAURI_INVOKE("command_history")),
 	/**  Forgets the finished commands of the history. */
 	clearCommandHistory: () => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("clear_command_history")),
+	/**  Whether the interface should run its checks and report. */
+	smokeMode: () => __TAURI_INVOKE<boolean>("smoke_mode"),
+	/**
+	 *  The interface's checks: no problems ends the run with 0, any with 1.
+	 *  Ignored outside a smoke run.
+	 */
+	smokeReport: (problems: string[]) => __TAURI_INVOKE<void>("smoke_report", { problems }),
 };
 
 /** Events */

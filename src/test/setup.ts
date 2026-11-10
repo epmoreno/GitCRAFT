@@ -82,6 +82,8 @@ vi.mock("../ipc", () => ({
     cancelClone: vi.fn(),
     commandHistory: vi.fn(),
     clearCommandHistory: vi.fn(),
+    smokeMode: vi.fn(),
+    smokeReport: vi.fn(),
     generalSettings: vi.fn(),
     setGeneralSettings: vi.fn(),
     gitDefaults: vi.fn(),

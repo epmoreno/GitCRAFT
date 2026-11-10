@@ -23,6 +23,7 @@ import {
   RestoreFailedBanner,
 } from "../features/repo/OpenErrorBanner";
 import { installAppMenu } from "./menu";
+import { reportIfSmokeRun } from "./smoke";
 import { isShortcut } from "./shortcuts";
 import { StartPage } from "../features/repo/StartPage";
 import { PublishDialog } from "../features/publish/PublishDialog";
@@ -47,6 +48,7 @@ export function App() {
     void useSettingsStore.getState().load();
     void restoreSession();
     void loadRecents();
+    void reportIfSmokeRun();
   }, [restoreSession, loadRecents]);
 
   // ⌘T / Ctrl+T opens a new tab and ⌘W / Ctrl+W closes the active one

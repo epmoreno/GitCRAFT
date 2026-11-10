@@ -1,6 +1,5 @@
 # npm run check (format, lint, types and every test, web and Rust) on macOS,
-# Windows and Linux. While phase P makes the code portable (P.3–P.10), Windows
-# reports without blocking.
+# Windows and Linux, then a smoke run of the built app on each (P.11).
 name: CI
 
 on:
@@ -21,7 +20,6 @@ jobs:
     name: check (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
-    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -35,7 +33,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
             libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev
+            libjavascriptcoregtk-4.1-dev xvfb
 
       - uses: actions/setup-node@v7
         with:
@@ -80,3 +78,19 @@ jobs:
             exit 1
           }
           Write-Output "gitcraft.exe carries the Common Controls v6 manifest"
+
+      # The built app (interface included) opens its window, loads the
+      # interface in the system's web engine (WKWebView, WebView2,
+      # WebKitGTK), checks what it needs from it and exits: 0 if all is
+      # there. See src-tauri/src/smoke.rs. Linux has no display: Xvfb.
+      - name: Smoke run of the app
+        if: success() || failure()
+        shell: bash
+        run: |
+          npx tauri build --debug --no-bundle
+          app=target/debug/gitcraft
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a "$app" --smoke
+          else
+            "$app" --smoke
+          fi
