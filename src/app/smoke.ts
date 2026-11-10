@@ -28,7 +28,7 @@ export function engineProblems(): string[] {
     .trim();
   if (tokens === "")
     problems.push("the design tokens (tokens.css) did not load");
-  if (!document.querySelector('[role="main"]')) {
+  if (!document.querySelector("main")) {
     problems.push("the interface did not render");
   }
   return problems;

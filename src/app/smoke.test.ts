@@ -5,7 +5,7 @@ describe("smoke run checks", () => {
 
   beforeEach(() => {
     document.documentElement.style.setProperty("--font-ui", "system-ui");
-    document.body.innerHTML = '<main role="main"></main>';
+    document.body.innerHTML = "<main></main>";
   });
 
   afterEach(() => {
