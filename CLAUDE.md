@@ -131,3 +131,10 @@ usuario.
    (`gh auth login`, credenciales, llavero) ni se escribe en el portapapeles
    del sistema sin pedir permiso antes al usuario, aunque sea en un entorno
    aislado.
+
+8. **Dependencias e instalaciones:** antes de añadir una dependencia (crate o
+   paquete npm), activar features nuevas de una dependencia o instalar
+   cualquier cosa en el equipo del usuario (targets de rustup, herramientas,
+   paquetes del sistema), se le dice exactamente qué y para qué, y se espera
+   su aprobación. Vale aunque ya esté en el `Cargo.lock` o sea del mismo
+   proyecto que otra aprobada.

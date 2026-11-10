@@ -1185,12 +1185,19 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       si no se para el grupo). Ya no se ignora `can_be_cancelled` en
       Windows.
       *CI* (`55d2c96`): los tres en verde.
-- [ ] **P.8 Rutas y finales de línea.** Separadores `\`, unidades y rutas largas
+      *Limpieza del clon parado (revisada):* GitCRAFT solo borra lo que ha
+      escrito el clon. Si la carpeta de destino ya existía (vacía, como se
+      exige), se conserva y solo se vacía; si la creó el clon, se borra.
+      Los enlaces se borran sin seguirlos, así que nada fuera del destino se
+      toca. Tests en los tres sistemas: la limpieza con un clon a medias (y
+      un enlace a una carpeta de fuera en Unix) y un clon cancelado sobre una
+      carpeta vacía que ya existía.
+- [x] **P.8 Rutas y finales de línea.** Separadores `\`, unidades y rutas largas
       en sesión y recientes; `core.autocrlf` y CRLF en diffs y en el stage por
       línea; `diff --no-index` contra `/dev/null`; bits de ejecución y symlinks
       en descartar y deshacer; mayúsculas y minúsculas en rutas.
       *Tests:* stage parcial y descarte con CRLF, y rutas de Windows simuladas.
-      *En curso:* rutas hechas. `platform::native_path` da a cada carpeta una
+      *Hecho:* rutas. `platform::native_path` da a cada carpeta una
       sola forma: en Windows, la ruta real (con `\`, sin el prefijo `\\?\`,
       con los nombres largos en vez de los 8.3 como `RUNNER~1` y con las
       mayúsculas de verdad), así que un repo ya no se duplica en recientes ni
@@ -1201,9 +1208,16 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       en el índice), byte a byte; el descarte con CRLF y el diff de archivos
       sin seguimiento contra `/dev/null` ya los cubrían tests que pasan en
       Windows. Bit de ejecución: Windows no tiene (como Git for Windows,
-      `core.fileMode=false`). Falta decidir los symlinks en Windows.
+      `core.fileMode=false`). Symlinks en Windows (decidido, opción A): no
+      se recrean. Git for Windows trae `core.symlinks=false` y los saca como
+      archivos de texto, que se descartan y deshacen bien; si hay un symlink
+      real, el diálogo avisa antes de descartar y «Deshacer» se niega sin
+      tocar nada, con la copia en el stash. Crearlos exigiría el Modo de
+      desarrollador o permisos de administrador.
       *CI* (`8d9e46f`): los tres en verde; Rust: 334 tests y 2 ignorados en
       macOS y Linux, 329 y 2 ignorados en Windows (ninguno de la Fase P).
+      *Verificado manualmente en macOS:* el mismo repo abierto desde la raíz
+      y desde una subcarpeta sale una sola vez.
 - [ ] **P.9 Menús y textos del sistema.** Barra de menús en Windows/Linux, sin
       los elementos propios de macOS. Textos que nombran `~/.gitconfig`, Llavero
       o Finder, según el sistema.

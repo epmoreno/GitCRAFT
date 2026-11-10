@@ -186,3 +186,28 @@ async fn can_be_cancelled() {
     assert_eq!(err.kind(), ErrorKind::Cancelled);
     assert!(!parent.path().join("z").join(".git").exists());
 }
+
+/// P.7: cancelling a clone into a folder that already existed (empty) keeps
+/// that folder, empty; only what the clone wrote goes.
+#[tokio::test]
+async fn cancelling_into_an_empty_folder_keeps_the_folder() {
+    let (_source, bare) = remote().await;
+    let parent = tempfile::tempdir().expect("tempdir");
+    std::fs::create_dir(parent.path().join("z")).expect("mkdir");
+    let cancel = c();
+    cancel.cancel();
+    let err = clone_repository(
+        &git(),
+        &file_url(bare.path()),
+        parent.path(),
+        "z",
+        &cancel,
+        |_| {},
+    )
+    .await
+    .expect_err("cancelled");
+    assert_eq!(err.kind(), ErrorKind::Cancelled);
+    let destination = parent.path().join("z");
+    assert!(destination.is_dir(), "the folder that existed stays");
+    assert_eq!(std::fs::read_dir(&destination).expect("read").count(), 0);
+}

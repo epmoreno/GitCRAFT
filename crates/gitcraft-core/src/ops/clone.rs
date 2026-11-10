@@ -112,36 +112,102 @@ pub async fn clone_repository(
 
 /// After a clone was stopped. On Unix git gets SIGTERM and removes what it
 /// had written itself; on Windows it is ended at once and cannot, so
-/// GitCRAFT does the same: the folder goes if the clone created it, and
-/// only its contents if it was an empty folder before (it was checked to
-/// be empty, so nothing but the clone is removed).
+/// GitCRAFT does the same there.
 fn clean_up_stopped_clone(destination: &Path, existed: bool) {
-    #[cfg(windows)]
-    {
-        if existed {
-            for entry in std::fs::read_dir(destination)
-                .into_iter()
-                .flatten()
-                .flatten()
-            {
-                let path = entry.path();
-                let _ = if path.is_dir() {
-                    std::fs::remove_dir_all(&path)
-                } else {
-                    std::fs::remove_file(&path)
-                };
-            }
+    if cfg!(windows) {
+        let _ = remove_what_the_clone_wrote(destination, existed);
+    }
+}
+
+/// Removes only what a clone wrote into `destination`: the folder itself if
+/// the clone created it, or else just its contents (it was checked to be an
+/// empty folder before the clone started). Links are removed, never
+/// followed, so nothing outside `destination` is touched.
+pub fn remove_what_the_clone_wrote(destination: &Path, existed: bool) -> std::io::Result<()> {
+    if !existed {
+        return match std::fs::symlink_metadata(destination) {
+            Ok(meta) if meta.is_dir() => std::fs::remove_dir_all(destination),
+            _ => Ok(()),
+        };
+    }
+    for entry in std::fs::read_dir(destination)? {
+        let path = entry?.path();
+        if std::fs::symlink_metadata(&path)?.is_dir() {
+            std::fs::remove_dir_all(&path)?;
         } else {
-            let _ = std::fs::remove_dir_all(destination);
+            remove_file_or_link(&path)?;
         }
     }
-    #[cfg(not(windows))]
-    let _ = (destination, existed);
+    Ok(())
+}
+
+/// A file, or a link (on Windows a link to a folder is removed as a folder,
+/// which removes the link only).
+fn remove_file_or_link(path: &Path) -> std::io::Result<()> {
+    std::fs::remove_file(path).or_else(|e| {
+        if cfg!(windows) {
+            std::fs::remove_dir(path)
+        } else {
+            Err(e)
+        }
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A destination with what a stopped clone leaves: files, folders and,
+    /// where the system allows, a link to a folder outside.
+    fn partial_clone(destination: &Path, outside: &Path) {
+        std::fs::create_dir_all(destination.join(".git/objects")).expect("mkdir");
+        std::fs::write(destination.join(".git/HEAD"), "ref: refs/heads/main\n").expect("write");
+        std::fs::write(destination.join("README.md"), "x").expect("write");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(outside, destination.join("link")).expect("symlink");
+        let _ = outside;
+    }
+
+    /// P.7: a destination that already existed (empty) is kept: only what
+    /// the clone wrote goes, and nothing a link points to.
+    #[test]
+    fn keeps_a_folder_that_existed_and_removes_only_the_clone() {
+        let parent = tempfile::tempdir().expect("tempdir");
+        let outside = parent.path().join("outside");
+        std::fs::create_dir(&outside).expect("mkdir");
+        std::fs::write(outside.join("keep.txt"), "mine").expect("write");
+        let destination = parent.path().join("dest");
+        std::fs::create_dir(&destination).expect("mkdir");
+        partial_clone(&destination, &outside);
+
+        remove_what_the_clone_wrote(&destination, true).expect("clean up");
+        assert!(destination.is_dir(), "the folder that existed stays");
+        assert_eq!(std::fs::read_dir(&destination).expect("read").count(), 0);
+        assert_eq!(
+            std::fs::read_to_string(outside.join("keep.txt")).expect("read"),
+            "mine"
+        );
+    }
+
+    /// P.7: a destination the clone created goes entirely, and nothing next
+    /// to it.
+    #[test]
+    fn removes_a_folder_the_clone_created() {
+        let parent = tempfile::tempdir().expect("tempdir");
+        let outside = parent.path().join("outside");
+        std::fs::create_dir(&outside).expect("mkdir");
+        std::fs::write(outside.join("keep.txt"), "mine").expect("write");
+        let destination = parent.path().join("dest");
+        std::fs::create_dir(&destination).expect("mkdir");
+        partial_clone(&destination, &outside);
+
+        remove_what_the_clone_wrote(&destination, false).expect("clean up");
+        assert!(!destination.exists());
+        assert_eq!(
+            std::fs::read_to_string(outside.join("keep.txt")).expect("read"),
+            "mine"
+        );
+    }
 
     #[test]
     fn derives_the_folder_name_from_the_url() {
