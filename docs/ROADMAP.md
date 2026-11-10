@@ -1168,6 +1168,8 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       ejecución, que no existe allí). Ya no se ignora
       `helpers_are_found_when_launched_from_finder` en Windows.
       *CI* (`1ec7fc5`): los tres en verde.
+      *Verificado manualmente en macOS:* Ajustes → GitHub encuentra gh y
+      muestra la cuenta con la sesión iniciada.
 - [x] **P.7 Cancelar procesos en Windows.** Job Objects en lugar de grupos de
       procesos, en el ejecutor de git y en el de `gh`, sin ventanas de consola
       (`CREATE_NO_WINDOW`).
@@ -1193,6 +1195,7 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       un enlace a una carpeta de fuera en Unix) y un clon cancelado sobre una
       carpeta vacía que ya existía.
       *CI* (`0025302`): los tres en verde.
+      *Verificado manualmente en macOS:* clonar y cancelar no deja carpeta.
 - [x] **P.8 Rutas y finales de línea.** Separadores `\`, unidades y rutas largas
       en sesión y recientes; `core.autocrlf` y CRLF en diffs y en el stage por
       línea; `diff --no-index` contra `/dev/null`; bits de ejecución y symlinks
@@ -1219,7 +1222,7 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       macOS y Linux, 329 y 2 ignorados en Windows (ninguno de la Fase P).
       *Verificado manualmente en macOS:* el mismo repo abierto desde la raíz
       y desde una subcarpeta sale una sola vez.
-- [ ] **P.9 Menús y textos del sistema.** Barra de menús en Windows/Linux, sin
+- [x] **P.9 Menús y textos del sistema.** Barra de menús en Windows/Linux, sin
       los elementos propios de macOS. Textos que nombran `~/.gitconfig`, Llavero
       o Finder, según el sistema.
       *En curso:* textos hechos. Variantes `_windows` y `_linux` (solo donde
@@ -1229,9 +1232,21 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       de claves del sistema) y el credential helper del error de
       autenticación; `useOsText` elige la del sistema. En macOS, los textos
       de siempre. Un test comprueba que cada variante tiene su texto base y
-      que ninguna nombra cosas de macOS. Falta decidir el menú en Windows y
-      Linux.
+      que ninguna nombra cosas de macOS.
       *CI* (`5126e47`): los tres en verde.
+      *Verificado manualmente en macOS (textos):* «gh guarda la sesión en el
+      Llavero de macOS» en Ajustes → GitHub, `~/.gitconfig` en Generales e
+      Identidad, e «irá a la Papelera» al descartar un archivo sin
+      seguimiento.
+      *Menú (decidido, opción A):* en Windows y Linux, barra de menús nativa
+      dentro de la ventana: Archivo (Nueva pestaña, Cerrar pestaña, Ajustes,
+      Salir), Edición (Cortar, Copiar, Pegar, Seleccionar todo) y Ayuda
+      (Acerca de GitCRAFT), con los aceleradores del mismo registro (Ctrl+T,
+      Ctrl+W, Ctrl+,). Sin Deshacer/Rehacer en el menú, porque esos elementos
+      solo funcionan en macOS (Ctrl+Z sigue funcionando en los campos de
+      texto). «Salir» cierra la ventana (el permiso `core:window:allow-close`),
+      porque el «Salir» predefinido no hace nada en Linux. El menú de macOS no
+      cambia: un test fija su estructura y otro la de Windows y Linux.
 - [ ] **P.10 WebView2 y WebKitGTK.** Lista de diferencias (`color-mix()`,
       `-webkit-user-select`, zona de arrastre de la ventana, zoom, canvas,
       fuentes) con su resolución.
@@ -1303,6 +1318,8 @@ principio y toda operación destructiva pasa por confirmación.
       además de español e inglés, con soporte de interfaz de derecha a
       izquierda (RTL) para el árabe. El README ya tiene la descripción en esos
       idiomas.
+- [ ] **Ocultar la barra de menús en Windows y Linux:** una opción en
+      Ajustes (los atajos siguen funcionando).
 - [ ] **README completo en árabe, alemán, francés y portugués**
       (`README.ar.md`, `README.de.md`, `README.fr.md`, `README.pt.md`), con el
       árabe envuelto en `<div dir="rtl">`. La barra de idiomas pasa a enlazarlos.

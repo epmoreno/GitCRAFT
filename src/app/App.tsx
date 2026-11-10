@@ -49,8 +49,9 @@ export function App() {
     void loadRecents();
   }, [restoreSession, loadRecents]);
 
-  // ⌘T opens a new tab and ⌘W closes the active one (menu bar); ⌘1…⌘9 and
-  // ⌃Tab / ⌃⇧Tab switch tabs. Never while a dialog waits for an answer.
+  // ⌘T / Ctrl+T opens a new tab and ⌘W / Ctrl+W closes the active one
+  // (menu bar); ⌘1…⌘9 and ⌃Tab / ⌃⇧Tab switch tabs. Never while a dialog
+  // waits for an answer.
   useEffect(() => {
     const dialogOpen = () => document.querySelector('[aria-modal="true"]');
     const tabs = useRepoStore.getState;

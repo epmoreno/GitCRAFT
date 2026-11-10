@@ -4,22 +4,32 @@ import {
   PredefinedMenuItem,
   Submenu,
 } from "@tauri-apps/api/menu";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { TFunction } from "i18next";
+import { isMac } from "./platform";
 import { accelerator } from "./shortcuts";
+
+type MenuActions = {
+  openSettings: () => void;
+  newTab: () => void;
+  closeTab: () => void;
+};
+
+/**
+ * The menu bar: the macOS one, or on Windows and Linux a bar inside the
+ * window (File, Edit, Help). Both take their accelerators from the shortcut
+ * registry, so ⌘T / Ctrl+T, ⌘W / Ctrl+W and ⌘, / Ctrl+, work the same.
+ */
+export async function installAppMenu(t: TFunction, actions: MenuActions) {
+  return isMac() ? macMenu(t, actions) : windowsAndLinuxMenu(t, actions);
+}
 
 /**
  * The macOS menu bar. Replaces the default one, whose "Close Window" on ⌘W
  * would close the whole app: here ⌘W closes the active tab. ⌘T opens a new
  * tab with the start page.
  */
-export async function installAppMenu(
-  t: TFunction,
-  actions: {
-    openSettings: () => void;
-    newTab: () => void;
-    closeTab: () => void;
-  },
-) {
+async function macMenu(t: TFunction, actions: MenuActions) {
   const separator = () => PredefinedMenuItem.new({ item: "Separator" });
   const app = await Submenu.new({
     text: "GitCRAFT",
@@ -89,5 +99,69 @@ export async function installAppMenu(
     ],
   });
   const menu = await Menu.new({ items: [app, file, edit, window] });
+  await menu.setAsAppMenu();
+}
+
+/**
+ * Windows and Linux: File, Edit and Help, without the macOS items (Services,
+ * Hide…). Undo and Redo are left out: the menu items only work on macOS,
+ * and Ctrl+Z / Ctrl+Y work in text fields anyway.
+ */
+async function windowsAndLinuxMenu(t: TFunction, actions: MenuActions) {
+  const separator = () => PredefinedMenuItem.new({ item: "Separator" });
+  const file = await Submenu.new({
+    text: t("menu.file"),
+    items: [
+      await MenuItem.new({
+        id: "new-tab",
+        text: t("menu.newTab"),
+        accelerator: accelerator("newTab"),
+        action: actions.newTab,
+      }),
+      await MenuItem.new({
+        id: "close-tab",
+        text: t("menu.closeTab"),
+        accelerator: accelerator("closeTab"),
+        action: actions.closeTab,
+      }),
+      await separator(),
+      await MenuItem.new({
+        id: "settings",
+        text: t("menu.settings"),
+        accelerator: accelerator("settings"),
+        action: actions.openSettings,
+      }),
+      await separator(),
+      // The predefined Quit does nothing on Linux: close the window instead.
+      await MenuItem.new({
+        id: "quit",
+        text: t("menu.quit"),
+        action: () => void getCurrentWindow().close(),
+      }),
+    ],
+  });
+  const edit = await Submenu.new({
+    text: t("menu.edit"),
+    items: [
+      await PredefinedMenuItem.new({ item: "Cut", text: t("menu.cut") }),
+      await PredefinedMenuItem.new({ item: "Copy", text: t("menu.copy") }),
+      await PredefinedMenuItem.new({ item: "Paste", text: t("menu.paste") }),
+      await separator(),
+      await PredefinedMenuItem.new({
+        item: "SelectAll",
+        text: t("menu.selectAll"),
+      }),
+    ],
+  });
+  const help = await Submenu.new({
+    text: t("menu.help"),
+    items: [
+      await PredefinedMenuItem.new({
+        text: t("menu.about"),
+        item: { About: { comments: t("app.description") } },
+      }),
+    ],
+  });
+  const menu = await Menu.new({ items: [file, edit, help] });
   await menu.setAsAppMenu();
 }

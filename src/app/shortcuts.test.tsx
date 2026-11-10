@@ -213,6 +213,7 @@ describe("no shortcut outside the registry", () => {
     const withAccelerator = SHORTCUT_IDS.filter(
       (id) => "accelerator" in SHORTCUTS[id],
     );
-    expect(used.sort()).toEqual([...withAccelerator].sort());
+    // Each menu (macOS; Windows and Linux) uses them: compare the set.
+    expect([...new Set(used)].sort()).toEqual([...withAccelerator].sort());
   });
 });

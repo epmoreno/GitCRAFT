@@ -643,7 +643,14 @@
     "closeTab": "Cerrar pestaña",
     "file": "Archivo",
     "newTab": "Nueva pestaña",
-    "settings": "Ajustes…"
+    "settings": "Ajustes…",
+    "help": "Ayuda",
+    "quit": "Salir",
+    "cut": "Cortar",
+    "copy": "Copiar",
+    "paste": "Pegar",
+    "selectAll": "Seleccionar todo",
+    "about": "Acerca de GitCRAFT"
   },
   "init": {
     "pickerTitle": "Carpeta para el nuevo repositorio",

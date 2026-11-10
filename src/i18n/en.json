@@ -643,7 +643,14 @@
     "closeTab": "Close tab",
     "file": "File",
     "newTab": "New tab",
-    "settings": "Settings…"
+    "settings": "Settings…",
+    "help": "Help",
+    "quit": "Exit",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "selectAll": "Select All",
+    "about": "About GitCRAFT"
   },
   "init": {
     "pickerTitle": "Folder for the new repository",
