@@ -129,14 +129,14 @@ impl FakeGh {
         let exe = dir
             .path()
             .join(format!("gh{}", std::env::consts::EXE_SUFFIX));
-        // A hard link never has the file open for writing. A copy does, and
-        // on Linux a process another test forks meanwhile inherits that until
-        // it runs its own program: running the copy then fails with "Text
-        // file busy" (ETXTBSY). So after copying, wait until it runs.
-        if std::fs::hard_link(binary, &exe).is_err() {
-            std::fs::copy(binary, &exe).expect("copy the fake-gh binary");
-            wait_until_it_runs(&exe);
-        }
+        // A copy, not a hard link: on macOS the running binary's path can
+        // come back as another link to the same file, i.e. another test's
+        // folder and scenario. While copying, the file is open for writing,
+        // and on Linux a process another test forks meanwhile inherits that
+        // until it runs its own program: running the copy then fails with
+        // "Text file busy" (ETXTBSY). So after copying, wait until it runs.
+        std::fs::copy(binary, &exe).expect("copy the fake-gh binary");
+        wait_until_it_runs(&exe);
         let json = serde_json::to_string(scenario).expect("scenario as JSON");
         std::fs::write(dir.path().join(SCENARIO), json).expect("write the scenario");
         Self { dir, exe }
