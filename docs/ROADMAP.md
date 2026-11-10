@@ -1052,6 +1052,10 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
 
 ## Fase P — Portabilidad
 
+**Terminada** (P.1–P.11). El código compila, pasa los tests y arranca en
+macOS, Windows y Linux en el CI, sin tests ignorados por la Fase P. Queda la
+prueba a mano en máquinas virtuales.
+
 Objetivo: el código compila, pasa los tests y arranca en macOS, Windows y
 Linux, comprobado por el CI. La prueba manual en máquinas virtuales la hará el
 usuario más adelante. Los instaladores quedan para la fase de publicación.
@@ -1247,23 +1251,26 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       texto). «Salir» cierra la ventana (el permiso `core:window:allow-close`),
       porque el «Salir» predefinido no hace nada en Linux. El menú de macOS no
       cambia: un test fija su estructura y otro la de Windows y Linux.
-- [ ] **P.10 WebView2 y WebKitGTK.** Lista de diferencias (`color-mix()`,
+      *CI* (`3412ddc`): los tres en verde.
+- [x] **P.10 WebView2 y WebKitGTK.** Lista de diferencias (`color-mix()`,
       `-webkit-user-select`, zona de arrastre de la ventana, zoom, canvas,
       fuentes) con su resolución.
       *Verificable:* la app web pasa un test de humo en los motores del CI, y se
       apunta lo que solo se puede ver a mano.
-      *Hecho (falta el test de humo, que llega con P.11):* lista de
+      *Hecho:* lista de
       diferencias en ARCHITECTURE.md (sección 8, «Motores web»), con su
       solución y lo que solo se puede ver a mano. Cambios: fuentes
       alternativas para Windows y Linux al final de cada lista; el hueco de
       84 px para los botones de la ventana y la zona de arrastre de la barra
       de herramientas, solo en macOS (en Windows y Linux hay barra de título
-      del sistema). En macOS no cambia nada.
-- [ ] **P.11 Compila y arranca en los tres.** El CI compila la app y la arranca
+      del sistema). En macOS no cambia nada. El test de humo de P.11
+      comprueba en el motor real de cada sistema `color-mix()`,
+      `user-select`, el canvas 2D y los tokens.
+- [x] **P.11 Compila y arranca en los tres.** El CI compila la app y la arranca
       con una bandera de humo (`xvfb` en Linux): abre la ventana, carga el
       frontend y sale con código 0.
       *Verificable:* los tres en verde, sin `continue-on-error`.
-      *En curso:* bandera `--smoke` (`src-tauri/src/smoke.rs` y
+      *Hecho:* bandera `--smoke` (`src-tauri/src/smoke.rs` y
       `src/app/smoke.ts`): la app abre la ventana, carga la interfaz en el
       motor web del sistema, comprueba lo que necesita de él (`color-mix()`,
       `user-select`, canvas 2D, tokens de diseño, que la interfaz se haya
@@ -1272,6 +1279,10 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       la interfaz incluida (`tauri build --debug --no-bundle`) y la ejecuta
       con `--smoke` en los tres sistemas (Linux, con `xvfb-run`). Se quita
       `continue-on-error` de Windows.
+      *CI* (`19520c2`): los tres en verde y bloqueantes; en los tres, «smoke:
+      the interface loaded and has what it needs». Rust: 337 tests y 2
+      ignorados en macOS y Linux, 332 y 2 en Windows; los 39 archivos de
+      tests web en los tres.
 
 ### Tests ignorados en Windows
 
