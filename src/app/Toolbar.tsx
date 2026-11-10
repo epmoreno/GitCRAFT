@@ -1,3 +1,4 @@
+import { isMac } from "./platform";
 import { useTranslation } from "react-i18next";
 import { useBranchStore } from "../features/branches/store";
 import { NewRepositoryMenu } from "../features/create/NewRepositoryMenu";
@@ -25,6 +26,9 @@ const PENDING = ["undo"] as const;
  * so empty areas are drag regions.
  */
 export function Toolbar() {
+  // The toolbar is the title bar on macOS (drag it to move the window);
+  // Windows and Linux have the system's own title bar above it.
+  const dragRegion = isMac() ? { "data-tauri-drag-region": true } : {};
   const { t } = useTranslation();
   const label = useShortcutLabel();
   const openSettings = useSettingsStore((s) => s.openSettings);
@@ -65,8 +69,8 @@ export function Toolbar() {
     : t("toolbar.needsRepo");
 
   return (
-    <header className={styles.toolbar} data-tauri-drag-region>
-      <span className={styles.brand} data-tauri-drag-region>
+    <header className={styles.toolbar} {...dragRegion}>
+      <span className={styles.brand} {...dragRegion}>
         GitCRAFT
       </span>
       <button
@@ -78,7 +82,7 @@ export function Toolbar() {
         {t("toolbar.openRepo")}
       </button>
       <NewRepositoryMenu />
-      <div className={styles.toolbarActions} data-tauri-drag-region>
+      <div className={styles.toolbarActions} {...dragRegion}>
         <CurrentBranch repoId={active?.id ?? null} />
         <FetchButton repoId={active?.id ?? null} />
         <PullButton repoId={active?.id ?? null} />

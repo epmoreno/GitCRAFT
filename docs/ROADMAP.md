@@ -1252,6 +1252,13 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       fuentes) con su resolución.
       *Verificable:* la app web pasa un test de humo en los motores del CI, y se
       apunta lo que solo se puede ver a mano.
+      *Hecho (falta el test de humo, que llega con P.11):* lista de
+      diferencias en ARCHITECTURE.md (sección 8, «Motores web»), con su
+      solución y lo que solo se puede ver a mano. Cambios: fuentes
+      alternativas para Windows y Linux al final de cada lista; el hueco de
+      84 px para los botones de la ventana y la zona de arrastre de la barra
+      de herramientas, solo en macOS (en Windows y Linux hay barra de título
+      del sistema). En macOS no cambia nada.
 - [ ] **P.11 Compila y arranca en los tres.** El CI compila la app y la arranca
       con una bandera de humo (`xvfb` en Linux): abre la ventana, carga el
       frontend y sale con código 0.

@@ -651,9 +651,9 @@ específica de un sistema se apunta en esta tabla.
 | Abrir el navegador | `src-tauri/src/state.rs`, `platform.rs` (`Os::open_url_command`) | `/usr/bin/open <url>` | `explorer.exe <url>` | `xdg-open <url>` | Hecho en P.6 |
 | Atajos de teclado | `src/app/shortcuts.ts` (modificador `primary` y combinaciones con `os`), `src/app/platform.ts` (`navigator.platform`), `useShortcutLabel` | ⌘ como modificador principal; textos con símbolos (`⌘W`, `⌃⇧⇥`) | Ctrl; descartar con Ctrl+Supr; textos como `Ctrl+Mayús+Tab` | Igual que Windows | Hecho en P.4 |
 | Barra de menús | `src/app/menu.ts` (`macMenu`, `windowsAndLinuxMenu`) | Menú de la app con elementos de macOS (Servicios, Ocultar…) | Barra dentro de la ventana: Archivo, Edición, Ayuda, con los aceleradores del registro; «Salir» cierra la ventana | Igual que Windows | Hecho en P.9 |
-| Barra de título | `tauri.conf.json` (`titleBarStyle: Overlay`, `hiddenTitle`), `App.module.css` (hueco de 84 px para los botones de la ventana), `data-tauri-drag-region` | Barra de herramientas dentro de la barra de título | Decoraciones del sistema, sin hueco | Igual que Windows | P.9, P.10 |
+| Barra de título | `tauri.conf.json` (`titleBarStyle: Overlay`, `hiddenTitle`: solo macOS, los demás sistemas los ignoran), `App.module.css` (hueco de 84 px, solo con `html[data-os="mac"]`), zona de arrastre (`Toolbar.tsx`, solo en macOS) | Barra de herramientas dentro de la barra de título | Decoraciones del sistema, sin hueco ni zona de arrastre | Igual que Windows | Hecho en P.10 |
 | Textos que nombran macOS | `src/i18n/*.json`: variantes `_windows`/`_linux` de los textos que dependen del sistema (instalar git y gh, Papelera, `~/.gitconfig`, dónde guarda gh la sesión, credential helper); `osKey` y `useOsText` eligen la del sistema | Los de siempre (texto base, sin sufijo) | Papelera de reciclaje, `%USERPROFILE%\.gitconfig`, Administrador de credenciales de Windows, Git Credential Manager, `winget` | Papelera, `~/.gitconfig`, almacén de claves del sistema, libsecret, gestor de paquetes | Hecho en P.6 y P.9 |
-| Motor web | CSS: `color-mix()`, `-webkit-user-select`, `-webkit-font-smoothing`, fuentes `-apple-system`/`SF Mono`/`Menlo` | WKWebView | WebView2 (Chromium) | WebKitGTK (según versión) | P.10 |
+| Motor web | CSS: `color-mix()`, `user-select`, `-webkit-font-smoothing`, fuentes | WKWebView | WebView2 (Chromium) | WebKitGTK 2.40+ | Revisado en P.10: ver «Motores web» más abajo |
 | Finales de línea | `.gitattributes` (`* text=auto eol=lf`, fixtures sin conversión) | LF | LF en el checkout, como exige Prettier | LF | Hecho en P.3 |
 | Tests | `testing.rs` (`NO_CONFIG`: `/dev/null` o `NUL` en `GIT_CONFIG_GLOBAL`), `gh` simulado con el binario de prueba `fake-gh`, `platform::set_file_mode` para el hook, `#[cfg(unix)]` en lo que solo existe en Unix (`nix::kill`, bit de ejecución, symlinks) | Funcionan | Funcionan; los que dependen de tareas pendientes se ignoran con su tarea (lista en el ROADMAP) | Funcionan | Hecho en P.3 |
 | Diff de un archivo sin seguimiento | `ops/worktree.rs` (`diff --no-index -- /dev/null <ruta>`) | Funciona | Funciona con Git for Windows (los tests de stage parcial de archivos sin seguimiento pasan en el CI) | Funciona | Comprobado en P.8 |
@@ -662,3 +662,25 @@ específica de un sistema se apunta en esta tabla.
 | Scripts de npm | `package.json`: `bindings` es `node scripts/bindings.mjs`; `dist` sigue con `CI=true comando` | Funcionan | `bindings` funciona; `dist` no, porque `cmd.exe` no entiende `VAR=1` | Funcionan | Hecho en P.3 (`bindings`); Fase final (`dist`) |
 | Empaquetado | `tauri.conf.json` (`targets: app, dmg`, `macOS.minimumSystemVersion`, firma ad-hoc), `npm run dist` | `.app` y `.dmg` | Instalador (`.msi` o NSIS) | `.deb`, AppImage… | Fase final |
 | Scripts de desarrollo | `scripts/*.sh` (`make-remote-sandbox.sh` usa `osascript` y Finder) | Funcionan | No | Parcialmente | Solo para desarrollo en macOS; sin tarea |
+
+
+### Motores web (P.10)
+
+La interfaz corre en el motor web de cada sistema: WKWebView (WebKit) en
+macOS, WebView2 (Chromium, actualizado por Windows) en Windows y WebKitGTK en
+Linux. Diferencias revisadas y su solución:
+
+| Qué | Dónde | WKWebView | WebView2 | WebKitGTK | Solución | Comprobación |
+| --- | --- | --- | --- | --- | --- | --- |
+| `color-mix()` | `src/ui/tokens.css` (tintes de selección, diff, avisos) | Safari 16.2+ (en macOS 11 y 12, con Safari actualizado) | Chromium 111+ (siempre al día) | WebKitGTK 2.40+ | Se mantiene; versión mínima de WebKitGTK documentada para los instaladores de Linux | Test de humo en el motor de cada sistema (P.11) |
+| `user-select` | `tokens.css`, `diff.module.css` | Con prefijo `-webkit-` | Sin prefijo | Con prefijo | Se escriben las dos formas | Test de humo |
+| `-webkit-font-smoothing` | `tokens.css` | Suaviza el texto | Se ignora | Se ignora | Sin efecto fuera de macOS: no hace falta nada | — |
+| Fuentes | `--font-ui`, `--font-mono` | San Francisco, SF Mono | Segoe UI, Cascadia Mono o Consolas | `system-ui`, Ubuntu, Cantarell, Noto Sans, DejaVu Sans Mono | Alternativas al final de cada lista (en macOS se usan las mismas de antes) | A mano |
+| Barra de título | `App.module.css`, `Toolbar.tsx` | La barra de herramientas es la barra de título: hueco de 84 px y zona de arrastre | Barra de título del sistema encima | Igual que Windows | Hueco y zona de arrastre solo en macOS (`html[data-os]`, `isMac()`) | Test de componente; el aspecto, a mano |
+| Zoom | `setWebviewZoom` de Tauri | Funciona | Funciona | Funciona | Nada | A mano |
+| Canvas del grafo | `GraphView.tsx` (`devicePixelRatio`) | Retina | Escalado de Windows (125 %, 150 %) | Escalado de GNOME/KDE | Ya escala por `devicePixelRatio` | Test de humo (hay contexto 2D); la nitidez, a mano |
+| Portapapeles | `src/ui/clipboard.ts` | `navigator.clipboard` | `navigator.clipboard` | `navigator.clipboard` o, si falla, `execCommand("copy")` | Ya tiene la alternativa | A mano |
+| Barras de desplazamiento, foco y controles de formulario | Todo el CSS | Superpuestas, estilo macOS | Clásicas de Windows | Las del tema GTK | Se aceptan las del sistema | A mano |
+
+Lo que solo se puede ver a mano está en la lista de pruebas en máquinas
+virtuales del resumen de la Fase P.

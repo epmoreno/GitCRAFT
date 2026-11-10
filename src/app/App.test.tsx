@@ -4,6 +4,7 @@ import i18n from "../i18n";
 import type { RepoChanged } from "../ipc";
 import { commandError, ipc, opened, sampleRefs } from "../test/ipc";
 import { App } from "./App";
+import { setPlatformForTests } from "./platform";
 
 describe("App", () => {
   beforeEach(async () => {
@@ -19,6 +20,18 @@ describe("App", () => {
     expect(
       screen.getByRole("complementary", { name: "Detalle" }),
     ).toBeVisible();
+  });
+
+  // P.10: only on macOS is the toolbar the title bar (drag to move).
+  it.each([
+    ["mac", true],
+    ["windows", false],
+    ["linux", false],
+  ] as const)("on %s, the toolbar drags the window: %s", (system, drags) => {
+    setPlatformForTests(system);
+    const { container } = render(<App />);
+    const header = container.querySelector("header");
+    expect(header?.hasAttribute("data-tauri-drag-region")).toBe(drags);
   });
 
   it("explains why repository actions are disabled", () => {

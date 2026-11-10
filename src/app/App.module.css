@@ -6,14 +6,19 @@
   height: 100%;
 }
 
-/* Toolbar (also the macOS title bar; leaves room for the traffic lights) */
+/* Toolbar (also the macOS title bar; leaves room for the traffic lights
+   there: Windows and Linux have the system's own title bar above) */
 .toolbar {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: 0 var(--space-3) 0 84px;
+  padding: 0 var(--space-3);
   background: var(--surface-1);
   border-bottom: 1px solid var(--border);
+}
+
+:global(html[data-os="mac"]) .toolbar {
+  padding-left: 84px;
 }
 
 .brand {
