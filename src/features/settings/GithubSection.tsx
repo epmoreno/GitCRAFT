@@ -1,3 +1,4 @@
+import { useOsText } from "../../app/useOsText";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { commands, ghLogin, type CommandError, type GhStatus } from "../../ipc";
@@ -26,6 +27,7 @@ type Login =
  */
 export function GithubSection() {
   const { t } = useTranslation();
+  const osT = useOsText();
   const [status, setStatus] = useState<GhStatus | null>(null);
   const [error, setError] = useState<CommandError | null>(null);
   const [login, setLogin] = useState<Login>(null);
@@ -85,7 +87,7 @@ export function GithubSection() {
   return (
     <section aria-label={t("settings.section.github")}>
       <h3 className={styles.sectionTitle}>{t("settings.section.github")}</h3>
-      <p className={styles.hint}>{t("settings.github.intro")}</p>
+      <p className={styles.hint}>{osT("settings.github.intro")}</p>
       {error && (
         <ErrorReport error={error} lead={t("settings.github.failed")} />
       )}
@@ -269,7 +271,7 @@ export function GithubSection() {
             show(await commands.ghSetupGit());
           }}
         >
-          <p>{t("settings.github.useGhBody")}</p>
+          <p>{osT("settings.github.useGhBody")}</p>
           <pre className={`${styles.output} selectable`}>
             {[
               '[credential "https://github.com"]',

@@ -1,3 +1,4 @@
+import { useOsText } from "../../app/useOsText";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -36,6 +37,7 @@ const STRATEGIES: (PullStrategy | null)[] = [
  */
 export function GitDefaults() {
   const { t } = useTranslation();
+  const osT = useOsText();
   const [defaults, setDefaults] = useState<GlobalDefaults | null>(null);
   const [error, setError] = useState<CommandError | null>(null);
   const [branch, setBranch] = useState("");
@@ -96,7 +98,7 @@ export function GitDefaults() {
   return (
     <>
       <h3 className={styles.subTitle}>{t("settings.git.title")}</h3>
-      <p className={styles.hint}>{t("settings.git.globalNote")}</p>
+      <p className={styles.hint}>{osT("settings.git.globalNote")}</p>
       {error && <ErrorReport error={error} lead={t("settings.git.failed")} />}
       <Field
         label={t("settings.git.defaultBranch")}

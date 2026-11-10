@@ -42,24 +42,6 @@ describe("ErrorReport", () => {
     );
   });
 
-  it("has every system variant in both languages, next to its base text", () => {
-    for (const [language, { translation }] of Object.entries(resources)) {
-      const errors = translation.errors as Record<string, string>;
-      for (const key of Object.keys(errors)) {
-        const variant = /^(.*)_(windows|linux)$/.exec(key);
-        if (!variant) continue;
-        const [, base, system] = variant;
-        const other = system === "windows" ? "linux" : "windows";
-        expect(errors[base!], `${language}: ${base}`).toBeTruthy();
-        expect(
-          errors[`${base}_${other}`],
-          `${language}: ${base}_${other}`,
-        ).toBeTruthy();
-        expect(errors[key]).not.toMatch(/Homebrew|Xcode|brew /);
-      }
-    }
-  });
-
   it("explains, then shows and copies git's original output", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);

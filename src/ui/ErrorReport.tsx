@@ -64,6 +64,8 @@ export function explainError(
   path?: string,
 ): string {
   const key = osKey(`errors.${error.kind}`, (k) => i18n.exists(k));
+  // (Variants per system: how to install git or gh, the Recycle Bin, the
+  // credential helper.)
   return path ? t(key, { path }) : t(key, { context: "noPath" });
 }
 

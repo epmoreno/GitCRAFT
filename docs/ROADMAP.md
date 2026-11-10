@@ -1221,6 +1221,15 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
 - [ ] **P.9 Menús y textos del sistema.** Barra de menús en Windows/Linux, sin
       los elementos propios de macOS. Textos que nombran `~/.gitconfig`, Llavero
       o Finder, según el sistema.
+      *En curso:* textos hechos. Variantes `_windows` y `_linux` (solo donde
+      el texto de macOS no sirve) para la Papelera (de reciclaje en Windows),
+      `~/.gitconfig` (`%USERPROFILE%\.gitconfig` en Windows), dónde guarda gh
+      la sesión (Llavero, Administrador de credenciales de Windows, almacén
+      de claves del sistema) y el credential helper del error de
+      autenticación; `useOsText` elige la del sistema. En macOS, los textos
+      de siempre. Un test comprueba que cada variante tiene su texto base y
+      que ninguna nombra cosas de macOS. Falta decidir el menú en Windows y
+      Linux.
 - [ ] **P.10 WebView2 y WebKitGTK.** Lista de diferencias (`color-mix()`,
       `-webkit-user-select`, zona de arrastre de la ventana, zoom, canvas,
       fuentes) con su resolución.

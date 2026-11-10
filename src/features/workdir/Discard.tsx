@@ -1,3 +1,4 @@
+import { useOsText } from "../../app/useOsText";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { DiscardedFile } from "../../ipc";
@@ -34,6 +35,7 @@ function FileLoss({ file }: { file: DiscardedFile }) {
  * be recovered. */
 export function DiscardDialog() {
   const { t } = useTranslation();
+  const osT = useOsText();
   const pending = useWorkdirStore((s) => s.pendingDiscard);
   const cancel = useWorkdirStore((s) => s.cancelDiscard);
   const confirm = useWorkdirStore((s) => s.confirmDiscard);
@@ -67,7 +69,7 @@ export function DiscardDialog() {
         </p>
       )}
       {untracked.length > 0 && (
-        <p>{t("discard.untracked", { count: untracked.length })}</p>
+        <p>{osT("discard.untracked", { count: untracked.length })}</p>
       )}
       <ul className={styles.lossList}>
         {pending.files.slice(0, MAX_LISTED).map((file) => (
@@ -85,7 +87,7 @@ export function DiscardDialog() {
       {pending.files.some((f) => f.undoUnsupported) && (
         <p className={styles.lossWarning}>{t("discard.undoUnsupported")}</p>
       )}
-      {untracked.length > 0 && <p>{t("discard.trashRecovery")}</p>}
+      {untracked.length > 0 && <p>{osT("discard.trashRecovery")}</p>}
       {tracked.length > 0 && <p>{t("discard.stagedKept")}</p>}
     </ConfirmDialog>
   );

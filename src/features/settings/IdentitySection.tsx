@@ -1,3 +1,4 @@
+import { useOsText } from "../../app/useOsText";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -20,6 +21,7 @@ export const plausibleEmail = (email: string) =>
 /** Git's identity: global, and for the active tab the repository's own. */
 export function IdentitySection() {
   const { t } = useTranslation();
+  const osT = useOsText();
   const repo = useActiveRepository();
   const repoId = repo?.id ?? null;
   const [info, setInfo] = useState<IdentityInfo | null>(null);
@@ -55,7 +57,7 @@ export function IdentitySection() {
           <IdentityForm
             key={`global:${JSON.stringify(info.global)}`}
             title={t("settings.identity.global")}
-            hint={t("settings.identity.globalHint")}
+            hint={osT("settings.identity.globalHint")}
             scope="global"
             current={info.global}
             onSaved={() => {

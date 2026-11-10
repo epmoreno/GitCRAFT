@@ -12,6 +12,7 @@ import {
   textDiff,
 } from "../../test/ipc";
 import { App } from "../../app/App";
+import { setPlatformForTests } from "../../app/platform";
 import { DetailPanel } from "../detail/DetailPanel";
 import { GraphView } from "../graph/GraphView";
 import { useGraphStore, WORKTREE } from "../graph/store";
@@ -195,6 +196,46 @@ describe("discarding changes", () => {
     expect(within(dialog).getByText("3 archivos")).toBeVisible();
     expect(dialog).toHaveTextContent(/recuperar desde la Papelera/);
   });
+
+  // P.9: on Windows it is the Recycle Bin; Linux keeps "Papelera".
+  it.each([
+    [
+      "windows",
+      "1 archivo sin seguimiento irá a la Papelera de reciclaje.",
+      /desde la Papelera de reciclaje/,
+    ],
+    [
+      "linux",
+      "1 archivo sin seguimiento irá a la Papelera.",
+      /recuperar desde la Papelera\./,
+    ],
+  ] as const)(
+    "on %s, names that system's Trash",
+    async (system, count, recovery) => {
+      setPlatformForTests(system);
+      const user = userEvent.setup();
+      ipc.discardPreview.mockResolvedValue({
+        status: "ok",
+        data: [
+          loss({
+            path: "scratch.txt",
+            untracked: true,
+            added: null,
+            removed: null,
+            lines: 12,
+          }),
+        ],
+      });
+      renderWorkspace();
+      const unstaged = screen.getByRole("region", { name: "Sin preparar" });
+      await user.click(
+        within(unstaged).getByRole("button", { name: "Descartar todo" }),
+      );
+      const dialog = screen.getByRole("alertdialog");
+      expect(dialog).toHaveTextContent(count);
+      expect(dialog).toHaveTextContent(recovery);
+    },
+  );
 
   it("discards on confirmation and offers Undo", async () => {
     const user = userEvent.setup();

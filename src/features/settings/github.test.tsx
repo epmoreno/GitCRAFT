@@ -73,6 +73,23 @@ describe("GitHub account in Settings", () => {
     },
   );
 
+  // P.9: where gh keeps the session depends on the system.
+  it.each([
+    ["mac", "gh guarda la sesión en el Llavero de macOS."],
+    [
+      "windows",
+      "gh guarda la sesión en el Administrador de credenciales de Windows.",
+    ],
+    ["linux", "gh guarda la sesión en el almacén de claves del sistema"],
+  ] as const)(
+    "on %s, says where gh keeps the session",
+    async (system, text) => {
+      setPlatformForTests(system);
+      const section = await openGithub();
+      expect(section).toHaveTextContent(text);
+    },
+  );
+
   it("shows who is signed in, and signs out after confirming", async () => {
     const user = userEvent.setup();
     const section = await openGithub();
