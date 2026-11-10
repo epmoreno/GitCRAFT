@@ -1192,6 +1192,7 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       toca. Tests en los tres sistemas: la limpieza con un clon a medias (y
       un enlace a una carpeta de fuera en Unix) y un clon cancelado sobre una
       carpeta vacía que ya existía.
+      *CI* (`0025302`): los tres en verde.
 - [x] **P.8 Rutas y finales de línea.** Separadores `\`, unidades y rutas largas
       en sesión y recientes; `core.autocrlf` y CRLF en diffs y en el stage por
       línea; `diff --no-index` contra `/dev/null`; bits de ejecución y symlinks
@@ -1230,6 +1231,7 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       de siempre. Un test comprueba que cada variante tiene su texto base y
       que ninguna nombra cosas de macOS. Falta decidir el menú en Windows y
       Linux.
+      *CI* (`5126e47`): los tres en verde.
 - [ ] **P.10 WebView2 y WebKitGTK.** Lista de diferencias (`color-mix()`,
       `-webkit-user-select`, zona de arrastre de la ventana, zoom, canvas,
       fuentes) con su resolución.
