@@ -1252,6 +1252,8 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       porque el «Salir» predefinido no hace nada en Linux. El menú de macOS no
       cambia: un test fija su estructura y otro la de Windows y Linux.
       *CI* (`3412ddc`): los tres en verde.
+      *Verificado manualmente en macOS (menú):* GitCRAFT, Archivo, Edición y
+      Ventana, igual que antes.
 - [x] **P.10 WebView2 y WebKitGTK.** Lista de diferencias (`color-mix()`,
       `-webkit-user-select`, zona de arrastre de la ventana, zoom, canvas,
       fuentes) con su resolución.
@@ -1266,6 +1268,9 @@ usuario más adelante. Los instaladores quedan para la fase de publicación.
       del sistema). En macOS no cambia nada. El test de humo de P.11
       comprueba en el motor real de cada sistema `color-mix()`,
       `user-select`, el canvas 2D y los tokens.
+      *Verificado manualmente en macOS:* los botones de la ventana no tapan
+      nada, la ventana se arrastra desde la barra de herramientas y las
+      fuentes se ven como siempre.
 - [x] **P.11 Compila y arranca en los tres.** El CI compila la app y la arranca
       con una bandera de humo (`xvfb` en Linux): abre la ventana, carga el
       frontend y sale con código 0.
@@ -1356,6 +1361,46 @@ principio y toda operación destructiva pasa por confirmación.
 - [ ] Instaladores de Windows y Linux. **No se publica ningún instalador para
       Windows mientras quede algún test de la lista «Tests ignorados en
       Windows» de la Fase P.**
+- [ ] **Pruebas a mano en Windows y Linux (requisito de los instaladores).**
+      Antes de publicar los instaladores de Windows y Linux, el usuario prueba
+      la app en máquinas virtuales en su Mac. Lo que no se ha probado a mano
+      en un sistema no se da por verificado en él.
+      *Máquinas virtuales con UTM* (gratuito y de código abierto, funciona en
+      Apple Silicon; lo instala el usuario si lo decide):
+      - **Linux (Ubuntu 24.04 para ARM):** máquina virtual con la ISO de
+        Ubuntu Desktop ARM64 y unos 4 GB de RAM. Dentro: Git, Node 22, Rust
+        (rustup) y las librerías de Tauri que usa el CI
+        (`sudo apt install git libwebkit2gtk-4.1-dev libgtk-3-dev
+        libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev
+        libjavascriptcoregtk-4.1-dev`). Se clona GitCRAFT y se ejecuta
+        `npm ci` y `npm run tauri dev`.
+      - **Windows 11 para ARM:** máquina virtual con la ISO oficial de
+        Windows 11 ARM64 de Microsoft (WebView2 ya viene incluido). Dentro:
+        Git for Windows, Node 22, Rust (rustup) y Visual Studio Build Tools
+        con «Desarrollo para el escritorio con C++». Se clona GitCRAFT y se
+        ejecuta `npm ci` y `npm run tauri dev`.
+      *Qué probar en cada sistema* (con un repo de prueba desechable):
+      1. **Menú y atajos:** la barra Archivo, Edición y Ayuda; Ctrl+T, Ctrl+W,
+         Ctrl+,, Ctrl+1…9, Ctrl+Tab, Ctrl+Intro para confirmar y Ctrl+Supr
+         para descartar, con el foco en la lista de cambios.
+      2. **Papelera:** descartar un archivo sin seguimiento lo lleva a la
+         Papelera de reciclaje (Windows) o a la Papelera (Linux); «Deshacer»
+         lo devuelve igual y lo quita de la Papelera.
+      3. **Cancelar:** cancelar un clon (no queda carpeta) y un fetch. En
+         Windows, además, que no aparece ninguna ventana de consola al
+         ejecutar git.
+      4. **Rutas:** el mismo repo abierto desde la raíz, desde una subcarpeta
+         y, en Windows, con la ruta escrita con otras mayúsculas sale una sola
+         vez en recientes y en pestañas.
+      5. **GitHub:** Ajustes → GitHub encuentra gh o muestra cómo instalarlo
+         (winget o apt), e iniciar sesión abre el navegador.
+      6. **Textos:** Papelera de reciclaje y `%USERPROFILE%\.gitconfig` en
+         Windows; dónde guarda gh la sesión en cada sistema.
+      7. **Lo que solo se ve a mano:** fuentes, barras de desplazamiento,
+         zoom, nitidez del grafo con el escalado de pantalla al 125 % y 150 %
+         en Windows, y copiar al portapapeles.
+      8. **CRLF en Windows:** un repo con `core.autocrlf=true`, con stage
+         parcial por líneas y descarte.
 - [ ] **Sin firma de Apple (decidido).** GitCRAFT no se firma ni se notariza con
       Apple: es software libre y gratuito, y la firma exige una cuota anual de
       pago. En su lugar:
