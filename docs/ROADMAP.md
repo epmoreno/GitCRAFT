@@ -1317,6 +1317,163 @@ principio y toda operación destructiva pasa por confirmación.
       *Tests:* parser de marcadores (también diff3 y CRLF), resolver y continuar
       un merge y un rebase, abortar deja el repo como estaba, y archivos binarios
       o eliminados en un lado.
+      *Ya existe:* el estado de cada archivo en conflicto (`ConflictKind`), la
+      operación a medias (`in_progress`), «Abortar…» con confirmación en el
+      aviso de arriba y la sección «Conflictos» del panel de cambios (solo
+      lista). Hoy se resuelve en un editor externo y, para un rebase, se
+      continúa en la terminal.
+      *Principios:* la app nunca deja el repo en un estado que git no
+      entienda; cada paso es un comando de git normal; nada se escribe sin
+      que el usuario lo pida, y lo que descarta trabajo pasa por
+      confirmación. Ninguna dependencia nueva.
+      - [ ] **9.1 Leer un conflicto (core).** `conflict_file(path)` devuelve
+        las etapas que existen (`git ls-files -u -z`: base, nuestra, suya,
+        con modo y tamaño), el contenido del archivo del working tree y el
+        tamaño de marcador (`git check-attr -z conflict-marker-size`).
+        Clasifica el archivo: texto que se puede resolver por bloques, o
+        solo «elegir una versión entera» si es binario (NUL en los primeros
+        8000 bytes, como git), no es UTF-8 válido (para no estropear bytes),
+        es un enlace simbólico o un submódulo, pasa de 5 MB o le falta una de
+        las dos versiones (eliminado en un lado).
+        Parser de marcadores: estilos `merge`, `diff3` y `zdiff3`, tamaño de
+        marcador configurable, LF, CRLF y mezclados, sin salto de línea
+        final y líneas que parecen marcadores dentro del texto. Marcadores
+        incompletos (el usuario editó a medias): error claro, y se ofrece
+        elegir una versión entera o seguir en el editor.
+        Base de cada bloque (el ancestro común, para el botón de 9.5): si el
+        archivo ya tiene estilo `diff3`/`zdiff3`, sale de sus marcadores; si
+        no, se calcula con `git merge-file -p --diff3` sobre copias
+        temporales de las tres versiones (en una carpeta temporal propia
+        que se borra al terminar; nada se escribe en el repo) y se asigna a
+        cada bloque solo si su versión de cada lado coincide exactamente.
+        Si no coincide (el usuario editó el archivo, o el merge usó otras
+        opciones), ese bloque se queda sin base y la UI lo dice.
+        *Verificable:* tests del parser con fixtures generadas por git en los
+        tres estilos (`tests/fixtures/conflicts/`); al unir los segmentos se
+        obtiene el archivo original byte a byte; test de integración que
+        clasifica un conflicto de texto, uno binario, uno con CRLF, uno
+        «modificado/eliminado» y un enlace simbólico (este, fuera de
+        Windows); base calculada en un archivo con estilo `merge`, y bloque
+        sin base cuando el archivo se ha editado; la carpeta temporal no
+        queda.
+      - [ ] **9.2 Nombres de los dos lados (core).** Cada lado se nombra por
+        lo que es, no «ours/theirs»: en un merge, la rama actual y lo que se
+        fusiona (rama si se sabe, si no commit corto y asunto); en un rebase
+        están invertidos (el lado «nuestro» es la base nueva y el «suyo»,
+        tu commit que se está aplicando), y la app lo dice así; en un
+        cherry-pick, el commit que se trae; en un revert, «deshacer» y el
+        commit. Para el rebase, además, el progreso (commit 3 de 7 y su
+        asunto) desde los archivos de `rebase-merge`/`rebase-apply`, sin
+        parsear salida para humanos.
+        *Verificable:* integración con merge, rebase, cherry-pick y revert
+        detenidos en conflicto; en el rebase, tu commit sale como el lado que
+        se aplica.
+      - [ ] **9.3 Resolver un archivo (core).**
+        - `write_resolution(path, contenido, huella)`: escribe el resultado
+          de forma atómica (archivo temporal y renombrado en la misma
+          carpeta), conserva los permisos (bit de ejecución) y no escribe si
+          el archivo ha cambiado desde que se leyó (la huella no coincide)
+          ni si es un enlace simbólico. No marca como resuelto.
+        - `choose_version(path, Nuestra|Suya)`: `git checkout --ours/--theirs
+          -- <path>`; para binarios, enlaces y submódulos.
+        - `resolve_by_deleting(path)`: `git rm -- <path>`, cuando un lado lo
+          eliminó (con confirmación en la UI).
+        - `mark_resolved(path)`: `git add -- <path>`. Si quedan marcadores,
+          se niega y devuelve las líneas que los tienen (número y texto),
+          salvo que se pida explícitamente: la confirmación de la UI muestra
+          esas líneas (hay archivos que las contienen a propósito).
+        - `restart_file(path)`: `git checkout -m -- <path>` vuelve a poner
+          las marcas originales (con confirmación: se pierde lo resuelto en
+          ese archivo).
+        - **Volver a marcar como en conflicto** (deshacer «marcar como
+          resuelto»): primero se comprueba con tests si git recrea el
+          conflicto de forma fiable después de `git add` (información de
+          *resolve-undo* del índice con `git checkout -m`), en merge, rebase
+          y cherry-pick, en archivos de texto, binarios y
+          modificado/eliminado, y tras un commit parcial o un `git status`
+          intermedio. Si es fiable, se ofrece con confirmación y con su
+          test; si no, no se incluye y se explica por qué al usuario.
+        *Verificable:* integración con resultados byte a byte (LF y CRLF,
+        también con `core.autocrlf=true` en Windows), bit de ejecución
+        conservado, elegir versión en un binario, modificado/eliminado en los
+        dos sentidos, se niega si el archivo cambió por fuera, las líneas con
+        marcadores que devuelve `mark_resolved`, y rutas con espacios,
+        acentos y que empiezan por `-`.
+      - [ ] **9.4 Continuar, saltar y abortar (core).**
+        `continue_in_progress`: merge, cherry-pick y revert → `git commit`
+        con el mensaje que da la UI (por defecto, el que preparó git en
+        `MERGE_MSG`); rebase → `git rebase --continue` sin abrir editor
+        (`GIT_EDITOR=true`), conservando el mensaje. Se niega mientras queden
+        conflictos. Resultado: terminado; detenido otra vez (con los nuevos
+        conflictos y el progreso); «no queda nada que confirmar» (la
+        resolución dejó el commit vacío: se ofrece saltarlo); o el error de
+        un hook, con su salida y el estado intacto.
+        `skip_current` (rebase y cherry-pick): `git rebase --skip` /
+        `git cherry-pick --skip`.
+        Abortar ya existe (`abort_in_progress`).
+        *Verificable:* integración en los tres sistemas: merge resuelto y
+        continuado (commit con dos padres y el árbol esperado); rebase de 3
+        commits con 2 en conflicto, continuado dos veces (historia lineal
+        esperada); commit vacío tras resolver → saltar; cherry-pick y revert;
+        hook `pre-commit` que falla; y abortar tras resolver parte de los
+        archivos deja HEAD, ramas, índice y working tree exactamente como
+        antes de empezar.
+      - [ ] **9.5 Vista de conflictos (UI).** Se abre al pulsar un archivo de
+        la sección «Conflictos» del panel de cambios.
+        *Diseño (aprobado):* arriba, dos paneles lado a lado (izquierda, la
+        versión de tu rama; derecha, la que llega), con sus nombres de 9.2;
+        abajo, el resultado. Cada bloque tiene un botón para mostrar u
+        ocultar su versión base (el ancestro común, de 9.1), oculta por
+        defecto; si un bloque no tiene base, el botón lo explica. El texto común aparece una vez y plegado; cada bloque
+        en conflicto tiene «Usar la de la izquierda», «Usar la de la
+        derecha», «Ambas (izquierda primero)», «Ambas (derecha primero)» y
+        «Editar», que abre un área de texto simple con ese bloque (sin
+        editor de código ni dependencias nuevas). Contador «2 de 5 bloques
+        resueltos» y atajos para ir al bloque anterior o siguiente (del
+        registro de atajos, con su variante por sistema). «Guardar» escribe
+        el resultado sin marcarlo; «Guardar y marcar como resuelto» hace las
+        dos cosas. Si el archivo cambia por fuera (por ejemplo, en un
+        editor), se avisa y no se pisa nada.
+        *Resolución a medias:* las elecciones sin guardar se conservan por
+        archivo mientras dure la operación (en memoria, por repo): cambiar
+        de archivo o de pestaña, o cerrar la vista, no las pierde, y el
+        archivo se marca como «con cambios sin guardar» en la lista. Cerrar
+        la pestaña del repo o la ventana, abortar o continuar con elecciones
+        sin guardar pide confirmación y dice en qué archivos están. Se
+        descartan cuando la operación termina o se aborta. Si la app se
+        cierra de golpe, se pierden (no se escriben en disco sin pedirlo).
+        Los archivos que solo admiten elegir una versión entera (9.1) muestran
+        qué hay en cada lado (tamaño, eliminado, enlace…) y dos botones; con
+        un lado eliminado, conservar la versión que queda o «Eliminar el archivo»
+        (con confirmación).
+        *Verificable:* tests de interfaz: cada elección produce el texto
+        esperado, se conservan los finales CRLF, mostrar y ocultar la base,
+        las elecciones sin guardar que sobreviven al cambio de archivo y de
+        pestaña y la confirmación al cerrar, abortar o continuar con ellas,
+        la confirmación con las líneas que conservan marcadores, el aviso de
+        cambio externo, la navegación por teclado y los textos en es/en.
+      - [ ] **9.6 Continuar desde la app (UI).** El aviso de operación a
+        medias pasa a tener «Continuar» (activo cuando no quedan conflictos;
+        si quedan, dice cuántos), «Saltar este commit» en rebase y
+        cherry-pick (con confirmación que nombra el commit y explica que sus
+        cambios no se aplicarán) y «Abortar…», que ya existe. En el rebase
+        muestra el progreso (commit 3 de 7). En un merge, el cuadro de commit
+        se rellena con el mensaje que preparó git. Si se detiene otra vez,
+        aparecen los nuevos conflictos. Se cambian los textos que hoy
+        mandan a la terminal.
+        *Verificable:* tests de interfaz de cada estado del aviso y de las
+        confirmaciones.
+      - [ ] **9.7 Documentación y prueba a mano.** Sección de conflictos en
+        ARCHITECTURE.md (módulo, flujo y por qué cada comando). Instrucciones
+        para probarlo en macOS en un repo desechable: un script que crea un
+        merge y un rebase en conflicto (texto, CRLF, binario y
+        modificado/eliminado), sin tocar ningún otro repo.
+        *Verificable:* el usuario resuelve, continúa y aborta un merge y un
+        rebase en su Mac y lo confirma.
+      *Fuera de la 9:* `git rerere` (se respeta si el usuario lo tiene
+      activado, pero la app no lo configura), herramientas de merge
+      externas (`git mergetool`) y conflictos de submódulos más allá de
+      elegir una versión.
 - [ ] **10. Cherry-pick, revert, reset** (soft/mixed/hard con aviso) y **crear
       tags** (ligeros y anotados).
       *Tests:* cada operación, también cuando acaba en conflicto (usa la 9). El
@@ -1350,6 +1507,10 @@ principio y toda operación destructiva pasa por confirmación.
       además de español e inglés, con soporte de interfaz de derecha a
       izquierda (RTL) para el árabe. El README ya tiene la descripción en esos
       idiomas.
+- [ ] **Coloreado de sintaxis** en diffs y en la vista de conflictos. Cuando
+      llegue, valorar un editor de código para editar bloques en conflicto
+      (hoy, un área de texto simple, sin dependencias; 9.5). Sería una
+      dependencia nueva, que se propone y se aprueba antes.
 - [ ] **Ocultar la barra de menús en Windows y Linux:** una opción en
       Ajustes (los atajos siguen funcionando).
 - [ ] **README completo en árabe, alemán, francés y portugués**
