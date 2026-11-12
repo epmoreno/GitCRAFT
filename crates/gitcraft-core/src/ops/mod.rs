@@ -7,6 +7,7 @@ pub mod commit_write;
 pub mod config;
 pub mod conflict;
 pub mod discard;
+pub mod in_progress;
 pub mod init;
 pub mod log;
 pub mod maintenance;

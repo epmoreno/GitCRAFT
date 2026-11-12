@@ -1368,7 +1368,7 @@ principio y toda operación destructiva pasa por confirmación.
         estilos y con CRLF. Un marcador de cierre borrado a mano se
         informa en la línea donde la estructura se rompe (la del siguiente
         `<<<<<<<`). Tests: 11 del parser, 4 unitarios y 13 de integración.
-      - [ ] **9.2 Nombres de los dos lados (core).** Cada lado se nombra por
+      - [x] **9.2 Nombres de los dos lados (core).** Cada lado se nombra por
         lo que es, no «ours/theirs»: en un merge, la rama actual y lo que se
         fusiona (rama si se sabe, si no commit corto y asunto); en un rebase
         están invertidos (el lado «nuestro» es la base nueva y el «suyo»,
@@ -1380,6 +1380,16 @@ principio y toda operación destructiva pasa por confirmación.
         *Verificable:* integración con merge, rebase, cherry-pick y revert
         detenidos en conflicto; en el rebase, tu commit sale como el lado que
         se aplica.
+        *Hecho:* `ops::in_progress::conflict_sides` devuelve, por operación,
+        la rama actual, HEAD y el otro lado (`MERGE_HEAD`, `REBASE_HEAD`,
+        `CHERRY_PICK_HEAD`, `REVERT_HEAD`), cada commit con hash, hash corto
+        y asunto (`--format` con `%x00`). Lo que se fusiona y la base del
+        rebase llevan además las ramas que apuntan a ese commit
+        (`for-each-ref --points-at`; primero las locales). En el rebase, la
+        rama que se rebasa sale de `head-name` y el progreso de
+        `msgnum`/`end` (o `next`/`last` con `--apply`). Tests: 6 de
+        integración, con los dos motores de rebase y una segunda parada
+        (commit 3 de 3, con HEAD ya sobre los commits reaplicados).
       - [ ] **9.3 Resolver un archivo (core).**
         - `write_resolution(path, contenido, huella)`: escribe el resultado
           de forma atómica (archivo temporal y renombrado en la misma
