@@ -83,6 +83,11 @@ pub enum GitError {
     #[error("{0} is not in conflict")]
     NotConflicted(String),
 
+    /// git no longer has this operation's versions of the file, so it cannot
+    /// be put back in conflict; nothing was done.
+    #[error("{0} cannot be put back in conflict")]
+    CannotUnmark(String),
+
     #[error("HEAD is detached: not on any branch")]
     DetachedHead,
 
@@ -168,6 +173,8 @@ pub enum ErrorKind {
     NothingToStash,
     /// The file is no longer in conflict; nothing was done.
     NotConflicted,
+    /// A resolved file cannot be put back in conflict; nothing was done.
+    CannotUnmark,
     /// The remote rejected the credentials, or none were available (no
     /// credential helper / SSH key): git cannot prompt.
     AuthFailed,
@@ -230,6 +237,7 @@ impl GitError {
             Self::StashChanged(_) => ErrorKind::StashChanged,
             Self::NothingToStash => ErrorKind::NothingToStash,
             Self::NotConflicted(_) => ErrorKind::NotConflicted,
+            Self::CannotUnmark(_) => ErrorKind::CannotUnmark,
             Self::DetachedHead => ErrorKind::DetachedHead,
             Self::AlreadyARepository(_) => ErrorKind::AlreadyARepository,
             Self::DestinationNotEmpty(_) => ErrorKind::DestinationNotEmpty,
@@ -296,6 +304,7 @@ impl GitError {
             | Self::StashChanged(_)
             | Self::NothingToStash
             | Self::NotConflicted(_)
+            | Self::CannotUnmark(_)
             | Self::DetachedHead
             | Self::AlreadyARepository(_)
             | Self::DestinationNotEmpty(_)

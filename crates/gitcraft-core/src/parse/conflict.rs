@@ -222,17 +222,40 @@ pub fn render_segments(segments: &[Segment]) -> String {
     out
 }
 
-/// 1-based numbers and text (without line ending) of the lines of `text`
-/// that are conflict markers, wherever they are.
-pub fn marker_lines(text: &str, marker_size: usize) -> Vec<(u32, String)> {
-    text.split_inclusive('\n')
+/// A line that still looks like a conflict marker.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct MarkerLine {
+    /// 1-based.
+    pub line: u32,
+    /// Without its line ending.
+    pub text: String,
+}
+
+/// The marker lines left in `text`. Opening and closing markers always
+/// count; `=======` and `|||||||` lines only when an opening or closing one
+/// is present too, so a Markdown heading underline alone is not reported.
+pub fn leftover_markers(text: &str, marker_size: usize) -> Vec<MarkerLine> {
+    let found: Vec<(u32, &str, Marker)> = text
+        .split_inclusive('\n')
         .enumerate()
-        .filter(|(_, line)| marker(line, marker_size).is_some())
-        .map(|(i, line)| {
-            (
-                u32::try_from(i + 1).unwrap_or(u32::MAX),
-                content(line).to_owned(),
-            )
+        .filter_map(|(i, line)| {
+            marker(line, marker_size)
+                .map(|kind| (u32::try_from(i + 1).unwrap_or(u32::MAX), line, kind))
+        })
+        .collect();
+    let has_edges = found
+        .iter()
+        .any(|(_, _, kind)| matches!(kind, Marker::Ours | Marker::Theirs));
+    if !has_edges {
+        return Vec::new();
+    }
+    found
+        .into_iter()
+        .map(|(line, text, _)| MarkerLine {
+            line,
+            text: content(text).to_owned(),
         })
         .collect()
 }
@@ -353,11 +376,21 @@ mod tests {
     }
 
     #[test]
-    fn marker_lines_anywhere() {
+    fn leftover_markers_anywhere() {
         let text = "ok\n<<<<<<< HEAD\r\nx\n=======\n";
+        let line = |line, text: &str| MarkerLine {
+            line,
+            text: text.to_owned(),
+        };
         assert_eq!(
-            marker_lines(text, 7),
-            vec![(2, "<<<<<<< HEAD".to_owned()), (4, "=======".to_owned())]
+            leftover_markers(text, 7),
+            vec![line(2, "<<<<<<< HEAD"), line(4, "=======")]
+        );
+        // A heading underline on its own is not a leftover marker.
+        assert_eq!(leftover_markers("Title\n=======\n", 7), vec![]);
+        assert_eq!(
+            leftover_markers("a\n>>>>>>> b\n", 7),
+            vec![line(2, ">>>>>>> b")]
         );
     }
 

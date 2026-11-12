@@ -598,6 +598,8 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 "branchInWorktree" | "stashChanged" | "nothingToStash" | 
 /**  The file is no longer in conflict; nothing was done. */
 "notConflicted" | 
+/**  A resolved file cannot be put back in conflict; nothing was done. */
+"cannotUnmark" | 
 /**
  *  The remote rejected the credentials, or none were available (no
  *  credential helper / SSH key): git cannot prompt.

@@ -29,6 +29,7 @@ const KINDS = {
   stashChanged: true,
   nothingToStash: true,
   notConflicted: true,
+  cannotUnmark: true,
   authFailed: true,
   detachedHead: true,
   alreadyARepository: true,

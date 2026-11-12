@@ -1390,7 +1390,7 @@ principio y toda operación destructiva pasa por confirmación.
         `msgnum`/`end` (o `next`/`last` con `--apply`). Tests: 6 de
         integración, con los dos motores de rebase y una segunda parada
         (commit 3 de 3, con HEAD ya sobre los commits reaplicados).
-      - [ ] **9.3 Resolver un archivo (core).**
+      - [x] **9.3 Resolver un archivo (core).**
         - `write_resolution(path, contenido, huella)`: escribe el resultado
           de forma atómica (archivo temporal y renombrado en la misma
           carpeta), conserva los permisos (bit de ejecución) y no escribe si
@@ -1421,6 +1421,38 @@ principio y toda operación destructiva pasa por confirmación.
         dos sentidos, se niega si el archivo cambió por fuera, las líneas con
         marcadores que devuelve `mark_resolved`, y rutas con espacios,
         acentos y que empiezan por `-`.
+        *Hecho:* `ops::resolve`: `write_resolution`, `choose_version`,
+        `resolve_by_deleting`, `mark_resolved` (devuelve `MarkersLeft` con
+        las líneas; un subrayado `=======` de Markdown solo no cuenta),
+        `restart_file`, `resolved_files` y `unmark_resolved`. Todo lo que
+        escribe el working tree recibe la huella del archivo tal como se
+        mostró y no hace nada si ha cambiado (`StaleDiff`).
+        *Volver a marcar como en conflicto (investigado e incluido, con
+        condiciones):*
+        - `git checkout -m` sí recrea el conflicto desde *resolve-undo* en
+          texto y binarios, pero falla con modificado/eliminado y además
+          reescribe el archivo. En su lugar se usa `git update-index
+          --unresolve`, que existe desde git 1.7. Devuelve exactamente las
+          mismas etapas que había al detenerse en merge, rebase y
+          cherry-pick, también con modificado/eliminado (comprobado con git
+          2.55 y el 2.54 de Apple), y solo toca el índice: el archivo se
+          queda como está.
+        - El problema: git conserva esa información después de terminar
+          la operación (tras el commit del merge y al acabar el rebase).
+          Restaurarla entonces inventaría un conflicto. Por eso solo se
+          ofrece mientras hay una operación en curso, y solo para archivos
+          cuyas versiones guardadas coinciden con las de esa operación
+          (HEAD y `MERGE_HEAD`, `REBASE_HEAD`, `CHERRY_PICK_HEAD` o el padre
+          de `REVERT_HEAD`). Un archivo renombrado durante el merge no
+          coincide y no se ofrece. Tras restaurar se comprueba que las
+          etapas son las guardadas.
+        - `resolved_files` dice si el archivo se editó después de
+          marcarlo (`changed_since`): en ese caso se pierde la versión que
+          se marcó (no el archivo), y la confirmación lo dirá.
+        - Si git es tan antiguo que no tiene `ls-files --resolve-undo`, no se
+          ofrece. Fuera de esos casos, `CannotUnmark` y no se toca nada.
+        Error nuevo `CannotUnmark` con su texto en es/en. Tests: 16 de
+        integración y 2 unitarios.
       - [ ] **9.4 Continuar, saltar y abortar (core).**
         `continue_in_progress`: merge, cherry-pick y revert → `git commit`
         con el mensaje que da la UI (por defecto, el que preparó git en

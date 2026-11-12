@@ -109,7 +109,7 @@ pub struct ConflictFile {
 
 /// A path from the UI: relative to the repository, inside it, and never
 /// read by git as a pathspec.
-fn checked_path(path: &str) -> Result<&str> {
+pub(crate) fn checked_path(path: &str) -> Result<&str> {
     let invalid = || GitError::Parse(format!("invalid path: {path:?}"));
     if path.is_empty() || path.contains('\0') {
         return Err(invalid());
@@ -123,26 +123,26 @@ fn checked_path(path: &str) -> Result<&str> {
     Ok(path)
 }
 
-fn literal(cmd: GitCommand) -> GitCommand {
+pub(crate) fn literal(cmd: GitCommand) -> GitCommand {
     cmd.env("GIT_LITERAL_PATHSPECS", "1")
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Stage {
-    mode: String,
-    oid: String,
+pub(crate) struct Stage {
+    pub(crate) mode: String,
+    pub(crate) oid: String,
 }
 
 #[derive(Debug, Default)]
-struct Stages {
-    base: Option<Stage>,
-    ours: Option<Stage>,
-    theirs: Option<Stage>,
+pub(crate) struct Stages {
+    pub(crate) base: Option<Stage>,
+    pub(crate) ours: Option<Stage>,
+    pub(crate) theirs: Option<Stage>,
 }
 
 /// `git ls-files -u -z`: `<mode> <oid> <stage>\t<path>` records. Only the
 /// records of exactly `path` count (a directory would list its files).
-fn parse_unmerged(stdout: &[u8], path: &str) -> Result<Stages> {
+pub(crate) fn parse_unmerged(stdout: &[u8], path: &str) -> Result<Stages> {
     let mut stages = Stages::default();
     for record in stdout.split(|&b| b == 0).filter(|r| !r.is_empty()) {
         let record = String::from_utf8_lossy(record);
@@ -200,7 +200,7 @@ fn entry_kind(mode: &str) -> EntryKind {
 }
 
 /// `conflict-marker-size` and `merge` attributes of `path`.
-async fn attributes(
+pub(crate) async fn attributes(
     git: &Git,
     repo: &Path,
     path: &str,

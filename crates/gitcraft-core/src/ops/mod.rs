@@ -15,6 +15,7 @@ pub mod publish;
 pub mod refs;
 pub mod remote;
 pub mod repo;
+pub mod resolve;
 pub mod stage;
 pub mod stash;
 pub mod status;
