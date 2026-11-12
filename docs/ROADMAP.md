@@ -1453,7 +1453,7 @@ principio y toda operación destructiva pasa por confirmación.
           ofrece. Fuera de esos casos, `CannotUnmark` y no se toca nada.
         Error nuevo `CannotUnmark` con su texto en es/en. Tests: 16 de
         integración y 2 unitarios.
-      - [ ] **9.4 Continuar, saltar y abortar (core).**
+      - [x] **9.4 Continuar, saltar y abortar (core).**
         `continue_in_progress`: merge, cherry-pick y revert → `git commit`
         con el mensaje que da la UI (por defecto, el que preparó git en
         `MERGE_MSG`); rebase → `git rebase --continue` sin abrir editor
@@ -1472,6 +1472,32 @@ principio y toda operación destructiva pasa por confirmación.
         hook `pre-commit` que falla; y abortar tras resolver parte de los
         archivos deja HEAD, ramas, índice y working tree exactamente como
         antes de empezar.
+        *Hecho:* en `ops::in_progress`, `continue_in_progress`,
+        `skip_current` y `prepared_message`; el resultado es
+        `ContinueOutcome` (`Done`, `StoppedAgain`, `ConflictsLeft` o
+        `NothingToCommit`).
+        - El merge se termina con el mismo `create_commit` del cuadro de
+          commit. El mensaje que prepara git se pasa sin sus comentarios
+          (`git stripspace --strip-comments`), porque `git commit --no-edit`
+          dejaría las líneas «# Conflicts:» en el mensaje.
+        - *Cambio respecto al plan:* cherry-pick y revert usan
+          `cherry-pick --continue` / `revert --continue` (con
+          `GIT_EDITOR=true`) en vez de `git commit`. Así también funcionan
+          cuando hay una secuencia de varios commits empezada en la
+          terminal, que `git commit` dejaría a medias.
+        - «Commit vacío»: git 2.55 descarta en silencio un commit de rebase
+          que queda vacío al resolver, y versiones anteriores se detienen.
+          Por eso se comprueba antes (índice igual a HEAD) y se devuelve
+          `NothingToCommit` para que el usuario decida saltarlo. Se excluye
+          la parada de un paso `edit`, en la que git crea
+          `rebase-merge/amend` y continuar sin cambios es lo normal.
+        - Un hook que falla devuelve el error normal, con la salida del
+          hook en los detalles. Para distinguir «se detuvo en otro paso» de
+          «falló en el mismo» se compara el paso (`REBASE_HEAD` y progreso)
+          antes y después, sin leer mensajes de git.
+        Tests: 11 de integración, entre ellos abortar un merge y un rebase
+        a medias, comparando HEAD, todas las refs, el índice y cada archivo
+        del working tree (también uno sin seguimiento).
       - [ ] **9.5 Vista de conflictos (UI).** Se abre al pulsar un archivo de
         la sección «Conflictos» del panel de cambios.
         *Diseño (aprobado):* arriba, dos paneles lado a lado (izquierda, la

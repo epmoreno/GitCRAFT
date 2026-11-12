@@ -308,3 +308,231 @@ pub async fn conflict_sides(
     };
     Ok(Some(sides))
 }
+
+// --- Continuing and skipping --------------------------------------------
+
+/// What happened after "continue" or "skip".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum ContinueOutcome {
+    /// The operation finished.
+    Done,
+    /// It went on and stopped again (a rebase at its next conflict, or at
+    /// an `edit` step: `conflicts` is then empty).
+    StoppedAgain { conflicts: Vec<String> },
+    /// Nothing was done: these files are still in conflict.
+    ConflictsLeft { conflicts: Vec<String> },
+    /// Nothing was done: once resolved, the commit being replayed changes
+    /// nothing. It can be skipped.
+    NothingToCommit,
+}
+
+/// Paths still in conflict.
+async fn conflicted_paths(
+    git: &Git,
+    repo: &Path,
+    cancel: &CancellationToken,
+) -> Result<Vec<String>> {
+    let out = git
+        .read(repo)
+        .args(["ls-files", "-u", "-z"])
+        .output(cancel)
+        .await?;
+    let mut paths: Vec<String> = out
+        .stdout
+        .split(|&b| b == 0)
+        .filter_map(|record| {
+            let record = String::from_utf8_lossy(record);
+            record.split_once('\t').map(|(_, p)| p.to_owned())
+        })
+        .collect();
+    paths.dedup();
+    Ok(paths)
+}
+
+/// Where the operation stands, to tell "stopped again" from "failed".
+#[derive(Debug, PartialEq, Eq)]
+struct Step {
+    operation: Option<InProgress>,
+    applying: Option<String>,
+    progress: Option<RebaseProgress>,
+}
+
+async fn step(git: &Git, repo: &Path, cancel: &CancellationToken) -> Result<Step> {
+    let operation = in_progress(git, repo, cancel).await?;
+    let applying = match operation {
+        Some(InProgress::Rebase) => commit_id(git, repo, "REBASE_HEAD", cancel).await?,
+        Some(InProgress::CherryPick) => commit_id(git, repo, "CHERRY_PICK_HEAD", cancel).await?,
+        Some(InProgress::Revert) => commit_id(git, repo, "REVERT_HEAD", cancel).await?,
+        Some(InProgress::Merge) | None => None,
+    };
+    let progress = match operation {
+        Some(InProgress::Rebase) => rebase_progress(git, repo, cancel).await?,
+        _ => None,
+    };
+    Ok(Step {
+        operation,
+        applying,
+        progress,
+    })
+}
+
+/// The index has nothing HEAD does not: committing would make an empty
+/// commit.
+async fn index_matches_head(git: &Git, repo: &Path, cancel: &CancellationToken) -> Result<bool> {
+    let out = git
+        .read(repo)
+        .args(["diff", "--cached", "--quiet", "HEAD", "--"])
+        .accept_exit_code(1)
+        .output(cancel)
+        .await?;
+    Ok(out.exit_code == Some(0))
+}
+
+/// Runs the git command that moves the operation on and reports where it
+/// ended. A failure that left it at the same step (a hook refused the
+/// commit, for instance) is returned as the error, with git's output.
+async fn run_step(
+    git: &Git,
+    repo: &Path,
+    args: &[&str],
+    cancel: &CancellationToken,
+) -> Result<ContinueOutcome> {
+    let before = step(git, repo, cancel).await?;
+    let result = git
+        .write(repo)
+        // Keep the message git prepared; never open an editor.
+        .env("GIT_EDITOR", "true")
+        .args(args)
+        .output(cancel)
+        .await;
+    let after = step(git, repo, cancel).await?;
+    if after.operation.is_none() {
+        return result.map(|_| ContinueOutcome::Done);
+    }
+    let conflicts = conflicted_paths(git, repo, cancel).await?;
+    match result {
+        Ok(_) => Ok(ContinueOutcome::StoppedAgain { conflicts }),
+        Err(_) if !conflicts.is_empty() || after != before => {
+            Ok(ContinueOutcome::StoppedAgain { conflicts })
+        }
+        Err(e) => Err(e),
+    }
+}
+
+/// The message git prepared for the merge (or the commit being replayed),
+/// without its comment lines, to show in the commit box.
+pub async fn prepared_message(
+    git: &Git,
+    repo: &Path,
+    cancel: &CancellationToken,
+) -> Result<Option<String>> {
+    let out = git
+        .read(repo)
+        .args(["rev-parse", "--git-path", "MERGE_MSG"])
+        .output(cancel)
+        .await?;
+    let path = Path::new(out.stdout_lossy().trim()).to_path_buf();
+    let path = if path.is_absolute() {
+        path
+    } else {
+        repo.join(path)
+    };
+    let Ok(raw) = std::fs::read(path) else {
+        return Ok(None);
+    };
+    let stripped = git
+        .read(repo)
+        .args(["stripspace", "--strip-comments"])
+        .stdin(raw)
+        .output(cancel)
+        .await?;
+    let message = stripped.stdout_lossy();
+    Ok((!message.trim().is_empty()).then_some(message))
+}
+
+/// Continues the operation once its conflicts are resolved. A merge is
+/// concluded with a commit with `message` (the UI shows
+/// [`prepared_message`] by default); a rebase, cherry-pick or revert goes
+/// on with the message git kept for the commit being replayed.
+pub async fn continue_in_progress(
+    git: &Git,
+    repo: &Path,
+    message: Option<&str>,
+    cancel: &CancellationToken,
+) -> Result<ContinueOutcome> {
+    let Some(operation) = in_progress(git, repo, cancel).await? else {
+        return Ok(ContinueOutcome::Done);
+    };
+    let conflicts = conflicted_paths(git, repo, cancel).await?;
+    if !conflicts.is_empty() {
+        return Ok(ContinueOutcome::ConflictsLeft { conflicts });
+    }
+    match operation {
+        InProgress::Merge => {
+            let message = match message {
+                Some(m) => m.to_owned(),
+                None => prepared_message(git, repo, cancel)
+                    .await?
+                    .unwrap_or_default(),
+            };
+            crate::ops::commit_write::create_commit(git, repo, &message, false, cancel).await?;
+            Ok(match in_progress(git, repo, cancel).await? {
+                None => ContinueOutcome::Done,
+                Some(_) => ContinueOutcome::StoppedAgain {
+                    conflicts: Vec::new(),
+                },
+            })
+        }
+        InProgress::Rebase => {
+            // At an `edit` step the commit is already made: continuing with
+            // nothing new is normal there.
+            let editing = state_file(git, repo, "rebase-merge/amend", cancel)
+                .await?
+                .is_some();
+            if !editing
+                && commit_id(git, repo, "REBASE_HEAD", cancel).await?.is_some()
+                && index_matches_head(git, repo, cancel).await?
+            {
+                return Ok(ContinueOutcome::NothingToCommit);
+            }
+            run_step(git, repo, &["rebase", "--continue"], cancel).await
+        }
+        InProgress::CherryPick | InProgress::Revert => {
+            if index_matches_head(git, repo, cancel).await? {
+                return Ok(ContinueOutcome::NothingToCommit);
+            }
+            let command = if operation == InProgress::CherryPick {
+                "cherry-pick"
+            } else {
+                "revert"
+            };
+            run_step(git, repo, &[command, "--continue"], cancel).await
+        }
+    }
+}
+
+/// Skips the commit being replayed in a rebase, cherry-pick or revert: its
+/// changes are not applied, and whatever was resolved for it in the working
+/// tree is discarded (untracked files stay). The UI confirms first.
+pub async fn skip_current(
+    git: &Git,
+    repo: &Path,
+    cancel: &CancellationToken,
+) -> Result<ContinueOutcome> {
+    let command = match in_progress(git, repo, cancel).await? {
+        None => return Ok(ContinueOutcome::Done),
+        Some(InProgress::Rebase) => "rebase",
+        Some(InProgress::CherryPick) => "cherry-pick",
+        Some(InProgress::Revert) => "revert",
+        Some(InProgress::Merge) => {
+            return Err(GitError::Parse("a merge has nothing to skip".into()));
+        }
+    };
+    run_step(git, repo, &[command, "--skip"], cancel).await
+}
