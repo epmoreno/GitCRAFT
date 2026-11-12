@@ -106,6 +106,7 @@
     "branchInWorktree": "That branch is in use in another worktree of this repository.",
     "stashChanged": "That entry is no longer in the stash (it was applied or deleted elsewhere). Nothing was done.",
     "nothingToStash": "There are no uncommitted changes to save.",
+    "notConflicted": "That file is no longer in conflict (it was resolved, or the operation ended, elsewhere). Nothing was done.",
     "authFailed": "Git could not authenticate with the remote. GitCRAFT never stores or asks for passwords: set up a credential helper (osxkeychain on macOS) or add your SSH key to the agent, and check that “git fetch” works in a terminal.",
     "authFailed_linux": "Git could not authenticate with the remote. GitCRAFT never stores or asks for passwords: set up a credential helper (on Linux, libsecret for example) or add your SSH key to the agent, and check that “git fetch” works in a terminal.",
     "authFailed_windows": "Git could not authenticate with the remote. GitCRAFT never stores or asks for passwords: set up a credential helper (Git Credential Manager on Windows, which comes with Git for Windows) or add your SSH key to the agent, and check that “git fetch” works in a terminal.",

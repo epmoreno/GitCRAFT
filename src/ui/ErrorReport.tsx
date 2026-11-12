@@ -28,6 +28,7 @@ const KINDS = {
   branchInWorktree: true,
   stashChanged: true,
   nothingToStash: true,
+  notConflicted: true,
   authFailed: true,
   detachedHead: true,
   alreadyARepository: true,

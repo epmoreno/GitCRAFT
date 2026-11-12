@@ -78,6 +78,11 @@ pub enum GitError {
     #[error("there are no local changes to save")]
     NothingToStash,
 
+    /// The file is no longer in conflict (resolved, or the operation ended,
+    /// elsewhere); nothing was done.
+    #[error("{0} is not in conflict")]
+    NotConflicted(String),
+
     #[error("HEAD is detached: not on any branch")]
     DetachedHead,
 
@@ -161,6 +166,8 @@ pub enum ErrorKind {
     BranchInWorktree,
     StashChanged,
     NothingToStash,
+    /// The file is no longer in conflict; nothing was done.
+    NotConflicted,
     /// The remote rejected the credentials, or none were available (no
     /// credential helper / SSH key): git cannot prompt.
     AuthFailed,
@@ -222,6 +229,7 @@ impl GitError {
             Self::BranchChanged(_) => ErrorKind::BranchChanged,
             Self::StashChanged(_) => ErrorKind::StashChanged,
             Self::NothingToStash => ErrorKind::NothingToStash,
+            Self::NotConflicted(_) => ErrorKind::NotConflicted,
             Self::DetachedHead => ErrorKind::DetachedHead,
             Self::AlreadyARepository(_) => ErrorKind::AlreadyARepository,
             Self::DestinationNotEmpty(_) => ErrorKind::DestinationNotEmpty,
@@ -287,6 +295,7 @@ impl GitError {
             | Self::BranchChanged(_)
             | Self::StashChanged(_)
             | Self::NothingToStash
+            | Self::NotConflicted(_)
             | Self::DetachedHead
             | Self::AlreadyARepository(_)
             | Self::DestinationNotEmpty(_)

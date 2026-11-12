@@ -1,0 +1,19 @@
+fn main() {
+<<<<<<< HEAD
+    let a = 100;
+    let b = 2;
+    let c = 300;
+=======
+    let a = 10;
+    let b = 2;
+    let c = 30;
+>>>>>>> feature
+    println!("{a} {c}");
+}
+
+// tail one
+<<<<<<< HEAD
+// tail two (main)
+=======
+// tail two (feature)
+>>>>>>> feature

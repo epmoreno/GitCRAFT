@@ -106,6 +106,7 @@
     "branchInWorktree": "Esa rama está en uso en otro worktree de este repositorio.",
     "stashChanged": "Esa entrada ya no está en el stash (se aplicó o borró desde otro sitio). No se ha hecho nada.",
     "nothingToStash": "No hay cambios sin confirmar que guardar.",
+    "notConflicted": "Ese archivo ya no está en conflicto (se resolvió o la operación terminó desde otro sitio). No se ha hecho nada.",
     "authFailed": "Git no pudo autenticarse con el remoto. GitCRAFT no guarda ni pide contraseñas: configura un credential helper (en macOS, osxkeychain) o añade tu clave SSH al agente, y comprueba que «git fetch» funciona desde la terminal.",
     "authFailed_linux": "Git no pudo autenticarse con el remoto. GitCRAFT no guarda ni pide contraseñas: configura un credential helper (en Linux, por ejemplo libsecret) o añade tu clave SSH al agente, y comprueba que «git fetch» funciona desde la terminal.",
     "authFailed_windows": "Git no pudo autenticarse con el remoto. GitCRAFT no guarda ni pide contraseñas: configura un credential helper (en Windows, Git Credential Manager, que viene con Git for Windows) o añade tu clave SSH al agente, y comprueba que «git fetch» funciona desde la terminal.",

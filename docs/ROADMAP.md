@@ -1326,7 +1326,7 @@ principio y toda operación destructiva pasa por confirmación.
       entienda; cada paso es un comando de git normal; nada se escribe sin
       que el usuario lo pida, y lo que descarta trabajo pasa por
       confirmación. Ninguna dependencia nueva.
-      - [ ] **9.1 Leer un conflicto (core).** `conflict_file(path)` devuelve
+      - [x] **9.1 Leer un conflicto (core).** `conflict_file(path)` devuelve
         las etapas que existen (`git ls-files -u -z`: base, nuestra, suya,
         con modo y tamaño), el contenido del archivo del working tree y el
         tamaño de marcador (`git check-attr -z conflict-marker-size`).
@@ -1356,6 +1356,18 @@ principio y toda operación destructiva pasa por confirmación.
         Windows); base calculada en un archivo con estilo `merge`, y bloque
         sin base cuando el archivo se ha editado; la carpeta temporal no
         queda.
+        *Hecho:* `parse::conflict` (parser puro: `parse_conflicts`,
+        `render_segments`, `marker_lines`) y `ops::conflict::conflict_file`.
+        Además de lo previsto: el atributo `merge=binary` o `-merge` también
+        lleva a «elegir una versión entera»; las versiones se comparan tal
+        como se sacan al working tree (`git cat-file --filters`), así que la
+        base se calcula también con `core.autocrlf=true`; la carpeta
+        temporal solo la puede leer el usuario (0700 en Unix). Error nuevo
+        `NotConflicted` (el archivo ya no está en conflicto) con su texto en
+        es/en. Las fixtures son salidas reales de `git merge` en los tres
+        estilos y con CRLF. Un marcador de cierre borrado a mano se
+        informa en la línea donde la estructura se rompe (la del siguiente
+        `<<<<<<<`). Tests: 11 del parser, 4 unitarios y 13 de integración.
       - [ ] **9.2 Nombres de los dos lados (core).** Cada lado se nombra por
         lo que es, no «ours/theirs»: en un merge, la rama actual y lo que se
         fusiona (rama si se sabe, si no commit corto y asunto); en un rebase

@@ -596,6 +596,8 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 "identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "undoUnsupported" | "trashFailed" | "invalidBranchName" | "branchExists" | "branchChanged" | 
 /**  The branch is checked out in another worktree. */
 "branchInWorktree" | "stashChanged" | "nothingToStash" | 
+/**  The file is no longer in conflict; nothing was done. */
+"notConflicted" | 
 /**
  *  The remote rejected the credentials, or none were available (no
  *  credential helper / SSH key): git cannot prompt.
