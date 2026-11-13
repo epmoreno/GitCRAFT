@@ -31,6 +31,7 @@ export type {
   CommitRef,
   CommitActions,
   PickBlock,
+  PickKind,
   PickOutcome_Serialize as PickOutcome,
   PickPreview_Serialize as PickPreview,
   PickRefusal,

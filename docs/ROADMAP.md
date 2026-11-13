@@ -1759,7 +1759,7 @@ principio y toda operación destructiva pasa por confirmación.
             de detalle (`CommitActionButtons`), desactivada con su motivo
             cuando no se puede.
         Tests: 6 de integración y 7 de interfaz.
-      - [ ] **10.3 Revert (core y UI).** Igual que el cherry-pick, para
+      - [x] **10.3 Revert (core y UI).** Igual que el cherry-pick, para
         commits de la rama actual: `revert_preview(oid)` (conflictos
         previstos con `--merge-base=<oid> HEAD <oid>^`) y `git revert
         --no-edit <oid>`, con el mensaje «Revert "…"» que pone git. El
@@ -1768,6 +1768,19 @@ principio y toda operación destructiva pasa por confirmación.
         *Verificable:* integración: limpio, con conflicto resuelto con la 9,
         bloqueado por cambios locales y un commit que no está en la rama;
         tests de interfaz.
+        *Hecho:*
+        - **Core:** `ops::pick` comparte código entre cherry-pick y
+          revertir (`PickKind`): las mismas comprobaciones, el guardado en el
+          stash («GitCRAFT: antes de revertir <hash>») y la predicción de
+          conflictos, aplicando los cambios del commit al revés
+          (`--merge-base=<oid> HEAD <oid>^`). `revert_preview` / `revert`
+          ejecutan `git revert --no-edit`. Se niega con `NotInBranch` si el
+          commit no está en la rama.
+        - **Interfaz:** el mismo diálogo, con sus textos. Explica que añade
+          un commit nuevo y que el original no se borra. Hay «Recuperar mis
+          cambios» y el aviso de abortar con cambios guardados. Está en el
+          menú («Revertir en «main»…») y en el panel («Revertir…»).
+        Tests: 4 de integración y 3 de interfaz.
       - [ ] **10.4 Reset de la rama actual (core y UI).** Tres modos, con la
         explicación de cada uno: soft (los cambios de los commits quedan
         preparados), mixed (quedan sin preparar) y hard (se descartan).

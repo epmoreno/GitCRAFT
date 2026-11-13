@@ -30,12 +30,14 @@ function Files({ files }: { files: { path: string; untracked?: boolean }[] }) {
   );
 }
 
-/** The cherry-pick confirmation: clean, changes in the way, conflicts, or
- * both (task 10.2). */
-function CherryPickDialog({ preview }: { preview: PickPreview }) {
+/** The cherry-pick (10.2) or revert (10.3) confirmation: clean, changes in
+ * the way, conflicts, or both. */
+function PickDialog({ preview }: { preview: PickPreview }) {
   const { t } = useTranslation();
   const close = useHistoryStore((s) => s.closeDialog);
-  const confirm = useHistoryStore((s) => s.confirmCherryPick);
+  const confirm = useHistoryStore((s) => s.confirmPick);
+  // This operation's own texts: history.pick.* or history.revert.*.
+  const own = preview.kind === "revert" ? "history.revert" : "history.pick";
   const blocked = preview.blocked;
   const conflicts = preview.conflicts.length > 0;
   const values = {
@@ -43,45 +45,40 @@ function CherryPickDialog({ preview }: { preview: PickPreview }) {
     subject: preview.commit.subject,
     branch: preview.branch ?? "",
   };
-  const confirmLabel = t(
-    blocked
-      ? conflicts
-        ? "history.pick.saveAndPickWithConflicts"
-        : "history.pick.saveAndPick"
-      : conflicts
-        ? "history.pick.pickWithConflicts"
-        : "history.pick.pick",
-  );
+  const button = blocked
+    ? conflicts
+      ? "saveAndActWithConflicts"
+      : "saveAndAct"
+    : conflicts
+      ? "actWithConflicts"
+      : "act";
   return (
     <ConfirmDialog
-      title={t("history.pick.title", values)}
-      confirmLabel={confirmLabel}
+      title={t(`${own}.title`, values)}
+      confirmLabel={t(`${own}.${button}`)}
       cancelLabel={t("history.cancel")}
       onConfirm={() => void confirm()}
       onCancel={close}
     >
-      <p>{t("history.pick.explained", values)}</p>
+      <p>{t(`${own}.explained`, values)}</p>
       {blocked && (
-        <section aria-label={t("history.pick.blockedTitle")}>
-          <h3 className={styles.heading}>{t("history.pick.blockedTitle")}</h3>
-          <p>{t(`history.pick.blocked.${blocked}`)}</p>
+        <section aria-label={t("history.blockedTitle")}>
+          <h3 className={styles.heading}>{t("history.blockedTitle")}</h3>
+          <p>{t(`history.blocked.${blocked}`, { action: t(`${own}.noun`) })}</p>
           <Files files={preview.blocking} />
-          <p>{t("history.pick.saveExplained", values)}</p>
+          <p>{t(`${own}.saveExplained`, values)}</p>
         </section>
       )}
       {conflicts && (
-        <section aria-label={t("history.pick.conflictsTitle")}>
+        <section aria-label={t("history.conflictsTitle")}>
           <h3 className={styles.heading}>
-            {t(
-              preview.exact
-                ? "history.pick.conflicts"
-                : "history.pick.mayConflict",
-              { count: preview.conflicts.length },
-            )}
+            {t(preview.exact ? `${own}.conflicts` : `${own}.mayConflict`, {
+              count: preview.conflicts.length,
+            })}
           </h3>
           <Files files={preview.conflicts.map((path) => ({ path }))} />
-          <p>{t("history.pick.conflictExplained")}</p>
-          {blocked && <p>{t("history.pick.abortKeepsSaved")}</p>}
+          <p>{t("history.conflictExplained")}</p>
+          {blocked && <p>{t("history.abortKeepsSavedHere")}</p>}
         </section>
       )}
     </ConfirmDialog>
@@ -90,8 +87,8 @@ function CherryPickDialog({ preview }: { preview: PickPreview }) {
 
 export function HistoryDialogs() {
   const dialog = useHistoryStore((s) => s.dialog);
-  if (dialog?.kind === "cherryPick") {
-    return <CherryPickDialog preview={dialog.preview} />;
+  if (dialog?.kind === "pick") {
+    return <PickDialog preview={dialog.preview} />;
   }
   return null;
 }
@@ -126,13 +123,19 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
         )}
         {notice?.kind === "picked" && (
           <p>
-            {t("history.pick.done", {
-              subject: notice.subject,
-              branch: notice.branch,
-            })}
+            {t(
+              notice.pick === "revert"
+                ? "history.revert.done"
+                : "history.pick.done",
+              { subject: notice.subject, branch: notice.branch },
+            )}
           </p>
         )}
-        {offer && <p>{t("history.savedNotice", { short: offer.short })}</p>}
+        {offer && (
+          <p>
+            {t(`history.savedNotice.${offer.pick}`, { short: offer.short })}
+          </p>
+        )}
       </div>
       {offer && (
         <button

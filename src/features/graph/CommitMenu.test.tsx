@@ -54,7 +54,7 @@ describe("the menu of a commit", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Cherry-pick en «main»…", "Copiar hash"]);
+    ).toEqual(["Cherry-pick en «main»…", "Revertir en «main»…", "Copiar hash"]);
     // The default facts say it is already in main.
     expect(pick).toBeDisabled();
     expect(pick).toHaveAttribute("title", "Ya está en «main».");

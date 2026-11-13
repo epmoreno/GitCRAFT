@@ -150,6 +150,10 @@ export const commands = {
 	 *  user did not accept (saving changes first, going on with conflicts).
 	 */
 	cherryPick: (id: number, oid: string, saveChanges: boolean, allowConflicts: boolean) => typedError<PickOutcome_Serialize, IpcError_Serialize>(__TAURI_INVOKE("cherry_pick", { id, oid, saveChanges, allowConflicts })),
+	/**  What reverting `oid` (a commit of the current branch) would do. */
+	revertPreview: (id: number, oid: string) => typedError<PickPreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("revert_preview", { id, oid })),
+	/**  Reverts `oid` with a new commit, after the same checks as cherry-pick. */
+	revert: (id: number, oid: string, saveChanges: boolean, allowConflicts: boolean) => typedError<PickOutcome_Serialize, IpcError_Serialize>(__TAURI_INVOKE("revert", { id, oid, saveChanges, allowConflicts })),
 	/**
 	 *  Pushes the current branch to its upstream, or publishes it to
 	 *  `publish_to` creating the upstream. `force_lease`: force only if the
@@ -1402,6 +1406,13 @@ export type PickBlock =
 /**  Changes (or untracked files) in files the commit changes. */
 "overwrite";
 
+/**  Which way the commit's changes are applied. */
+export type PickKind = 
+/**  A copy of the commit (`git cherry-pick`). */
+"cherryPick" | 
+/**  A new commit that undoes it (`git revert`). */
+"revert";
+
 /**
  *  In every outcome, `saved` is the stash entry (commit id) holding the
  *  changes "save my changes" put aside, so the app can offer them back.
@@ -1447,6 +1458,7 @@ export type PickOutcome_Serialize =
 export type PickPreview = PickPreview_Serialize | PickPreview_Deserialize;
 
 export type PickPreview_Deserialize = {
+	kind: PickKind,
 	commit: CommitRef,
 	/**  The current branch (`None` with a detached HEAD). */
 	branch?: string | null,
@@ -1464,6 +1476,7 @@ export type PickPreview_Deserialize = {
 };
 
 export type PickPreview_Serialize = {
+	kind: PickKind,
 	commit: CommitRef,
 	/**  The current branch (`None` with a detached HEAD). */
 	branch: string | null,
@@ -1480,7 +1493,7 @@ export type PickPreview_Serialize = {
 	exact: boolean,
 };
 
-/**  Why the commit cannot be picked at all. */
+/**  Why the commit cannot be picked (or reverted) at all. */
 export type PickRefusal = 
 /**  A merge, rebase… is waiting for the user. */
 "inProgress" | 
@@ -1488,8 +1501,10 @@ export type PickRefusal =
 "detached" | 
 /**  A merge commit: one parent would have to be chosen as the main line. */
 "merge" | 
-/**  The commit is already in the current branch. */
-"alreadyInBranch";
+/**  Cherry-pick: the commit is already in the current branch. */
+"alreadyInBranch" | 
+/**  Revert: the commit is not in the current branch. */
+"notInBranch";
 
 /**  Everything the "Publish on GitHub" dialog shows before publishing. */
 export type PublishInfo = PublishInfo_Serialize | PublishInfo_Deserialize;

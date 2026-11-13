@@ -999,3 +999,27 @@ pub async fn cherry_pick(
         .cherry_pick(id, oid, save_changes, allow_conflicts)
         .await
 }
+
+/// What reverting `oid` (a commit of the current branch) would do.
+#[tauri::command]
+#[specta::specta]
+pub async fn revert_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+) -> Result<PickPreview, IpcError> {
+    state.revert_preview(id, &oid).await
+}
+
+/// Reverts `oid` with a new commit, after the same checks as cherry-pick.
+#[tauri::command]
+#[specta::specta]
+pub async fn revert(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+    save_changes: bool,
+    allow_conflicts: bool,
+) -> Result<PickOutcome, IpcError> {
+    state.revert(id, oid, save_changes, allow_conflicts).await
+}

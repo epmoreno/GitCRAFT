@@ -12,7 +12,7 @@ export type CommitAction = "cherryPick" | "revert" | "reset" | "createTag";
 
 /** The actions that already work, in menu order. Each task of phase 2
  * (10.2 cherry-pick, 10.3 revert, 10.4 reset, 10.5 tags) adds its own. */
-export const READY_ACTIONS: readonly CommitAction[] = ["cherryPick"];
+export const READY_ACTIONS: readonly CommitAction[] = ["cherryPick", "revert"];
 
 /** Shown apart, with the danger style (like "Discard"). */
 export const DANGEROUS_ACTIONS: ReadonlySet<CommitAction> = new Set(["reset"]);

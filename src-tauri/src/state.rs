@@ -1441,6 +1441,27 @@ impl AppState {
         Ok(pick::cherry_pick_preview(git, &repo, oid, &CancellationToken::new()).await?)
     }
 
+    pub async fn revert_preview(&self, id: RepoId, oid: &str) -> Result<PickPreview, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(pick::revert_preview(git, &repo, oid, &CancellationToken::new()).await?)
+    }
+
+    pub async fn revert(
+        &self,
+        id: RepoId,
+        oid: String,
+        save_changes: bool,
+        allow_conflicts: bool,
+    ) -> Result<PickOutcome, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            pick::revert(git, &repo, &oid, save_changes, allow_conflicts, &cancel).await
+        })
+        .await
+    }
+
     pub async fn cherry_pick(
         &self,
         id: RepoId,

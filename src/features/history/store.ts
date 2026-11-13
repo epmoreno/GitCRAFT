@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   commands,
   type CommandError,
+  type PickKind,
   type PickOutcome,
   type PickPreview,
 } from "../../ipc";
@@ -17,27 +18,35 @@ import { useWorkdirStore } from "../workdir/store";
  * with "Recover my changes" once nothing is in progress.
  */
 
+/** Cherry-pick or revert waiting for confirmation (`preview.kind`). */
 export type HistoryDialog = {
-  kind: "cherryPick";
+  kind: "pick";
   repoId: number;
   preview: PickPreview;
 };
 
 export type HistoryNotice =
-  | { kind: "picked"; repoId: number; subject: string; branch: string }
+  | {
+      kind: "picked";
+      repoId: number;
+      pick: PickKind;
+      subject: string;
+      branch: string;
+    }
   | { kind: "error"; repoId: number; error: CommandError };
 
-/** Changes saved in the stash before an operation: the entry's commit, and
- * the short id of the commit the operation was about (in its message). */
-export type SavedChanges = { oid: string; short: string };
+/** Changes saved in the stash before an operation: the entry's commit, the
+ * operation, and the short id of the commit it was about (in its message). */
+export type SavedChanges = { oid: string; pick: PickKind; short: string };
 
 type HistoryState = {
   dialog: HistoryDialog | null;
   notice: HistoryNotice | null;
   busy: boolean;
   saved: Record<number, SavedChanges>;
-  requestCherryPick: (repoId: number, oid: string) => Promise<void>;
-  confirmCherryPick: () => Promise<void>;
+  /** Shows what cherry-picking or reverting `oid` would do. */
+  requestPick: (repoId: number, oid: string, kind: PickKind) => Promise<void>;
+  confirmPick: () => Promise<void>;
   closeDialog: () => void;
   dismissNotice: () => void;
   /** Applies the saved changes back (the entry stays in the stash), with
@@ -63,14 +72,14 @@ function selectWhenLoaded(repoId: number, oid: string) {
 }
 
 export const useHistoryStore = create<HistoryState>()((set, get) => {
-  const remember = (repoId: number, oid: string | null, short: string) => {
+  const remember = (
+    repoId: number,
+    oid: string | null,
+    pick: PickKind,
+    short: string,
+  ) => {
     if (!oid) return;
-    set((s) => ({
-      saved: {
-        ...s.saved,
-        [repoId]: { oid, short },
-      },
-    }));
+    set((s) => ({ saved: { ...s.saved, [repoId]: { oid, pick, short } } }));
   };
 
   const settle = (
@@ -78,7 +87,7 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
     preview: PickPreview,
     outcome: PickOutcome,
   ) => {
-    remember(repoId, outcome.saved, preview.commit.short);
+    remember(repoId, outcome.saved, preview.kind, preview.commit.short);
     refreshAfterRemote(repoId);
     switch (outcome.type) {
       case "done":
@@ -86,6 +95,7 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
           notice: {
             kind: "picked",
             repoId,
+            pick: preview.kind,
             subject: preview.commit.subject,
             branch: preview.branch ?? "",
           },
@@ -98,7 +108,7 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
       case "notDone":
         // Something changed since the preview: show it again.
         set({
-          dialog: { kind: "cherryPick", repoId, preview: outcome.preview },
+          dialog: { kind: "pick", repoId, preview: outcome.preview },
         });
         return;
     }
@@ -107,22 +117,27 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
   return {
     ...initialHistoryState,
 
-    requestCherryPick: async (repoId, oid) => {
+    requestPick: async (repoId, oid, kind) => {
       set({ notice: null });
-      const result = await commands.cherryPickPreview(repoId, oid);
+      const result =
+        kind === "revert"
+          ? await commands.revertPreview(repoId, oid)
+          : await commands.cherryPickPreview(repoId, oid);
       if (result.status === "error") {
         set({ notice: { kind: "error", repoId, error: result.error } });
         return;
       }
-      set({ dialog: { kind: "cherryPick", repoId, preview: result.data } });
+      set({ dialog: { kind: "pick", repoId, preview: result.data } });
     },
 
-    confirmCherryPick: async () => {
+    confirmPick: async () => {
       const dialog = get().dialog;
-      if (dialog?.kind !== "cherryPick") return;
+      if (dialog?.kind !== "pick") return;
       const { repoId, preview } = dialog;
       set({ dialog: null, busy: true });
-      const result = await commands.cherryPick(
+      const run =
+        preview.kind === "revert" ? commands.revert : commands.cherryPick;
+      const result = await run(
         repoId,
         preview.commit.oid,
         preview.blocked !== null,
@@ -186,7 +201,8 @@ export function runCommitAction(
 ): void {
   switch (action) {
     case "cherryPick":
-      void useHistoryStore.getState().requestCherryPick(repoId, oid);
+    case "revert":
+      void useHistoryStore.getState().requestPick(repoId, oid, action);
       return;
     default:
       return;

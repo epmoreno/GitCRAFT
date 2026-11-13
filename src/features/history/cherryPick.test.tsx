@@ -15,6 +15,7 @@ const STASH = "5".repeat(40);
 
 function preview(overrides: Partial<PickPreview> = {}): PickPreview {
   return {
+    kind: "cherryPick",
     commit: { oid: OID, short: "a1b2c3d", subject: "topic edits f" },
     branch: "main",
     refused: null,
@@ -34,7 +35,7 @@ function show(p: PickPreview) {
       <HistoryToast repoId={1} />
     </>,
   );
-  return act(() => useHistoryStore.getState().requestCherryPick(1, OID));
+  return act(() => useHistoryStore.getState().requestPick(1, OID, p.kind));
 }
 
 const entry: StashEntry = {
@@ -149,7 +150,7 @@ describe("cherry-pick", () => {
       data: { type: "applied", dropped: false },
     });
     useHistoryStore.setState({
-      saved: { 1: { oid: STASH, short: "a1b2c3d" } },
+      saved: { 1: { oid: STASH, pick: "cherryPick", short: "a1b2c3d" } },
     });
     render(<HistoryToast repoId={1} />);
     await user.click(
@@ -162,7 +163,7 @@ describe("cherry-pick", () => {
 
   it("offers them back only once the operation is over", () => {
     useHistoryStore.setState({
-      saved: { 1: { oid: STASH, short: "a1b2c3d" } },
+      saved: { 1: { oid: STASH, pick: "cherryPick", short: "a1b2c3d" } },
     });
     useWorkdirStore.setState({
       statuses: {

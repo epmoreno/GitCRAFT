@@ -1088,10 +1088,12 @@
       "isHead": "«{{branch}}» ya está en este commit."
     },
     "action": {
-      "cherryPick": "Cherry-pick en «{{branch}}»…"
+      "cherryPick": "Cherry-pick en «{{branch}}»…",
+      "revert": "Revertir en «{{branch}}»…"
     },
     "button": {
-      "cherryPick": "Cherry-pick…"
+      "cherryPick": "Cherry-pick…",
+      "revert": "Revertir…"
     }
   },
   "history": {
@@ -1102,29 +1104,48 @@
     "failed": "La operación no se ha podido hacer. No se ha tocado nada:",
     "actions": "Acciones del commit",
     "recover": "Recuperar mis cambios",
-    "savedNotice": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del cherry-pick de {{short}}»).",
+    "savedNotice": {
+      "cherryPick": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del cherry-pick de {{short}}»).",
+      "revert": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de revertir {{short}}»)."
+    },
     "abortKeepsSaved": "Los cambios que guardaste antes de empezar siguen en el stash: no vuelven solos al abortar. Recupéralos después con «Recuperar mis cambios».",
+    "abortKeepsSavedHere": "Si lo abortas, tus cambios guardados seguirán en el stash: no vuelven solos al abortar. Recupéralos con «Recuperar mis cambios».",
+    "blockedTitle": "Tus cambios sin confirmar están en medio",
+    "blocked": {
+      "stagedChanges": "git no hace un {{action}} con cambios preparados, aunque sean de otros archivos:",
+      "overwrite": "Hay cambios en archivos que el commit cambia:"
+    },
+    "conflictsTitle": "Conflictos",
+    "conflictExplained": "Si sigues, se detendrá para que los resuelvas con la vista de conflictos; podrás abortarlo y volver a como estás ahora.",
     "pick": {
+      "noun": "cherry-pick",
       "title": "¿Hacer cherry-pick de {{short}} en «{{branch}}»?",
       "explained": "Se copia «{{subject}}» a «{{branch}}» como un commit nuevo. El commit original no cambia.",
-      "pick": "Hacer cherry-pick",
-      "pickWithConflicts": "Hacer cherry-pick con conflictos",
-      "saveAndPick": "Guardar mis cambios y hacer cherry-pick",
-      "saveAndPickWithConflicts": "Guardar mis cambios y hacer cherry-pick con conflictos",
-      "blockedTitle": "Tus cambios sin confirmar están en medio",
-      "blocked": {
-        "stagedChanges": "git no hace un cherry-pick con cambios preparados, aunque sean de otros archivos:",
-        "overwrite": "Hay cambios en archivos que el commit cambia:"
-      },
+      "act": "Hacer cherry-pick",
+      "actWithConflicts": "Hacer cherry-pick con conflictos",
+      "saveAndAct": "Guardar mis cambios y hacer cherry-pick",
+      "saveAndActWithConflicts": "Guardar mis cambios y hacer cherry-pick con conflictos",
       "saveExplained": "«Guardar mis cambios…» los guarda en el stash como «GitCRAFT: antes del cherry-pick de {{short}}», que nunca se borra solo, y al terminar podrás recuperarlos con «Recuperar mis cambios».",
-      "conflictsTitle": "Conflictos",
       "conflicts_one": "El cherry-pick producirá conflictos en 1 archivo:",
       "conflicts_other": "El cherry-pick producirá conflictos en {{count}} archivos:",
       "mayConflict_one": "El cherry-pick podría producir conflictos en 1 archivo:",
       "mayConflict_other": "El cherry-pick podría producir conflictos en {{count}} archivos:",
-      "conflictExplained": "Si sigues, se detendrá para que los resuelvas con la vista de conflictos; podrás abortarlo y volver a como estás ahora.",
-      "abortKeepsSaved": "Si lo abortas, tus cambios guardados seguirán en el stash: no vuelven solos al abortar. Recupéralos con «Recuperar mis cambios».",
       "done": "Cherry-pick hecho: «{{subject}}» copiado en «{{branch}}»."
+    },
+    "revert": {
+      "noun": "revert",
+      "title": "¿Revertir {{short}} en «{{branch}}»?",
+      "explained": "Se añade a «{{branch}}» un commit nuevo, «Revert \"{{subject}}\"», que deshace los cambios de «{{subject}}». El commit original no se borra: es la forma segura de deshacer un commit que ya has publicado.",
+      "act": "Revertir",
+      "actWithConflicts": "Revertir con conflictos",
+      "saveAndAct": "Guardar mis cambios y revertir",
+      "saveAndActWithConflicts": "Guardar mis cambios y revertir con conflictos",
+      "saveExplained": "«Guardar mis cambios…» los guarda en el stash como «GitCRAFT: antes de revertir {{short}}», que nunca se borra solo, y al terminar podrás recuperarlos con «Recuperar mis cambios».",
+      "conflicts_one": "Revertir producirá conflictos en 1 archivo:",
+      "conflicts_other": "Revertir producirá conflictos en {{count}} archivos:",
+      "mayConflict_one": "Revertir podría producir conflictos en 1 archivo:",
+      "mayConflict_other": "Revertir podría producir conflictos en {{count}} archivos:",
+      "done": "Revertido: «{{subject}}» se ha deshecho con un commit nuevo en «{{branch}}»."
     }
   }
 }

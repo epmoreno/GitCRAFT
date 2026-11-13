@@ -1,8 +1,9 @@
-//! Cherry-pick (task 10.2): copying one commit onto the current branch.
-//! Like the pull, it never forces: before touching anything it says why it
-//! cannot be done, which uncommitted changes are in the way and which files
-//! would conflict. A pick that stops on conflicts is resolved with the
-//! conflict view (task 9).
+//! Cherry-pick (task 10.2) and revert (task 10.3): applying one commit's
+//! changes onto the current branch, forwards (a copy) or backwards (a new
+//! commit that undoes them). Like the pull, they never force: before
+//! touching anything they say why they cannot be done, which uncommitted
+//! changes are in the way and which files would conflict. One that stops on
+//! conflicts is resolved with the conflict view (task 9).
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -16,7 +17,18 @@ use crate::ops::stash::create_stash;
 use crate::ops::status::working_status;
 use crate::{CancellationToken, Git, Result};
 
-/// Why the commit cannot be picked at all.
+/// Which way the commit's changes are applied.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum PickKind {
+    /// A copy of the commit (`git cherry-pick`).
+    CherryPick,
+    /// A new commit that undoes it (`git revert`).
+    Revert,
+}
+
+/// Why the commit cannot be picked (or reverted) at all.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
@@ -27,8 +39,10 @@ pub enum PickRefusal {
     Detached,
     /// A merge commit: one parent would have to be chosen as the main line.
     Merge,
-    /// The commit is already in the current branch.
+    /// Cherry-pick: the commit is already in the current branch.
     AlreadyInBranch,
+    /// Revert: the commit is not in the current branch.
+    NotInBranch,
 }
 
 /// Why uncommitted changes are in the way.
@@ -46,6 +60,7 @@ pub enum PickBlock {
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct PickPreview {
+    pub kind: PickKind,
     pub commit: CommitRef,
     /// The current branch (`None` with a detached HEAD).
     pub branch: Option<String>,
@@ -180,6 +195,27 @@ pub async fn cherry_pick_preview(
     oid: &str,
     cancel: &CancellationToken,
 ) -> Result<PickPreview> {
+    pick_preview(git, repo, PickKind::CherryPick, oid, cancel).await
+}
+
+/// What reverting `oid` (a commit of the current branch) would do.
+/// Read-only.
+pub async fn revert_preview(
+    git: &Git,
+    repo: &Path,
+    oid: &str,
+    cancel: &CancellationToken,
+) -> Result<PickPreview> {
+    pick_preview(git, repo, PickKind::Revert, oid, cancel).await
+}
+
+async fn pick_preview(
+    git: &Git,
+    repo: &Path,
+    kind: PickKind,
+    oid: &str,
+    cancel: &CancellationToken,
+) -> Result<PickPreview> {
     let facts = commit_actions(git, repo, oid, cancel).await?;
     let commit = commit_ref(git, repo, &facts.oid, cancel).await?;
     let refused = if facts.in_progress.is_some() {
@@ -188,12 +224,15 @@ pub async fn cherry_pick_preview(
         Some(PickRefusal::Detached)
     } else if facts.is_merge {
         Some(PickRefusal::Merge)
-    } else if facts.in_branch {
+    } else if kind == PickKind::CherryPick && facts.in_branch {
         Some(PickRefusal::AlreadyInBranch)
+    } else if kind == PickKind::Revert && !facts.in_branch {
+        Some(PickRefusal::NotInBranch)
     } else {
         None
     };
     let mut preview = PickPreview {
+        kind,
         commit,
         branch: facts.branch,
         refused,
@@ -250,7 +289,13 @@ pub async fn cherry_pick_preview(
             preview.blocking = blocking;
         }
     }
-    let (conflicts, exact) = predicted_conflicts(git, repo, &base, &facts.oid, cancel).await?;
+    // A revert applies the commit's changes backwards: from the commit to
+    // its parent.
+    let (from, to) = match kind {
+        PickKind::CherryPick => (base.as_str(), facts.oid.as_str()),
+        PickKind::Revert => (facts.oid.as_str(), base.as_str()),
+    };
+    let (conflicts, exact) = predicted_conflicts(git, repo, from, to, cancel).await?;
     preview.conflicts = conflicts;
     preview.exact = exact;
     Ok(preview)
@@ -259,6 +304,11 @@ pub async fn cherry_pick_preview(
 /// Message of the stash made by "save my changes, then cherry-pick".
 pub fn pick_stash_message(short: &str) -> String {
     format!("GitCRAFT: antes del cherry-pick de {short}")
+}
+
+/// Message of the stash made by "save my changes, then revert".
+pub fn revert_stash_message(short: &str) -> String {
+    format!("GitCRAFT: antes de revertir {short}")
 }
 
 /// Cherry-picks `oid` onto the current branch. It checks everything again
@@ -274,7 +324,50 @@ pub async fn cherry_pick(
     allow_conflicts: bool,
     cancel: &CancellationToken,
 ) -> Result<PickOutcome> {
-    let mut preview = cherry_pick_preview(git, repo, oid, cancel).await?;
+    apply_commit(
+        git,
+        repo,
+        PickKind::CherryPick,
+        oid,
+        save_changes,
+        allow_conflicts,
+        cancel,
+    )
+    .await
+}
+
+/// Reverts `oid` with a new commit (`git revert --no-edit`, git's
+/// «Revert "…"» message), with the same checks as [`cherry_pick`].
+pub async fn revert(
+    git: &Git,
+    repo: &Path,
+    oid: &str,
+    save_changes: bool,
+    allow_conflicts: bool,
+    cancel: &CancellationToken,
+) -> Result<PickOutcome> {
+    apply_commit(
+        git,
+        repo,
+        PickKind::Revert,
+        oid,
+        save_changes,
+        allow_conflicts,
+        cancel,
+    )
+    .await
+}
+
+async fn apply_commit(
+    git: &Git,
+    repo: &Path,
+    kind: PickKind,
+    oid: &str,
+    save_changes: bool,
+    allow_conflicts: bool,
+    cancel: &CancellationToken,
+) -> Result<PickOutcome> {
+    let mut preview = pick_preview(git, repo, kind, oid, cancel).await?;
     let mut saved = None;
     if preview.refused.is_some() {
         return Ok(PickOutcome::NotDone { preview, saved });
@@ -283,9 +376,12 @@ pub async fn cherry_pick(
         if !save_changes {
             return Ok(PickOutcome::NotDone { preview, saved });
         }
-        let message = pick_stash_message(&preview.commit.short);
+        let message = match kind {
+            PickKind::CherryPick => pick_stash_message(&preview.commit.short),
+            PickKind::Revert => revert_stash_message(&preview.commit.short),
+        };
         saved = Some(create_stash(git, repo, &message, true, cancel).await?);
-        preview = cherry_pick_preview(git, repo, oid, cancel).await?;
+        preview = pick_preview(git, repo, kind, oid, cancel).await?;
         if preview.refused.is_some() || preview.blocked.is_some() {
             return Ok(PickOutcome::NotDone { preview, saved });
         }
@@ -293,9 +389,14 @@ pub async fn cherry_pick(
     if !preview.conflicts.is_empty() && !allow_conflicts {
         return Ok(PickOutcome::NotDone { preview, saved });
     }
+    let command: &[&str] = match kind {
+        PickKind::CherryPick => &["cherry-pick"],
+        PickKind::Revert => &["revert", "--no-edit"],
+    };
     let out = git
         .write(repo)
-        .args(["cherry-pick", "--end-of-options"])
+        .args(command)
+        .arg("--end-of-options")
         .arg(&preview.commit.oid)
         .accept_exit_code(1)
         .output(cancel)

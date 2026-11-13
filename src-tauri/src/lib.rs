@@ -77,6 +77,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::commit_actions,
             commands::cherry_pick_preview,
             commands::cherry_pick,
+            commands::revert_preview,
+            commands::revert,
             commands::push_branch,
             commands::force_push_preview,
             commands::save_session,

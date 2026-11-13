@@ -1088,10 +1088,12 @@
       "isHead": "“{{branch}}” is already at this commit."
     },
     "action": {
-      "cherryPick": "Cherry-pick onto “{{branch}}”…"
+      "cherryPick": "Cherry-pick onto “{{branch}}”…",
+      "revert": "Revert in “{{branch}}”…"
     },
     "button": {
-      "cherryPick": "Cherry-pick…"
+      "cherryPick": "Cherry-pick…",
+      "revert": "Revert…"
     }
   },
   "history": {
@@ -1102,29 +1104,48 @@
     "failed": "The operation could not be done. Nothing was touched:",
     "actions": "Commit actions",
     "recover": "Recover my changes",
-    "savedNotice": "Your changes are still saved in the stash (“GitCRAFT: antes del cherry-pick de {{short}}”).",
+    "savedNotice": {
+      "cherryPick": "Your changes are still saved in the stash (“GitCRAFT: antes del cherry-pick de {{short}}”).",
+      "revert": "Your changes are still saved in the stash (“GitCRAFT: antes de revertir {{short}}”)."
+    },
     "abortKeepsSaved": "The changes you saved before starting are still in the stash: aborting does not bring them back. Recover them afterwards with “Recover my changes”.",
+    "abortKeepsSavedHere": "If you abort it, your saved changes stay in the stash: aborting does not bring them back. Recover them with “Recover my changes”.",
+    "blockedTitle": "Your uncommitted changes are in the way",
+    "blocked": {
+      "stagedChanges": "git does not {{action}} with staged changes, even in other files:",
+      "overwrite": "There are changes in files the commit changes:"
+    },
+    "conflictsTitle": "Conflicts",
+    "conflictExplained": "If you go on, it stops so you resolve them in the conflict view; you can abort it and get back to how you are now.",
     "pick": {
+      "noun": "cherry-pick",
       "title": "Cherry-pick {{short}} onto “{{branch}}”?",
       "explained": "“{{subject}}” is copied onto “{{branch}}” as a new commit. The original commit does not change.",
-      "pick": "Cherry-pick",
-      "pickWithConflicts": "Cherry-pick with conflicts",
-      "saveAndPick": "Save my changes and cherry-pick",
-      "saveAndPickWithConflicts": "Save my changes and cherry-pick with conflicts",
-      "blockedTitle": "Your uncommitted changes are in the way",
-      "blocked": {
-        "stagedChanges": "git does not cherry-pick with staged changes, even in other files:",
-        "overwrite": "There are changes in files the commit changes:"
-      },
+      "act": "Cherry-pick",
+      "actWithConflicts": "Cherry-pick with conflicts",
+      "saveAndAct": "Save my changes and cherry-pick",
+      "saveAndActWithConflicts": "Save my changes and cherry-pick with conflicts",
       "saveExplained": "“Save my changes…” puts them in the stash as “GitCRAFT: antes del cherry-pick de {{short}}”, which is never dropped by itself; afterwards you can get them back with “Recover my changes”.",
-      "conflictsTitle": "Conflicts",
       "conflicts_one": "The cherry-pick will conflict in 1 file:",
       "conflicts_other": "The cherry-pick will conflict in {{count}} files:",
       "mayConflict_one": "The cherry-pick may conflict in 1 file:",
       "mayConflict_other": "The cherry-pick may conflict in {{count}} files:",
-      "conflictExplained": "If you go on, it stops so you resolve them in the conflict view; you can abort it and get back to how you are now.",
-      "abortKeepsSaved": "If you abort it, your saved changes stay in the stash: aborting does not bring them back. Recover them with “Recover my changes”.",
       "done": "Cherry-pick done: “{{subject}}” copied onto “{{branch}}”."
+    },
+    "revert": {
+      "noun": "revert",
+      "title": "Revert {{short}} in “{{branch}}”?",
+      "explained": "A new commit, “Revert \"{{subject}}\"”, is added to “{{branch}}” undoing the changes of “{{subject}}”. The original commit is not deleted: the safe way to undo a commit you already published.",
+      "act": "Revert",
+      "actWithConflicts": "Revert with conflicts",
+      "saveAndAct": "Save my changes and revert",
+      "saveAndActWithConflicts": "Save my changes and revert with conflicts",
+      "saveExplained": "“Save my changes…” puts them in the stash as “GitCRAFT: antes de revertir {{short}}”, which is never dropped by itself; afterwards you can get them back with “Recover my changes”.",
+      "conflicts_one": "Reverting will conflict in 1 file:",
+      "conflicts_other": "Reverting will conflict in {{count}} files:",
+      "mayConflict_one": "Reverting may conflict in 1 file:",
+      "mayConflict_other": "Reverting may conflict in {{count}} files:",
+      "done": "Reverted: “{{subject}}” was undone with a new commit in “{{branch}}”."
     }
   }
 }
