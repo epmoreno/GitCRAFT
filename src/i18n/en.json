@@ -284,7 +284,15 @@
       "status": "Status"
     },
     "stageFolder": "Stage the folder {{path}}",
-    "unstageFolder": "Unstage the folder {{path}}"
+    "unstageFolder": "Unstage the folder {{path}}",
+    "resolved": "Resolved",
+    "openConflict": "Resolve {{path}}",
+    "unsavedChoices": "Has unsaved choices",
+    "unmark": "Put back in conflict…",
+    "unmarkTitle": "Put {{path}} back in conflict?",
+    "unmarkBody": "The file goes back to the conflicts list with the versions from when the operation stopped. The file in your folder is not touched.",
+    "unmarkChanged": "You edited it after marking it: the version you marked resolved is forgotten (the one in your folder stays as it is).",
+    "unmarkConfirm": "Put back in conflict"
   },
   "commit": {
     "label": "Create commit",
@@ -848,7 +856,8 @@
         "changes": "Changes panel (list and tree)",
         "commit": "Commit box",
         "general": "Dialogs and menus",
-        "diff": "Diff"
+        "diff": "Diff",
+        "conflicts": "Conflict view"
       },
       "key": {
         " ": "Space",
@@ -887,7 +896,9 @@
         "escape": "Close the dialog, menu or diff, or clear the sidebar filter",
         "menuNext": "Menu: next item",
         "menuPrevious": "Menu: previous item",
-        "diffRange": "Select several lines: from the previous one to this one"
+        "diffRange": "Select several lines: from the previous one to this one",
+        "conflictPrevious": "Go to the previous conflict block",
+        "conflictNext": "Go to the next conflict block"
       }
     }
   },
@@ -936,5 +947,96 @@
     "pushFailedLead": "The push failed.",
     "cancelPush": "Cancel the push",
     "close": "Close"
+  },
+  "conflicts": {
+    "label": "Conflicts in {{path}}",
+    "revertOf": "undo {{short}}",
+    "rebaseNote": "In a rebase the sides are the other way round from a merge: on the left is “{{onto}}”, the new base with the commits already replayed; on the right, your commit from “{{branch}}” being replayed.",
+    "failed": "The action could not be completed.",
+    "loadFailed": "The file in conflict could not be read.",
+    "cancel": "Cancel",
+    "lineNo": "line {{line}}",
+    "side": {
+      "ours": {
+        "merge": "“{{name}}” (your branch)",
+        "rebase": "“{{name}}” (new base)",
+        "cherryPick": "“{{name}}” (your branch)",
+        "revert": "“{{name}}” (your branch)"
+      },
+      "theirs": {
+        "merge": "“{{name}}” (being merged)",
+        "rebase": "“{{name}}”: {{subject}} (your commit, being replayed)",
+        "cherryPick": "{{short}} {{subject}} (the commit being picked)",
+        "revert": "undo {{short}} {{subject}}"
+      }
+    },
+    "noBlocks": "No conflict blocks are left in this file: you can mark it resolved.",
+    "counter": "Block {{current}} of {{total}} · chosen: {{chosen}}",
+    "previous": "Previous block ({{shortcut}})",
+    "next": "Next block ({{shortcut}})",
+    "staleDraft": "The file changed outside GitCRAFT after you made your choices, so they can’t be applied to it. Nothing was written.",
+    "discardDraft": "Discard my choices",
+    "restart": "Start over…",
+    "save": "Save",
+    "saveAndMark": "Save and mark resolved",
+    "sameLines_one": "{{count}} unchanged line",
+    "sameLines_other": "{{count}} unchanged lines",
+    "blockLabel": "Block {{index}} of {{total}}",
+    "use": "Use “{{name}}”",
+    "bothFirst": "Both (“{{name}}” first)",
+    "edit": "Edit",
+    "editLabel": "Text of block {{index}}",
+    "applyEdit": "Use this text",
+    "noBase": "This block’s base version is unknown: the file was edited, or git merged it another way.",
+    "baseHint": "The common ancestor’s version, before either side changed it.",
+    "showBase": "Show base",
+    "hideBase": "Hide base",
+    "baseTitle": "Base (common ancestor)",
+    "undoChoice": "Clear choice",
+    "result": "Result",
+    "unresolvedBlock": "Block {{index}} unresolved: saved with its markers",
+    "deleteFile": "Delete the file…",
+    "whole": {
+      "deleted": "deleted",
+      "symlink": "symbolic link",
+      "submodule": "submodule",
+      "size": "{{size}} bytes",
+      "reason": {
+        "binary": "It is a binary file: it can’t be combined block by block. Choose which version stays.",
+        "notUtf8": "It is not UTF-8 text: editing it block by block could change its bytes. Choose which version stays, or resolve it in your editor.",
+        "symlink": "It is a symbolic link: choose where it points.",
+        "submodule": "It is a submodule: choose which commit stays.",
+        "tooLarge": "It is too large to show block by block (over 5 MB). Choose which version stays, or resolve it in your editor.",
+        "oneSideMissing": "One side deleted the file and the other changed it: keep it with the remaining version, or delete it.",
+        "bothDeleted": "Both sides deleted the file.",
+        "notInWorktree": "The file is not in your folder. Choose which version stays.",
+        "malformedMarkers": "The conflict markers are incomplete from line {{line}} on (edited halfway?). Finish in your editor, start this file over or choose a whole version."
+      }
+    },
+    "confirm": {
+      "restart": {
+        "title": "Start this file over?",
+        "body": "The conflict markers from when the operation stopped are put back in {{path}}. Whatever you resolved in this file, saved or not, is lost.",
+        "confirm": "Start over"
+      },
+      "delete": {
+        "title": "Delete the file?",
+        "body": "{{path}} is removed from your folder and the conflict is resolved that way. The other version stays in its branch’s history.",
+        "confirm": "Delete"
+      },
+      "markers": {
+        "title": "Conflict markers are left",
+        "body": "{{path}} still has these lines, which look like conflict markers. If the file contains them on purpose you can mark it anyway; if not, go back and resolve those blocks.",
+        "confirm": "Mark anyway"
+      }
+    },
+    "unsaved": {
+      "title": "There are unsaved choices",
+      "tab": "Files in conflict in this tab have choices you haven’t saved. Closing it loses them:",
+      "window": "Files in conflict have choices you haven’t saved. Closing the window loses them:",
+      "confirmTab": "Close the tab",
+      "confirmWindow": "Close the window",
+      "abort": "The unsaved choices in these files will be lost too:"
+    }
   }
 }

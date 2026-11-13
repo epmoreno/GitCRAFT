@@ -30,7 +30,12 @@ export type OpenFile =
       area: WorktreeArea;
       path: string;
       oldPath: string | null;
-    };
+    }
+  /** A file in conflict, shown in the conflict view (task 9). */
+  | { kind: "conflict"; path: string };
+
+/** The files whose diff `DiffView` shows. */
+export type DiffFile = Exclude<OpenFile, { kind: "conflict" }>;
 
 export type RepoGraph = {
   status: "loading" | "done" | "error";

@@ -215,9 +215,11 @@ describe("staging files", () => {
   it("does not offer staging for conflicts", () => {
     panel();
     const conflicts = screen.getByRole("region", { name: "Conflictos" });
-    // Only the button that folds the section.
+    // The button that folds the section and the one that opens the file in
+    // the conflict view: nothing stages it.
     expect(within(conflicts).getAllByRole("button")).toEqual([
       within(conflicts).getByRole("button", { name: /Conflictos/ }),
+      within(conflicts).getByRole("button", { name: "Resolver conflict.txt" }),
     ]);
   });
 

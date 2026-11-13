@@ -1,6 +1,16 @@
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ConflictEntry, StatusEntry, WorkingStatus } from "../../ipc";
+import {
+  commands,
+  type CommandError,
+  type ConflictEntry,
+  type ResolvedFile,
+  type StatusEntry,
+  type WorkingStatus,
+} from "../../ipc";
+import { useConflictStore } from "../conflicts/store";
+import { useGraphStore } from "../graph/store";
+import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { useRememberedScroll } from "../repo/viewState";
 import { changeCounts, useWorkdirStore } from "./store";
 import {
@@ -97,11 +107,12 @@ export function WorkingDirPanel({ repoId }: { repoId: number }) {
           >
             <ul className={styles.list}>
               {status.conflicted.map((c) => (
-                <ConflictRow key={c.path} entry={c} />
+                <ConflictRow key={c.path} repoId={repoId} entry={c} />
               ))}
             </ul>
           </Section>
         )}
+        <ResolvedSection repoId={repoId} status={status} />
         <Section
           id="unstaged"
           title={t("workdir.unstaged")}
@@ -347,20 +358,127 @@ function IconButton({
   );
 }
 
-function ConflictRow({ entry }: { entry: ConflictEntry }) {
+function ConflictRow({
+  repoId,
+  entry,
+}: {
+  repoId: number;
+  entry: ConflictEntry;
+}) {
   const { t } = useTranslation();
+  const open = useGraphStore((s) => s.openFileDiff);
+  const isOpen = useGraphStore((s) => {
+    const f = s.graphs[repoId]?.openFile;
+    return f?.kind === "conflict" && f.path === entry.path;
+  });
+  const unsaved = useConflictStore(
+    (s) => s.drafts[repoId]?.[entry.path] !== undefined,
+  );
   return (
-    <li className={styles.file}>
+    <li className={isOpen ? `${styles.file} ${styles.fileOpen}` : styles.file}>
       <span
         className={`${styles.letter} ${styles.conflict}`}
         aria-hidden="true"
       >
         !
       </span>
-      <PathLabel path={entry.path} />
+      <button
+        type="button"
+        className={styles.pathButton}
+        aria-label={t("workdir.openConflict", { path: entry.path })}
+        onClick={() => open(repoId, { kind: "conflict", path: entry.path })}
+      >
+        <PathLabel path={entry.path} />
+      </button>
+      {unsaved && (
+        <Tooltip label={t("workdir.unsavedChoices")}>
+          <span
+            className={styles.unsavedDot}
+            role="img"
+            aria-label={t("workdir.unsavedChoices")}
+          >
+            ●
+          </span>
+        </Tooltip>
+      )}
       <span className={styles.conflictKind}>
         {t(`workdir.conflict.${entry.kind}`)}
       </span>
     </li>
+  );
+}
+
+/** Files marked resolved during the operation in progress, which can be
+ * put back in conflict (see `ops::resolve::resolved_files`). */
+function ResolvedSection({
+  repoId,
+  status,
+}: {
+  repoId: number;
+  status: WorkingStatus;
+}) {
+  const { t } = useTranslation();
+  const refresh = useWorkdirStore((s) => s.refresh);
+  const [files, setFiles] = useState<ResolvedFile[]>([]);
+  const [asking, setAsking] = useState<ResolvedFile | null>(null);
+  const [error, setError] = useState<CommandError | null>(null);
+  const operation = status.inProgress;
+  // Re-read whenever the status changes.
+  const key = JSON.stringify([operation, status.conflicted, status.staged]);
+  useEffect(() => {
+    let stale = false;
+    if (!operation) return;
+    void commands.resolvedFiles(repoId).then((result) => {
+      if (!stale && result.status === "ok") setFiles(result.data);
+    });
+    return () => {
+      stale = true;
+    };
+  }, [repoId, operation, key]);
+
+  async function unmark(file: ResolvedFile) {
+    setAsking(null);
+    setError(null);
+    const result = await commands.unmarkResolved(repoId, file.path);
+    if (result.status === "error") setError(result.error);
+    await refresh(repoId);
+  }
+
+  // Nothing in progress: nothing can be put back in conflict.
+  const shown = operation ? files : [];
+  if (shown.length === 0 && !error) return null;
+  return (
+    <Section id="resolved" title={t("workdir.resolved")} count={shown.length}>
+      {error && <ErrorReport error={error} lead={t("conflicts.failed")} />}
+      <ul className={styles.list}>
+        {shown.map((file) => (
+          <li key={file.path} className={styles.file}>
+            <span className={styles.letter} aria-hidden="true">
+              ✓
+            </span>
+            <PathLabel path={file.path} />
+            <button
+              type="button"
+              className={styles.action}
+              onClick={() => setAsking(file)}
+            >
+              {t("workdir.unmark")}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {asking && (
+        <ConfirmDialog
+          title={t("workdir.unmarkTitle", { path: asking.path })}
+          confirmLabel={t("workdir.unmarkConfirm")}
+          cancelLabel={t("conflicts.cancel")}
+          onConfirm={() => void unmark(asking)}
+          onCancel={() => setAsking(null)}
+        >
+          <p>{t("workdir.unmarkBody")}</p>
+          {asking.changedSince && <p>{t("workdir.unmarkChanged")}</p>}
+        </ConfirmDialog>
+      )}
+    </Section>
   );
 }

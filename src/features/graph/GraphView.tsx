@@ -2,6 +2,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { RepoInfo } from "../../ipc";
+import { ConflictView } from "../conflicts/ConflictView";
 import { DiffView } from "../diff/DiffView";
 import { useRememberedScroll } from "../repo/viewState";
 import { UncommittedRow } from "../workdir/UncommittedRow";
@@ -228,7 +229,15 @@ export function GraphView({
             : t("graph.count", { count: lines.length })}
         </span>
       </footer>
-      {graph?.openFile && <DiffView repoId={repoId} file={graph.openFile} />}
+      {graph?.openFile?.kind === "conflict" ? (
+        <ConflictView
+          key={graph.openFile.path}
+          repoId={repoId}
+          path={graph.openFile.path}
+        />
+      ) : (
+        graph?.openFile && <DiffView repoId={repoId} file={graph.openFile} />
+      )}
     </div>
   );
 }

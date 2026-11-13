@@ -119,6 +119,8 @@ describe("shortcut registry", () => {
       expect(label("commit")).toEqual(["Ctrl+<Enter>"]);
       expect(label("newTab")).toEqual(["Ctrl+T"]);
       expect(label("changesNext")).toEqual(["↓"]);
+      expect(label("conflictNext")).toEqual(["Alt+↓"]);
+      expect(label("conflictPrevious")).toEqual(["Alt+↑"]);
       expect(shortcutLabel("tabByNumber", named, "3")).toBe("Ctrl+3");
     });
 
@@ -173,6 +175,18 @@ describe("shortcut registry", () => {
     expect(
       within(section).getByRole("row", { name: /Preparar o quitar/ }),
     ).toHaveTextContent("Espacio");
+    expect(
+      within(section).getByRole("row", {
+        name: /Ir al siguiente bloque en conflicto/,
+      }),
+    ).toHaveTextContent("⌥↓");
+    // ⌥↓ is not plain ↓: the list's own arrows keep working.
+    expect(isShortcut("conflictNext", key("ArrowDown", { altKey: true }))).toBe(
+      true,
+    );
+    expect(isShortcut("changesNext", key("ArrowDown", { altKey: true }))).toBe(
+      false,
+    );
   });
 });
 

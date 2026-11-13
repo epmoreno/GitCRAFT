@@ -1,3 +1,4 @@
+import { unsavedPaths, useConflictStore } from "../conflicts/store";
 import { create } from "zustand";
 import { useGraphStore } from "../graph/store";
 import { useRemoteStore } from "../remote/store";
@@ -60,7 +61,9 @@ type RepoState = {
   activate: (id: number) => void;
   /** Shows a repository opened elsewhere (e.g. just created) in a tab. */
   adopt: (opened: OpenedRepository) => Promise<void>;
-  closeTab: (id: number) => Promise<void>;
+  /** Closes the tab; with unsaved conflict choices, asks first unless
+   * `force`. */
+  closeTab: (id: number, force?: boolean) => Promise<void>;
   dismissError: () => void;
 };
 
@@ -198,7 +201,15 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
           : s.activeId,
     })),
 
-  closeTab: async (id) => {
+  closeTab: async (id, force = false) => {
+    // Unsaved conflict choices are lost with the tab: ask first.
+    const unsaved = unsavedPaths(id);
+    if (!force && unsaved.length > 0) {
+      useConflictStore
+        .getState()
+        .setClosing({ kind: "tab", repoId: id, paths: unsaved });
+      return;
+    }
     const { tabs, activeId } = get();
     const index = tabs.findIndex((t) => t.id === id);
     if (index === -1) return;
@@ -214,6 +225,7 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
     useStashStore.getState().forget(id);
     useRemoteStore.getState().forget(id);
     forgetView(id);
+    useConflictStore.getState().clearRepo(id);
     await commands.closeRepository(id);
   },
 

@@ -20,12 +20,14 @@ type Chord = {
   meta?: boolean;
   ctrl?: boolean;
   shift?: boolean;
+  /** ⌥ on macOS, Alt elsewhere. */
+  alt?: boolean;
   /** Only on this system. */
   os?: Platform;
 };
 
 export type ShortcutGroup =
-  "app" | "tabs" | "changes" | "commit" | "diff" | "general";
+  "app" | "tabs" | "changes" | "commit" | "diff" | "conflicts" | "general";
 
 export type Shortcut = {
   group: ShortcutGroup;
@@ -85,6 +87,14 @@ export const SHORTCUTS = {
   commitBoxSmallest: { group: "commit", chords: [{ key: "End" }] },
   commitBoxReset: { group: "commit", chords: [{ key: "Enter" }] },
   diffRange: { group: "diff", chords: [{ key: "click", shift: true }] },
+  conflictPrevious: {
+    group: "conflicts",
+    chords: [{ key: "ArrowUp", alt: true }],
+  },
+  conflictNext: {
+    group: "conflicts",
+    chords: [{ key: "ArrowDown", alt: true }],
+  },
   escape: { group: "general", chords: [{ key: "Escape" }] },
   menuNext: { group: "general", chords: [{ key: "ArrowDown" }] },
   menuPrevious: { group: "general", chords: [{ key: "ArrowUp" }] },
@@ -109,6 +119,7 @@ export function chordsOf(id: ShortcutId): Chord[] {
       meta: chord.meta || (chord.primary && os === "mac"),
       ctrl: chord.ctrl || (chord.primary && os === "other"),
       shift: chord.shift,
+      alt: chord.alt,
     }));
 }
 
@@ -122,7 +133,7 @@ function chordMatches(chord: Chord, event: KeyLike): boolean {
     !!chord.meta === event.metaKey &&
     !!chord.ctrl === event.ctrlKey &&
     !!chord.shift === event.shiftKey &&
-    !event.altKey
+    !!chord.alt === event.altKey
   );
 }
 
@@ -194,7 +205,7 @@ export function chordLabel(chord: Chord, named: (key: string) => string) {
       (NAMED_KEYS.has(chord.key)
         ? named(chord.key)
         : (MAC_SYMBOLS[chord.key] ?? chord.key.toUpperCase()));
-    return `${chord.ctrl ? "⌃" : ""}${chord.shift ? "⇧" : ""}${chord.meta ? "⌘" : ""}${key}`;
+    return `${chord.ctrl ? "⌃" : ""}${chord.alt ? "⌥" : ""}${chord.shift ? "⇧" : ""}${chord.meta ? "⌘" : ""}${key}`;
   }
   const key =
     digits ??
@@ -203,6 +214,7 @@ export function chordLabel(chord: Chord, named: (key: string) => string) {
       : (ARROWS[chord.key] ?? chord.key.toUpperCase()));
   return [
     chord.ctrl && "Ctrl",
+    chord.alt && "Alt",
     chord.shift && named("Shift"),
     chord.meta && "Meta",
     key,

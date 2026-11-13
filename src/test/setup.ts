@@ -12,6 +12,10 @@ import {
   useOperationsStore,
 } from "../features/operations/store";
 import { initialRemoteState, useRemoteStore } from "../features/remote/store";
+import {
+  initialConflictState,
+  useConflictStore,
+} from "../features/conflicts/store";
 import { initialStashState, useStashStore } from "../features/stash/store";
 import { initialRepoState, useRepoStore } from "../features/repo/store";
 import { useViewStore } from "../features/repo/viewState";
@@ -30,6 +34,12 @@ import { setPlatformForTests } from "../app/platform";
 // The native menu bar does not exist in tests.
 vi.mock("../app/menu", () => ({
   installAppMenu: vi.fn(() => Promise.resolve()),
+}));
+
+// There is no real window in tests.
+vi.mock("../app/windowClose", () => ({
+  guardWindowClose: vi.fn(() => Promise.resolve(() => {})),
+  closeWindow: vi.fn(() => Promise.resolve()),
 }));
 
 // No test talks to a real Tauri backend.
@@ -100,6 +110,15 @@ vi.mock("../ipc", () => ({
     publishInfo: vi.fn(),
     validRepoName: vi.fn(),
     publishRepository: vi.fn(),
+    conflictFile: vi.fn(),
+    conflictSides: vi.fn(),
+    resolvedFiles: vi.fn(),
+    writeResolution: vi.fn(),
+    chooseVersion: vi.fn(),
+    resolveByDeleting: vi.fn(),
+    markResolved: vi.fn(),
+    restartConflictFile: vi.fn(),
+    unmarkResolved: vi.fn(),
   },
   setUiZoom: vi.fn(),
   ghLogin: vi.fn(),
@@ -137,6 +156,7 @@ beforeEach(() => {
   useBranchStore.setState(initialBranchState);
   useStashStore.setState(initialStashState);
   useRemoteStore.setState(initialRemoteState);
+  useConflictStore.setState(initialConflictState);
   useCreateStore.setState(initialCreateState);
   useOperationsStore.setState(initialOperationsState);
   useGraphStore.setState({ graphs: {} });

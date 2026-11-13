@@ -1498,7 +1498,7 @@ principio y toda operación destructiva pasa por confirmación.
         Tests: 11 de integración, entre ellos abortar un merge y un rebase
         a medias, comparando HEAD, todas las refs, el índice y cada archivo
         del working tree (también uno sin seguimiento).
-      - [ ] **9.5 Vista de conflictos (UI).** Se abre al pulsar un archivo de
+      - [x] **9.5 Vista de conflictos (UI).** Se abre al pulsar un archivo de
         la sección «Conflictos» del panel de cambios.
         *Diseño (aprobado):* arriba, dos paneles lado a lado (izquierda, la
         versión de tu rama; derecha, la que llega), con sus nombres de 9.2;
@@ -1532,6 +1532,43 @@ principio y toda operación destructiva pasa por confirmación.
         pestaña y la confirmación al cerrar, abortar o continuar con ellas,
         la confirmación con las líneas que conservan marcadores, el aviso de
         cambio externo, la navegación por teclado y los textos en es/en.
+        *Cambios del usuario al diseño:* los botones llevan el nombre de
+        cada lado («Usar «main»», «Ambas («feature» primero)»), recortado con
+        «…» si pasa de 24 caracteres y entero en el tooltip y para lectores
+        de pantalla; en un rebase, la línea que explica que los lados van al
+        revés se ve siempre; atajos ⌥↑/⌥↓ en macOS y Alt+↑/Alt+↓ en Windows y
+        Linux, en el registro único y en Ajustes → Atajos (grupo «Vista de
+        conflictos»).
+        *Hecho:* `src/features/conflicts/`.
+        - **Vista y lógica:** `ConflictView` se abre en la zona central,
+          como el diff (`OpenFile` de tipo `conflict`). `result.ts` tiene la
+          lógica pura: el resultado conserva los finales de línea del
+          archivo (también lo escrito en «Editar»), nunca pega dos líneas al
+          poner «Ambas», y los bloques sin elegir se guardan con sus marcas.
+        - **Elecciones sin guardar:** el store `conflicts/store.ts` las
+          guarda en memoria, por repo y archivo. Se olvidan solas cuando la
+          operación termina, y en la lista de conflictos el archivo lleva un
+          punto. Cerrar la pestaña o la ventana con elecciones pendientes
+          pide confirmación con la lista de archivos (`UnsavedDialog`;
+          ventana con `onCloseRequested`, sin permisos nuevos), y la
+          confirmación de «Abortar…» también los lista.
+        - **Archivos que no admiten bloques:** binario, enlace, submódulo,
+          eliminado en un lado… Se muestran los dos lados con «Usar «x»»
+          (elegir la versión y marcar como resuelto) o «Eliminar el
+          archivo…», con confirmación; con marcadores rotos, también
+          «Volver a empezar…».
+        - **Sección «Resueltos»:** en el panel de cambios, con «Volver a
+          marcar como en conflicto…» y su confirmación (avisa si se editó
+          después de marcarlo).
+        - **Comandos de Tauri nuevos:** `conflict_file`, `conflict_sides`,
+          `resolved_files`, `write_resolution`, `choose_version`,
+          `resolve_by_deleting`, `mark_resolved`, `restart_conflict_file` y
+          `unmark_resolved`.
+        - *Limitación:* en macOS, ⌘Q («Salir» del menú, que no se cambia)
+          cierra la app sin pasar por el aviso. Cerrar la ventana con su
+          botón sí avisa.
+        Tests: 9 de `result.ts`, 17 de la vista y del panel, y los de
+        atajos (⌥↓ / Alt+↓, y que ⌥↓ no es ↓).
       - [ ] **9.6 Continuar desde la app (UI).** El aviso de operación a
         medias pasa a tener «Continuar» (activo cuando no quedan conflictos;
         si quedan, dice cuántos), «Saltar este commit» en rebase y

@@ -23,6 +23,13 @@ import {
   RestoreFailedBanner,
 } from "../features/repo/OpenErrorBanner";
 import { installAppMenu } from "./menu";
+import { guardWindowClose } from "./windowClose";
+import { UnsavedDialog } from "../features/conflicts/UnsavedDialog";
+import {
+  reposWithDrafts,
+  unsavedPaths,
+  useConflictStore,
+} from "../features/conflicts/store";
 import { reportIfSmokeRun } from "./smoke";
 import { isShortcut } from "./shortcuts";
 import { StartPage } from "../features/repo/StartPage";
@@ -51,6 +58,34 @@ export function App() {
     void reportIfSmokeRun();
   }, [restoreSession, loadRecents]);
 
+  // Closing the window with unsaved conflict choices asks first.
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    let gone = false;
+    void guardWindowClose(() => {
+      const repos = reposWithDrafts();
+      if (repos.length === 0) return false;
+      const names = new Map(
+        useRepoStore.getState().tabs.map((tab) => [tab.id, tab.info.name]),
+      );
+      const paths = repos.flatMap((id) =>
+        unsavedPaths(id).map((path) => `${names.get(id) ?? id}: ${path}`),
+      );
+      useConflictStore.getState().setClosing({ kind: "window", paths });
+      return true;
+    })
+      .then((stop) => {
+        if (gone) stop();
+        else unlisten = stop;
+      })
+      .catch((error: unknown) => {
+        console.warn("could not guard the window close", error);
+      });
+    return () => {
+      gone = true;
+      unlisten?.();
+    };
+  }, []);
   // ⌘T / Ctrl+T opens a new tab and ⌘W / Ctrl+W closes the active one
   // (menu bar); ⌘1…⌘9 and ⌃Tab / ⌃⇧Tab switch tabs. Never while a dialog
   // waits for an answer.
@@ -149,6 +184,7 @@ export function App() {
         <CreateDialogs />
         <SettingsDialog />
         <PublishDialog />
+        <UnsavedDialog />
       </div>
       <OperationsPanel />
     </div>

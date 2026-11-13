@@ -13,10 +13,13 @@ use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::config::{
     self, ConfigChange, GlobalDefaults, Identity, IdentityInfo, PullStrategy,
 };
+use gitcraft_core::ops::conflict::ConflictFile;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
+use gitcraft_core::ops::in_progress::ConflictSides;
 use gitcraft_core::ops::init::InitCheck;
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::ops::remote::{ForcePushPreview, PullMode, PullOutcome, PushOutcome};
+use gitcraft_core::ops::resolve::{MarkOutcome, ResolvedFile, Side};
 use gitcraft_core::ops::stash::{ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
 use gitcraft_core::parse::commit::CommitDetails;
@@ -819,4 +822,106 @@ pub async fn clear_command_history(
 ) -> Result<(), IpcError> {
     history.clear();
     Ok(())
+}
+
+// --- Conflicts (task 9) ---------------------------------------------------
+
+/// One file in conflict: its versions and its blocks.
+#[tauri::command]
+#[specta::specta]
+pub async fn conflict_file(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+) -> Result<ConflictFile, IpcError> {
+    state.conflict_file(id, &path).await
+}
+
+/// What each side of the operation in progress is.
+#[tauri::command]
+#[specta::specta]
+pub async fn conflict_sides(
+    state: State<'_, AppState>,
+    id: RepoId,
+) -> Result<Option<ConflictSides>, IpcError> {
+    state.conflict_sides(id).await
+}
+
+/// Files marked resolved that can be put back in conflict.
+#[tauri::command]
+#[specta::specta]
+pub async fn resolved_files(
+    state: State<'_, AppState>,
+    id: RepoId,
+) -> Result<Vec<ResolvedFile>, IpcError> {
+    state.resolved_files(id).await
+}
+
+/// Writes the result of a file in conflict if it is still as it was read
+/// (`expected` fingerprint). Returns the new fingerprint.
+#[tauri::command]
+#[specta::specta]
+pub async fn write_resolution(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+    contents: String,
+    expected: String,
+) -> Result<String, IpcError> {
+    state.write_resolution(id, path, contents, expected).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn choose_version(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+    side: Side,
+    expected: Option<String>,
+) -> Result<Option<String>, IpcError> {
+    state.choose_version(id, path, side, expected).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn resolve_by_deleting(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+    expected: Option<String>,
+) -> Result<(), IpcError> {
+    state.resolve_by_deleting(id, path, expected).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn mark_resolved(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+    force: bool,
+) -> Result<MarkOutcome, IpcError> {
+    state.mark_resolved(id, path, force).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn restart_conflict_file(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+    expected: Option<String>,
+) -> Result<Option<String>, IpcError> {
+    state.restart_conflict_file(id, path, expected).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn unmark_resolved(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+) -> Result<(), IpcError> {
+    state.unmark_resolved(id, path).await
 }

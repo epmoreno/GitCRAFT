@@ -1,3 +1,4 @@
+import { useConflictStore } from "../conflicts/store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
@@ -121,12 +122,16 @@ function PullConflictDialog() {
 }
 
 /** Aborting the merge/rebase a pull left waiting. */
-function AbortDialog() {
+export function AbortDialog() {
   const { t } = useTranslation();
   const dialog = useRemoteStore((s) => s.dialog);
   const close = useRemoteStore((s) => s.closeDialog);
   const confirm = useRemoteStore((s) => s.confirmAbort);
+  const drafts = useConflictStore((s) =>
+    dialog?.kind === "abort" ? s.drafts[dialog.repoId] : undefined,
+  );
   if (dialog?.kind !== "abort") return null;
+  const unsaved = Object.keys(drafts ?? {}).sort();
   return (
     <ConfirmDialog
       title={t(`pull.abortTitle.${dialog.operation}`)}
@@ -134,9 +139,24 @@ function AbortDialog() {
       cancelLabel={t("pull.cancel")}
       danger
       onCancel={close}
-      onConfirm={() => void confirm()}
+      onConfirm={() => {
+        useConflictStore.getState().clearRepo(dialog.repoId);
+        void confirm();
+      }}
     >
       <p>{t("pull.abortExplained")}</p>
+      {unsaved.length > 0 && (
+        <>
+          <p>{t("conflicts.unsaved.abort")}</p>
+          <ul>
+            {unsaved.map((path) => (
+              <li key={path}>
+                <code>{path}</code>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </ConfirmDialog>
   );
 }

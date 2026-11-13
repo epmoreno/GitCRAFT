@@ -7,7 +7,7 @@ import {
   type FileDiff,
   type HunkSelection,
 } from "../../ipc";
-import { useGraphStore, type OpenFile } from "../graph/store";
+import { useGraphStore, type DiffFile } from "../graph/store";
 import { useRememberedScroll } from "../repo/viewState";
 import { useWorkdirStore } from "../workdir/store";
 import styles from "./diff.module.css";
@@ -22,7 +22,7 @@ type Selection = Map<number, Set<number>>;
 
 const SIGN = { context: " ", added: "+", removed: "−" } as const;
 
-function load(repoId: number, file: OpenFile, full: boolean) {
+function load(repoId: number, file: DiffFile, full: boolean) {
   return file.kind === "commit"
     ? commands.commitFileDiff(repoId, file.oid, file.path, file.oldPath, full)
     : commands.worktreeFileDiff(
@@ -37,7 +37,7 @@ function load(repoId: number, file: OpenFile, full: boolean) {
 /** The diff of one file — of a commit, or an uncommitted change — shown
  * over the history. Uncommitted changes can be staged/unstaged by hunk or
  * by line from here. */
-export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
+export function DiffView({ repoId, file }: { repoId: number; file: DiffFile }) {
   const { t } = useTranslation();
   const close = useGraphStore((s) => s.closeFile);
   // Uncommitted diffs follow the status: re-read when it changes.
@@ -52,7 +52,7 @@ export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
 
   useEffect(() => {
     let stale = false;
-    const { file, full } = JSON.parse(key) as { file: OpenFile; full: boolean };
+    const { file, full } = JSON.parse(key) as { file: DiffFile; full: boolean };
     void load(repoId, file, full).then((result) => {
       if (stale) return;
       setLoaded(
@@ -77,7 +77,7 @@ export function DiffView({ repoId, file }: { repoId: number; file: OpenFile }) {
   // While a refreshed diff of the same file loads, keep showing the last one.
   const sameFile =
     loaded !== null &&
-    JSON.stringify((JSON.parse(loaded.key) as { file: OpenFile }).file) ===
+    JSON.stringify((JSON.parse(loaded.key) as { file: DiffFile }).file) ===
       JSON.stringify(file);
   const current = loaded?.key === key || sameFile ? loaded : null;
 
@@ -141,7 +141,7 @@ function DiffBody({
   onShowAll,
 }: {
   repoId: number;
-  file: OpenFile;
+  file: DiffFile;
   diff: FileDiff;
   onShowAll: () => void;
 }) {

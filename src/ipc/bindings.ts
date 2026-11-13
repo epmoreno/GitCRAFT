@@ -116,6 +116,22 @@ export const commands = {
 	pullBranch: (id: number, allowConflicts: boolean, saveLocal: boolean, onProgress: Channel<string>) => typedError<PullOutcome, IpcError_Serialize>(__TAURI_INVOKE("pull_branch", { id, allowConflicts, saveLocal, onProgress })),
 	/**  Aborts the merge/rebase/cherry-pick/revert waiting on conflicts. */
 	abortInProgress: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("abort_in_progress", { id })),
+	/**  One file in conflict: its versions and its blocks. */
+	conflictFile: (id: number, path: string) => typedError<ConflictFile_Serialize, IpcError_Serialize>(__TAURI_INVOKE("conflict_file", { id, path })),
+	/**  What each side of the operation in progress is. */
+	conflictSides: (id: number) => typedError<ConflictSides_Serialize | null, IpcError_Serialize>(__TAURI_INVOKE("conflict_sides", { id })),
+	/**  Files marked resolved that can be put back in conflict. */
+	resolvedFiles: (id: number) => typedError<ResolvedFile[], IpcError_Serialize>(__TAURI_INVOKE("resolved_files", { id })),
+	/**
+	 *  Writes the result of a file in conflict if it is still as it was read
+	 *  (`expected` fingerprint). Returns the new fingerprint.
+	 */
+	writeResolution: (id: number, path: string, contents: string, expected: string) => typedError<string, IpcError_Serialize>(__TAURI_INVOKE("write_resolution", { id, path, contents, expected })),
+	chooseVersion: (id: number, path: string, side: Side, expected: string | null) => typedError<string | null, IpcError_Serialize>(__TAURI_INVOKE("choose_version", { id, path, side, expected })),
+	resolveByDeleting: (id: number, path: string, expected: string | null) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("resolve_by_deleting", { id, path, expected })),
+	markResolved: (id: number, path: string, force: boolean) => typedError<MarkOutcome, IpcError_Serialize>(__TAURI_INVOKE("mark_resolved", { id, path, force })),
+	restartConflictFile: (id: number, path: string, expected: string | null) => typedError<string | null, IpcError_Serialize>(__TAURI_INVOKE("restart_conflict_file", { id, path, expected })),
+	unmarkResolved: (id: number, path: string) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("unmark_resolved", { id, path })),
 	/**
 	 *  Pushes the current branch to its upstream, or publishes it to
 	 *  `publish_to` creating the upstream. `force_lease`: force only if the
@@ -431,6 +447,12 @@ export type CommitDetails = {
 	body: string,
 };
 
+export type CommitRef = {
+	oid: string,
+	short: string,
+	subject: string,
+};
+
 /**  One value to write (`Some`) or remove (`None`). */
 export type ConfigChange = ConfigChange_Serialize | ConfigChange_Deserialize;
 
@@ -446,13 +468,165 @@ export type ConfigChange_Serialize = {
 	value: string | null,
 };
 
+/**  One conflicting block. Texts include their line endings. */
+export type ConflictBlock = ConflictBlock_Serialize | ConflictBlock_Deserialize;
+
+/**  One conflicting block. Texts include their line endings. */
+export type ConflictBlock_Deserialize = {
+	ours: string,
+	/**
+	 *  The common ancestor's version of the block. Comes from the markers
+	 *  (`base_marker` is then set) or is computed separately (see
+	 *  `ops::conflict`), in which case it is not part of the file.
+	 */
+	base?: string | null,
+	theirs: string,
+	/**
+	 *  Raw marker lines, with their line endings, so the file can be
+	 *  rebuilt byte for byte.
+	 */
+	oursMarker: string,
+	baseMarker?: string | null,
+	separator: string,
+	theirsMarker: string,
+};
+
+/**  One conflicting block. Texts include their line endings. */
+export type ConflictBlock_Serialize = {
+	ours: string,
+	/**
+	 *  The common ancestor's version of the block. Comes from the markers
+	 *  (`base_marker` is then set) or is computed separately (see
+	 *  `ops::conflict`), in which case it is not part of the file.
+	 */
+	base: string | null,
+	theirs: string,
+	/**
+	 *  Raw marker lines, with their line endings, so the file can be
+	 *  rebuilt byte for byte.
+	 */
+	oursMarker: string,
+	baseMarker: string | null,
+	separator: string,
+	theirsMarker: string,
+};
+
+export type ConflictContent = ConflictContent_Serialize | ConflictContent_Deserialize;
+
+export type ConflictContent_Deserialize = 
+/**
+ *  The working tree file, split into common text and conflict blocks.
+ *  Blocks whose base could not be known have `base: None`.
+ */
+{ type: "blocks"; segments: Segment_Deserialize[]; markerSize: number } | { type: "wholeFile"; reason: WholeFileReason };
+
+export type ConflictContent_Serialize = 
+/**
+ *  The working tree file, split into common text and conflict blocks.
+ *  Blocks whose base could not be known have `base: None`.
+ */
+{ type: "blocks"; segments: Segment_Serialize[]; markerSize: number } | { type: "wholeFile"; reason: WholeFileReason };
+
 export type ConflictEntry = {
 	path: string,
 	kind: ConflictKind,
 };
 
+export type ConflictFile = ConflictFile_Serialize | ConflictFile_Deserialize;
+
+export type ConflictFile_Deserialize = {
+	path: string,
+	kind: ConflictKind,
+	/**  The common ancestor's version (`None`: both sides added the file). */
+	base?: ConflictVersion_Deserialize | null,
+	ours?: ConflictVersion_Deserialize | null,
+	theirs?: ConflictVersion_Deserialize | null,
+	/**
+	 *  Identifies the working tree file as read (`None`: no regular file),
+	 *  so a later write only happens if it has not changed since.
+	 */
+	fingerprint?: string | null,
+	content: ConflictContent_Deserialize,
+};
+
+export type ConflictFile_Serialize = {
+	path: string,
+	kind: ConflictKind,
+	/**  The common ancestor's version (`None`: both sides added the file). */
+	base: ConflictVersion_Serialize | null,
+	ours: ConflictVersion_Serialize | null,
+	theirs: ConflictVersion_Serialize | null,
+	/**
+	 *  Identifies the working tree file as read (`None`: no regular file),
+	 *  so a later write only happens if it has not changed since.
+	 */
+	fingerprint: string | null,
+	content: ConflictContent_Serialize,
+};
+
 /**  How a path conflicts during a merge, rebase, cherry-pick… */
 export type ConflictKind = "bothModified" | "bothAdded" | "bothDeleted" | "addedByUs" | "addedByThem" | "deletedByUs" | "deletedByThem";
+
+export type ConflictSides = ConflictSides_Serialize | ConflictSides_Deserialize;
+
+export type ConflictSides_Deserialize = 
+/**  Left: the current branch. Right: what is being merged into it. */
+{ type: "merge"; branch?: string | null; head: CommitRef; merging: NamedCommit } | 
+/**
+ *  Left: the new base with the commits already replayed (HEAD is
+ *  detached during a rebase). Right: your commit being replayed.
+ */
+{ type: "rebase"; 
+/**  The branch being rebased (`None` if it was a detached HEAD). */
+branch?: string | null; onto: NamedCommit; head: CommitRef; 
+/**
+ *  `None` when git stopped without a commit being replayed (for
+ *  example after an `exec` step).
+ */
+applying?: CommitRef | null; progress?: RebaseProgress | null } | 
+/**  Left: the current branch. Right: the commit being copied onto it. */
+{ type: "cherryPick"; branch?: string | null; head: CommitRef; picking: CommitRef } | 
+/**  Left: the current branch. Right: the changes that undo `reverting`. */
+{ type: "revert"; branch?: string | null; head: CommitRef; reverting: CommitRef };
+
+export type ConflictSides_Serialize = 
+/**  Left: the current branch. Right: what is being merged into it. */
+{ type: "merge"; branch: string | null; head: CommitRef; merging: NamedCommit } | 
+/**
+ *  Left: the new base with the commits already replayed (HEAD is
+ *  detached during a rebase). Right: your commit being replayed.
+ */
+{ type: "rebase"; 
+/**  The branch being rebased (`None` if it was a detached HEAD). */
+branch: string | null; onto: NamedCommit; head: CommitRef; 
+/**
+ *  `None` when git stopped without a commit being replayed (for
+ *  example after an `exec` step).
+ */
+applying: CommitRef | null; progress: RebaseProgress | null } | 
+/**  Left: the current branch. Right: the commit being copied onto it. */
+{ type: "cherryPick"; branch: string | null; head: CommitRef; picking: CommitRef } | 
+/**  Left: the current branch. Right: the changes that undo `reverting`. */
+{ type: "revert"; branch: string | null; head: CommitRef; reverting: CommitRef };
+
+/**  One version of the file in the index (stage 1, 2 or 3). */
+export type ConflictVersion = ConflictVersion_Serialize | ConflictVersion_Deserialize;
+
+/**  One version of the file in the index (stage 1, 2 or 3). */
+export type ConflictVersion_Deserialize = {
+	oid: string,
+	kind: EntryKind,
+	/**  `None` for a submodule (its commit is not an object of this repo). */
+	size?: number | null,
+};
+
+/**  One version of the file in the index (stage 1, 2 or 3). */
+export type ConflictVersion_Serialize = {
+	oid: string,
+	kind: EntryKind,
+	/**  `None` for a submodule (its commit is not an object of this repo). */
+	size: number | null,
+};
 
 /**  Whether a clone could go to a destination, checked as it is typed. */
 export type Destination = 
@@ -586,6 +760,8 @@ export type EffectiveValue = {
 	/**  The file it was read from (`file:<path>`) as git reports it. */
 	origin: string,
 };
+
+export type EntryKind = "file" | "executable" | "symlink" | "submodule";
 
 /**
  *  What went wrong, in terms the UI can explain. Each kind has a translated
@@ -1118,6 +1294,27 @@ export type LoginEvent =
 /**  Anything else gh said, as is (shown when no code could be read). */
 { type: "line"; text: string };
 
+export type MarkOutcome = { type: "resolved" } | 
+/**  Nothing was done: the file still has these marker lines. */
+{ type: "markersLeft"; lines: MarkerLine[] };
+
+/**  A line that still looks like a conflict marker. */
+export type MarkerLine = {
+	/**  1-based. */
+	line: number,
+	/**  Without its line ending. */
+	text: string,
+};
+
+/**
+ *  A commit and the branches (local first, then remote-tracking) that point
+ *  at it, if any.
+ */
+export type NamedCommit = {
+	commit: CommitRef,
+	branches: string[],
+};
+
 export type OpenedRepository = {
 	id: number,
 	info: RepoInfo,
@@ -1279,6 +1476,12 @@ export type PushReject =
 /**  Refused by the remote itself (hooks, protected branch…). */
 "remote" | "other";
 
+/**  Position in a rebase: replaying commit `current` of `total` (1-based). */
+export type RebaseProgress = {
+	current: number,
+	total: number,
+};
+
 export type RecentRepository = {
 	path: string,
 	name: string,
@@ -1394,6 +1597,20 @@ export type RepoRefs_Serialize = {
 	remotes: string[],
 };
 
+/**
+ *  A file marked resolved during the current operation that can be put
+ *  back in conflict.
+ */
+export type ResolvedFile = {
+	path: string,
+	/**
+	 *  The file was edited after being marked resolved: putting it back in
+	 *  conflict forgets the version that was marked (the file itself stays
+	 *  as it is).
+	 */
+	changedSince: boolean,
+};
+
 /**  The previous session, reopened. */
 export type RestoredSession = RestoredSession_Serialize | RestoredSession_Deserialize;
 
@@ -1415,8 +1632,24 @@ export type RestoredSession_Serialize = {
 	failed: FailedRestore_Serialize[],
 };
 
+export type Segment = Segment_Serialize | Segment_Deserialize;
+
+export type Segment_Deserialize = 
+/**  Text outside any conflict block. */
+{ type: "common"; text: string } | { type: "conflict"; block: ConflictBlock_Deserialize };
+
+export type Segment_Serialize = 
+/**  Text outside any conflict block. */
+{ type: "common"; text: string } | { type: "conflict"; block: ConflictBlock_Serialize };
+
 /**  What to do with a selection of a file's changes. */
 export type SelectionAction = "stage" | "unstage";
+
+/**
+ *  One of the two sides of a conflict, as git's index calls them (stage 2
+ *  and 3). The UI names them with `ops::in_progress::ConflictSides`.
+ */
+export type Side = "ours" | "theirs";
 
 export type Signature = {
 	name: string,
@@ -1496,6 +1729,23 @@ export type StatusEntry_Serialize = {
 
 /**  Text size levels; the whole UI scales with it. */
 export type TextSize = "small" | "normal" | "large" | "larger";
+
+/**  Why a file can only be resolved by keeping one version whole. */
+export type WholeFileReason = 
+/**  Binary content, or the `merge` attribute says not to merge text. */
+{ type: "binary" } | 
+/**  Not valid UTF-8: editing it as text could change its bytes. */
+{ type: "notUtf8" } | { type: "symlink" } | { type: "submodule" } | 
+/**  Over [`MAX_BLOCK_FILE_BYTES`]. */
+{ type: "tooLarge" } | 
+/**  One side deleted (or renamed away) the file. */
+{ type: "oneSideMissing" } | 
+/**  Both sides deleted it. */
+{ type: "bothDeleted" } | 
+/**  There is no regular file at the path in the working tree. */
+{ type: "notInWorktree" } | 
+/**  The markers do not form complete blocks (1-based line). */
+{ type: "malformedMarkers"; line: number };
 
 export type WorkingStatus = WorkingStatus_Serialize | WorkingStatus_Deserialize;
 

@@ -6,7 +6,7 @@ import type { SortOrder } from "./fileTree";
  * How the uncommitted-changes panel is laid out. Remembered between
  * sessions in the webview's localStorage: losing it only resets the layout.
  */
-export type WorkdirSection = "conflicts" | "unstaged" | "staged";
+export type WorkdirSection = "conflicts" | "resolved" | "unstaged" | "staged";
 
 type WorkdirViewPrefs = {
   /** Height of the commit box in px; `null` = its natural height. */

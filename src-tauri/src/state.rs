@@ -16,10 +16,12 @@ use gitcraft_core::ops::commit_write::{AmendInfo, amend_info, compose_message, c
 use gitcraft_core::ops::config::{
     self, ConfigChange, ConfigTarget, GlobalDefaults, Identity, IdentityInfo, PullStrategy,
 };
+use gitcraft_core::ops::conflict::{self, ConflictFile};
 use gitcraft_core::ops::discard::{
     DiscardRecord, DiscardTarget, DiscardedFile, SystemTrash, Trash, discard, preview_discard,
     undo_discard,
 };
+use gitcraft_core::ops::in_progress::{self, ConflictSides};
 use gitcraft_core::ops::init::{self, InitCheck};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
@@ -28,6 +30,7 @@ use gitcraft_core::ops::publish::{self, PublishPreview, PublishRequest, Publishe
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::remote::{self, ForcePushPreview, PullMode, PullOutcome, PushOutcome};
 use gitcraft_core::ops::repo::{self, RepoInfo};
+use gitcraft_core::ops::resolve::{self, MarkOutcome, ResolvedFile, Side};
 use gitcraft_core::ops::stage;
 use gitcraft_core::ops::stash::{self, ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::status::working_status;
@@ -1416,6 +1419,109 @@ fn unix_now() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| d.as_secs())
+}
+
+/// Resolving conflicts (task 9): reads go straight to git; writes take the
+/// session's write turn like every other change.
+impl AppState {
+    pub async fn conflict_file(&self, id: RepoId, path: &str) -> Result<ConflictFile, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(conflict::conflict_file(git, &repo, path, &CancellationToken::new()).await?)
+    }
+
+    pub async fn conflict_sides(&self, id: RepoId) -> Result<Option<ConflictSides>, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(in_progress::conflict_sides(git, &repo, &CancellationToken::new()).await?)
+    }
+
+    pub async fn resolved_files(&self, id: RepoId) -> Result<Vec<ResolvedFile>, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(resolve::resolved_files(git, &repo, &CancellationToken::new()).await?)
+    }
+
+    pub async fn write_resolution(
+        &self,
+        id: RepoId,
+        path: String,
+        contents: String,
+        expected: String,
+    ) -> Result<String, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            resolve::write_resolution(git, &repo, &path, &contents, &expected, &cancel).await
+        })
+        .await
+    }
+
+    pub async fn choose_version(
+        &self,
+        id: RepoId,
+        path: String,
+        side: Side,
+        expected: Option<String>,
+    ) -> Result<Option<String>, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            resolve::choose_version(git, &repo, &path, side, expected.as_deref(), &cancel).await
+        })
+        .await
+    }
+
+    pub async fn resolve_by_deleting(
+        &self,
+        id: RepoId,
+        path: String,
+        expected: Option<String>,
+    ) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            resolve::resolve_by_deleting(git, &repo, &path, expected.as_deref(), &cancel).await
+        })
+        .await
+    }
+
+    pub async fn mark_resolved(
+        &self,
+        id: RepoId,
+        path: String,
+        force: bool,
+    ) -> Result<MarkOutcome, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            resolve::mark_resolved(git, &repo, &path, force, &cancel).await
+        })
+        .await
+    }
+
+    pub async fn restart_conflict_file(
+        &self,
+        id: RepoId,
+        path: String,
+        expected: Option<String>,
+    ) -> Result<Option<String>, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            resolve::restart_file(git, &repo, &path, expected.as_deref(), &cancel).await
+        })
+        .await
+    }
+
+    pub async fn unmark_resolved(&self, id: RepoId, path: String) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            resolve::unmark_resolved(git, &repo, &path, &cancel).await
+        })
+        .await
+    }
 }
 
 #[cfg(test)]

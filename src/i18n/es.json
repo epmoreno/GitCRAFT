@@ -284,7 +284,15 @@
       "status": "Estado"
     },
     "stageFolder": "Preparar la carpeta {{path}}",
-    "unstageFolder": "Quitar la carpeta {{path}} del stage"
+    "unstageFolder": "Quitar la carpeta {{path}} del stage",
+    "resolved": "Resueltos",
+    "openConflict": "Resolver {{path}}",
+    "unsavedChoices": "Tiene elecciones sin guardar",
+    "unmark": "Volver a marcar como en conflicto…",
+    "unmarkTitle": "¿Volver a marcar {{path}} como en conflicto?",
+    "unmarkBody": "El archivo vuelve a la lista de conflictos con las versiones de cuando se detuvo la operación. El archivo de tu carpeta no se toca.",
+    "unmarkChanged": "Lo has editado después de marcarlo: se olvida la versión que marcaste como resuelta (la de tu carpeta se queda como está).",
+    "unmarkConfirm": "Volver a marcar"
   },
   "commit": {
     "label": "Crear commit",
@@ -848,7 +856,8 @@
         "changes": "Panel de cambios (lista y árbol)",
         "commit": "Caja de commit",
         "general": "Diálogos y menús",
-        "diff": "Diff"
+        "diff": "Diff",
+        "conflicts": "Vista de conflictos"
       },
       "key": {
         " ": "Espacio",
@@ -887,7 +896,9 @@
         "escape": "Cerrar el diálogo, el menú o el diff, o vaciar el filtro de la barra lateral",
         "menuNext": "Menú: opción siguiente",
         "menuPrevious": "Menú: opción anterior",
-        "diffRange": "Seleccionar varias líneas: desde la anterior hasta esta"
+        "diffRange": "Seleccionar varias líneas: desde la anterior hasta esta",
+        "conflictPrevious": "Ir al bloque en conflicto anterior",
+        "conflictNext": "Ir al siguiente bloque en conflicto"
       }
     }
   },
@@ -936,5 +947,96 @@
     "pushFailedLead": "El push falló.",
     "cancelPush": "Cancelar el push",
     "close": "Cerrar"
+  },
+  "conflicts": {
+    "label": "Conflictos de {{path}}",
+    "revertOf": "deshacer {{short}}",
+    "rebaseNote": "En un rebase los lados van al revés que en un merge: a la izquierda está «{{onto}}», la base nueva con los commits ya aplicados; a la derecha, tu commit de «{{branch}}» que se está aplicando.",
+    "failed": "No se ha podido completar la acción.",
+    "loadFailed": "No se ha podido leer el archivo en conflicto.",
+    "cancel": "Cancelar",
+    "lineNo": "línea {{line}}",
+    "side": {
+      "ours": {
+        "merge": "«{{name}}» (tu rama)",
+        "rebase": "«{{name}}» (base nueva)",
+        "cherryPick": "«{{name}}» (tu rama)",
+        "revert": "«{{name}}» (tu rama)"
+      },
+      "theirs": {
+        "merge": "«{{name}}» (lo que se fusiona)",
+        "rebase": "«{{name}}»: {{subject}} (tu commit, se está aplicando)",
+        "cherryPick": "{{short}} {{subject}} (el commit que se trae)",
+        "revert": "deshacer {{short}} {{subject}}"
+      }
+    },
+    "noBlocks": "No quedan bloques en conflicto en este archivo: puedes marcarlo como resuelto.",
+    "counter": "Bloque {{current}} de {{total}} · elegidos: {{chosen}}",
+    "previous": "Bloque anterior ({{shortcut}})",
+    "next": "Bloque siguiente ({{shortcut}})",
+    "staleDraft": "El archivo ha cambiado fuera de GitCRAFT después de que hicieras tus elecciones, así que no se pueden aplicar sobre él. No se ha escrito nada.",
+    "discardDraft": "Descartar mis elecciones",
+    "restart": "Volver a empezar…",
+    "save": "Guardar",
+    "saveAndMark": "Guardar y marcar como resuelto",
+    "sameLines_one": "{{count}} línea igual",
+    "sameLines_other": "{{count}} líneas iguales",
+    "blockLabel": "Bloque {{index}} de {{total}}",
+    "use": "Usar «{{name}}»",
+    "bothFirst": "Ambas («{{name}}» primero)",
+    "edit": "Editar",
+    "editLabel": "Texto del bloque {{index}}",
+    "applyEdit": "Usar este texto",
+    "noBase": "No se sabe la versión base de este bloque: el archivo se ha editado, o git lo fusionó de otra forma.",
+    "baseHint": "La versión del ancestro común, antes de los cambios de los dos lados.",
+    "showBase": "Mostrar base",
+    "hideBase": "Ocultar base",
+    "baseTitle": "Base (ancestro común)",
+    "undoChoice": "Quitar elección",
+    "result": "Resultado",
+    "unresolvedBlock": "Bloque {{index}} sin resolver: se guarda con sus marcas",
+    "deleteFile": "Eliminar el archivo…",
+    "whole": {
+      "deleted": "eliminado",
+      "symlink": "enlace simbólico",
+      "submodule": "submódulo",
+      "size": "{{size}} bytes",
+      "reason": {
+        "binary": "Es un archivo binario: no se puede combinar por bloques. Elige qué versión se queda.",
+        "notUtf8": "No es texto UTF-8: editarlo por bloques podría cambiar sus bytes. Elige qué versión se queda, o resuélvelo en tu editor.",
+        "symlink": "Es un enlace simbólico: elige a dónde apunta.",
+        "submodule": "Es un submódulo: elige qué commit se queda.",
+        "tooLarge": "Es demasiado grande para verlo por bloques (más de 5 MB). Elige qué versión se queda, o resuélvelo en tu editor.",
+        "oneSideMissing": "Un lado eliminó el archivo y el otro lo cambió: consérvalo con la versión que queda o elimínalo.",
+        "bothDeleted": "Los dos lados eliminaron el archivo.",
+        "notInWorktree": "El archivo no está en tu carpeta. Elige qué versión se queda.",
+        "malformedMarkers": "Las marcas de conflicto están incompletas a partir de la línea {{line}} (¿se editó a medias?). Termina en tu editor, vuelve a empezar este archivo o elige una versión entera."
+      }
+    },
+    "confirm": {
+      "restart": {
+        "title": "¿Volver a empezar este archivo?",
+        "body": "Se vuelven a poner en {{path}} las marcas de conflicto de cuando se detuvo la operación. Lo que hayas resuelto en este archivo, guardado o no, se pierde.",
+        "confirm": "Volver a empezar"
+      },
+      "delete": {
+        "title": "¿Eliminar el archivo?",
+        "body": "Se elimina {{path}} de tu carpeta y el conflicto queda resuelto así. La otra versión sigue en la historia de su rama.",
+        "confirm": "Eliminar"
+      },
+      "markers": {
+        "title": "Quedan marcas de conflicto",
+        "body": "{{path}} todavía tiene estas líneas, que parecen marcas de conflicto. Si el archivo las lleva a propósito, puedes marcarlo igualmente; si no, vuelve y resuelve esos bloques.",
+        "confirm": "Marcar igualmente"
+      }
+    },
+    "unsaved": {
+      "title": "Hay elecciones sin guardar",
+      "tab": "En esta pestaña hay archivos en conflicto con elecciones que no has guardado. Si la cierras, se pierden:",
+      "window": "Hay archivos en conflicto con elecciones que no has guardado. Si cierras la ventana, se pierden:",
+      "confirmTab": "Cerrar la pestaña",
+      "confirmWindow": "Cerrar la ventana",
+      "abort": "Además se perderán las elecciones sin guardar en:"
+    }
   }
 }

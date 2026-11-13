@@ -99,6 +99,15 @@ export const ipc = {
   publishInfo: vi.mocked(commands.publishInfo),
   validRepoName: vi.mocked(commands.validRepoName),
   publishRepository: vi.mocked(commands.publishRepository),
+  conflictFile: vi.mocked(commands.conflictFile),
+  conflictSides: vi.mocked(commands.conflictSides),
+  resolvedFiles: vi.mocked(commands.resolvedFiles),
+  writeResolution: vi.mocked(commands.writeResolution),
+  chooseVersion: vi.mocked(commands.chooseVersion),
+  resolveByDeleting: vi.mocked(commands.resolveByDeleting),
+  markResolved: vi.mocked(commands.markResolved),
+  restartConflictFile: vi.mocked(commands.restartConflictFile),
+  unmarkResolved: vi.mocked(commands.unmarkResolved),
 };
 
 export function resetIpcMock() {
@@ -111,6 +120,8 @@ export function resetIpcMock() {
   ipc.commandHistory.mockResolvedValue({ status: "ok", data: [] });
   ipc.clearCommandHistory.mockResolvedValue({ status: "ok", data: null });
   ipc.workingStatus.mockResolvedValue({ status: "ok", data: cleanStatus() });
+  ipc.conflictSides.mockResolvedValue({ status: "ok", data: null });
+  ipc.resolvedFiles.mockResolvedValue({ status: "ok", data: [] });
   ipc.stageFiles.mockResolvedValue({ status: "ok", data: null });
   ipc.unstageFiles.mockResolvedValue({ status: "ok", data: null });
   ipc.createCommit.mockResolvedValue({ status: "ok", data: oid("9") });
