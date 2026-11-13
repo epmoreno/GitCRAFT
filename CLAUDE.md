@@ -7,6 +7,10 @@ Cliente Git de escritorio original (Tauri 2 + Rust + React + TypeScript).
 Visión y alcance: `docs/VISION.md`. Tareas: `docs/ROADMAP.md`.
 Arquitectura: `docs/ARCHITECTURE.md`.
 
+**Idioma de las respuestas: responde siempre en español** al usuario (también
+después de compactar o resumir la conversación). Esto no cambia el idioma del
+código, los comentarios ni los commits (ver «Convenciones»).
+
 ## Identidad pública
 
 Descripción oficial: «GitCRAFT – cliente Git visual, rápido y de código abierto» (en inglés: «GitCRAFT – a visual, fast, open-source Git client»).

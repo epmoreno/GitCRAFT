@@ -1309,7 +1309,7 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 Orden acordado: 9 → 10 → 8 → 11 → 12 → 13. Todo es multiplataforma desde el
 principio y toda operación destructiva pasa por confirmación.
 
-- [ ] **9. Conflictos.** Vista a tres paneles (ours / theirs / resultado),
+- [x] **9. Conflictos.** Vista a tres paneles (ours / theirs / resultado),
       elección por bloque, marcar como resuelto, continuar o abortar.
       Incluye continuar un merge/rebase tras resolver conflictos desde la app
       (`git merge --continue` / `git rebase --continue` / `--skip`); hoy (6.2)
@@ -1604,14 +1604,14 @@ principio y toda operación destructiva pasa por confirmación.
         saltar con confirmación, commit vacío, merge con el mensaje del
         cuadro, elecciones sin guardar, error, y el cuadro de commit
         rellenado).
-      - [ ] **9.7 Documentación y prueba a mano.** Sección de conflictos en
+      - [x] **9.7 Documentación y prueba a mano.** Sección de conflictos en
         ARCHITECTURE.md (módulo, flujo y por qué cada comando). Instrucciones
         para probarlo en macOS en un repo desechable: un script que crea un
         merge y un rebase en conflicto (texto, CRLF, binario y
         modificado/eliminado), sin tocar ningún otro repo.
         *Verificable:* el usuario resuelve, continúa y aborta un merge y un
         rebase en su Mac y lo confirma.
-        *Hecho (falta la prueba del usuario):* sección «5g. Conflictos» en
+        *Hecho:* sección «5g. Conflictos» en
         ARCHITECTURE.md y `scripts/make-conflict-examples.sh`, que crea
         `~/gitcraft-conflictos-merge` (merge detenido: texto con tres
         bloques, CRLF, binario, ruta con espacio, eliminado en cada lado y un
@@ -1619,6 +1619,19 @@ principio y toda operación destructiva pasa por confirmación.
         de 3 commits detenido en el primero; el tercero vuelve a chocar). Si
         ya existen no toca nada; con `--replace`, los mueve a la Papelera
         tras preguntar. Sus commits no ejecutan hooks ni firman.
+        *CI* (`42d3f5f`): los tres en verde.
+        *Verificado manualmente en macOS (tarea 9 completa), con los repos
+        del script:*
+        - **Merge:** el aviso de arriba, los 3 bloques, los botones con los
+          nombres de los lados, ⌥↑/⌥↓, la base, las elecciones conservadas
+          al cerrar con Esc, el aviso con ⌘W, CRLF en `windows.txt`, el
+          binario, la confirmación de marcadores, los archivos borrados,
+          volver a marcar como en conflicto y el commit de merge con dos
+          padres.
+        - **Rebase:** el progreso, el aviso de lados invertidos, el commit
+          vacío saltado y el final correcto.
+        - **Abortar:** avisa de las elecciones sin guardar y deja `main`
+          limpio.
       *Fuera de la 9:* `git rerere` (se respeta si el usuario lo tiene
       activado, pero la app no lo configura), herramientas de merge
       externas (`git mergetool`) y conflictos de submódulos más allá de
