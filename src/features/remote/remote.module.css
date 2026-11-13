@@ -90,28 +90,3 @@
   color: var(--text-faint);
   font-size: var(--font-size-small);
 }
-
-/* A merge or rebase waiting for its conflicts */
-.banner {
-  display: flex;
-  gap: var(--space-3);
-  align-items: center;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--warning-border);
-  background: var(--warning-bg);
-}
-
-.banner p {
-  flex: 1;
-  margin: 0;
-}
-
-.bannerButton {
-  height: 26px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--danger-border);
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--danger);
-  white-space: nowrap;
-}

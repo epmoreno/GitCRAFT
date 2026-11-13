@@ -573,14 +573,6 @@
       "cherryPick": "A cherry-pick is in progress.",
       "revert": "A revert is in progress."
     },
-    "inProgressConflicts_one": "1 file still has conflicts: resolve it in your editor and stage it.",
-    "inProgressConflicts_other": "{{count}} files still have conflicts: resolve them in your editor and stage them.",
-    "inProgressNext": {
-      "merge": "No conflicts left: commit to finish it.",
-      "rebase": "No conflicts left: continue with “git rebase --continue” in a terminal.",
-      "cherryPick": "No conflicts left: commit to finish it.",
-      "revert": "No conflicts left: commit to finish it."
-    },
     "done_one": "Pulled 1 commit from “{{upstream}}”",
     "done_other": "Pulled {{count}} commits from “{{upstream}}”",
     "how": {
@@ -1037,6 +1029,44 @@
       "confirmTab": "Close the tab",
       "confirmWindow": "Close the window",
       "abort": "The unsaved choices in these files will be lost too:"
+    }
+  },
+  "operation": {
+    "title": {
+      "merge": "Merge of “{{theirs}}” into “{{ours}}”",
+      "rebase": "Rebase of “{{branch}}” onto “{{onto}}”",
+      "cherryPick": "Cherry-pick of {{short}} “{{subject}}” into “{{ours}}”",
+      "revert": "Revert of {{short}} “{{subject}}” in “{{ours}}”"
+    },
+    "progress": "commit {{current}} of {{total}}: “{{subject}}”",
+    "conflicts_one": "1 file is still in conflict.",
+    "conflicts_other": "{{count}} files are still in conflict.",
+    "ready": {
+      "merge": "No conflicts left: “Continue” makes the merge commit with the message in the commit box.",
+      "rebase": "No conflicts left: “Continue” applies this commit and goes on with the next one.",
+      "cherryPick": "No conflicts left: “Continue” makes the commit.",
+      "revert": "No conflicts left: “Continue” makes the commit."
+    },
+    "continue": "Continue",
+    "resolveFirst": "Resolve the conflicts first.",
+    "skip": "Skip this commit…",
+    "failed": "Could not continue. Nothing was touched:",
+    "confirm": {
+      "skip": {
+        "title": "Skip this commit?",
+        "body": "{{short}} “{{subject}}” is skipped: its changes will not be applied. Whatever you resolved for it in tracked files is discarded; untracked files stay.",
+        "confirm": "Skip this commit"
+      },
+      "nothingToCommit": {
+        "title": "This commit no longer changes anything",
+        "body": "Once the conflicts are resolved, {{short}} “{{subject}}” brings no change (the same was already in the base). You can skip it, or cancel and change the resolution.",
+        "confirm": "Skip this commit"
+      },
+      "unsaved": {
+        "title": "There are unsaved choices",
+        "body": "These files have choices in the conflict view you haven’t saved. Continuing loses them:",
+        "confirm": "Continue without them"
+      }
     }
   }
 }

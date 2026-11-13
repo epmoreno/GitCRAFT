@@ -108,6 +108,9 @@ export const ipc = {
   markResolved: vi.mocked(commands.markResolved),
   restartConflictFile: vi.mocked(commands.restartConflictFile),
   unmarkResolved: vi.mocked(commands.unmarkResolved),
+  preparedMessage: vi.mocked(commands.preparedMessage),
+  continueInProgress: vi.mocked(commands.continueInProgress),
+  skipCurrent: vi.mocked(commands.skipCurrent),
 };
 
 export function resetIpcMock() {
@@ -122,6 +125,7 @@ export function resetIpcMock() {
   ipc.workingStatus.mockResolvedValue({ status: "ok", data: cleanStatus() });
   ipc.conflictSides.mockResolvedValue({ status: "ok", data: null });
   ipc.resolvedFiles.mockResolvedValue({ status: "ok", data: [] });
+  ipc.preparedMessage.mockResolvedValue({ status: "ok", data: null });
   ipc.stageFiles.mockResolvedValue({ status: "ok", data: null });
   ipc.unstageFiles.mockResolvedValue({ status: "ok", data: null });
   ipc.createCommit.mockResolvedValue({ status: "ok", data: oid("9") });

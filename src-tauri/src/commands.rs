@@ -15,7 +15,7 @@ use gitcraft_core::ops::config::{
 };
 use gitcraft_core::ops::conflict::ConflictFile;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
-use gitcraft_core::ops::in_progress::ConflictSides;
+use gitcraft_core::ops::in_progress::{ConflictSides, ContinueOutcome};
 use gitcraft_core::ops::init::InitCheck;
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::ops::remote::{ForcePushPreview, PullMode, PullOutcome, PushOutcome};
@@ -924,4 +924,36 @@ pub async fn unmark_resolved(
     path: String,
 ) -> Result<(), IpcError> {
     state.unmark_resolved(id, path).await
+}
+
+/// The message git prepared for the merge, without its comments.
+#[tauri::command]
+#[specta::specta]
+pub async fn prepared_message(
+    state: State<'_, AppState>,
+    id: RepoId,
+) -> Result<Option<String>, IpcError> {
+    state.prepared_message(id).await
+}
+
+/// Continues the merge, rebase, cherry-pick or revert once its conflicts are
+/// resolved; a merge is concluded with `message` (git's when `None`).
+#[tauri::command]
+#[specta::specta]
+pub async fn continue_in_progress(
+    state: State<'_, AppState>,
+    id: RepoId,
+    message: Option<String>,
+) -> Result<ContinueOutcome, IpcError> {
+    state.continue_in_progress(id, message).await
+}
+
+/// Skips the commit being replayed (rebase, cherry-pick, revert).
+#[tauri::command]
+#[specta::specta]
+pub async fn skip_current(
+    state: State<'_, AppState>,
+    id: RepoId,
+) -> Result<ContinueOutcome, IpcError> {
+    state.skip_current(id).await
 }

@@ -573,14 +573,6 @@
       "cherryPick": "Hay un cherry-pick a medias.",
       "revert": "Hay un revert a medias."
     },
-    "inProgressConflicts_one": "Queda 1 archivo con conflictos: resuélvelo en tu editor y prepáralo.",
-    "inProgressConflicts_other": "Quedan {{count}} archivos con conflictos: resuélvelos en tu editor y prepáralos.",
-    "inProgressNext": {
-      "merge": "Ya no quedan conflictos: haz commit para terminarlo.",
-      "rebase": "Ya no quedan conflictos: continúa con «git rebase --continue» desde la terminal.",
-      "cherryPick": "Ya no quedan conflictos: haz commit para terminarlo.",
-      "revert": "Ya no quedan conflictos: haz commit para terminarlo."
-    },
     "done_one": "Pull completado: 1 commit de «{{upstream}}»",
     "done_other": "Pull completado: {{count}} commits de «{{upstream}}»",
     "how": {
@@ -1037,6 +1029,44 @@
       "confirmTab": "Cerrar la pestaña",
       "confirmWindow": "Cerrar la ventana",
       "abort": "Además se perderán las elecciones sin guardar en:"
+    }
+  },
+  "operation": {
+    "title": {
+      "merge": "Merge de «{{theirs}}» en «{{ours}}»",
+      "rebase": "Rebase de «{{branch}}» sobre «{{onto}}»",
+      "cherryPick": "Cherry-pick de {{short}} «{{subject}}» en «{{ours}}»",
+      "revert": "Revert de {{short}} «{{subject}}» en «{{ours}}»"
+    },
+    "progress": "commit {{current}} de {{total}}: «{{subject}}»",
+    "conflicts_one": "Queda 1 archivo con conflictos.",
+    "conflicts_other": "Quedan {{count}} archivos con conflictos.",
+    "ready": {
+      "merge": "Ya no quedan conflictos: «Continuar» hace el commit del merge con el mensaje del cuadro de commit.",
+      "rebase": "Ya no quedan conflictos: «Continuar» aplica este commit y sigue con el siguiente.",
+      "cherryPick": "Ya no quedan conflictos: «Continuar» hace el commit.",
+      "revert": "Ya no quedan conflictos: «Continuar» hace el commit."
+    },
+    "continue": "Continuar",
+    "resolveFirst": "Resuelve primero los conflictos.",
+    "skip": "Saltar este commit…",
+    "failed": "No se ha podido continuar. No se ha tocado nada:",
+    "confirm": {
+      "skip": {
+        "title": "¿Saltar este commit?",
+        "body": "Se salta {{short}} «{{subject}}»: sus cambios no se aplicarán. Lo que hayas resuelto para él en los archivos con seguimiento se descarta; los archivos sin seguimiento se quedan.",
+        "confirm": "Saltar este commit"
+      },
+      "nothingToCommit": {
+        "title": "Este commit ya no cambia nada",
+        "body": "Tras resolver los conflictos, {{short}} «{{subject}}» no aporta ningún cambio (lo mismo ya estaba en la base). Puedes saltarlo, o cancelar y cambiar la resolución.",
+        "confirm": "Saltar este commit"
+      },
+      "unsaved": {
+        "title": "Hay elecciones sin guardar",
+        "body": "Estos archivos tienen elecciones en la vista de conflictos que no has guardado. Si continúas, se pierden:",
+        "confirm": "Continuar sin guardarlas"
+      }
     }
   }
 }

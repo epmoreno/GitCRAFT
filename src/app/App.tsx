@@ -3,10 +3,7 @@ import { useTranslation } from "react-i18next";
 import { BranchDialogs, BranchToast } from "../features/branches/BranchDialogs";
 import { CreateDialogs } from "../features/create/CreateDialogs";
 import { DetailPanel } from "../features/detail/DetailPanel";
-import {
-  InProgressBanner,
-  RemoteDialogs,
-} from "../features/remote/RemoteDialogs";
+import { RemoteDialogs } from "../features/remote/RemoteDialogs";
 import { useAutoFetch } from "../features/remote/autoFetch";
 import { RemoteProgress, RemoteToast } from "../features/remote/RemoteStatus";
 import { StashDialogs, StashToast } from "../features/stash/StashDialogs";
@@ -24,6 +21,7 @@ import {
 } from "../features/repo/OpenErrorBanner";
 import { installAppMenu } from "./menu";
 import { guardWindowClose } from "./windowClose";
+import { InProgressBanner } from "../features/conflicts/OperationBanner";
 import { UnsavedDialog } from "../features/conflicts/UnsavedDialog";
 import {
   reposWithDrafts,

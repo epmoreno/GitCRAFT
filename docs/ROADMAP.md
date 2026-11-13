@@ -1569,7 +1569,7 @@ principio y toda operación destructiva pasa por confirmación.
           botón sí avisa.
         Tests: 9 de `result.ts`, 17 de la vista y del panel, y los de
         atajos (⌥↓ / Alt+↓, y que ⌥↓ no es ↓).
-      - [ ] **9.6 Continuar desde la app (UI).** El aviso de operación a
+      - [x] **9.6 Continuar desde la app (UI).** El aviso de operación a
         medias pasa a tener «Continuar» (activo cuando no quedan conflictos;
         si quedan, dice cuántos), «Saltar este commit» en rebase y
         cherry-pick (con confirmación que nombra el commit y explica que sus
@@ -1580,6 +1580,30 @@ principio y toda operación destructiva pasa por confirmación.
         mandan a la terminal.
         *Verificable:* tests de interfaz de cada estado del aviso y de las
         confirmaciones.
+        *Hecho:* `InProgressBanner` pasa a `src/features/conflicts/
+        OperationBanner.tsx`.
+        - **El aviso:** nombra la operación con sus lados («Rebase de
+          «topic» sobre «main» · commit 2 de 3: «topic two»», «Merge de
+          «feature» en «main»»…) y dice cuántos archivos quedan en conflicto
+          o qué hará «Continuar». «Continuar» está desactivado, con un
+          tooltip, mientras queden conflictos. «Saltar este commit…» solo
+          sale en rebase, cherry-pick y revert, con una confirmación que
+          nombra el commit y explica qué se descarta.
+        - **Resultados de continuar:** si el commit queda vacío, se ofrece
+          saltarlo; si falla (un hook, por ejemplo), sale el error con la
+          salida de git. Las elecciones sin guardar de la vista de
+          conflictos se listan y se piden confirmar antes de continuar.
+        - **Merge:** «Continuar» usa el mensaje del cuadro de commit, que se
+          rellena con el que preparó git sin sus comentarios
+          (`prepared_message`). El botón de commit de siempre también
+          termina el merge.
+        - Se quitan los textos que mandaban a la terminal.
+        - **Comandos de Tauri nuevos:** `prepared_message`,
+          `continue_in_progress` y `skip_current`.
+        Tests: 8 de interfaz (aviso de rebase con progreso, continuar,
+        saltar con confirmación, commit vacío, merge con el mensaje del
+        cuadro, elecciones sin guardar, error, y el cuadro de commit
+        rellenado).
       - [ ] **9.7 Documentación y prueba a mano.** Sección de conflictos en
         ARCHITECTURE.md (módulo, flujo y por qué cada comando). Instrucciones
         para probarlo en macOS en un repo desechable: un script que crea un

@@ -13,7 +13,8 @@ import {
 import { useGraphStore } from "../graph/store";
 import { useRepoStore } from "../repo/store";
 import { Sidebar } from "../sidebar/Sidebar";
-import { InProgressBanner, RemoteDialogs } from "./RemoteDialogs";
+import { InProgressBanner } from "../conflicts/OperationBanner";
+import { RemoteDialogs } from "./RemoteDialogs";
 import { RemoteProgress, RemoteToast } from "./RemoteStatus";
 import { useWorkdirStore } from "../workdir/store";
 
@@ -322,7 +323,9 @@ describe("pull", () => {
       },
     });
     renderToolbar();
-    const banner = screen.getByText(/Hay un merge a medias/);
+    const banner = screen
+      .getByText(/Hay un merge a medias/)
+      .closest('[role="status"]');
     expect(banner).toHaveTextContent("Queda 1 archivo con conflictos");
     await user.click(screen.getByRole("button", { name: "Abortar…" }));
     const dialog = screen.getByRole("alertdialog", {

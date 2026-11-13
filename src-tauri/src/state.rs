@@ -21,7 +21,7 @@ use gitcraft_core::ops::discard::{
     DiscardRecord, DiscardTarget, DiscardedFile, SystemTrash, Trash, discard, preview_discard,
     undo_discard,
 };
-use gitcraft_core::ops::in_progress::{self, ConflictSides};
+use gitcraft_core::ops::in_progress::{self, ConflictSides, ContinueOutcome};
 use gitcraft_core::ops::init::{self, InitCheck};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
@@ -1510,6 +1510,34 @@ impl AppState {
         let cancel = CancellationToken::new();
         self.write(id, |repo| async move {
             resolve::restart_file(git, &repo, &path, expected.as_deref(), &cancel).await
+        })
+        .await
+    }
+
+    pub async fn prepared_message(&self, id: RepoId) -> Result<Option<String>, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(in_progress::prepared_message(git, &repo, &CancellationToken::new()).await?)
+    }
+
+    pub async fn continue_in_progress(
+        &self,
+        id: RepoId,
+        message: Option<String>,
+    ) -> Result<ContinueOutcome, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            in_progress::continue_in_progress(git, &repo, message.as_deref(), &cancel).await
+        })
+        .await
+    }
+
+    pub async fn skip_current(&self, id: RepoId) -> Result<ContinueOutcome, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            in_progress::skip_current(git, &repo, &cancel).await
         })
         .await
     }

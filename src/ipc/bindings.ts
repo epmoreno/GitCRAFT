@@ -132,6 +132,15 @@ export const commands = {
 	markResolved: (id: number, path: string, force: boolean) => typedError<MarkOutcome, IpcError_Serialize>(__TAURI_INVOKE("mark_resolved", { id, path, force })),
 	restartConflictFile: (id: number, path: string, expected: string | null) => typedError<string | null, IpcError_Serialize>(__TAURI_INVOKE("restart_conflict_file", { id, path, expected })),
 	unmarkResolved: (id: number, path: string) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("unmark_resolved", { id, path })),
+	/**  The message git prepared for the merge, without its comments. */
+	preparedMessage: (id: number) => typedError<string | null, IpcError_Serialize>(__TAURI_INVOKE("prepared_message", { id })),
+	/**
+	 *  Continues the merge, rebase, cherry-pick or revert once its conflicts are
+	 *  resolved; a merge is concluded with `message` (git's when `None`).
+	 */
+	continueInProgress: (id: number, message: string | null) => typedError<ContinueOutcome, IpcError_Serialize>(__TAURI_INVOKE("continue_in_progress", { id, message })),
+	/**  Skips the commit being replayed (rebase, cherry-pick, revert). */
+	skipCurrent: (id: number) => typedError<ContinueOutcome, IpcError_Serialize>(__TAURI_INVOKE("skip_current", { id })),
 	/**
 	 *  Pushes the current branch to its upstream, or publishes it to
 	 *  `publish_to` creating the upstream. `force_lease`: force only if the
@@ -627,6 +636,23 @@ export type ConflictVersion_Serialize = {
 	/**  `None` for a submodule (its commit is not an object of this repo). */
 	size: number | null,
 };
+
+/**  What happened after "continue" or "skip". */
+export type ContinueOutcome = 
+/**  The operation finished. */
+{ type: "done" } | 
+/**
+ *  It went on and stopped again (a rebase at its next conflict, or at
+ *  an `edit` step: `conflicts` is then empty).
+ */
+{ type: "stoppedAgain"; conflicts: string[] } | 
+/**  Nothing was done: these files are still in conflict. */
+{ type: "conflictsLeft"; conflicts: string[] } | 
+/**
+ *  Nothing was done: once resolved, the commit being replayed changes
+ *  nothing. It can be skipped.
+ */
+{ type: "nothingToCommit" };
 
 /**  Whether a clone could go to a destination, checked as it is typed. */
 export type Destination = 

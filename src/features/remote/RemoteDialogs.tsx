@@ -3,9 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import branches from "../branches/branches.module.css";
-import { useWorkdirStore } from "../workdir/store";
 import { useRemoteStore } from "./store";
-import styles from "./remote.module.css";
 
 const MAX_LISTED = 12;
 
@@ -285,34 +283,5 @@ function ForcePushDialog() {
         {t("push.forceRecoverCommand", { sha: preview.expected })}
       </pre>
     </ConfirmDialog>
-  );
-}
-
-/** A merge/rebase/cherry-pick/revert waiting for its conflicts. */
-export function InProgressBanner({ repoId }: { repoId: number | null }) {
-  const { t } = useTranslation();
-  const status = useWorkdirStore((s) =>
-    repoId === null ? null : (s.statuses[repoId]?.status ?? null),
-  );
-  const requestAbort = useRemoteStore((s) => s.requestAbort);
-  const operation = status?.inProgress ?? null;
-  if (repoId === null || !operation) return null;
-  const conflicts = status?.conflicted.length ?? 0;
-  return (
-    <div className={styles.banner} role="status">
-      <p>
-        {t(`pull.inProgress.${operation}`)}{" "}
-        {conflicts > 0
-          ? t("pull.inProgressConflicts", { count: conflicts })
-          : t(`pull.inProgressNext.${operation}`)}
-      </p>
-      <button
-        type="button"
-        className={styles.bannerButton}
-        onClick={() => requestAbort(repoId, operation)}
-      >
-        {t("pull.abortButton")}
-      </button>
-    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { isShortcut } from "../../app/shortcuts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commands,
@@ -40,6 +40,30 @@ export function CommitBox({
   const [amendProblem, setAmendProblem] = useState<
     CommandError | "nothing" | null
   >(null);
+
+  // A merge in progress: start from the message git prepared for it, so
+  // "Continue" and the commit button make the usual merge commit.
+  const merging = status.inProgress === "merge";
+  const empty = !draft.summary.trim() && !draft.description.trim();
+  useEffect(() => {
+    if (!merging || !empty) return;
+    let stale = false;
+    void commands.preparedMessage(repoId).then((result) => {
+      if (stale || result.status !== "ok" || !result.data) return;
+      const current = useWorkdirStore.getState().drafts[repoId];
+      if (current && (current.summary.trim() || current.description.trim())) {
+        return;
+      }
+      const [summary = "", ...rest] = result.data.split("\n");
+      setDraft(repoId, {
+        summary,
+        description: rest.join("\n").trim(),
+      });
+    });
+    return () => {
+      stale = true;
+    };
+  }, [repoId, merging, empty, setDraft]);
 
   const staged = status.staged.length;
   const blocked =
