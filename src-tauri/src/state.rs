@@ -27,6 +27,7 @@ use gitcraft_core::ops::init::{self, InitCheck};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
+use gitcraft_core::ops::pick::{self, PickOutcome, PickPreview};
 use gitcraft_core::ops::publish::{self, PublishPreview, PublishRequest, Published};
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::remote::{self, ForcePushPreview, PullMode, PullOutcome, PushOutcome};
@@ -1428,6 +1429,31 @@ impl AppState {
         let git = self.git()?;
         let repo = self.session_path(id)?;
         Ok(commit_actions::commit_actions(git, &repo, oid, &CancellationToken::new()).await?)
+    }
+
+    pub async fn cherry_pick_preview(
+        &self,
+        id: RepoId,
+        oid: &str,
+    ) -> Result<PickPreview, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(pick::cherry_pick_preview(git, &repo, oid, &CancellationToken::new()).await?)
+    }
+
+    pub async fn cherry_pick(
+        &self,
+        id: RepoId,
+        oid: String,
+        save_changes: bool,
+        allow_conflicts: bool,
+    ) -> Result<PickOutcome, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            pick::cherry_pick(git, &repo, &oid, save_changes, allow_conflicts, &cancel).await
+        })
+        .await
     }
 }
 

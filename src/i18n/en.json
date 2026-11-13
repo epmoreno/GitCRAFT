@@ -1086,6 +1086,45 @@
       "alreadyInBranch": "Already in “{{branch}}”.",
       "notInBranch": "Not in “{{branch}}”: only commits of the current branch can be reverted.",
       "isHead": "“{{branch}}” is already at this commit."
+    },
+    "action": {
+      "cherryPick": "Cherry-pick onto “{{branch}}”…"
+    },
+    "button": {
+      "cherryPick": "Cherry-pick…"
+    }
+  },
+  "history": {
+    "cancel": "Cancel",
+    "untracked": "(untracked)",
+    "more_one": "and 1 more",
+    "more_other": "and {{count}} more",
+    "failed": "The operation could not be done. Nothing was touched:",
+    "actions": "Commit actions",
+    "recover": "Recover my changes",
+    "savedNotice": "Your changes are still saved in the stash (“GitCRAFT: antes del cherry-pick de {{short}}”).",
+    "abortKeepsSaved": "The changes you saved before starting are still in the stash: aborting does not bring them back. Recover them afterwards with “Recover my changes”.",
+    "pick": {
+      "title": "Cherry-pick {{short}} onto “{{branch}}”?",
+      "explained": "“{{subject}}” is copied onto “{{branch}}” as a new commit. The original commit does not change.",
+      "pick": "Cherry-pick",
+      "pickWithConflicts": "Cherry-pick with conflicts",
+      "saveAndPick": "Save my changes and cherry-pick",
+      "saveAndPickWithConflicts": "Save my changes and cherry-pick with conflicts",
+      "blockedTitle": "Your uncommitted changes are in the way",
+      "blocked": {
+        "stagedChanges": "git does not cherry-pick with staged changes, even in other files:",
+        "overwrite": "There are changes in files the commit changes:"
+      },
+      "saveExplained": "“Save my changes…” puts them in the stash as “GitCRAFT: antes del cherry-pick de {{short}}”, which is never dropped by itself; afterwards you can get them back with “Recover my changes”.",
+      "conflictsTitle": "Conflicts",
+      "conflicts_one": "The cherry-pick will conflict in 1 file:",
+      "conflicts_other": "The cherry-pick will conflict in {{count}} files:",
+      "mayConflict_one": "The cherry-pick may conflict in 1 file:",
+      "mayConflict_other": "The cherry-pick may conflict in {{count}} files:",
+      "conflictExplained": "If you go on, it stops so you resolve them in the conflict view; you can abort it and get back to how you are now.",
+      "abortKeepsSaved": "If you abort it, your saved changes stay in the stash: aborting does not bring them back. Recover them with “Recover my changes”.",
+      "done": "Cherry-pick done: “{{subject}}” copied onto “{{branch}}”."
     }
   }
 }

@@ -143,6 +143,13 @@ export const commands = {
 	skipCurrent: (id: number) => typedError<ContinueOutcome, IpcError_Serialize>(__TAURI_INVOKE("skip_current", { id })),
 	/**  What can be done with commit `oid`, and the facts to say why not. */
 	commitActions: (id: number, oid: string) => typedError<CommitActions_Serialize, IpcError_Serialize>(__TAURI_INVOKE("commit_actions", { id, oid })),
+	/**  What cherry-picking `oid` onto the current branch would do (read-only). */
+	cherryPickPreview: (id: number, oid: string) => typedError<PickPreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("cherry_pick_preview", { id, oid })),
+	/**
+	 *  Cherry-picks `oid`: checks everything again and does nothing that the
+	 *  user did not accept (saving changes first, going on with conflicts).
+	 */
+	cherryPick: (id: number, oid: string, saveChanges: boolean, allowConflicts: boolean) => typedError<PickOutcome_Serialize, IpcError_Serialize>(__TAURI_INVOKE("cherry_pick", { id, oid, saveChanges, allowConflicts })),
 	/**
 	 *  Pushes the current branch to its upstream, or publishes it to
 	 *  `publish_to` creating the upstream. `force_lease`: force only if the
@@ -1387,6 +1394,102 @@ export type OrphanCommit = {
 	/**  Author date, Unix seconds. */
 	time: number,
 };
+
+/**  Why uncommitted changes are in the way. */
+export type PickBlock = 
+/**  git refuses with anything staged, even in other files. */
+"stagedChanges" | 
+/**  Changes (or untracked files) in files the commit changes. */
+"overwrite";
+
+/**
+ *  In every outcome, `saved` is the stash entry (commit id) holding the
+ *  changes "save my changes" put aside, so the app can offer them back.
+ */
+export type PickOutcome = PickOutcome_Serialize | PickOutcome_Deserialize;
+
+/**
+ *  In every outcome, `saved` is the stash entry (commit id) holding the
+ *  changes "save my changes" put aside, so the app can offer them back.
+ */
+export type PickOutcome_Deserialize = 
+/**  The commit was copied: `head` is the new commit. */
+{ type: "done"; head: string; saved?: string | null } | 
+/**
+ *  Started at the user's request and stopped on conflicts in these
+ *  files: a cherry-pick is waiting (task 9's banner and view).
+ */
+{ type: "conflicted"; files: string[]; saved?: string | null } | 
+/**
+ *  Nothing was picked; the preview says why (refused, blocked, or
+ *  conflicts the user did not accept).
+ */
+{ type: "notDone"; preview: PickPreview_Deserialize; saved?: string | null };
+
+/**
+ *  In every outcome, `saved` is the stash entry (commit id) holding the
+ *  changes "save my changes" put aside, so the app can offer them back.
+ */
+export type PickOutcome_Serialize = 
+/**  The commit was copied: `head` is the new commit. */
+{ type: "done"; head: string; saved: string | null } | 
+/**
+ *  Started at the user's request and stopped on conflicts in these
+ *  files: a cherry-pick is waiting (task 9's banner and view).
+ */
+{ type: "conflicted"; files: string[]; saved: string | null } | 
+/**
+ *  Nothing was picked; the preview says why (refused, blocked, or
+ *  conflicts the user did not accept).
+ */
+{ type: "notDone"; preview: PickPreview_Serialize; saved: string | null };
+
+export type PickPreview = PickPreview_Serialize | PickPreview_Deserialize;
+
+export type PickPreview_Deserialize = {
+	commit: CommitRef,
+	/**  The current branch (`None` with a detached HEAD). */
+	branch?: string | null,
+	refused?: PickRefusal | null,
+	/**  Uncommitted changes in the way. */
+	blocked?: PickBlock | null,
+	blocking: BlockingFile[],
+	/**  Files that would stop with conflicts. */
+	conflicts: string[],
+	/**
+	 *  `conflicts` comes from git's own merge (git ≥ 2.40); otherwise it is
+	 *  an estimate (files changed on both sides).
+	 */
+	exact: boolean,
+};
+
+export type PickPreview_Serialize = {
+	commit: CommitRef,
+	/**  The current branch (`None` with a detached HEAD). */
+	branch: string | null,
+	refused: PickRefusal | null,
+	/**  Uncommitted changes in the way. */
+	blocked: PickBlock | null,
+	blocking: BlockingFile[],
+	/**  Files that would stop with conflicts. */
+	conflicts: string[],
+	/**
+	 *  `conflicts` comes from git's own merge (git ≥ 2.40); otherwise it is
+	 *  an estimate (files changed on both sides).
+	 */
+	exact: boolean,
+};
+
+/**  Why the commit cannot be picked at all. */
+export type PickRefusal = 
+/**  A merge, rebase… is waiting for the user. */
+"inProgress" | 
+/**  HEAD is not on a branch. */
+"detached" | 
+/**  A merge commit: one parent would have to be chosen as the main line. */
+"merge" | 
+/**  The commit is already in the current branch. */
+"alreadyInBranch";
 
 /**  Everything the "Publish on GitHub" dialog shows before publishing. */
 export type PublishInfo = PublishInfo_Serialize | PublishInfo_Deserialize;

@@ -1,0 +1,160 @@
+import { useTranslation } from "react-i18next";
+import type { PickPreview } from "../../ipc";
+import { ConfirmDialog } from "../../ui/ConfirmDialog";
+import { ErrorReport } from "../../ui/ErrorReport";
+import { useWorkdirStore } from "../workdir/store";
+import { useHistoryStore } from "./store";
+import styles from "./history.module.css";
+
+/** At most this many files are listed in a dialog. */
+const MAX_LISTED = 12;
+
+function Files({ files }: { files: { path: string; untracked?: boolean }[] }) {
+  const { t } = useTranslation();
+  return (
+    <ul className={styles.files}>
+      {files.slice(0, MAX_LISTED).map((f) => (
+        <li key={f.path}>
+          <code>{f.path}</code>
+          {f.untracked && (
+            <span className={styles.note}> {t("history.untracked")}</span>
+          )}
+        </li>
+      ))}
+      {files.length > MAX_LISTED && (
+        <li className={styles.note}>
+          {t("history.more", { count: files.length - MAX_LISTED })}
+        </li>
+      )}
+    </ul>
+  );
+}
+
+/** The cherry-pick confirmation: clean, changes in the way, conflicts, or
+ * both (task 10.2). */
+function CherryPickDialog({ preview }: { preview: PickPreview }) {
+  const { t } = useTranslation();
+  const close = useHistoryStore((s) => s.closeDialog);
+  const confirm = useHistoryStore((s) => s.confirmCherryPick);
+  const blocked = preview.blocked;
+  const conflicts = preview.conflicts.length > 0;
+  const values = {
+    short: preview.commit.short,
+    subject: preview.commit.subject,
+    branch: preview.branch ?? "",
+  };
+  const confirmLabel = t(
+    blocked
+      ? conflicts
+        ? "history.pick.saveAndPickWithConflicts"
+        : "history.pick.saveAndPick"
+      : conflicts
+        ? "history.pick.pickWithConflicts"
+        : "history.pick.pick",
+  );
+  return (
+    <ConfirmDialog
+      title={t("history.pick.title", values)}
+      confirmLabel={confirmLabel}
+      cancelLabel={t("history.cancel")}
+      onConfirm={() => void confirm()}
+      onCancel={close}
+    >
+      <p>{t("history.pick.explained", values)}</p>
+      {blocked && (
+        <section aria-label={t("history.pick.blockedTitle")}>
+          <h3 className={styles.heading}>{t("history.pick.blockedTitle")}</h3>
+          <p>{t(`history.pick.blocked.${blocked}`)}</p>
+          <Files files={preview.blocking} />
+          <p>{t("history.pick.saveExplained", values)}</p>
+        </section>
+      )}
+      {conflicts && (
+        <section aria-label={t("history.pick.conflictsTitle")}>
+          <h3 className={styles.heading}>
+            {t(
+              preview.exact
+                ? "history.pick.conflicts"
+                : "history.pick.mayConflict",
+              { count: preview.conflicts.length },
+            )}
+          </h3>
+          <Files files={preview.conflicts.map((path) => ({ path }))} />
+          <p>{t("history.pick.conflictExplained")}</p>
+          {blocked && <p>{t("history.pick.abortKeepsSaved")}</p>}
+        </section>
+      )}
+    </ConfirmDialog>
+  );
+}
+
+export function HistoryDialogs() {
+  const dialog = useHistoryStore((s) => s.dialog);
+  if (dialog?.kind === "cherryPick") {
+    return <CherryPickDialog preview={dialog.preview} />;
+  }
+  return null;
+}
+
+/** The result of the last operation, and the changes saved in the stash
+ * before it, offered back once nothing is in progress. */
+export function HistoryToast({ repoId }: { repoId: number | null }) {
+  const { t } = useTranslation();
+  const notice = useHistoryStore((s) =>
+    s.notice && s.notice.repoId === repoId ? s.notice : null,
+  );
+  const saved = useHistoryStore((s) =>
+    repoId === null ? undefined : s.saved[repoId],
+  );
+  const busy = useHistoryStore((s) => s.busy);
+  const waiting = useWorkdirStore(
+    (s) => repoId !== null && !!s.statuses[repoId]?.status?.inProgress,
+  );
+  const dismiss = useHistoryStore((s) => s.dismissNotice);
+  const recover = useHistoryStore((s) => s.recoverSaved);
+  const forget = useHistoryStore((s) => s.forgetSaved);
+  const offer = saved && !waiting ? saved : null;
+  if (repoId === null || (!notice && !offer)) return null;
+  return (
+    <div
+      className={styles.toast}
+      role={notice?.kind === "error" ? undefined : "status"}
+    >
+      <div className={styles.toastBody}>
+        {notice?.kind === "error" && (
+          <ErrorReport error={notice.error} lead={t("history.failed")} />
+        )}
+        {notice?.kind === "picked" && (
+          <p>
+            {t("history.pick.done", {
+              subject: notice.subject,
+              branch: notice.branch,
+            })}
+          </p>
+        )}
+        {offer && <p>{t("history.savedNotice", { short: offer.short })}</p>}
+      </div>
+      {offer && (
+        <button
+          type="button"
+          className={styles.toastAction}
+          disabled={busy}
+          onClick={() => void recover(repoId)}
+        >
+          {t("history.recover")}
+        </button>
+      )}
+      <button
+        type="button"
+        className={styles.toastClose}
+        aria-label={t("errors.dismiss")}
+        onClick={() => {
+          dismiss();
+          if (offer) forget(repoId);
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+}

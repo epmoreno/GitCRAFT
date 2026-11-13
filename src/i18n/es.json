@@ -1086,6 +1086,45 @@
       "alreadyInBranch": "Ya está en «{{branch}}».",
       "notInBranch": "No está en «{{branch}}»: solo se revierten commits de la rama actual.",
       "isHead": "«{{branch}}» ya está en este commit."
+    },
+    "action": {
+      "cherryPick": "Cherry-pick en «{{branch}}»…"
+    },
+    "button": {
+      "cherryPick": "Cherry-pick…"
+    }
+  },
+  "history": {
+    "cancel": "Cancelar",
+    "untracked": "(sin seguimiento)",
+    "more_one": "y 1 más",
+    "more_other": "y {{count}} más",
+    "failed": "La operación no se ha podido hacer. No se ha tocado nada:",
+    "actions": "Acciones del commit",
+    "recover": "Recuperar mis cambios",
+    "savedNotice": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del cherry-pick de {{short}}»).",
+    "abortKeepsSaved": "Los cambios que guardaste antes de empezar siguen en el stash: no vuelven solos al abortar. Recupéralos después con «Recuperar mis cambios».",
+    "pick": {
+      "title": "¿Hacer cherry-pick de {{short}} en «{{branch}}»?",
+      "explained": "Se copia «{{subject}}» a «{{branch}}» como un commit nuevo. El commit original no cambia.",
+      "pick": "Hacer cherry-pick",
+      "pickWithConflicts": "Hacer cherry-pick con conflictos",
+      "saveAndPick": "Guardar mis cambios y hacer cherry-pick",
+      "saveAndPickWithConflicts": "Guardar mis cambios y hacer cherry-pick con conflictos",
+      "blockedTitle": "Tus cambios sin confirmar están en medio",
+      "blocked": {
+        "stagedChanges": "git no hace un cherry-pick con cambios preparados, aunque sean de otros archivos:",
+        "overwrite": "Hay cambios en archivos que el commit cambia:"
+      },
+      "saveExplained": "«Guardar mis cambios…» los guarda en el stash como «GitCRAFT: antes del cherry-pick de {{short}}», que nunca se borra solo, y al terminar podrás recuperarlos con «Recuperar mis cambios».",
+      "conflictsTitle": "Conflictos",
+      "conflicts_one": "El cherry-pick producirá conflictos en 1 archivo:",
+      "conflicts_other": "El cherry-pick producirá conflictos en {{count}} archivos:",
+      "mayConflict_one": "El cherry-pick podría producir conflictos en 1 archivo:",
+      "mayConflict_other": "El cherry-pick podría producir conflictos en {{count}} archivos:",
+      "conflictExplained": "Si sigues, se detendrá para que los resuelvas con la vista de conflictos; podrás abortarlo y volver a como estás ahora.",
+      "abortKeepsSaved": "Si lo abortas, tus cambios guardados seguirán en el stash: no vuelven solos al abortar. Recupéralos con «Recuperar mis cambios».",
+      "done": "Cherry-pick hecho: «{{subject}}» copiado en «{{branch}}»."
     }
   }
 }

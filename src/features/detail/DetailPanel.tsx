@@ -1,3 +1,4 @@
+import { CommitActionButtons } from "../history/CommitActionButtons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -116,6 +117,7 @@ function CommitInfo({
     <article className={styles.commit}>
       <RefChips labels={labels} color={laneColor(color)} />
       <h2 className={`${styles.summary} selectable`}>{details.summary}</h2>
+      <CommitActionButtons repoId={repoId} oid={details.oid} />
       {details.body && (
         <pre className={`${styles.body} selectable`}>
           {reflowMessage(details.body)}

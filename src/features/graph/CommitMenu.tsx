@@ -3,17 +3,13 @@ import { useTranslation } from "react-i18next";
 import { commands, type CommitActions } from "../../ipc";
 import { copyText } from "../../ui/clipboard";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
+import { runCommitAction } from "../history/store";
 import {
   availability,
   DANGEROUS_ACTIONS,
   READY_ACTIONS,
   type CommitAction,
 } from "./commitActions";
-
-/** What each ready action does when picked (filled in by tasks 10.2–10.5). */
-export const ACTION_HANDLERS: Partial<
-  Record<CommitAction, (repoId: number, oid: string) => void>
-> = {};
 
 /** The actions on one commit of the graph, at (`x`, `y`). Only actions that
  * already work are listed; those that cannot be done on this commit are
@@ -58,7 +54,7 @@ export function CommitMenu({
         state && !state.enabled
           ? t(`commitMenu.why.${state.reason}`, { branch })
           : undefined,
-      onSelect: () => ACTION_HANDLERS[action]?.(repoId, oid),
+      onSelect: () => runCommitAction(action, repoId, oid),
     };
   };
 

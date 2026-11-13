@@ -1717,7 +1717,7 @@ principio y toda operación destructiva pasa por confirmación.
         - El panel de detalle no cambia hasta que haya alguna acción.
         Tests: 3 de integración del core, 6 de las reglas, 4 de interfaz del
         menú y los de atajos.
-      - [ ] **10.2 Cherry-pick (core y UI).** `cherry_pick_preview(oid)`: si
+      - [x] **10.2 Cherry-pick (core y UI).** `cherry_pick_preview(oid)`: si
         el commit ya está en la rama (`merge-base --is-ancestor`), si es un
         merge, qué cambios sin confirmar chocarían (archivos que toca el
         commit) y los conflictos previstos con `git merge-tree --write-tree
@@ -1731,6 +1731,34 @@ principio y toda operación destructiva pasa por confirmación.
         conflicto (que la 9 resuelve y continúa), bloqueado por cambios
         locales, guardar y hacer cherry-pick, commit ya en la rama, y un
         merge; tests de interfaz de cada diálogo.
+        *Cambios del usuario:* si se guardaron cambios en el stash, al
+        terminar el aviso ofrece «Recuperar mis cambios» (los aplica con
+        apply, la entrada se conserva, y si algo choca usa los diálogos de la
+        7.x); si se detiene con conflictos, el botón aparece cuando la
+        operación termina o se aborta. Con cambios guardados y conflictos, el
+        diálogo y la confirmación de abortar aclaran que los cambios siguen
+        en el stash y no vuelven solos al abortar.
+        *Hecho:*
+        - **Core:** `ops::pick` (`cherry_pick_preview`, `cherry_pick`).
+          Comprobado con git:
+          - cualquier cambio preparado bloquea el cherry-pick, aunque sea
+            de otro archivo;
+          - los cambios sin preparar solo bloquean si están en archivos que
+            toca el commit;
+          - git se niega antes de pisar archivos sin seguimiento.
+          Los conflictos se predicen con `merge-tree --merge-base` (git ≥
+          2.40; si no, estimados). Un commit sin padre se compara con el
+          árbol vacío. El resultado lleva la entrada de stash guardada.
+        - **Interfaz:** `src/features/history/`.
+          - El diálogo único tiene los casos limpio, cambios en medio,
+            conflictos, y cambios y conflictos a la vez.
+          - El aviso del resultado selecciona en el grafo el commit nuevo y
+            ofrece «Recuperar mis cambios», que usa el `apply` del stash
+            (sin pop).
+          - La acción está en el menú del commit y en los botones del panel
+            de detalle (`CommitActionButtons`), desactivada con su motivo
+            cuando no se puede.
+        Tests: 6 de integración y 7 de interfaz.
       - [ ] **10.3 Revert (core y UI).** Igual que el cherry-pick, para
         commits de la rama actual: `revert_preview(oid)` (conflictos
         previstos con `--merge-base=<oid> HEAD <oid>^`) y `git revert

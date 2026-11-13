@@ -18,6 +18,7 @@ use gitcraft_core::ops::conflict::ConflictFile;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::in_progress::{ConflictSides, ContinueOutcome};
 use gitcraft_core::ops::init::InitCheck;
+use gitcraft_core::ops::pick::{PickOutcome, PickPreview};
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::ops::remote::{ForcePushPreview, PullMode, PullOutcome, PushOutcome};
 use gitcraft_core::ops::resolve::{MarkOutcome, ResolvedFile, Side};
@@ -970,4 +971,31 @@ pub async fn commit_actions(
     oid: String,
 ) -> Result<CommitActions, IpcError> {
     state.commit_actions(id, &oid).await
+}
+
+/// What cherry-picking `oid` onto the current branch would do (read-only).
+#[tauri::command]
+#[specta::specta]
+pub async fn cherry_pick_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+) -> Result<PickPreview, IpcError> {
+    state.cherry_pick_preview(id, &oid).await
+}
+
+/// Cherry-picks `oid`: checks everything again and does nothing that the
+/// user did not accept (saving changes first, going on with conflicts).
+#[tauri::command]
+#[specta::specta]
+pub async fn cherry_pick(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+    save_changes: bool,
+    allow_conflicts: bool,
+) -> Result<PickOutcome, IpcError> {
+    state
+        .cherry_pick(id, oid, save_changes, allow_conflicts)
+        .await
 }

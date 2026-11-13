@@ -46,12 +46,18 @@ describe("the menu of a commit", () => {
       name: `Acciones del commit ${oid("e").slice(0, 7)}`,
     });
     expect(useGraphStore.getState().graphs[1]?.selectedOid).toBe(oid("e"));
-    // In 10.1 only what already works: no button that does nothing.
+    // Only what already works: no button that does nothing.
+    const pick = await within(menu).findByRole("menuitem", {
+      name: "Cherry-pick en «main»…",
+    });
     expect(
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Copiar hash"]);
+    ).toEqual(["Cherry-pick en «main»…", "Copiar hash"]);
+    // The default facts say it is already in main.
+    expect(pick).toBeDisabled();
+    expect(pick).toHaveAttribute("title", "Ya está en «main».");
   });
 
   it("copies the whole hash", async () => {

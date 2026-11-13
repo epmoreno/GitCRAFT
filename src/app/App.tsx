@@ -23,6 +23,10 @@ import { installAppMenu } from "./menu";
 import { installWindowCloseGuard, requestQuit } from "./quit";
 import { InProgressBanner } from "../features/conflicts/OperationBanner";
 import { UnsavedDialog } from "../features/conflicts/UnsavedDialog";
+import {
+  HistoryDialogs,
+  HistoryToast,
+} from "../features/history/HistoryDialogs";
 import { reportIfSmokeRun } from "./smoke";
 import { isShortcut } from "./shortcuts";
 import { StartPage } from "../features/repo/StartPage";
@@ -147,6 +151,7 @@ export function App() {
           <StashToast />
           <RemoteToast />
           <RemoteProgress />
+          <HistoryToast repoId={active?.id ?? null} />
         </main>
         <DetailPanel repoId={active?.id ?? null} />
         <DiscardDialog />
@@ -157,6 +162,7 @@ export function App() {
         <SettingsDialog />
         <PublishDialog />
         <UnsavedDialog />
+        <HistoryDialogs />
       </div>
       <OperationsPanel />
     </div>

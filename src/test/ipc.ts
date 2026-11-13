@@ -112,6 +112,8 @@ export const ipc = {
   continueInProgress: vi.mocked(commands.continueInProgress),
   skipCurrent: vi.mocked(commands.skipCurrent),
   commitActions: vi.mocked(commands.commitActions),
+  cherryPickPreview: vi.mocked(commands.cherryPickPreview),
+  cherryPick: vi.mocked(commands.cherryPick),
 };
 
 export function resetIpcMock() {
@@ -127,6 +129,20 @@ export function resetIpcMock() {
   ipc.conflictSides.mockResolvedValue({ status: "ok", data: null });
   ipc.resolvedFiles.mockResolvedValue({ status: "ok", data: [] });
   ipc.preparedMessage.mockResolvedValue({ status: "ok", data: null });
+  // A commit of the current branch, with nothing in progress.
+  ipc.commitActions.mockImplementation((_id, commit) =>
+    Promise.resolve({
+      status: "ok",
+      data: {
+        oid: commit,
+        branch: "main",
+        inProgress: null,
+        isMerge: false,
+        inBranch: true,
+        isHead: false,
+      },
+    }),
+  );
   ipc.stageFiles.mockResolvedValue({ status: "ok", data: null });
   ipc.unstageFiles.mockResolvedValue({ status: "ok", data: null });
   ipc.createCommit.mockResolvedValue({ status: "ok", data: oid("9") });

@@ -13,6 +13,10 @@ import {
 } from "../features/operations/store";
 import { initialRemoteState, useRemoteStore } from "../features/remote/store";
 import {
+  initialHistoryState,
+  useHistoryStore,
+} from "../features/history/store";
+import {
   initialConflictState,
   useConflictStore,
 } from "../features/conflicts/store";
@@ -123,6 +127,8 @@ vi.mock("../ipc", () => ({
     continueInProgress: vi.fn(),
     skipCurrent: vi.fn(),
     commitActions: vi.fn(),
+    cherryPickPreview: vi.fn(),
+    cherryPick: vi.fn(),
   },
   setUiZoom: vi.fn(),
   ghLogin: vi.fn(),
@@ -161,6 +167,7 @@ beforeEach(() => {
   useStashStore.setState(initialStashState);
   useRemoteStore.setState(initialRemoteState);
   useConflictStore.setState(initialConflictState);
+  useHistoryStore.setState(initialHistoryState);
   useCreateStore.setState(initialCreateState);
   useOperationsStore.setState(initialOperationsState);
   useGraphStore.setState({ graphs: {} });

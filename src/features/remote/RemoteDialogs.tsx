@@ -1,4 +1,5 @@
 import { useConflictStore } from "../conflicts/store";
+import { useHistoryStore } from "../history/store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
@@ -129,6 +130,7 @@ export function AbortDialog() {
     dialog?.kind === "abort" ? s.drafts[dialog.repoId] : undefined,
   );
   if (dialog?.kind !== "abort") return null;
+  const saved = useHistoryStore.getState().saved[dialog.repoId];
   const unsaved = Object.keys(drafts ?? {}).sort();
   return (
     <ConfirmDialog
@@ -143,6 +145,7 @@ export function AbortDialog() {
       }}
     >
       <p>{t("pull.abortExplained")}</p>
+      {saved && <p>{t("history.abortKeepsSaved")}</p>}
       {unsaved.length > 0 && (
         <>
           <p>{t("conflicts.unsaved.abort")}</p>
