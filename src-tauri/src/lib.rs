@@ -118,7 +118,10 @@ pub fn run() {
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
-            let settings = app.path().app_config_dir()?.join("settings.json");
+            // A smoke run gets an empty configuration of its own, never
+            // the user's (saved tabs, recent repositories).
+            let smoke = smoke::Smoke::from_args()?;
+            let settings = smoke.settings_file(&app.path().app_config_dir()?);
             let handle = app.handle().clone();
             let history = Arc::new(CommandHistory::new(Arc::new({
                 let handle = handle.clone();
@@ -129,7 +132,6 @@ pub fn run() {
             let git = Git::discover().ok().map(|git| {
                 git.with_log(Arc::clone(&history) as Arc<dyn gitcraft_core::CommandLog>)
             });
-            let smoke = smoke::Smoke::from_args();
             smoke.start_deadline();
             app.manage(smoke);
             app.manage(Arc::clone(&history));

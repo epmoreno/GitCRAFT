@@ -408,7 +408,9 @@ Núcleo en `gitcraft-core`: `parse/conflict.rs` (parser puro),
   la app termina sin ningún evento que se pueda cancelar. Por la misma
   razón, «Salir» del Dock, cerrar sesión o apagar terminan sin el aviso. El
   modo de humo del CI sale por este mismo camino y falla (código 3) si la
-  app no termina sola.
+  app no termina sola (el modo de humo nunca usa la configuración del
+  usuario: crea su propia carpeta de configuración vacía en la carpeta
+  temporal, sin pestañas guardadas ni recientes, y la borra al terminar).
 - **Pruebas:** `scripts/make-conflict-examples.sh` crea un merge y un rebase
   detenidos en conflicto en repos desechables; los tests de integración
   (`tests/conflict.rs`, `resolve.rs`, `in_progress.rs`, `continue.rs`) crean
