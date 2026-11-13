@@ -1,9 +1,11 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isShortcut } from "../../app/shortcuts";
 import { useTranslation } from "react-i18next";
 import type { RepoInfo } from "../../ipc";
 import { ConflictView } from "../conflicts/ConflictView";
 import { DiffView } from "../diff/DiffView";
+import { CommitMenu } from "./CommitMenu";
 import { useRememberedScroll } from "../repo/viewState";
 import { UncommittedRow } from "../workdir/UncommittedRow";
 import { drawGraph } from "./drawGraph";
@@ -55,6 +57,14 @@ export function GraphView({
   const now = Date.now();
 
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const [menu, setMenu] = useState<{
+    oid: string;
+
+    x: number;
+
+    y: number;
+  } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Each tab keeps its scroll position.
   useRememberedScroll(scrollRef, `${repoId}:graph`);
@@ -169,6 +179,23 @@ export function GraphView({
         // selection can tell whether the history has the focus.
         tabIndex={0}
         aria-label={t("graph.listLabel", { name: info.name })}
+        onKeyDown={(event) => {
+          // The menu key or ⇧F10: the selected commit's menu, under its row.
+          if (!isShortcut("commitMenu", event)) return;
+          if (!selectedOid || !lines.some((l) => l.oid === selectedOid)) {
+            return;
+          }
+          event.preventDefault();
+          const row =
+            scrollRef.current?.querySelector('[aria-selected="true"]') ??
+            scrollRef.current;
+          const rect = row?.getBoundingClientRect();
+          setMenu({
+            oid: selectedOid,
+            x: (rect?.left ?? 0) + width + 24,
+            y: rect?.bottom ?? 0,
+          });
+        }}
       >
         <div className={styles.canvasLayer} aria-hidden="true">
           <canvas ref={canvasRef} className={styles.canvas} />
@@ -193,6 +220,15 @@ export function GraphView({
                   paddingLeft: width,
                 }}
                 onClick={() => select(repoId, line.oid)}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  select(repoId, line.oid);
+                  setMenu({
+                    oid: line.oid,
+                    x: event.clientX,
+                    y: event.clientY,
+                  });
+                }}
               >
                 <span className={styles.description}>
                   <RefChips
@@ -229,6 +265,15 @@ export function GraphView({
             : t("graph.count", { count: lines.length })}
         </span>
       </footer>
+      {menu && (
+        <CommitMenu
+          repoId={repoId}
+          oid={menu.oid}
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+        />
+      )}
       {graph?.openFile?.kind === "conflict" ? (
         <ConflictView
           key={graph.openFile.path}

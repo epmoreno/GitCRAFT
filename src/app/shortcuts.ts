@@ -27,7 +27,14 @@ type Chord = {
 };
 
 export type ShortcutGroup =
-  "app" | "tabs" | "changes" | "commit" | "diff" | "conflicts" | "general";
+  | "app"
+  | "tabs"
+  | "changes"
+  | "commit"
+  | "diff"
+  | "conflicts"
+  | "history"
+  | "general";
 
 export type Shortcut = {
   group: ShortcutGroup;
@@ -93,6 +100,10 @@ export const SHORTCUTS = {
   commitBoxSmallest: { group: "commit", chords: [{ key: "End" }] },
   commitBoxReset: { group: "commit", chords: [{ key: "Enter" }] },
   diffRange: { group: "diff", chords: [{ key: "click", shift: true }] },
+  commitMenu: {
+    group: "history",
+    chords: [{ key: "ContextMenu" }, { key: "F10", shift: true }],
+  },
   conflictPrevious: {
     group: "conflicts",
     chords: [{ key: "ArrowUp", alt: true }],
@@ -186,7 +197,14 @@ const ARROWS: Record<string, string> = {
 };
 
 /** Keys written with their name (translated by `named`), not a symbol. */
-const NAMED_KEYS = new Set([" ", "Home", "End", "Escape", "click"]);
+const NAMED_KEYS = new Set([
+  " ",
+  "Home",
+  "End",
+  "Escape",
+  "click",
+  "ContextMenu",
+]);
 
 /** Also named outside macOS, as Windows and Linux keyboards print them. */
 const NAMED_KEYS_OTHER = new Set([

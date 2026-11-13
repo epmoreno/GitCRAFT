@@ -1688,7 +1688,7 @@ principio y toda operación destructiva pasa por confirmación.
       medias (aviso de arriba) o si HEAD está separado; nunca se fuerza
       nada; cada paso es un comando de git normal, con los argumentos
       separados y las refs completas.
-      - [ ] **10.1 Acciones de un commit (UI).** Menú contextual en las filas
+      - [x] **10.1 Acciones de un commit (UI).** Menú contextual en las filas
         del grafo (clic derecho, y la tecla de menú o ⇧F10 desde el teclado,
         en el registro de atajos) y los mismos botones en el panel de detalle
         del commit: «Cherry-pick en «rama»…», «Revertir en «rama»…»,
@@ -1697,6 +1697,26 @@ principio y toda operación destructiva pasa por confirmación.
         (ya está en la rama, es un merge, hay una operación a medias…).
         *Verificable:* tests de interfaz de qué acciones salen activas en
         cada caso, del menú por teclado y de los textos en es/en.
+        *Cambios del usuario:* cada acción aparece en el menú y en el panel
+        solo cuando su tarea esté hecha (cherry-pick con la 10.2, revertir
+        con la 10.3, restablecer con la 10.4, crear tag con la 10.5); nunca
+        botones que no hagan nada. «Restablecer…» va separado por una línea y
+        con el estilo de acción peligrosa, en el menú y en el panel.
+        *Hecho:*
+        - **Core:** `ops::commit_actions::commit_actions` (comando
+          `commit_actions`) da los datos que deciden qué se ofrece: rama
+          actual, operación a medias, si es un merge, si ya está en la rama y
+          si es HEAD. Acepta solo ids hexadecimales.
+        - **Reglas:** `src/features/graph/commitActions.ts` decide si cada
+          acción está disponible y el motivo si no; `READY_ACTIONS`, vacía en
+          la 10.1, es la lista de las que ya funcionan.
+        - **Menú:** clic derecho en un commit del grafo (lo selecciona) o la
+          tecla de menú / ⇧F10 con la lista enfocada (atajo `commitMenu`,
+          grupo «Historial» en Ajustes → Atajos). En la 10.1 solo tiene
+          «Copiar hash». `ContextMenu` admite ya una línea separadora.
+        - El panel de detalle no cambia hasta que haya alguna acción.
+        Tests: 3 de integración del core, 6 de las reglas, 4 de interfaz del
+        menú y los de atajos.
       - [ ] **10.2 Cherry-pick (core y UI).** `cherry_pick_preview(oid)`: si
         el commit ya está en la rama (`merge-base --is-ancestor`), si es un
         merge, qué cambios sin confirmar chocarían (archivos que toca el

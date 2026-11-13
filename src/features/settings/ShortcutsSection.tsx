@@ -16,6 +16,7 @@ const GROUPS: ShortcutGroup[] = [
   "commit",
   "diff",
   "conflicts",
+  "history",
   "general",
 ];
 

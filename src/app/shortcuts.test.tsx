@@ -120,6 +120,7 @@ describe("shortcut registry", () => {
       expect(label("newTab")).toEqual(["Ctrl+T"]);
       expect(label("changesNext")).toEqual(["↓"]);
       expect(label("conflictNext")).toEqual(["Alt+↓"]);
+      expect(label("commitMenu")).toEqual(["<ContextMenu>", "<Shift>+F10"]);
       expect(label("conflictPrevious")).toEqual(["Alt+↑"]);
       expect(shortcutLabel("tabByNumber", named, "3")).toBe("Ctrl+3");
     });
@@ -180,6 +181,11 @@ describe("shortcut registry", () => {
         name: /Ir al siguiente bloque en conflicto/,
       }),
     ).toHaveTextContent("⌥↓");
+    expect(
+      within(section).getByRole("row", {
+        name: /Abrir el menú del commit seleccionado/,
+      }),
+    ).toHaveTextContent("Tecla de menú⇧F10");
     // ⌥↓ is not plain ↓: the list's own arrows keep working.
     expect(isShortcut("conflictNext", key("ArrowDown", { altKey: true }))).toBe(
       true,

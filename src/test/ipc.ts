@@ -111,6 +111,7 @@ export const ipc = {
   preparedMessage: vi.mocked(commands.preparedMessage),
   continueInProgress: vi.mocked(commands.continueInProgress),
   skipCurrent: vi.mocked(commands.skipCurrent),
+  commitActions: vi.mocked(commands.commitActions),
 };
 
 export function resetIpcMock() {

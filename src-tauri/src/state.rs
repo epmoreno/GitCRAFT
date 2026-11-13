@@ -12,6 +12,7 @@ use gitcraft_core::ops::branch::{
 };
 use gitcraft_core::ops::clone;
 use gitcraft_core::ops::commit::{CommitChanges, commit_changes, commit_details, commit_file_diff};
+use gitcraft_core::ops::commit_actions::{self, CommitActions};
 use gitcraft_core::ops::commit_write::{AmendInfo, amend_info, compose_message, create_commit};
 use gitcraft_core::ops::config::{
     self, ConfigChange, ConfigTarget, GlobalDefaults, Identity, IdentityInfo, PullStrategy,
@@ -1419,6 +1420,15 @@ fn unix_now() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| d.as_secs())
+}
+
+/// Actions on a commit of the graph (task 10).
+impl AppState {
+    pub async fn commit_actions(&self, id: RepoId, oid: &str) -> Result<CommitActions, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(commit_actions::commit_actions(git, &repo, oid, &CancellationToken::new()).await?)
+    }
 }
 
 /// Resolving conflicts (task 9): reads go straight to git; writes take the

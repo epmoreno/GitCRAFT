@@ -141,6 +141,8 @@ export const commands = {
 	continueInProgress: (id: number, message: string | null) => typedError<ContinueOutcome, IpcError_Serialize>(__TAURI_INVOKE("continue_in_progress", { id, message })),
 	/**  Skips the commit being replayed (rebase, cherry-pick, revert). */
 	skipCurrent: (id: number) => typedError<ContinueOutcome, IpcError_Serialize>(__TAURI_INVOKE("skip_current", { id })),
+	/**  What can be done with commit `oid`, and the facts to say why not. */
+	commitActions: (id: number, oid: string) => typedError<CommitActions_Serialize, IpcError_Serialize>(__TAURI_INVOKE("commit_actions", { id, oid })),
 	/**
 	 *  Pushes the current branch to its upstream, or publishes it to
 	 *  `publish_to` creating the upstream. `force_lease`: force only if the
@@ -421,6 +423,36 @@ export type CommandRecord_Serialize = {
 	startedAt: number,
 	durationMs: number | null,
 	outcome: CommandOutcome_Serialize | null,
+};
+
+export type CommitActions = CommitActions_Serialize | CommitActions_Deserialize;
+
+export type CommitActions_Deserialize = {
+	oid: string,
+	/**  The branch HEAD is on (`None`: detached HEAD, or no commit yet). */
+	branch?: string | null,
+	/**  A merge, rebase… waiting for the user: nothing else can start. */
+	inProgress?: InProgress | null,
+	/**  More than one parent: cherry-pick and revert are not offered. */
+	isMerge: boolean,
+	/**  The commit is HEAD or one of its ancestors (already in the branch). */
+	inBranch: boolean,
+	/**  The commit is HEAD itself. */
+	isHead: boolean,
+};
+
+export type CommitActions_Serialize = {
+	oid: string,
+	/**  The branch HEAD is on (`None`: detached HEAD, or no commit yet). */
+	branch: string | null,
+	/**  A merge, rebase… waiting for the user: nothing else can start. */
+	inProgress: InProgress | null,
+	/**  More than one parent: cherry-pick and revert are not offered. */
+	isMerge: boolean,
+	/**  The commit is HEAD or one of its ancestors (already in the branch). */
+	inBranch: boolean,
+	/**  The commit is HEAD itself. */
+	isHead: boolean,
 };
 
 export type CommitChanges = CommitChanges_Serialize | CommitChanges_Deserialize;

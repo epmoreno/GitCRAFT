@@ -29,6 +29,7 @@ export type {
   ConflictSides_Serialize as ConflictSides,
   ConflictVersion_Serialize as ConflictVersion,
   CommitRef,
+  CommitActions,
   ContinueOutcome,
   EntryKind,
   MarkOutcome,

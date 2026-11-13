@@ -9,6 +9,8 @@ export type MenuItem = {
   /** Why it is disabled, shown as its tooltip. */
   hint?: string;
   danger?: boolean;
+  /** A line above it, setting it apart from the items before. */
+  separatorBefore?: boolean;
 };
 
 type Props = {
@@ -81,7 +83,14 @@ export function ContextMenu({ x, y, label, items, onClose }: Props) {
         event.preventDefault();
       }}
     >
-      {items.map((item) => (
+      {items.map((item) => [
+        item.separatorBefore && (
+          <hr
+            key={`${item.label}-separator`}
+            className={styles.separator}
+            aria-hidden="true"
+          />
+        ),
         <button
           key={item.label}
           type="button"
@@ -97,8 +106,8 @@ export function ContextMenu({ x, y, label, items, onClose }: Props) {
           }}
         >
           {item.label}
-        </button>
-      ))}
+        </button>,
+      ])}
     </div>
   );
 }

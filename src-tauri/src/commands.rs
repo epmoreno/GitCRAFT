@@ -9,6 +9,7 @@ use tauri::ipc::Channel;
 use gitcraft_core::ops::branch::{BranchDeletion, BranchNameCheck, CheckoutOutcome};
 use gitcraft_core::ops::clone::{self, Destination};
 use gitcraft_core::ops::commit::CommitChanges;
+use gitcraft_core::ops::commit_actions::CommitActions;
 use gitcraft_core::ops::commit_write::AmendInfo;
 use gitcraft_core::ops::config::{
     self, ConfigChange, GlobalDefaults, Identity, IdentityInfo, PullStrategy,
@@ -956,4 +957,17 @@ pub async fn skip_current(
     id: RepoId,
 ) -> Result<ContinueOutcome, IpcError> {
     state.skip_current(id).await
+}
+
+// --- Actions on a commit (task 10) ----------------------------------------
+
+/// What can be done with commit `oid`, and the facts to say why not.
+#[tauri::command]
+#[specta::specta]
+pub async fn commit_actions(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+) -> Result<CommitActions, IpcError> {
+    state.commit_actions(id, &oid).await
 }

@@ -850,7 +850,8 @@
         "commit": "Caja de commit",
         "general": "Diálogos y menús",
         "diff": "Diff",
-        "conflicts": "Vista de conflictos"
+        "conflicts": "Vista de conflictos",
+        "history": "Historial"
       },
       "key": {
         " ": "Espacio",
@@ -862,7 +863,8 @@
         "Backspace": "Retroceso",
         "Delete": "Supr",
         "Tab": "Tab",
-        "Shift": "Mayús"
+        "Shift": "Mayús",
+        "ContextMenu": "Tecla de menú"
       },
       "action": {
         "settings": "Abrir los ajustes",
@@ -892,7 +894,8 @@
         "diffRange": "Seleccionar varias líneas: desde la anterior hasta esta",
         "conflictPrevious": "Ir al bloque en conflicto anterior",
         "conflictNext": "Ir al siguiente bloque en conflicto",
-        "quit": "Salir de GitCRAFT"
+        "quit": "Salir de GitCRAFT",
+        "commitMenu": "Abrir el menú del commit seleccionado"
       }
     }
   },
@@ -1071,6 +1074,18 @@
         "body": "Estos archivos tienen elecciones en la vista de conflictos que no has guardado. Si continúas, se pierden:",
         "confirm": "Continuar sin guardarlas"
       }
+    }
+  },
+  "commitMenu": {
+    "label": "Acciones del commit {{short}}",
+    "copyHash": "Copiar hash",
+    "why": {
+      "inProgress": "Termina o aborta antes la operación en curso.",
+      "detached": "No estás en ninguna rama.",
+      "merge": "Es un merge: habría que elegir cuál de sus padres es la línea principal; todavía no se puede desde GitCRAFT.",
+      "alreadyInBranch": "Ya está en «{{branch}}».",
+      "notInBranch": "No está en «{{branch}}»: solo se revierten commits de la rama actual.",
+      "isHead": "«{{branch}}» ya está en este commit."
     }
   }
 }

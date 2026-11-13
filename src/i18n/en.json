@@ -850,7 +850,8 @@
         "commit": "Commit box",
         "general": "Dialogs and menus",
         "diff": "Diff",
-        "conflicts": "Conflict view"
+        "conflicts": "Conflict view",
+        "history": "History"
       },
       "key": {
         " ": "Space",
@@ -862,7 +863,8 @@
         "Backspace": "Backspace",
         "Delete": "Delete",
         "Tab": "Tab",
-        "Shift": "Shift"
+        "Shift": "Shift",
+        "ContextMenu": "Menu key"
       },
       "action": {
         "settings": "Open settings",
@@ -892,7 +894,8 @@
         "diffRange": "Select several lines: from the previous one to this one",
         "conflictPrevious": "Go to the previous conflict block",
         "conflictNext": "Go to the next conflict block",
-        "quit": "Quit GitCRAFT"
+        "quit": "Quit GitCRAFT",
+        "commitMenu": "Open the selected commit’s menu"
       }
     }
   },
@@ -1071,6 +1074,18 @@
         "body": "These files have choices in the conflict view you haven’t saved. Continuing loses them:",
         "confirm": "Continue without them"
       }
+    }
+  },
+  "commitMenu": {
+    "label": "Actions for commit {{short}}",
+    "copyHash": "Copy hash",
+    "why": {
+      "inProgress": "Finish or abort the operation in progress first.",
+      "detached": "You are not on any branch.",
+      "merge": "It is a merge: one of its parents would have to be chosen as the main line; GitCRAFT can’t do that yet.",
+      "alreadyInBranch": "Already in “{{branch}}”.",
+      "notInBranch": "Not in “{{branch}}”: only commits of the current branch can be reverted.",
+      "isHead": "“{{branch}}” is already at this commit."
     }
   }
 }

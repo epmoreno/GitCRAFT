@@ -122,6 +122,7 @@ vi.mock("../ipc", () => ({
     preparedMessage: vi.fn(),
     continueInProgress: vi.fn(),
     skipCurrent: vi.fn(),
+    commitActions: vi.fn(),
   },
   setUiZoom: vi.fn(),
   ghLogin: vi.fn(),
