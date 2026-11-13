@@ -142,8 +142,13 @@ pub fn run() {
             ));
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running GitCRAFT");
+        .build(tauri::generate_context!())
+        .expect("error while building GitCRAFT")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                app.state::<smoke::Smoke>().on_exit();
+            }
+        });
 }
 
 #[cfg(test)]

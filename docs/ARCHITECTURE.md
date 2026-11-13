@@ -397,10 +397,18 @@ Núcleo en `gitcraft-core`: `parse/conflict.rs` (parser puro),
   elecciones sin guardar viven en memoria por repo y archivo
   (`conflicts/store.ts`): se olvidan al terminar la operación, y cerrar la
   pestaña o la ventana, salir de la app, abortar o continuar con ellas pide
-  confirmación. Para que ⌘Q también avise, el «Quit» de macOS es un
-  elemento propio del menú (el predefinido llama a `terminate:` de AppKit y
-  la app termina sin ningún evento que se pueda cancelar); cerrar la última
-  ventana es lo que termina la app.
+  confirmación. Todo cierre pasa por `src/app/quit.ts`: ⌘Q / «Salir»
+  (`requestQuit`), el botón de cerrar la ventana (`onCloseRequested`) y el
+  «Salir» del aviso (`confirmClosing`); cerrar la última ventana es lo que
+  termina la app. Con un `onCloseRequested`, Tauri cancela siempre el cierre
+  nativo y la interfaz destruye la ventana (`destroy()`), por lo que hace
+  falta el permiso `core:window:allow-destroy` (sin él la app no se cierra;
+  un test lo exige). Para que ⌘Q también avise, el «Quit» de macOS es un
+  elemento propio del menú: el predefinido llama a `terminate:` de AppKit y
+  la app termina sin ningún evento que se pueda cancelar. Por la misma
+  razón, «Salir» del Dock, cerrar sesión o apagar terminan sin el aviso. El
+  modo de humo del CI sale por este mismo camino y falla (código 3) si la
+  app no termina sola.
 - **Pruebas:** `scripts/make-conflict-examples.sh` crea un merge y un rebase
   detenidos en conflicto en repos desechables; los tests de integración
   (`tests/conflict.rs`, `resolve.rs`, `in_progress.rs`, `continue.rs`) crean

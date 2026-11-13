@@ -60,8 +60,7 @@ async function macMenu(t: TFunction, actions: MenuActions) {
       await separator(),
       // Not the predefined Quit: that one ends the app straight away
       // (AppKit's terminate:), without the warning about unsaved conflict
-      // choices. Same place, text and ⌘Q; the text stays in English like
-      // the other items macOS names (Services, Hide…).
+      // choices. Same place and ⌘Q.
       await MenuItem.new({
         id: "quit",
         text: t("menu.quitMac"),

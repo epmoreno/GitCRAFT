@@ -68,7 +68,7 @@ describe("menu bar", () => {
   it("on macOS, is the one it always was", async () => {
     await install();
     expect(outline()).toEqual([
-      "GitCRAFT: About, —, Ajustes… [CmdOrCtrl+,], —, Services, —, Hide, HideOthers, ShowAll, —, Quit GitCRAFT [CmdOrCtrl+Q]",
+      "GitCRAFT: About, —, Ajustes… [CmdOrCtrl+,], —, Services, —, Hide, HideOthers, ShowAll, —, Salir de GitCRAFT [CmdOrCtrl+Q]",
       "Archivo: Nueva pestaña [CmdOrCtrl+T]",
       "Edición: Undo, Redo, —, Cut, Copy, Paste, SelectAll",
       "Ventana: Cerrar pestaña [CmdOrCtrl+W], —, Minimize, Fullscreen",

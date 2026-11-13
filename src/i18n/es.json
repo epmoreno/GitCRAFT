@@ -653,7 +653,7 @@
     "paste": "Pegar",
     "selectAll": "Seleccionar todo",
     "about": "Acerca de GitCRAFT",
-    "quitMac": "Quit GitCRAFT"
+    "quitMac": "Salir de GitCRAFT"
   },
   "init": {
     "pickerTitle": "Carpeta para el nuevo repositorio",

@@ -1,8 +1,10 @@
+import { readFileSync } from "node:fs";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import i18n from "../i18n";
 import { useConflictStore } from "../features/conflicts/store";
 import { ipc } from "../test/ipc";
+import { SRC_DIR } from "../test/sources";
 import { App } from "./App";
 import { installAppMenu } from "./menu";
 import { closeWindow } from "./windowClose";
@@ -50,4 +52,18 @@ describe("quitting (⌘Q, or Quit in the menu)", () => {
     expect(closeWindow).toHaveBeenCalled();
     expect(useConflictStore.getState().drafts).toEqual({});
   });
+});
+
+/*
+ * The window-close guard uses Tauri's onCloseRequested: with a listener,
+ * Tauri always holds the window open and the listener destroys it, which
+ * needs this permission. Without it nothing closes the app (7565461). The
+ * smoke run (smoke.ts) checks the real app closes; this catches it sooner.
+ */
+it("grants what closing the window needs", () => {
+  const capability = JSON.parse(
+    readFileSync(`${SRC_DIR}../src-tauri/capabilities/default.json`, "utf8"),
+  ) as { permissions: string[] };
+  expect(capability.permissions).toContain("core:window:allow-close");
+  expect(capability.permissions).toContain("core:window:allow-destroy");
 });

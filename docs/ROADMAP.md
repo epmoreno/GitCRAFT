@@ -1564,12 +1564,32 @@ principio y toda operación destructiva pasa por confirmación.
           `resolved_files`, `write_resolution`, `choose_version`,
           `resolve_by_deleting`, `mark_resolved`, `restart_conflict_file` y
           `unmark_resolved`.
-        - **Salir de la app** (⌘Q o «Quit GitCRAFT» en macOS, «Salir» en
-          Windows y Linux) también avisa. En macOS, el «Quit» predefinido
+        - **Salir de la app** (⌘Q o «Salir de GitCRAFT» en macOS, «Salir»
+          en Windows y Linux) también avisa. En macOS, el «Quit» predefinido
           terminaba la app directamente (`terminate:` de AppKit, sin evento
           que se pueda cancelar). Lo sustituye un elemento propio en el mismo
-          sitio, con el mismo texto y ⌘Q (atajo `quit` del registro), que
-          pasa por el aviso; las opciones del menú no cambian.
+          sitio y con ⌘Q (atajo `quit` del registro), que pasa por el aviso;
+          las opciones del menú no cambian.
+        - **Fallo grave del primer intento (`7565461`), arreglado:** la app
+          no se podía cerrar (ni ⌘Q, ni «Salir» del aviso, ni el botón rojo).
+          *Causa:* con un `onCloseRequested` en la interfaz, Tauri cancela
+          siempre el cierre nativo y es la interfaz la que destruye la ventana
+          (`destroy()`), que necesita el permiso `core:window:allow-destroy`;
+          la app no lo tenía, así que el `destroy()` fallaba en silencio. El
+          aviso al cerrar con el botón rojo (9.5) ya tenía el problema; ⌘Q
+          lo hizo evidente al pasar todo por el mismo cierre.
+          *Por qué los tests no lo vieron:* todos sustituyen el módulo de la
+          ventana (no hay Tauri en Vitest), los permisos solo los aplica la
+          app real, y el modo de humo terminaba la app desde Rust en vez de
+          cerrarla como el usuario. *Arreglo:* el permiso, un único camino
+          de salida (`src/app/quit.ts`), un test que exige el permiso, y el
+          modo de humo sale como el usuario (⌘Q con una elección sin guardar
+          y «Salir» del aviso): si la app no termina sola en 30 s, falla con
+          código 3, en los tres sistemas.
+        - *Limitación:* «Salir» del menú del Dock (clic derecho en el
+          icono), cerrar sesión o apagar el Mac terminan la app sin el aviso:
+          llegan como `terminate:` de AppKit y no hay evento que se pueda
+          cancelar sin código nativo.
         Tests: 9 de `result.ts`, 17 de la vista y del panel, y los de
         atajos (⌥↓ / Alt+↓, y que ⌥↓ no es ↓).
       - [x] **9.6 Continuar desde la app (UI).** El aviso de operación a

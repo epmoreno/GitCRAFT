@@ -20,14 +20,9 @@ import {
   RestoreFailedBanner,
 } from "../features/repo/OpenErrorBanner";
 import { installAppMenu } from "./menu";
-import { closeWindow, guardWindowClose } from "./windowClose";
+import { installWindowCloseGuard, requestQuit } from "./quit";
 import { InProgressBanner } from "../features/conflicts/OperationBanner";
 import { UnsavedDialog } from "../features/conflicts/UnsavedDialog";
-import {
-  reposWithDrafts,
-  unsavedPaths,
-  useConflictStore,
-} from "../features/conflicts/store";
 import { reportIfSmokeRun } from "./smoke";
 import { isShortcut } from "./shortcuts";
 import { StartPage } from "../features/repo/StartPage";
@@ -39,16 +34,6 @@ import { TabBar } from "../features/repo/TabBar";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
 import styles from "./App.module.css";
 import { Toolbar } from "./Toolbar";
-
-/** Unsaved conflict choices in every tab, as "repo: file". */
-function unsavedEverywhere(): string[] {
-  const names = new Map(
-    useRepoStore.getState().tabs.map((tab) => [tab.id, tab.info.name]),
-  );
-  return reposWithDrafts().flatMap((id) =>
-    unsavedPaths(id).map((path) => `${names.get(id) ?? id}: ${path}`),
-  );
-}
 
 /** Three-zone shell: sidebar · commit graph · contextual detail panel. */
 export function App() {
@@ -68,25 +53,9 @@ export function App() {
 
   // Closing the window with unsaved conflict choices asks first.
   useEffect(() => {
-    let unlisten: (() => void) | null = null;
-    let gone = false;
-    void guardWindowClose(() => {
-      const paths = unsavedEverywhere();
-      if (paths.length === 0) return false;
-      useConflictStore.getState().setClosing({ kind: "window", paths });
-      return true;
-    })
-      .then((stop) => {
-        if (gone) stop();
-        else unlisten = stop;
-      })
-      .catch((error: unknown) => {
-        console.warn("could not guard the window close", error);
-      });
-    return () => {
-      gone = true;
-      unlisten?.();
-    };
+    installWindowCloseGuard().catch((error: unknown) => {
+      console.warn("could not guard the window close", error);
+    });
   }, []);
   // ⌘T / Ctrl+T opens a new tab and ⌘W / Ctrl+W closes the active one
   // (menu bar); ⌘1…⌘9 and ⌃Tab / ⌃⇧Tab switch tabs. Never while a dialog
@@ -104,11 +73,7 @@ export function App() {
       closeTab: () => {
         if (!dialogOpen()) void tabs().closeActiveTab();
       },
-      quit: () => {
-        const paths = unsavedEverywhere();
-        if (paths.length === 0) void closeWindow();
-        else useConflictStore.getState().setClosing({ kind: "quit", paths });
-      },
+      quit: () => void requestQuit(),
     }).catch((error: unknown) => {
       console.warn("could not install the app menu", error);
     });
