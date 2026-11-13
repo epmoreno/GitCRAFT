@@ -1586,6 +1586,14 @@ principio y toda operación destructiva pasa por confirmación.
           modo de humo sale como el usuario (⌘Q con una elección sin guardar
           y «Salir» del aviso): si la app no termina sola en 30 s, falla con
           código 3, en los tres sistemas.
+          *CI* (`cb13f09`): los tres en verde; en los tres, «smoke: the app
+          closed itself when asked to quit». Después (`f4fc34d`), el modo de
+          humo usa su propia configuración vacía, nunca la del usuario.
+          *Verificado manualmente en macOS:* ⌘Q sin nada pendiente, el botón
+          rojo y «Salir de GitCRAFT ⌘Q» del menú (en español) cierran la app;
+          con elecciones sin guardar, tanto ⌘Q como el botón rojo avisan,
+          «Cancelar» la mantiene abierta y «Salir»/«Cerrar la ventana» la
+          cierran.
         - *Limitación:* «Salir» del menú del Dock (clic derecho en el
           icono), cerrar sesión o apagar el Mac terminan la app sin el aviso:
           llegan como `terminate:` de AppKit y no hay evento que se pueda
@@ -1663,6 +1671,115 @@ principio y toda operación destructiva pasa por confirmación.
       tags** (ligeros y anotados).
       *Tests:* cada operación, también cuando acaba en conflicto (usa la 9). El
       reset hard enumera lo que se perdería antes de confirmar.
+      *Criterios (del usuario):* el reset hard y cualquier operación que
+      pueda perder trabajo piden confirmación explicando qué se pierde y
+      hacen antes una copia recuperable, como los descartes; cherry-pick y
+      revert que acaben en conflicto usan la vista de la tarea 9; borrar un
+      tag publicado en el remoto tiene su propia confirmación, que explica
+      que afecta a otras personas.
+      *Decisiones del usuario:* (1) cherry-pick y revert de commits de merge
+      no se permiten en la 10: la app explica el motivo (habría que elegir
+      cuál de sus padres es la línea principal); (2) los commits que salen
+      de la rama con un reset quedan en el reflog, con «Deshacer» inmediato,
+      y recuperarlos más tarde es la tarea 11; (3) los archivos sin
+      seguimiento que pisaría un reset --hard van antes a la Papelera,
+      listados en la confirmación, como en los descartes.
+      *Comunes a todas:* se niegan, sin tocar nada, si hay una operación a
+      medias (aviso de arriba) o si HEAD está separado; nunca se fuerza
+      nada; cada paso es un comando de git normal, con los argumentos
+      separados y las refs completas.
+      - [ ] **10.1 Acciones de un commit (UI).** Menú contextual en las filas
+        del grafo (clic derecho, y la tecla de menú o ⇧F10 desde el teclado,
+        en el registro de atajos) y los mismos botones en el panel de detalle
+        del commit: «Cherry-pick en «rama»…», «Revertir en «rama»…»,
+        «Restablecer «rama» a este commit…», «Crear tag aquí…» y «Copiar
+        hash». Las que no se pueden hacer salen desactivadas con el motivo
+        (ya está en la rama, es un merge, hay una operación a medias…).
+        *Verificable:* tests de interfaz de qué acciones salen activas en
+        cada caso, del menú por teclado y de los textos en es/en.
+      - [ ] **10.2 Cherry-pick (core y UI).** `cherry_pick_preview(oid)`: si
+        el commit ya está en la rama (`merge-base --is-ancestor`), si es un
+        merge, qué cambios sin confirmar chocarían (archivos que toca el
+        commit) y los conflictos previstos con `git merge-tree --write-tree
+        --merge-base=<oid>^ HEAD <oid>` (como el pull; con git < 2.40, por
+        los archivos que cambian en los dos lados). Si algo estorba:
+        «Guardar mis cambios y hacer cherry-pick» (stash que nunca se borra)
+        o cancelar. Si habrá conflictos: la lista y «Hacer cherry-pick con
+        conflictos» o cancelar. Ejecuta `git cherry-pick <oid>`; si se
+        detiene, se resuelve con la vista de la 9 y el aviso de arriba.
+        *Verificable:* integración en los tres sistemas: limpio, con
+        conflicto (que la 9 resuelve y continúa), bloqueado por cambios
+        locales, guardar y hacer cherry-pick, commit ya en la rama, y un
+        merge; tests de interfaz de cada diálogo.
+      - [ ] **10.3 Revert (core y UI).** Igual que el cherry-pick, para
+        commits de la rama actual: `revert_preview(oid)` (conflictos
+        previstos con `--merge-base=<oid> HEAD <oid>^`) y `git revert
+        --no-edit <oid>`, con el mensaje «Revert "…"» que pone git. El
+        diálogo explica que no borra el commit: añade uno nuevo que deshace
+        sus cambios (lo seguro con commits ya publicados).
+        *Verificable:* integración: limpio, con conflicto resuelto con la 9,
+        bloqueado por cambios locales y un commit que no está en la rama;
+        tests de interfaz.
+      - [ ] **10.4 Reset de la rama actual (core y UI).** Tres modos, con la
+        explicación de cada uno: soft (los cambios de los commits quedan
+        preparados), mixed (quedan sin preparar) y hard (se descartan).
+        - `reset_preview(oid, modo)` devuelve los commits que dejan de estar
+          en la rama (`rev-list <oid>..HEAD`), cuáles no están en ninguna
+          otra rama, remoto o tag, cuáles ya están publicados (habrá que
+          hacer push forzado, y afecta a otras personas). Además: en mixed,
+          si hay preparados por partes que se perderían; en hard, los
+          archivos con cambios sin confirmar que se pierden y los
+          **archivos sin seguimiento que git sobrescribiría sin avisar**
+          (los que el commit destino sí tiene; comprobado: `reset --hard` los
+          pisa).
+        - *Copia antes (como los descartes):* si se va a perder algo sin
+          confirmar, una entrada de stash «GitCRAFT: antes de reset a
+          <hash>» (`stash create` + `stash store`, índice incluido, que nunca
+          se borra sola). Los archivos sin seguimiento que se pisarían van a
+          la Papelera antes, como en los descartes. Los commits que salen de
+          la rama siguen en el reflog de git.
+        - La confirmación lista todo lo anterior. En hard, con botón de
+          peligro y el texto «se descartan …, con copia en el stash». No
+          hace nada si HEAD o el estado han cambiado desde la vista previa.
+        - *Deshacer* (unos segundos, como el descarte): si nada ha cambiado
+          desde el reset, vuelve exactamente a como estaba (rama en su
+          commit, copia aplicada con su índice y archivos devueltos desde la
+          Papelera). Si algo ha cambiado, no toca nada y dice dónde está la
+          copia.
+        *Verificable:* integración en los tres sistemas con los tres modos:
+        lo que lista la vista previa (incluidos los sin seguimiento que se
+        pisarían y los commits publicados), la copia en el stash byte a byte,
+        la Papelera, deshacer exacto, deshacer que se niega si algo cambió,
+        y que no hace nada si el estado cambió tras la vista previa; tests
+        de interfaz de la confirmación de cada modo.
+      - [ ] **10.5 Tags (core y UI).**
+        - **Crear** en un commit: ligero o anotado (con mensaje). El nombre
+          se valida con `git check-ref-format`, y si ya existe se dice y no
+          se mueve.
+        - **Subir** un tag a un remoto: `git push <remoto> refs/tags/<tag>`.
+        - **Borrar** un tag local, con confirmación. Si además está en algún
+          remoto (`git ls-remote --tags <remoto> refs/tags/<tag>`, consultado
+          al pedirlo), se ofrece aparte «Borrarlo también de «origin»…», con
+          su propia confirmación. Esa confirmación explica que otras
+          personas pueden tenerlo ya, que su copia no se borra y que, si
+          alguien lo vuelve a subir, reaparece. Borrar en el remoto es
+          `git push <remoto> --delete refs/tags/<tag>`. Nunca se borra en el
+          remoto como efecto del borrado local.
+        - Desde la barra lateral (menú del tag) y desde la acción «Crear tag
+          aquí…» de 10.1.
+        *Verificable:* integración: crear ligero y anotado (autor y mensaje),
+        nombre inválido o repetido, subir, borrar local, y borrar en el
+        remoto (contra un remoto bare de prueba), que solo ocurre con su
+        confirmación; tests de interfaz de las dos confirmaciones.
+      - [ ] **10.6 Documentación y prueba a mano.** Sección en
+        ARCHITECTURE.md y un script de ejemplo (repo desechable con un
+        remoto bare local) para probar cada operación en el Mac.
+        *Verificable:* el usuario lo prueba y lo confirma.
+      *Fuera de la 10:* cherry-pick o revert de un commit de merge (más
+      adelante, eligiendo el padre principal con `-m`), de varios a la vez,
+      mover un tag existente (se borra y se crea), firmar tags (se respeta
+      `tag.gpgSign` si el usuario lo tiene) y deshacer más allá de los
+      segundos tras el reset (tarea 11).
 - [ ] **8. Merge/rebase con drag & drop.** Al arrastrar una rama sobre otra se
       abre un diálogo de confirmación que muestra qué rama se mueve y cuántos
       commits. Hay alternativa por menú y teclado.
