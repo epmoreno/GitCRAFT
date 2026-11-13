@@ -652,7 +652,8 @@
     "copy": "Copiar",
     "paste": "Pegar",
     "selectAll": "Seleccionar todo",
-    "about": "Acerca de GitCRAFT"
+    "about": "Acerca de GitCRAFT",
+    "quitMac": "Quit GitCRAFT"
   },
   "init": {
     "pickerTitle": "Carpeta para el nuevo repositorio",
@@ -890,7 +891,8 @@
         "menuPrevious": "Menú: opción anterior",
         "diffRange": "Seleccionar varias líneas: desde la anterior hasta esta",
         "conflictPrevious": "Ir al bloque en conflicto anterior",
-        "conflictNext": "Ir al siguiente bloque en conflicto"
+        "conflictNext": "Ir al siguiente bloque en conflicto",
+        "quit": "Salir de GitCRAFT"
       }
     }
   },
@@ -1028,7 +1030,9 @@
       "window": "Hay archivos en conflicto con elecciones que no has guardado. Si cierras la ventana, se pierden:",
       "confirmTab": "Cerrar la pestaña",
       "confirmWindow": "Cerrar la ventana",
-      "abort": "Además se perderán las elecciones sin guardar en:"
+      "abort": "Además se perderán las elecciones sin guardar en:",
+      "quit": "Hay archivos en conflicto con elecciones que no has guardado. Si sales de GitCRAFT, se pierden:",
+      "confirmQuit": "Salir de GitCRAFT"
     }
   },
   "operation": {

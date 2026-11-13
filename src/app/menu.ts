@@ -4,7 +4,6 @@ import {
   PredefinedMenuItem,
   Submenu,
 } from "@tauri-apps/api/menu";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { TFunction } from "i18next";
 import { isMac } from "./platform";
 import { accelerator } from "./shortcuts";
@@ -13,6 +12,8 @@ type MenuActions = {
   openSettings: () => void;
   newTab: () => void;
   closeTab: () => void;
+  /** Quit the app: asks first if conflict choices are unsaved. */
+  quit: () => void;
 };
 
 /**
@@ -57,7 +58,16 @@ async function macMenu(t: TFunction, actions: MenuActions) {
       await PredefinedMenuItem.new({ item: "HideOthers" }),
       await PredefinedMenuItem.new({ item: "ShowAll" }),
       await separator(),
-      await PredefinedMenuItem.new({ item: "Quit" }),
+      // Not the predefined Quit: that one ends the app straight away
+      // (AppKit's terminate:), without the warning about unsaved conflict
+      // choices. Same place, text and ⌘Q; the text stays in English like
+      // the other items macOS names (Services, Hide…).
+      await MenuItem.new({
+        id: "quit",
+        text: t("menu.quitMac"),
+        accelerator: accelerator("quit"),
+        action: actions.quit,
+      }),
     ],
   });
   const file = await Submenu.new({
@@ -132,11 +142,12 @@ async function windowsAndLinuxMenu(t: TFunction, actions: MenuActions) {
         action: actions.openSettings,
       }),
       await separator(),
-      // The predefined Quit does nothing on Linux: close the window instead.
+      // The predefined Quit does nothing on Linux: close the window instead
+      // (after the warning about unsaved conflict choices, if any).
       await MenuItem.new({
         id: "quit",
         text: t("menu.quit"),
-        action: () => void getCurrentWindow().close(),
+        action: actions.quit,
       }),
     ],
   });

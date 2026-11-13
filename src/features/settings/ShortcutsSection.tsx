@@ -32,20 +32,21 @@ export function ShortcutsSection() {
         <table key={group} className={styles.shortcuts}>
           <caption>{t(`settings.shortcuts.group.${group}`)}</caption>
           <tbody>
-            {SHORTCUT_IDS.filter((id) => SHORTCUTS[id].group === group).map(
-              (id) => (
-                <tr key={id}>
-                  <th scope="row">{t(`settings.shortcuts.action.${id}`)}</th>
-                  <td>
-                    {chordsOf(id).map((chord, i) => (
-                      <kbd key={i} className={styles.kbd}>
-                        {chordLabel(chord, named)}
-                      </kbd>
-                    ))}
-                  </td>
-                </tr>
-              ),
-            )}
+            {SHORTCUT_IDS.filter(
+              // Only those that exist on this system.
+              (id) => SHORTCUTS[id].group === group && chordsOf(id).length > 0,
+            ).map((id) => (
+              <tr key={id}>
+                <th scope="row">{t(`settings.shortcuts.action.${id}`)}</th>
+                <td>
+                  {chordsOf(id).map((chord, i) => (
+                    <kbd key={i} className={styles.kbd}>
+                      {chordLabel(chord, named)}
+                    </kbd>
+                  ))}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       ))}

@@ -20,7 +20,7 @@ import {
   RestoreFailedBanner,
 } from "../features/repo/OpenErrorBanner";
 import { installAppMenu } from "./menu";
-import { guardWindowClose } from "./windowClose";
+import { closeWindow, guardWindowClose } from "./windowClose";
 import { InProgressBanner } from "../features/conflicts/OperationBanner";
 import { UnsavedDialog } from "../features/conflicts/UnsavedDialog";
 import {
@@ -39,6 +39,16 @@ import { TabBar } from "../features/repo/TabBar";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
 import styles from "./App.module.css";
 import { Toolbar } from "./Toolbar";
+
+/** Unsaved conflict choices in every tab, as "repo: file". */
+function unsavedEverywhere(): string[] {
+  const names = new Map(
+    useRepoStore.getState().tabs.map((tab) => [tab.id, tab.info.name]),
+  );
+  return reposWithDrafts().flatMap((id) =>
+    unsavedPaths(id).map((path) => `${names.get(id) ?? id}: ${path}`),
+  );
+}
 
 /** Three-zone shell: sidebar · commit graph · contextual detail panel. */
 export function App() {
@@ -61,14 +71,8 @@ export function App() {
     let unlisten: (() => void) | null = null;
     let gone = false;
     void guardWindowClose(() => {
-      const repos = reposWithDrafts();
-      if (repos.length === 0) return false;
-      const names = new Map(
-        useRepoStore.getState().tabs.map((tab) => [tab.id, tab.info.name]),
-      );
-      const paths = repos.flatMap((id) =>
-        unsavedPaths(id).map((path) => `${names.get(id) ?? id}: ${path}`),
-      );
+      const paths = unsavedEverywhere();
+      if (paths.length === 0) return false;
       useConflictStore.getState().setClosing({ kind: "window", paths });
       return true;
     })
@@ -99,6 +103,11 @@ export function App() {
       },
       closeTab: () => {
         if (!dialogOpen()) void tabs().closeActiveTab();
+      },
+      quit: () => {
+        const paths = unsavedEverywhere();
+        if (paths.length === 0) void closeWindow();
+        else useConflictStore.getState().setClosing({ kind: "quit", paths });
       },
     }).catch((error: unknown) => {
       console.warn("could not install the app menu", error);

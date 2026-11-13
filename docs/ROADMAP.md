@@ -1564,9 +1564,12 @@ principio y toda operación destructiva pasa por confirmación.
           `resolved_files`, `write_resolution`, `choose_version`,
           `resolve_by_deleting`, `mark_resolved`, `restart_conflict_file` y
           `unmark_resolved`.
-        - *Limitación:* en macOS, ⌘Q («Salir» del menú, que no se cambia)
-          cierra la app sin pasar por el aviso. Cerrar la ventana con su
-          botón sí avisa.
+        - **Salir de la app** (⌘Q o «Quit GitCRAFT» en macOS, «Salir» en
+          Windows y Linux) también avisa. En macOS, el «Quit» predefinido
+          terminaba la app directamente (`terminate:` de AppKit, sin evento
+          que se pueda cancelar). Lo sustituye un elemento propio en el mismo
+          sitio, con el mismo texto y ⌘Q (atajo `quit` del registro), que
+          pasa por el aviso; las opciones del menú no cambian.
         Tests: 9 de `result.ts`, 17 de la vista y del panel, y los de
         atajos (⌥↓ / Alt+↓, y que ⌥↓ no es ↓).
       - [x] **9.6 Continuar desde la app (UI).** El aviso de operación a

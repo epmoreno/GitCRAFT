@@ -19,7 +19,8 @@ export type ConflictDraft = {
  * user's answer. `paths` are "repo: file" for the window. */
 export type Closing =
   | { kind: "tab"; repoId: number; paths: string[] }
-  | { kind: "window"; paths: string[] };
+  | { kind: "window"; paths: string[] }
+  | { kind: "quit"; paths: string[] };
 
 type ConflictState = {
   drafts: Record<number, Record<string, ConflictDraft>>;

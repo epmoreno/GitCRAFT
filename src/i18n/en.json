@@ -652,7 +652,8 @@
     "copy": "Copy",
     "paste": "Paste",
     "selectAll": "Select All",
-    "about": "About GitCRAFT"
+    "about": "About GitCRAFT",
+    "quitMac": "Quit GitCRAFT"
   },
   "init": {
     "pickerTitle": "Folder for the new repository",
@@ -890,7 +891,8 @@
         "menuPrevious": "Menu: previous item",
         "diffRange": "Select several lines: from the previous one to this one",
         "conflictPrevious": "Go to the previous conflict block",
-        "conflictNext": "Go to the next conflict block"
+        "conflictNext": "Go to the next conflict block",
+        "quit": "Quit GitCRAFT"
       }
     }
   },
@@ -1028,7 +1030,9 @@
       "window": "Files in conflict have choices you haven’t saved. Closing the window loses them:",
       "confirmTab": "Close the tab",
       "confirmWindow": "Close the window",
-      "abort": "The unsaved choices in these files will be lost too:"
+      "abort": "The unsaved choices in these files will be lost too:",
+      "quit": "Files in conflict have choices you haven’t saved. Quitting GitCRAFT loses them:",
+      "confirmQuit": "Quit GitCRAFT"
     }
   },
   "operation": {

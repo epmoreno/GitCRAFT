@@ -38,6 +38,12 @@ export type Shortcut = {
 };
 
 export const SHORTCUTS = {
+  /** macOS only: on Windows and Linux "Quit" is in the File menu. */
+  quit: {
+    group: "app",
+    chords: [{ key: "q", primary: true, os: "mac" }],
+    accelerator: "CmdOrCtrl+Q",
+  },
   settings: {
     group: "app",
     chords: [{ key: ",", primary: true }],

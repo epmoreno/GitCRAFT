@@ -7,6 +7,8 @@ import { setPlatformForTests } from "./platform";
  * test; here the real module is loaded.)
  */
 type Node = {
+  id?: string;
+  action?: () => void;
   text?: string;
   item?: unknown;
   accelerator?: string;
@@ -29,11 +31,13 @@ vi.mock("@tauri-apps/api/menu", () => {
     Submenu: { new: make },
   };
 });
-vi.mock("@tauri-apps/api/window", () => ({
-  getCurrentWindow: () => ({ close: vi.fn() }),
-}));
 
-const actions = { openSettings: vi.fn(), newTab: vi.fn(), closeTab: vi.fn() };
+const actions = {
+  openSettings: vi.fn(),
+  newTab: vi.fn(),
+  closeTab: vi.fn(),
+  quit: vi.fn(),
+};
 
 /** Each submenu as "Title: item, item…" (separators as "—"). */
 function outline(): string[] {
@@ -64,7 +68,7 @@ describe("menu bar", () => {
   it("on macOS, is the one it always was", async () => {
     await install();
     expect(outline()).toEqual([
-      "GitCRAFT: About, —, Ajustes… [CmdOrCtrl+,], —, Services, —, Hide, HideOthers, ShowAll, —, Quit",
+      "GitCRAFT: About, —, Ajustes… [CmdOrCtrl+,], —, Services, —, Hide, HideOthers, ShowAll, —, Quit GitCRAFT [CmdOrCtrl+Q]",
       "Archivo: Nueva pestaña [CmdOrCtrl+T]",
       "Edición: Undo, Redo, —, Cut, Copy, Paste, SelectAll",
       "Ventana: Cerrar pestaña [CmdOrCtrl+W], —, Minimize, Fullscreen",
@@ -82,6 +86,22 @@ describe("menu bar", () => {
         "Edición: Cortar, Copiar, Pegar, —, Seleccionar todo",
         "Ayuda: Acerca de GitCRAFT",
       ]);
+    },
+  );
+
+  // Quitting goes through the app (warning about unsaved conflict choices),
+  // never straight to the system.
+  it.each(["mac", "windows", "linux"] as const)(
+    "on %s, Quit is the app's own action",
+    async (system) => {
+      setPlatformForTests(system);
+      await install();
+      const quit = built.menu
+        .flatMap((sub) => sub.items ?? [])
+        .find((n) => n.id === "quit");
+      expect(quit?.item).toBeUndefined();
+      quit?.action?.();
+      expect(actions.quit).toHaveBeenCalled();
     },
   );
 });

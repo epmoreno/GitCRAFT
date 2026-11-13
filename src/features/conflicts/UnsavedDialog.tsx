@@ -27,9 +27,11 @@ export function UnsavedDialog() {
     <ConfirmDialog
       title={t("conflicts.unsaved.title")}
       confirmLabel={t(
-        closing.kind === "tab"
-          ? "conflicts.unsaved.confirmTab"
-          : "conflicts.unsaved.confirmWindow",
+        {
+          tab: "conflicts.unsaved.confirmTab",
+          window: "conflicts.unsaved.confirmWindow",
+          quit: "conflicts.unsaved.confirmQuit",
+        }[closing.kind],
       )}
       cancelLabel={t("conflicts.cancel")}
       danger

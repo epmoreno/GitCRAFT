@@ -396,8 +396,11 @@ Núcleo en `gitcraft-core`: `parse/conflict.rs` (parser puro),
   de línea del archivo y deja con sus marcas los bloques sin elegir. Las
   elecciones sin guardar viven en memoria por repo y archivo
   (`conflicts/store.ts`): se olvidan al terminar la operación, y cerrar la
-  pestaña o la ventana, abortar o continuar con ellas pide confirmación.
-  En macOS, ⌘Q (el «Salir» del menú del sistema) no pasa por ese aviso.
+  pestaña o la ventana, salir de la app, abortar o continuar con ellas pide
+  confirmación. Para que ⌘Q también avise, el «Quit» de macOS es un
+  elemento propio del menú (el predefinido llama a `terminate:` de AppKit y
+  la app termina sin ningún evento que se pueda cancelar); cerrar la última
+  ventana es lo que termina la app.
 - **Pruebas:** `scripts/make-conflict-examples.sh` crea un merge y un rebase
   detenidos en conflicto en repos desechables; los tests de integración
   (`tests/conflict.rs`, `resolve.rs`, `in_progress.rs`, `continue.rs`) crean
