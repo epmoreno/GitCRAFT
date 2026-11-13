@@ -1,3 +1,10 @@
+> **IDIOMA — NORMA Nº 1: responde SIEMPRE en español al usuario.** Todas las
+> respuestas, resúmenes, avisos de progreso y preguntas, sin excepción: también
+> al retomar el trabajo, después de compactar o resumir la conversación y
+> aunque el contexto, los resúmenes o las herramientas estén en inglés. El
+> código, los identificadores, los comentarios y los mensajes de commit siguen
+> en inglés (ver «Convenciones»).
+
 # CLAUDE.md — GitCRAFT
 
 Guía de trabajo para el desarrollo asistido por IA de este proyecto. GitCRAFT,
@@ -6,10 +13,6 @@ la aplicación, no incluye ninguna función de IA.
 Cliente Git de escritorio original (Tauri 2 + Rust + React + TypeScript).
 Visión y alcance: `docs/VISION.md`. Tareas: `docs/ROADMAP.md`.
 Arquitectura: `docs/ARCHITECTURE.md`.
-
-**Idioma de las respuestas: responde siempre en español** al usuario (también
-después de compactar o resumir la conversación). Esto no cambia el idioma del
-código, los comentarios ni los commits (ver «Convenciones»).
 
 ## Identidad pública
 
