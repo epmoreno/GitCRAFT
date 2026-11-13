@@ -337,6 +337,72 @@ terminan por grupo). El progreso son las líneas de `--progress` de git
   remoto bare y un segundo clon («otra persona»); los tests de integración
   hacen lo mismo con `TestRepo::add_bare_remote` y `TestRepo::clone_of`.
 
+## 5g. Conflictos
+
+Núcleo en `gitcraft-core`: `parse/conflict.rs` (parser puro),
+`ops/conflict.rs` (leer un archivo), `ops/resolve.rs` (resolverlo) y
+`ops/in_progress.rs` (los lados, continuar y saltar). UI en
+`src/features/conflicts/`.
+
+- **Leer** (`conflict_file`): las etapas del índice salen de
+  `git ls-files -u -z` (base, nuestra, suya, con modo) y sus tamaños de
+  `git cat-file --batch-check`. El archivo se clasifica en «por bloques» o
+  «elegir una versión entera»: binario (NUL en los primeros 8000 bytes, o el
+  atributo `merge=binary`/`-merge`), no UTF-8, enlace, submódulo, más de
+  5 MB, eliminado en un lado o marcadores rotos. El tamaño de marcador sale
+  de `git check-attr conflict-marker-size`.
+- **Parser de marcadores:** estados `<<<<<<<` → (`|||||||`) → `=======` →
+  `>>>>>>>`, con el tamaño exacto de marcador como git (una racha más larga
+  es texto). Cada segmento guarda sus bytes, finales de línea incluidos:
+  unirlos da el archivo original (lo comprueban fixtures reales de git en
+  los estilos `merge`, `diff3` y `zdiff3`, y con CRLF).
+- **Base de cada bloque:** si el archivo no la trae (estilo `merge`), se
+  calcula con `git merge-file -p --diff3` sobre copias temporales de las
+  tres versiones tal como se sacan al working tree (`git cat-file --filters`,
+  así coinciden también con `core.autocrlf`). Las copias van en una carpeta
+  temporal privada (0700 en Unix) que se borra al terminar. Un bloque solo
+  recibe base si sus dos lados coinciden exactamente con un bloque
+  calculado; si no, se queda sin ella y la UI lo dice.
+- **Escribir:** todo lo que toca el working tree recibe la huella del
+  archivo tal como se mostró y no hace nada si ha cambiado (`StaleDiff`).
+  El resultado se escribe en un temporal de la misma carpeta, con los
+  permisos del original, y se renombra encima. Marcar como resuelto es
+  `git add`; con marcas que quedan, se niega y devuelve las líneas, salvo
+  que se fuerce tras confirmar. Elegir versión: `git checkout --ours/--theirs`;
+  eliminar: `git rm`; volver a empezar: `git checkout -m`.
+- **Volver a marcar como en conflicto:** `git update-index --unresolve`,
+  que repone las etapas guardadas como *resolve-undo* sin tocar el archivo.
+  Como git conserva esa información después de terminar la operación, solo
+  se ofrece mientras hay una en curso y para archivos cuyas versiones
+  guardadas coinciden con las de esa operación (HEAD y `MERGE_HEAD`,
+  `REBASE_HEAD`, `CHERRY_PICK_HEAD` o el padre de `REVERT_HEAD`). Si git no
+  tiene `ls-files --resolve-undo`, no se ofrece.
+- **Lados:** cada uno se nombra por lo que es (`conflict_sides`): en un
+  merge, la rama actual y lo que se fusiona (ramas de
+  `for-each-ref --points-at`); en un rebase están invertidos (izquierda, la
+  base nueva; derecha, tu commit que se aplica, `REBASE_HEAD`), con el
+  progreso de `rebase-merge/msgnum`/`end` (o `rebase-apply/next`/`last`).
+- **Continuar:** merge → `create_commit` con el mensaje del cuadro de
+  commit (relleno con `MERGE_MSG` sin comentarios, `git stripspace
+  --strip-comments`); rebase, cherry-pick y revert → `--continue` con
+  `GIT_EDITOR=true`, que también sirve para secuencias empezadas en la
+  terminal. Si el índice es igual a HEAD (y no es una parada `edit`, que
+  crea `rebase-merge/amend`), devuelve `NothingToCommit` y la UI ofrece
+  saltar el commit (`--skip`). «Se detuvo otra vez» y «falló» se distinguen
+  comparando el paso (operación, commit que se aplica, progreso) antes y
+  después, sin leer mensajes de git.
+- **UI:** la vista se abre en la zona central (`OpenFile` de tipo
+  `conflict`). El resultado se calcula en `result.ts`: conserva los finales
+  de línea del archivo y deja con sus marcas los bloques sin elegir. Las
+  elecciones sin guardar viven en memoria por repo y archivo
+  (`conflicts/store.ts`): se olvidan al terminar la operación, y cerrar la
+  pestaña o la ventana, abortar o continuar con ellas pide confirmación.
+  En macOS, ⌘Q (el «Salir» del menú del sistema) no pasa por ese aviso.
+- **Pruebas:** `scripts/make-conflict-examples.sh` crea un merge y un rebase
+  detenidos en conflicto en repos desechables; los tests de integración
+  (`tests/conflict.rs`, `resolve.rs`, `in_progress.rs`, `continue.rs`) crean
+  los suyos con `TestRepo`.
+
 ## 5f. Crear repositorios
 
 - **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama

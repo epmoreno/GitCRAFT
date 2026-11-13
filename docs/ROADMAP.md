@@ -1611,6 +1611,14 @@ principio y toda operación destructiva pasa por confirmación.
         modificado/eliminado), sin tocar ningún otro repo.
         *Verificable:* el usuario resuelve, continúa y aborta un merge y un
         rebase en su Mac y lo confirma.
+        *Hecho (falta la prueba del usuario):* sección «5g. Conflictos» en
+        ARCHITECTURE.md y `scripts/make-conflict-examples.sh`, que crea
+        `~/gitcraft-conflictos-merge` (merge detenido: texto con tres
+        bloques, CRLF, binario, ruta con espacio, eliminado en cada lado y un
+        cambio que se fusiona solo) y `~/gitcraft-conflictos-rebase` (rebase
+        de 3 commits detenido en el primero; el tercero vuelve a chocar). Si
+        ya existen no toca nada; con `--replace`, los mueve a la Papelera
+        tras preguntar. Sus commits no ejecutan hooks ni firman.
       *Fuera de la 9:* `git rerere` (se respeta si el usuario lo tiene
       activado, pero la app no lo configura), herramientas de merge
       externas (`git mergetool`) y conflictos de submódulos más allá de
