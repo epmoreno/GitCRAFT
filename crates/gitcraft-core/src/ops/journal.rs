@@ -121,6 +121,9 @@ pub struct OpRecord {
     pub stash: Option<String>,
     /// Untracked files it moved to the Trash: (path in the repo, where it is).
     pub trashed: Vec<(String, PathBuf)>,
+    /// The operation saved copies (a stash entry or trashed files). Stays
+    /// true after undo gives them back: redo does not save them again.
+    pub made_copies: bool,
     /// HEAD and the local branches and tags right before: an undone
     /// operation can be redone while they are still these.
     pub refs_before: String,
@@ -297,6 +300,7 @@ pub async fn record(
         head_before: before.head,
         head_after: head.clone(),
         index_before: before.index,
+        made_copies: saved.stash.is_some() || !saved.trashed.is_empty(),
         stash: saved.stash,
         trashed: saved.trashed,
         refs_before,

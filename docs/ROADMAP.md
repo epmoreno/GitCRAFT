@@ -2409,7 +2409,7 @@ principio y toda operación destructiva pasa por confirmación.
         - un merge con conflictos se registra al continuar;
         - un cherry-pick abortado no deja nada.
         Siguen pasando los del «Deshacer» de los avisos (merge y reset).
-      - [ ] **11.4 Deshacer y rehacer en la interfaz (UI).**
+      - [x] **11.4 Deshacer y rehacer en la interfaz (UI).**
         - **Barra de arriba:** «Deshacer» y «Rehacer» (este último, nuevo)
           activados cuando hay algo; el tooltip dice qué («Deshacer commit
           "Añade la guía"»), o por qué no.
@@ -2423,6 +2423,30 @@ principio y toda operación destructiva pasa por confirmación.
         *Verificable:* tests de interfaz: botones y tooltips, atajos dentro
         y fuera de un campo de texto, diálogo con cada negativa, guardar en
         el stash y «Recuperar mis cambios», rehacer.
+        *Decisiones del usuario:* (1) solo texto y la lista de commits, sin
+        esquema; (2) «Revertir «x»…» solo cuando sale un único commit
+        publicado (con varios, se explica); (3) «Rehacer» también en los
+        avisos de merge, reset y rebase deshechos; (4) el diálogo de
+        «Rehacer» dice claramente, cuando aplica, que los cambios sin
+        confirmar se quedan como están y no se descartan otra vez.
+        *Hecho:* `src/features/undo/`.
+        - **Barra:** `UndoButtons` en la barra, con el tooltip de qué hace
+          o por qué no.
+        - **Atajos:** ⌘Z / ⇧⌘Z, y Ctrl+Z / Ctrl+Y / Ctrl+Mayús+Z, fuera de
+          los campos de texto.
+        - **Diálogo:** `UndoDialog`, con cada rama que se mueve, se crea o
+          se borra, los commits que salen y entran (y cuántos solo quedarán
+          en el historial), los tags, el cambio de rama, «exactamente como
+          antes» o «tus cambios se conservan», «no se descartan otra vez»
+          al rehacer, lo que estorba con «Guardar mis cambios y…», cada
+          negativa con su motivo y «Revertir «x»…» con un único commit
+          publicado.
+        - **Avisos:** «Deshecho: …» / «Rehecho: …» con el botón contrario,
+          y «Rehacer» en los avisos de merge, rebase y reset deshechos.
+        - **Núcleo:** el registro recuerda si la operación hizo copias
+          (`madeCopies`), para el aviso de rehacer.
+        Tests: 15 de interfaz y uno más del núcleo (rehacer un reset hard
+        no descarta los cambios).
       - [ ] **11.5 Historial de una rama (reflog) (core y UI).** En el menú
         de una rama y de HEAD, «Historial de la rama…»: sus entradas del
         reflog (fecha, commit y lo que git anotó), leídas con
@@ -2435,12 +2459,15 @@ principio y toda operación destructiva pasa por confirmación.
         *Verificable:* parser con fixtures reales, entradas de una rama
         borrada y vuelta a crear, recuperar un commit tras un reset hard y
         tests de interfaz.
-      - [ ] **11.6 Documentación y prueba a mano.** Sección en
-        ARCHITECTURE.md y `scripts/make-undo-examples.sh`, un repo
+      - [ ] **11.6 Documentación y prueba a mano.** Quitar del núcleo
+        `undo_reset` y `undo_move` con sus tests (ya no los usa la app).
+        Sección en ARCHITECTURE.md y `scripts/make-undo-examples.sh`, un repo
         desechable con un remoto bare local para probar cada operación de
         la lista, una rama ya publicada (para la negativa), y un cambio sin
         confirmar que estorba.
         *Verificable:* el usuario lo prueba y lo confirma.
+      *Mejora futura:* revertir varios commits a la vez (por ejemplo, los
+      publicados que impiden deshacer una operación).
       *Fuera de la 11:* deshacer operaciones en un remoto, deshacer
       operaciones hechas fuera de GitCRAFT (para eso está el historial de la
       rama), el stash y los descartes, y conservar la pila al cerrar la app.

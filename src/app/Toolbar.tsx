@@ -15,11 +15,10 @@ import { useStashStore } from "../features/stash/store";
 import { useWorkdirStore } from "../features/workdir/store";
 import { PublishButton } from "../features/publish/PublishButton";
 import { useSettingsStore } from "../features/settings/store";
+import { UndoButtons } from "../features/undo/UndoButtons";
 import { Tooltip } from "../ui/Tooltip";
 import styles from "./App.module.css";
 import { useShortcutLabel } from "./useShortcutLabel";
-
-const PENDING = ["undo"] as const;
 
 /**
  * Top bar. Doubles as the window title bar on macOS (overlay title bar),
@@ -62,11 +61,6 @@ export function Toolbar() {
           : t("stash.noChanges");
   const canStash =
     !!active && !!head?.oid && hasChanges && status?.conflicted.length === 0;
-
-  // The other actions do not exist yet; explain why they are disabled.
-  const disabledReason = active
-    ? t("toolbar.notYetAvailable")
-    : t("toolbar.needsRepo");
 
   return (
     <header className={styles.toolbar} {...dragRegion}>
@@ -125,13 +119,10 @@ export function Toolbar() {
             {t("toolbar.stash")}
           </button>
         </Tooltip>
-        {PENDING.map((action) => (
-          <Tooltip key={action} label={disabledReason}>
-            <button type="button" className={styles.toolButton} disabled>
-              {t(`toolbar.${action}`)}
-            </button>
-          </Tooltip>
-        ))}
+        <UndoButtons
+          repoId={active?.id ?? null}
+          className={styles.toolButton}
+        />
       </div>
       <Tooltip label={t("settings.openHint", { shortcut: label("settings") })}>
         <button

@@ -614,6 +614,18 @@ Núcleo en `gitcraft-core/src/ops/journal.rs`.
     y solo si se puede devolver todo exactamente (o la operación no movió
     los archivos, como el fast-forward de otra rama).
 
+- **En la interfaz (11.4, `src/features/undo/`):** «Deshacer» y «Rehacer»
+  en la barra de arriba (`UndoButtons`), con el tooltip de qué hacen o por
+  qué no; se vuelven a pedir (`undo_state`) cada vez que cambian las refs o
+  el estado del repositorio. Los atajos (`undo`, `redo` en el registro)
+  solo actúan con el foco fuera de los campos de texto y sin un diálogo
+  abierto; en macOS el menú Edición conserva sus «Deshacer» y «Rehacer»
+  estándar para el texto. Los dos abren siempre `UndoDialog` con la vista
+  previa. El resultado sale en el aviso del historial (`undoDone`), con el
+  botón para el sentido contrario, que también tienen los avisos de merge,
+  rebase y reset deshechos. Si un único commit publicado impide deshacer,
+  el diálogo ofrece revertirlo con el diálogo de la tarea 10.
+
 ## 5f. Crear repositorios
 
 - **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama

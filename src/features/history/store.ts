@@ -2,6 +2,8 @@ import { create } from "zustand";
 import {
   commands,
   type CommandError,
+  type Direction,
+  type OpKind,
   type PickKind,
   type PickOutcome,
   type PickPreview,
@@ -86,13 +88,22 @@ export type HistoryNotice =
       short: string;
       stashed: boolean;
     }
+  | {
+      /** Undone or redone from the toolbar's dialog (task 11.4). */
+      kind: "undoDone";
+      repoId: number;
+      direction: Direction;
+      op: OpKind;
+      /** What was staged could not be staged again. */
+      unstaged: boolean;
+    }
   | { kind: "error"; repoId: number; error: CommandError };
 
 /** Changes saved in the stash before an operation: the entry's commit, the
  * operation, and the short id of the commit it was about (in its message). */
 export type SavedChanges = {
   oid: string;
-  pick: PickKind | "reset" | "merge" | "rebase";
+  pick: PickKind | "reset" | "merge" | "rebase" | Direction;
   /** The commit's short id, or the merged branch's name. */
   short: string;
 };

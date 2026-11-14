@@ -87,9 +87,11 @@ describe("App", () => {
     expect(ipc.streamGraph).toHaveBeenCalledWith(1, expect.any(Function));
     // The path is content the user may want to copy.
     expect(within(main).getByText("/src/gitcraft")).toHaveClass("selectable");
+    // Nothing done yet in this tab (task 11.4).
     expect(
-      screen.getByRole("button", { name: "Deshacer" }),
-    ).toHaveAccessibleDescription("Todavía no disponible");
+      await screen.findByRole("button", { name: "Deshacer" }),
+    ).toHaveAccessibleDescription("No hay nada que deshacer");
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeDisabled();
   });
 
   it("opens the folder chosen in the picker", async () => {

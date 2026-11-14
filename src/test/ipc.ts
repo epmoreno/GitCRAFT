@@ -120,6 +120,9 @@ export const ipc = {
   resetBranch: vi.mocked(commands.resetBranch),
   undoAvailable: vi.mocked(commands.undoAvailable),
   undoOperation: vi.mocked(commands.undoOperation),
+  undoState: vi.mocked(commands.undoState),
+  undoRedoPreview: vi.mocked(commands.undoRedoPreview),
+  undoRedo: vi.mocked(commands.undoRedo),
   mergePreview: vi.mocked(commands.mergePreview),
   rebasePreview: vi.mocked(commands.rebasePreview),
   mergeBranch: vi.mocked(commands.mergeBranch),
@@ -147,6 +150,10 @@ export function resetIpcMock() {
   ipc.conflictSides.mockResolvedValue({ status: "ok", data: null });
   ipc.resolvedFiles.mockResolvedValue({ status: "ok", data: [] });
   ipc.preparedMessage.mockResolvedValue({ status: "ok", data: null });
+  ipc.undoState.mockResolvedValue({
+    status: "ok",
+    data: { undo: null, redo: null },
+  });
   // A commit of the current branch, with nothing in progress.
   ipc.commitActions.mockImplementation((_id, commit) =>
     Promise.resolve({

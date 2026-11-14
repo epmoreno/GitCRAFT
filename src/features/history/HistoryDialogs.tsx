@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import type { PickPreview } from "../../ipc";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { ErrorReport } from "../../ui/ErrorReport";
+import { describeOp } from "../undo/describe";
+import { requestOpposite } from "../undo/store";
 import { useWorkdirStore } from "../workdir/store";
 import { ResetDialog } from "./ResetDialog";
 import { useHistoryStore } from "./store";
@@ -131,6 +133,14 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
     (notice?.kind === "reset" || notice?.kind === "merged") &&
     notice.undoId !== null &&
     !notice.undoGone;
+  // After undoing: the way forward again (task 11), in the opposite
+  // direction of what was just done.
+  const back =
+    notice?.kind === "undoDone"
+      ? notice.direction
+      : notice?.kind === "resetUndone" || notice?.kind === "mergeUndone"
+        ? "undo"
+        : null;
   // While "Undo" is there it is the way back; the saved copy comes after.
   const offer = saved && !waiting && !undoable ? saved : null;
   if (repoId === null || (!notice && !offer)) return null;
@@ -184,6 +194,14 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
         {notice?.kind === "mergeUndone" && (
           <p>{t(`${notice.op}.undone`, { branch: notice.branch })}</p>
         )}
+        {notice?.kind === "undoDone" && (
+          <p>
+            {t(`undo.done.${notice.direction}`, {
+              what: describeOp(t, notice.op),
+            })}
+            {notice.unstaged && ` ${t("undo.unstaged")}`}
+          </p>
+        )}
         {notice?.kind === "undoRefused" && (
           <p>
             {notice.op === "reset"
@@ -208,6 +226,16 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
           onClick={() => void undo()}
         >
           {t("history.reset.undo")}
+        </button>
+      )}
+      {back && (
+        <button
+          type="button"
+          className={styles.toastAction}
+          disabled={busy}
+          onClick={() => requestOpposite(repoId, back)}
+        >
+          {t(back === "undo" ? "undo.redoButton" : "undo.undoButton")}
         </button>
       )}
       {offer && (

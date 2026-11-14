@@ -12,10 +12,8 @@
     "push": "Push",
     "branch": "Branch",
     "stash": "Stash",
-    "undo": "Undo",
     "openRepo": "Open repository",
     "needsRepo": "Open a repository first",
-    "notYetAvailable": "Not available yet",
     "fetch": "Fetch",
     "moreOptions": "More options for {{action}}",
     "newRepository": "More ways to open a repository"
@@ -897,7 +895,9 @@
         "conflictPrevious": "Go to the previous conflict block",
         "conflictNext": "Go to the next conflict block",
         "quit": "Quit GitCRAFT",
-        "commitMenu": "Open the menu of the selected commit or branch"
+        "commitMenu": "Open the menu of the selected commit or branch",
+        "undo": "Undo the last operation (with a preview)",
+        "redo": "Redo the last undone operation (with a preview)"
       }
     }
   },
@@ -1115,7 +1115,9 @@
       "revert": "Your changes are still saved in the stash (“GitCRAFT: antes de revertir {{short}}”).",
       "reset": "Your changes are still saved in the stash (“GitCRAFT: antes de reset a {{short}}”).",
       "merge": "Your changes are still saved in the stash (“GitCRAFT: antes del merge de {{short}}”).",
-      "rebase": "Your changes are still saved in the stash (“GitCRAFT: antes del rebase de {{short}}”)."
+      "rebase": "Your changes are still saved in the stash (“GitCRAFT: antes del rebase de {{short}}”).",
+      "undo": "Your changes are still saved in the stash (“GitCRAFT: antes de deshacer”).",
+      "redo": "Your changes are still saved in the stash (“GitCRAFT: antes de rehacer”)."
     },
     "abortKeepsSaved": "The changes you saved before starting are still in the stash: aborting does not bring them back. Recover them afterwards with “Recover my changes”.",
     "abortKeepsSavedHere": "If you abort it, your saved changes stay in the stash: aborting does not bring them back. Recover them with “Recover my changes”.",
@@ -1364,5 +1366,110 @@
     },
     "hint": "Drop to merge or rebase with “{{name}}”",
     "label": "Dragging branch {{name}}"
+  },
+  "undo": {
+    "what": {
+      "commit": "the commit “{{summary}}”",
+      "amend": "the amend of “{{summary}}”",
+      "merge": "the merge of “{{source}}”",
+      "fastForward": "the fast-forward of “{{source}}”",
+      "rebase": "the rebase onto “{{onto}}”",
+      "reset": "the reset to {{target}}",
+      "cherryPick": "the cherry-pick of “{{summary}}”",
+      "revert": "the revert of “{{summary}}”",
+      "pull": "the pull into “{{branch}}”",
+      "checkout": "the switch to branch “{{branch}}”",
+      "createBranch": "creating branch “{{name}}”",
+      "renameBranch": "renaming “{{old}}” to “{{new}}”",
+      "deleteBranch": "deleting branch “{{name}}”",
+      "createTag": "creating tag “{{name}}”",
+      "deleteTag": "deleting tag “{{name}}”"
+    },
+    "verb": {
+      "undo": "undo",
+      "redo": "redo"
+    },
+    "title": {
+      "undo": "Undo {{what}}?",
+      "redo": "Redo {{what}}?"
+    },
+    "act": {
+      "undo": "Undo",
+      "redo": "Redo"
+    },
+    "saveAndAct": {
+      "undo": "Save my changes and undo",
+      "redo": "Save my changes and redo"
+    },
+    "close": "Close",
+    "revert": "Revert “{{subject}}”…",
+    "toolbar": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "hint": {
+        "undo": "Undo {{what}} ({{shortcut}})",
+        "redo": "Redo {{what}} ({{shortcut}})"
+      },
+      "nothing": {
+        "undo": "Nothing to undo",
+        "redo": "Nothing to redo"
+      },
+      "inProgress": "An operation is in progress: finish or abort it first",
+      "changed": {
+        "undo": "Can no longer undo {{what}}: something changed since (maybe outside GitCRAFT)",
+        "redo": "Can no longer redo {{what}}: something changed since it was undone"
+      }
+    },
+    "branch": {
+      "moves": "“{{branch}}” moves to {{short}}.",
+      "created": "Branch “{{branch}}” is created at {{short}}.",
+      "deleted": "Branch “{{branch}}” is deleted.",
+      "leaving_one": "1 commit leaves “{{branch}}”:",
+      "leaving_other": "{{count}} commits leave “{{branch}}”:",
+      "arriving_one": "1 commit comes into “{{branch}}”:",
+      "arriving_other": "{{count}} commits come into “{{branch}}”:",
+      "onlyInReflog_one": "1 of them is on no other branch, tag or remote: it will only stay in the branch history.",
+      "onlyInReflog_other": "{{count}} of them are on no other branch, tag or remote: they will only stay in the branch history.",
+      "keptElsewhere": "Its commits stay on other branches."
+    },
+    "tag": {
+      "created": "Tag “{{name}}” is created at {{short}}.",
+      "deleted": "Tag “{{name}}” is deleted.",
+      "moves": "Tag “{{name}}” moves to {{short}}."
+    },
+    "head": {
+      "branch": "You switch to branch “{{branch}}”; your uncommitted changes come with you.",
+      "detached": "You switch to commit {{short}} (no branch); your uncommitted changes come with you."
+    },
+    "staged": "Its changes stay staged, ready to commit again.",
+    "exact": "Everything goes back exactly as it was before, what you had staged included.",
+    "restoresStash": "The changes the operation saved in the stash come back to your files.",
+    "restoresTrashed": "Coming back from the Trash:",
+    "kept": "Your uncommitted changes are kept.",
+    "keepsChanges": "Your uncommitted changes stay as they are: they are not discarded again.",
+    "keptStash": "The copy the operation saved is still in the stash ({{short}}).",
+    "blockedTitle": "Your uncommitted changes are in the way",
+    "saveExplained": {
+      "undo": "They will all be saved in the stash as “GitCRAFT: antes de deshacer”, which is never dropped by itself; you can then get them back with “Recover my changes”.",
+      "redo": "They will all be saved in the stash as “GitCRAFT: antes de rehacer”, which is never dropped by itself; you can then get them back with “Recover my changes”."
+    },
+    "changedPreview": "The repository changed since the preview, so nothing was done. This is the new preview: check it before confirming.",
+    "refused": {
+      "inProgress": "A merge, rebase, cherry-pick or revert is in progress: finish or abort it first.",
+      "changed": {
+        "undo": "It cannot be undone: the branches, tags or current branch are no longer where the operation left them (something changed since, maybe outside GitCRAFT). To go back anyway, use the branch history.",
+        "redo": "It cannot be redone: something changed since it was undone."
+      },
+      "checkedOutElsewhere": "Branch “{{branch}}” is checked out in another worktree: it is not moved from here.",
+      "publishedOne": "Cannot {{action}}: commit {{short}} “{{subject}}” is already on {{remotes}}. Taking it out of “{{branch}}” would need a forced push, which affects other people. You can revert it instead: a new commit that undoes its changes.",
+      "publishedMany": "Cannot {{action}}: {{count}} commits that would leave “{{branch}}” are already on {{remotes}}. Taking them out would need a forced push, which affects other people. You can revert them one by one from their menu."
+    },
+    "done": {
+      "undo": "Undone: {{what}}.",
+      "redo": "Redone: {{what}}."
+    },
+    "unstaged": "What you had staged could not be staged again: the changes are still in your files.",
+    "undoButton": "Undo",
+    "redoButton": "Redo"
   }
 }

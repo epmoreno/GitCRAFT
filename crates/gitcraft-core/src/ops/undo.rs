@@ -107,6 +107,10 @@ pub struct UndoPreview {
     pub restores_trashed: Vec<String>,
     /// Without `exact`: the copy the operation made stays in the stash.
     pub kept_stash: Option<String>,
+    /// Redo of an operation that saved and discarded uncommitted changes
+    /// (they came back on undo): they stay as they are, not discarded
+    /// again.
+    pub keeps_changes: bool,
     /// Uncommitted changes in the way (they can go to the stash first).
     pub blocking: Vec<BlockingFile>,
     pub fingerprint: String,
@@ -499,6 +503,7 @@ pub async fn undo_preview(
         restores_stash,
         restores_trashed,
         kept_stash,
+        keeps_changes: direction == Direction::Redo && record.made_copies,
         blocking,
         fingerprint,
     })

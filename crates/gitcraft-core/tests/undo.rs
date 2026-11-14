@@ -413,6 +413,21 @@ async fn resets_are_undone_exactly_with_their_copies() {
     let undone = done(&repo, &rec, Direction::Undo).await;
     assert_eq!(full_state(&repo).await, before);
     assert_eq!(undone.stash, None, "the copy was given back");
+
+    // Redo moves the branch again but keeps the changes that came back.
+    let p = preview(&repo, &undone, Direction::Redo).await;
+    assert!(p.keeps_changes);
+    assert_eq!(p.blocking.len(), 1, "b.txt changes between the commits");
+    let UndoOutcome::Done { saved, .. } = run(&repo, &undone, Direction::Redo, true).await else {
+        panic!("not done");
+    };
+    let saved = saved.expect("the changes went to the stash, as accepted");
+    assert_eq!(repo.head().await, target);
+    assert_eq!(
+        repo.run(&["show", &format!("{saved}:a.txt")]).await,
+        "unstaged",
+        "kept in the stash, not discarded again"
+    );
 }
 
 #[tokio::test]

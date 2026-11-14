@@ -2564,6 +2564,12 @@ export type UndoPreview_Deserialize = {
 	restoresTrashed: string[],
 	/**  Without `exact`: the copy the operation made stays in the stash. */
 	keptStash?: string | null,
+	/**
+	 *  Redo of an operation that saved and discarded uncommitted changes
+	 *  (they came back on undo): they stay as they are, not discarded
+	 *  again.
+	 */
+	keepsChanges: boolean,
 	/**  Uncommitted changes in the way (they can go to the stash first). */
 	blocking: BlockingFile[],
 	fingerprint: string,
@@ -2592,6 +2598,12 @@ export type UndoPreview_Serialize = {
 	restoresTrashed: string[],
 	/**  Without `exact`: the copy the operation made stays in the stash. */
 	keptStash: string | null,
+	/**
+	 *  Redo of an operation that saved and discarded uncommitted changes
+	 *  (they came back on undo): they stay as they are, not discarded
+	 *  again.
+	 */
+	keepsChanges: boolean,
 	/**  Uncommitted changes in the way (they can go to the stash first). */
 	blocking: BlockingFile[],
 	fingerprint: string,

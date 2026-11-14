@@ -104,6 +104,15 @@ export const SHORTCUTS = {
     group: "history",
     chords: [{ key: "ContextMenu" }, { key: "F10", shift: true }],
   },
+  /** Outside text fields, where they undo the text (task 11.4). */
+  undo: { group: "history", chords: [{ key: "z", primary: true }] },
+  redo: {
+    group: "history",
+    chords: [
+      { key: "z", primary: true, shift: true },
+      { key: "y", ctrl: true, os: "other" },
+    ],
+  },
   conflictPrevious: {
     group: "conflicts",
     chords: [{ key: "ArrowUp", alt: true }],

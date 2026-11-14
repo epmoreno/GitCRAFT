@@ -12,10 +12,8 @@
     "push": "Push",
     "branch": "Rama",
     "stash": "Stash",
-    "undo": "Deshacer",
     "openRepo": "Abrir repositorio",
     "needsRepo": "Abre un repositorio primero",
-    "notYetAvailable": "Todavía no disponible",
     "fetch": "Fetch",
     "moreOptions": "Más opciones de {{action}}",
     "newRepository": "Más formas de abrir un repositorio"
@@ -897,7 +895,9 @@
         "conflictPrevious": "Ir al bloque en conflicto anterior",
         "conflictNext": "Ir al siguiente bloque en conflicto",
         "quit": "Salir de GitCRAFT",
-        "commitMenu": "Abrir el menú del commit o la rama seleccionados"
+        "commitMenu": "Abrir el menú del commit o la rama seleccionados",
+        "undo": "Deshacer la última operación (con vista previa)",
+        "redo": "Rehacer lo último que se deshizo (con vista previa)"
       }
     }
   },
@@ -1115,7 +1115,9 @@
       "revert": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de revertir {{short}}»).",
       "reset": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de reset a {{short}}»).",
       "merge": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del merge de {{short}}»).",
-      "rebase": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del rebase de {{short}}»)."
+      "rebase": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del rebase de {{short}}»).",
+      "undo": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de deshacer»).",
+      "redo": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de rehacer»)."
     },
     "abortKeepsSaved": "Los cambios que guardaste antes de empezar siguen en el stash: no vuelven solos al abortar. Recupéralos después con «Recuperar mis cambios».",
     "abortKeepsSavedHere": "Si lo abortas, tus cambios guardados seguirán en el stash: no vuelven solos al abortar. Recupéralos con «Recuperar mis cambios».",
@@ -1364,5 +1366,110 @@
     },
     "hint": "Suelta para hacer merge o rebase con «{{name}}»",
     "label": "Arrastrando la rama {{name}}"
+  },
+  "undo": {
+    "what": {
+      "commit": "el commit «{{summary}}»",
+      "amend": "el amend de «{{summary}}»",
+      "merge": "el merge de «{{source}}»",
+      "fastForward": "el fast-forward de «{{source}}»",
+      "rebase": "el rebase sobre «{{onto}}»",
+      "reset": "el reset a {{target}}",
+      "cherryPick": "el cherry-pick de «{{summary}}»",
+      "revert": "el revert de «{{summary}}»",
+      "pull": "el pull en «{{branch}}»",
+      "checkout": "el cambio a la rama «{{branch}}»",
+      "createBranch": "la creación de la rama «{{name}}»",
+      "renameBranch": "el cambio de nombre de «{{old}}» a «{{new}}»",
+      "deleteBranch": "el borrado de la rama «{{name}}»",
+      "createTag": "la creación del tag «{{name}}»",
+      "deleteTag": "el borrado del tag «{{name}}»"
+    },
+    "verb": {
+      "undo": "deshacer",
+      "redo": "rehacer"
+    },
+    "title": {
+      "undo": "¿Deshacer {{what}}?",
+      "redo": "¿Rehacer {{what}}?"
+    },
+    "act": {
+      "undo": "Deshacer",
+      "redo": "Rehacer"
+    },
+    "saveAndAct": {
+      "undo": "Guardar mis cambios y deshacer",
+      "redo": "Guardar mis cambios y rehacer"
+    },
+    "close": "Cerrar",
+    "revert": "Revertir «{{subject}}»…",
+    "toolbar": {
+      "undo": "Deshacer",
+      "redo": "Rehacer",
+      "hint": {
+        "undo": "Deshacer {{what}} ({{shortcut}})",
+        "redo": "Rehacer {{what}} ({{shortcut}})"
+      },
+      "nothing": {
+        "undo": "No hay nada que deshacer",
+        "redo": "No hay nada que rehacer"
+      },
+      "inProgress": "Hay una operación a medias: termínala o abórtala antes",
+      "changed": {
+        "undo": "Ya no se puede deshacer {{what}}: algo ha cambiado desde entonces (quizá fuera de GitCRAFT)",
+        "redo": "Ya no se puede rehacer {{what}}: algo ha cambiado desde que se deshizo"
+      }
+    },
+    "branch": {
+      "moves": "«{{branch}}» pasa a {{short}}.",
+      "created": "Se crea la rama «{{branch}}» en {{short}}.",
+      "deleted": "Se borra la rama «{{branch}}».",
+      "leaving_one": "Sale de «{{branch}}» 1 commit:",
+      "leaving_other": "Salen de «{{branch}}» {{count}} commits:",
+      "arriving_one": "Entra en «{{branch}}» 1 commit:",
+      "arriving_other": "Entran en «{{branch}}» {{count}} commits:",
+      "onlyInReflog_one": "1 de ellos no está en ninguna otra rama, tag ni remoto: solo quedará en el historial de la rama.",
+      "onlyInReflog_other": "{{count}} de ellos no están en ninguna otra rama, tag ni remoto: solo quedarán en el historial de la rama.",
+      "keptElsewhere": "Sus commits siguen en otras ramas."
+    },
+    "tag": {
+      "created": "Se crea el tag «{{name}}» en {{short}}.",
+      "deleted": "Se borra el tag «{{name}}».",
+      "moves": "El tag «{{name}}» pasa a {{short}}."
+    },
+    "head": {
+      "branch": "Pasas a la rama «{{branch}}»; tus cambios sin confirmar vienen contigo.",
+      "detached": "Pasas al commit {{short}} (sin rama); tus cambios sin confirmar vienen contigo."
+    },
+    "staged": "Sus cambios quedan preparados, listos para volver a hacer commit.",
+    "exact": "Todo vuelve exactamente como estaba antes, incluido lo que tenías preparado.",
+    "restoresStash": "Los cambios que la operación guardó en el stash vuelven a tus archivos.",
+    "restoresTrashed": "Vuelven de la Papelera:",
+    "kept": "Tus cambios sin confirmar se conservan.",
+    "keepsChanges": "Tus cambios sin confirmar se quedan como están: no se descartan otra vez.",
+    "keptStash": "La copia que guardó la operación sigue en el stash ({{short}}).",
+    "blockedTitle": "Tus cambios sin confirmar están en medio",
+    "saveExplained": {
+      "undo": "Se guardarán todos en el stash como «GitCRAFT: antes de deshacer», que nunca se borra solo; después podrás recuperarlos con «Recuperar mis cambios».",
+      "redo": "Se guardarán todos en el stash como «GitCRAFT: antes de rehacer», que nunca se borra solo; después podrás recuperarlos con «Recuperar mis cambios»."
+    },
+    "changedPreview": "El repositorio ha cambiado desde la vista previa, así que no se ha hecho nada. Esta es la vista previa nueva: revísala antes de confirmar.",
+    "refused": {
+      "inProgress": "Hay un merge, rebase, cherry-pick o revert a medias: termínalo o abórtalo antes.",
+      "changed": {
+        "undo": "No se puede deshacer: las ramas, los tags o la rama actual ya no están donde los dejó la operación (algo ha cambiado desde entonces, quizá fuera de GitCRAFT). Para volver atrás igualmente, usa el historial de la rama.",
+        "redo": "No se puede rehacer: algo ha cambiado desde que se deshizo."
+      },
+      "checkedOutElsewhere": "La rama «{{branch}}» está abierta en otro worktree: no se mueve desde aquí.",
+      "publishedOne": "No se puede {{action}}: el commit {{short}} «{{subject}}» ya está en {{remotes}}. Quitarlo de «{{branch}}» obligaría a un push forzado, que afecta a otras personas. En su lugar puedes revertirlo: un commit nuevo que deshace sus cambios.",
+      "publishedMany": "No se puede {{action}}: {{count}} commits que saldrían de «{{branch}}» ya están en {{remotes}}. Quitarlos obligaría a un push forzado, que afecta a otras personas. Puedes revertirlos uno a uno desde su menú."
+    },
+    "done": {
+      "undo": "Deshecho: {{what}}.",
+      "redo": "Rehecho: {{what}}."
+    },
+    "unstaged": "Lo que tenías preparado no se pudo volver a preparar: los cambios siguen en tus archivos.",
+    "undoButton": "Deshacer",
+    "redoButton": "Rehacer"
   }
 }
