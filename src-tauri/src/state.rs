@@ -27,6 +27,7 @@ use gitcraft_core::ops::init::{self, InitCheck};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
+use gitcraft_core::ops::merge_rebase::{self, MovePreview};
 use gitcraft_core::ops::pick::{self, PickOutcome, PickPreview};
 use gitcraft_core::ops::publish::{self, PublishPreview, PublishRequest, Published};
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
@@ -1603,6 +1604,36 @@ impl AppState {
             reset_ops::undo_reset(git, &repo, &record, &cancel).await
         })
         .await
+    }
+
+    /// What merging the branch `source` into `target` would do (task 8).
+    pub async fn merge_preview(
+        &self,
+        id: RepoId,
+        source: &str,
+        target: &str,
+    ) -> Result<MovePreview, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(
+            merge_rebase::merge_preview(git, &repo, source, target, &CancellationToken::new())
+                .await?,
+        )
+    }
+
+    /// What rebasing the branch `source` onto `target` would do (task 8).
+    pub async fn rebase_preview(
+        &self,
+        id: RepoId,
+        source: &str,
+        target: &str,
+    ) -> Result<MovePreview, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(
+            merge_rebase::rebase_preview(git, &repo, source, target, &CancellationToken::new())
+                .await?,
+        )
     }
 
     pub async fn cherry_pick_preview(

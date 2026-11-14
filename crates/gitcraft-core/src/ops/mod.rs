@@ -12,6 +12,7 @@ pub mod in_progress;
 pub mod init;
 pub mod log;
 pub mod maintenance;
+pub mod merge_rebase;
 pub mod pick;
 pub mod publish;
 pub mod refs;

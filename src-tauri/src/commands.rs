@@ -18,6 +18,7 @@ use gitcraft_core::ops::conflict::ConflictFile;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::in_progress::{ConflictSides, ContinueOutcome};
 use gitcraft_core::ops::init::InitCheck;
+use gitcraft_core::ops::merge_rebase::MovePreview;
 use gitcraft_core::ops::pick::{PickOutcome, PickPreview};
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::ops::remote::{ForcePushPreview, PullMode, PullOutcome, PushOutcome};
@@ -973,6 +974,32 @@ pub async fn commit_actions(
     oid: String,
 ) -> Result<CommitActions, IpcError> {
     state.commit_actions(id, &oid).await
+}
+
+/// What merging the branch `source` into `target` (full ref names) would
+/// do: read-only (task 8).
+#[tauri::command]
+#[specta::specta]
+pub async fn merge_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    source: String,
+    target: String,
+) -> Result<MovePreview, IpcError> {
+    state.merge_preview(id, &source, &target).await
+}
+
+/// What rebasing the branch `source` onto `target` (full ref names) would
+/// do: read-only, apart from loose objects to predict conflicts (task 8).
+#[tauri::command]
+#[specta::specta]
+pub async fn rebase_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    source: String,
+    target: String,
+) -> Result<MovePreview, IpcError> {
+    state.rebase_preview(id, &source, &target).await
 }
 
 /// What cherry-picking `oid` onto the current branch would do (read-only).

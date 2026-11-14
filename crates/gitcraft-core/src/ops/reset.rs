@@ -150,7 +150,11 @@ async fn rev_list(
 
 /// HEAD and every uncommitted path with its size and modification time: a
 /// cheap fingerprint of "the repository as it is now".
-async fn state_fingerprint(git: &Git, repo: &Path, cancel: &CancellationToken) -> Result<String> {
+pub(crate) async fn state_fingerprint(
+    git: &Git,
+    repo: &Path,
+    cancel: &CancellationToken,
+) -> Result<String> {
     let head = git
         .read(repo)
         .args(["rev-parse", "-q", "--verify", "HEAD"])
@@ -179,6 +183,30 @@ async fn state_fingerprint(git: &Git, repo: &Path, cancel: &CancellationToken) -
         }
     }
     Ok(fingerprint(text.as_bytes()))
+}
+
+/// The remote branches (short names, like `origin/main`) that have `oid`.
+pub(crate) async fn remote_branches_containing(
+    git: &Git,
+    repo: &Path,
+    oid: &str,
+    cancel: &CancellationToken,
+) -> Result<Vec<String>> {
+    let out = git
+        .read(repo)
+        .args(["for-each-ref", "--format=%(refname)"])
+        .arg(format!("--contains={oid}"))
+        .arg("refs/remotes")
+        .output(cancel)
+        .await?;
+    // Full names, so `origin/HEAD` (short: "origin") is left out.
+    Ok(out
+        .stdout_lossy()
+        .lines()
+        .filter(|r| !r.ends_with("/HEAD"))
+        .filter_map(|r| r.strip_prefix("refs/remotes/"))
+        .map(str::to_owned)
+        .collect())
 }
 
 /// What resetting the current branch to `oid` with `mode` would do.
@@ -282,21 +310,8 @@ pub async fn reset_preview(
         .rev()
         .find(|oid| !not_published.contains(*oid))
     {
-        let out = git
-            .read(repo)
-            .args(["for-each-ref", "--format=%(refname)"])
-            .arg(format!("--contains={oldest_published}"))
-            .arg("refs/remotes")
-            .output(cancel)
-            .await?;
-        // Full names, so `origin/HEAD` (short: "origin") is left out.
-        preview.published_in = out
-            .stdout_lossy()
-            .lines()
-            .filter(|r| !r.ends_with("/HEAD"))
-            .filter_map(|r| r.strip_prefix("refs/remotes/"))
-            .map(str::to_owned)
-            .collect();
+        preview.published_in =
+            remote_branches_containing(git, repo, oldest_published, cancel).await?;
     }
 
     // Uncommitted work.

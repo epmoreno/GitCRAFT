@@ -75,6 +75,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::continue_in_progress,
             commands::skip_current,
             commands::commit_actions,
+            commands::merge_preview,
+            commands::rebase_preview,
             commands::cherry_pick_preview,
             commands::cherry_pick,
             commands::revert_preview,

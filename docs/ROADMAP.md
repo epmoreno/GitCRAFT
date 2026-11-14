@@ -1946,8 +1946,10 @@ principio y toda operación destructiva pasa por confirmación.
         el directorio de trabajo y solo si la rama sigue donde estaba).
       - Se niegan, sin tocar nada, con una operación a medias o con HEAD
         separado.
-      - Las ramas remotas solo pueden ser origen (nunca se mueven). Los
-        tags no se arrastran.
+      - Las ramas remotas pueden ser origen, pero nunca destino (nunca se
+        mueven). Por ejemplo: arrastrar `origin/main` sobre `main`, o hacer
+        merge de `origin/feature` en la rama actual. Los tags no se
+        arrastran.
       - Cada paso es un comando de git normal, con refs completas y los
         argumentos separados. No se hace push: si un rebase reescribe
         commits ya publicados, se avisa antes de que hará falta el push
@@ -1956,11 +1958,16 @@ principio y toda operación destructiva pasa por confirmación.
       - Huella como en el reset: si HEAD, las ramas implicadas o los
         cambios sin confirmar cambian entre la vista previa y la
         confirmación, no se hace nada y se enseña la vista previa nueva.
+      - **Deshacer** tras el merge (con commit o fast-forward) y el rebase,
+        reutilizando el mecanismo del reset (10.4): solo si nada ha cambiado
+        desde la operación (huella), y disponible hasta la siguiente
+        escritura en ese repo. Deja la rama, el índice y el directorio de
+        trabajo exactamente como estaban.
       - Ninguna dependencia nueva: el arrastre se hace con eventos de
         puntero (no con el drag & drop de HTML5, que en Windows choca con
         la recepción de archivos de Tauri), así que no hay que cambiar la
         configuración de la ventana.
-      - [ ] **8.1 Vista previa (core).** `merge_preview(origen, destino)` y
+      - [x] **8.1 Vista previa (core).** `merge_preview(origen, destino)` y
         `rebase_preview(origen, destino)`. Devuelven:
         - el caso: ya al día (no hay nada que hacer), fast-forward, merge
           o rebase;
@@ -1978,6 +1985,8 @@ principio y toda operación destructiva pasa por confirmación.
           `commit-tree`: solo se escriben objetos sueltos, sin ninguna ref,
           que git limpia solo. Dice en qué commit (n de m) se detendría y
           con qué archivos. Con git < 2.40 son estimados, y se dice;
+        - en un merge con commit, el mensaje que pondría git
+          (`git fmt-merge-msg`, el mismo que usa `git merge`);
         - la huella.
         *Verificable:* integración en los tres sistemas para cada caso:
         al día, fast-forward (actual y no actual), merge limpio y con
@@ -1985,6 +1994,35 @@ principio y toda operación destructiva pasa por confirmación.
         cambios que estorban, sin seguimiento que se pisarían, commits
         publicados, merges en el tramo, y que la vista previa no cambia
         ninguna ref ni el directorio de trabajo.
+        *Hecho:*
+        - **Core:** `ops::merge_rebase` (`merge_preview`,
+          `rebase_preview`), con las ramas como refs completas
+          (`refs/heads/…` o `refs/remotes/…`, validadas con
+          `check-ref-format`, sin «-» inicial y existentes). Comprobado con
+          git:
+          - en un merge con commit bloquea cualquier cambio preparado,
+            aunque sea de otro archivo; en un fast-forward, solo los
+            cambios en archivos que cambian;
+          - un rebase rehace exactamente `rev-list --right-only
+            --cherry-pick` y salta los commits cuyo cambio ya tiene el
+            destino (`skipped`);
+          - `git fmt-merge-msg` da el mismo mensaje que `git merge`
+            («Merge branch 'x'», «… into dev», «Merge remote-tracking
+            branch 'origin/x'»).
+        - La predicción del rebase rehace cada commit con
+          `merge-tree --merge-base` y `commit-tree` (identidad fija, sin
+          firma, sin ninguna ref). Un commit que queda vacío se salta, como
+          hace git. Los tests comparan la predicción con lo que hacen
+          `git rebase` y `git merge` de verdad.
+        - El fast-forward de otra rama se niega si está abierta en otro
+          worktree.
+        - La huella combina la del reset (HEAD y archivos con cambios) con
+          las puntas de las dos ramas.
+        - `state_fingerprint` y `remote_branches_containing` pasan de
+          `ops::reset` a ser compartidas.
+        - **Tauri:** comandos `merge_preview` y `rebase_preview` (sin
+          interfaz todavía).
+        Tests: 21 de integración.
       - [ ] **8.2 Merge y fast-forward (core y UI, desde el menú).**
         - **Core:** `merge(origen, destino, huella, …)`. Ejecuta
           `git merge --no-edit <origen>` en la rama actual, o el
@@ -1998,17 +2036,22 @@ principio y toda operación destructiva pasa por confirmación.
           lo que estorba y los conflictos, con los mismos casos que el de
           cherry-pick: limpio, cambios en medio, conflictos y las dos cosas.
           En el fast-forward, una casilla «Crear siempre un commit de merge»
-          (`--no-ff`), desmarcada.
+          (`--no-ff`), desmarcada. En un merge con commit, el mensaje en un
+          campo editable, relleno con el mensaje de git.
         - **Menús:** en la barra lateral, el menú de una rama (local o
           remota) tiene «Hacer merge de «x» en «actual»…». El menú de las
           etiquetas de rama del grafo tiene lo mismo. Los dos se abren
           también desde el teclado (tecla de menú o ⇧F10).
         - **Resultado:** el aviso dice qué ha pasado, selecciona el commit
-          nuevo y ofrece «Recuperar mis cambios» si se guardaron.
-        *Verificable:* integración: fast-forward, `--no-ff`, merge limpio,
+          nuevo y ofrece «Deshacer» mientras se pueda. Después, «Recuperar
+          mis cambios» si se guardaron.
+        *Verificable:* integración: fast-forward, `--no-ff`, merge limpio
+        con el mensaje editado,
         con conflicto que la 9 resuelve y continúa, abortar deja la rama
         como estaba, guardar y hacer merge, fast-forward de otra rama, y que
-        no hace nada si la huella cambió. Tests de interfaz de cada diálogo
+        no hace nada si la huella cambió. «Deshacer» de un merge con commit
+        y de un fast-forward (también el de otra rama) deja todo idéntico:
+        refs, índice y archivos; y se niega si algo cambió. Tests de interfaz de cada diálogo
         y de los menús en es/en.
       - [ ] **8.3 Rebase (core y UI, desde el menú).**
         - **Core:** `rebase(origen, destino, huella, …)` sobre la rama actual
@@ -2024,10 +2067,12 @@ principio y toda operación destructiva pasa por confirmación.
           explica el motivo: git los aplanaría y se perderían los merges.
         - **Menús:** «Hacer rebase de «actual» sobre «x»…» en los mismos
           menús que el merge.
+        - **Resultado:** como en el merge, con «Deshacer».
         *Verificable:* integración: rebase limpio, con conflicto resuelto y
         continuado, saltar un commit, abortar restaura la rama, guardar y
         hacer rebase, el aviso de publicados, y que no hace nada si la
-        huella cambió. Tests de interfaz.
+        huella cambió. «Deshacer» de un rebase deja todo idéntico y se
+        niega si algo cambió. Tests de interfaz.
       - [ ] **8.4 Arrastrar y soltar (UI).**
         - **Qué se arrastra:** las filas de rama de la barra lateral y las
           etiquetas de rama del grafo. Se puede soltar de una a otra (de la
@@ -2060,9 +2105,14 @@ principio y toda operación destructiva pasa por confirmación.
       *Fuera de la 8:* merge o rebase de una rama que no es la actual (salvo
       el fast-forward), conservar los merges al hacer rebase
       (`--rebase-merges`), squash merge, elegir la estrategia de merge,
-      editar el mensaje del commit de merge antes de crearlo (se puede con
-      «Editar el último commit», 4.5), arrastrar commits sueltos (tarea 13)
-      y deshacer después del merge o del rebase (tarea 11).
+      arrastrar commits sueltos (tarea 13) y deshacer más allá de la
+      siguiente escritura (tarea 11).
+      *Decisiones del usuario:* (1) la rama que se mueve es la actual,
+      salvo el fast-forward de otra rama local; (2) Merge por defecto al
+      soltar; (3) fast-forward si se puede, con «Crear siempre un commit de
+      merge» desmarcada; (4) no hay rebase con commits de merge en el
+      tramo, y se explica el motivo; (5) «Deshacer» ya en la 8; (6) el
+      mensaje del commit de merge se puede editar en el diálogo.
 - [ ] **11. Deshacer/rehacer** de la última operación cuando sea seguro, basado
       en el reflog. Antes de ejecutarlo se muestra qué se va a restaurar.
       *Tests:* deshacer commit, merge, rebase y reset, y se niega con cambios

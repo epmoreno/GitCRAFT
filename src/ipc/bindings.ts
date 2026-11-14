@@ -143,6 +143,16 @@ export const commands = {
 	skipCurrent: (id: number) => typedError<ContinueOutcome, IpcError_Serialize>(__TAURI_INVOKE("skip_current", { id })),
 	/**  What can be done with commit `oid`, and the facts to say why not. */
 	commitActions: (id: number, oid: string) => typedError<CommitActions_Serialize, IpcError_Serialize>(__TAURI_INVOKE("commit_actions", { id, oid })),
+	/**
+	 *  What merging the branch `source` into `target` (full ref names) would
+	 *  do: read-only (task 8).
+	 */
+	mergePreview: (id: number, source: string, target: string) => typedError<MovePreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("merge_preview", { id, source, target })),
+	/**
+	 *  What rebasing the branch `source` onto `target` (full ref names) would
+	 *  do: read-only, apart from loose objects to predict conflicts (task 8).
+	 */
+	rebasePreview: (id: number, source: string, target: string) => typedError<MovePreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("rebase_preview", { id, source, target })),
 	/**  What cherry-picking `oid` onto the current branch would do (read-only). */
 	cherryPickPreview: (id: number, oid: string) => typedError<PickPreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("cherry_pick_preview", { id, oid })),
 	/**
@@ -385,6 +395,17 @@ export type BranchStatus_Serialize = {
 	upstream: string | null,
 	ahead: number,
 	behind: number,
+};
+
+/**  A branch taking part, as it was when the preview was made. */
+export type BranchTip = {
+	/**  Full name: `refs/heads/…` or `refs/remotes/…`. */
+	refname: string,
+	/**  Short name, as the sidebar shows it (`main`, `origin/main`). */
+	name: string,
+	remote: boolean,
+	oid: string,
+	short: string,
 };
 
 export type CheckoutOutcome = { type: "switched" } | 
@@ -1416,6 +1437,169 @@ export type MarkerLine = {
 	text: string,
 };
 
+/**  Why uncommitted changes are in the way. */
+export type MoveBlock = 
+/**  A merge commit needs nothing staged, even in other files. */
+"stagedChanges" | 
+/**  Changes (or untracked files) in files the operation changes. */
+"overwrite" | 
+/**  A rebase needs no uncommitted changes in tracked files at all. */
+"rebaseNeedsClean";
+
+/**  What would happen. */
+export type MoveCase = 
+/**  Nothing to do: the branch that would move already has everything. */
+"upToDate" | 
+/**  The branch that moves only advances: no new commit, nothing replayed. */
+"fastForward" | 
+/**  A merge commit with two parents. */
+"merge" | 
+/**  Commits replayed with new ids. */
+"rebase";
+
+export type MoveCommit = {
+	commit: CommitRef,
+	/**
+	 *  Rebase: a remote branch has it, so rewriting it will need a forced
+	 *  push, which affects whoever already has it. Always false in a merge.
+	 */
+	published: boolean,
+};
+
+export type MoveKind = 
+/**  `source` is merged into `target`: `target` moves. */
+"merge" | 
+/**  `source` is replayed onto `target`: `source` moves. */
+"rebase";
+
+export type MovePreview = MovePreview_Serialize | MovePreview_Deserialize;
+
+export type MovePreview_Deserialize = {
+	kind: MoveKind,
+	source: BranchTip,
+	target: BranchTip,
+	/**  The current branch (`None`: detached HEAD or no commits yet). */
+	current?: string | null,
+	/**  The short name of the branch that moves. */
+	moving: string,
+	refused?: MoveRefusal | null,
+	case: MoveCase,
+	/**
+	 *  - Fast-forward: the commits the branch gains, newest first.
+	 *  - Merge: the commits that come in, newest first.
+	 *  - Rebase: the commits replayed, in the order git replays them.
+	 * 
+	 *  At most [`MAX_LISTED`].
+	 */
+	commits: MoveCommit[],
+	commitsTotal: number,
+	/**
+	 *  Rebase: commits git leaves out because `target` already has the same
+	 *  change.
+	 */
+	skipped: number,
+	/**  Rebase: remote branches that have some of the replayed commits. */
+	publishedIn: string[],
+	/**  Uncommitted changes in the way. */
+	blocked?: MoveBlock | null,
+	blocking: BlockingFile[],
+	/**
+	 *  Files that would stop with conflicts (in a rebase, at `stops_at`;
+	 *  after that commit nothing is known).
+	 */
+	conflicts: string[],
+	stopsAt?: RebaseStop | null,
+	/**
+	 *  The conflicts come from git's own merge (git ≥ 2.40); otherwise they
+	 *  are an estimate (files changed on both sides).
+	 */
+	exact: boolean,
+	/**  Merge commit: the message git would write (`git fmt-merge-msg`). */
+	message?: string | null,
+	/**
+	 *  The repository as the preview saw it (HEAD, the uncommitted files and
+	 *  both branches): nothing is done if it changed.
+	 */
+	fingerprint: string,
+};
+
+export type MovePreview_Serialize = {
+	kind: MoveKind,
+	source: BranchTip,
+	target: BranchTip,
+	/**  The current branch (`None`: detached HEAD or no commits yet). */
+	current: string | null,
+	/**  The short name of the branch that moves. */
+	moving: string,
+	refused: MoveRefusal | null,
+	case: MoveCase,
+	/**
+	 *  - Fast-forward: the commits the branch gains, newest first.
+	 *  - Merge: the commits that come in, newest first.
+	 *  - Rebase: the commits replayed, in the order git replays them.
+	 * 
+	 *  At most [`MAX_LISTED`].
+	 */
+	commits: MoveCommit[],
+	commitsTotal: number,
+	/**
+	 *  Rebase: commits git leaves out because `target` already has the same
+	 *  change.
+	 */
+	skipped: number,
+	/**  Rebase: remote branches that have some of the replayed commits. */
+	publishedIn: string[],
+	/**  Uncommitted changes in the way. */
+	blocked: MoveBlock | null,
+	blocking: BlockingFile[],
+	/**
+	 *  Files that would stop with conflicts (in a rebase, at `stops_at`;
+	 *  after that commit nothing is known).
+	 */
+	conflicts: string[],
+	stopsAt: RebaseStop | null,
+	/**
+	 *  The conflicts come from git's own merge (git ≥ 2.40); otherwise they
+	 *  are an estimate (files changed on both sides).
+	 */
+	exact: boolean,
+	/**  Merge commit: the message git would write (`git fmt-merge-msg`). */
+	message: string | null,
+	/**
+	 *  The repository as the preview saw it (HEAD, the uncommitted files and
+	 *  both branches): nothing is done if it changed.
+	 */
+	fingerprint: string,
+};
+
+/**  Why it cannot be done at all. */
+export type MoveRefusal = 
+/**  A merge, rebase… is waiting for the user. */
+"inProgress" | 
+/**  HEAD is not on a branch (or there are no commits yet). */
+"detached" | 
+/**  Both are the same branch. */
+"sameBranch" | 
+/**  The branch that would move is a remote branch. */
+"remoteMoves" | 
+/**
+ *  The branch that would move is not the current one (and this is not
+ *  a fast-forward of a local branch).
+ */
+"notCurrent" | 
+/**
+ *  Fast-forward of a branch checked out in another worktree: moving its
+ *  ref would leave that worktree out of step.
+ */
+"checkedOutElsewhere" | 
+/**  The two branches have no commit in common. */
+"unrelated" | 
+/**
+ *  Rebase: the commits to replay include merges, which git would
+ *  flatten (the merges would be lost).
+ */
+"mergesInRange";
+
 /**
  *  A commit and the branches (local first, then remote-tracking) that point
  *  at it, if any.
@@ -1697,6 +1881,13 @@ export type PushReject =
 export type RebaseProgress = {
 	current: number,
 	total: number,
+};
+
+/**  Where a rebase would stop with conflicts. */
+export type RebaseStop = {
+	/**  1-based, among the commits to replay. */
+	index: number,
+	commit: CommitRef,
 };
 
 export type RecentRepository = {
