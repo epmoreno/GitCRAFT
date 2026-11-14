@@ -2187,6 +2187,23 @@ principio y toda operación destructiva pasa por confirmación.
         publicados, un cambio sin confirmar que estorba y un archivo sin
         seguimiento que se pisaría.
         *Verificable:* el usuario lo prueba y lo confirma.
+        *Hecho (falta la prueba del usuario):* sección «5i» en
+        ARCHITECTURE.md y `scripts/make-merge-examples.sh`, que crea
+        `~/gitcraft-ramas` y su remoto local `~/gitcraft-ramas-remoto.git`.
+        - **Ramas:**
+          - `adelantada` y `trae-notas`: fast-forward; la segunda pisaría
+            el `notas.txt` sin seguimiento;
+          - `funcion-limpia`: merge con commit, sin conflictos;
+          - `funcion-choca`: merge con conflicto en `lista.txt`;
+          - `rebase-limpio`;
+          - `rebase-choca`: se detiene en el commit 2 de 3;
+          - `publicada`: también está en origin;
+          - `con-merge`: tiene un merge.
+        - Queda sin confirmar un cambio en README.md.
+        - `origin/main` tiene un commit de «otra persona» que aún no se ha
+          traído.
+        - Si ya existen no toca nada; con `--replace`, los mueve a la
+          Papelera tras preguntar.
       *Fuera de la 8:* merge o rebase de una rama que no es la actual (salvo
       el fast-forward), conservar los merges al hacer rebase
       (`--rebase-merges`), squash merge, elegir la estrategia de merge,

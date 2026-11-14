@@ -483,7 +483,7 @@ Núcleo en `gitcraft-core`: `ops/commit_actions.rs` (qué admite un commit),
 
 Núcleo en `gitcraft-core/src/ops/merge_rebase.rs`; UI en
 `src/features/merge/` (diálogo, esquema fijo por caso y entrada «Hacer merge
-de…» de los menús). Se completa en la 8.5.
+de…» y «Hacer rebase de…» de los menús, y el arrastre).
 
 - **Quién se mueve:** se suelta la rama origen sobre la destino. En un
   merge se mueve el destino; en un rebase, el origen. Solo se mueve la rama
@@ -522,6 +522,13 @@ de…» de los menús). Se completa en la 8.5.
   arrastre; los destinos se reconocen por `data-drop-branch` y solo valen
   otras ramas locales. Soltar abre el mismo diálogo, con el selector
   Merge / Rebase. Los colores salen de `--drag` (tokens.css).
+- **Pruebas:** `scripts/make-merge-examples.sh` crea un repo desechable con
+  su remoto local y una rama para cada caso (fast-forward, merge limpio y
+  con conflicto, rebase limpio, rebase que se detiene, rama publicada, rama
+  con un merge, y un archivo sin seguimiento que se pisaría). Además,
+  `origin/main` tiene un commit que no se ha traído, para probar «Fetch
+  primero». Los tests de integración (`merge_rebase.rs` y `remote.rs`)
+  crean los suyos con `TestRepo`.
 - **Último fetch de un remoto** (`remote::last_fetch`): la hora de
   `FETCH_HEAD` si el último fetch incluyó ese remoto (sus URL comparadas
   como las escribe git: sin credenciales, «/» ni «.git» finales). Si no,
