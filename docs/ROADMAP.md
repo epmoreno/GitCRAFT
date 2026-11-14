@@ -1920,7 +1920,7 @@ principio y toda operación destructiva pasa por confirmación.
       mover un tag existente (se borra y se crea), firmar tags (se respeta
       `tag.gpgSign` si el usuario lo tiene) y deshacer más allá de los
       segundos tras el reset (tarea 11).
-- [ ] **8. Merge/rebase con drag & drop.** Al arrastrar una rama sobre otra se
+- [x] **8. Merge/rebase con drag & drop.** Al arrastrar una rama sobre otra se
       abre un diálogo de confirmación que muestra qué rama se mueve y cuántos
       commits. Hay alternativa por menú y teclado.
       *Tests:* cálculo de lo que se mueve, cancelar no toca nada, y fast-forward,
@@ -2179,7 +2179,7 @@ principio y toda operación destructiva pasa por confirmación.
           cumpliendo. En las etiquetas del grafo solo cambia el contorno,
           porque la de la rama actual tiene fondo sólido con texto oscuro.
         Tests: 7 de interfaz y los de contraste.
-      - [ ] **8.5 Documentación y prueba a mano.** Sección en
+      - [x] **8.5 Documentación y prueba a mano.** Sección en
         ARCHITECTURE.md y `scripts/make-merge-examples.sh`, un repo
         desechable con un remoto bare local, con ramas para cada caso:
         fast-forward, merge limpio, merge con conflicto, rebase limpio,
@@ -2187,7 +2187,7 @@ principio y toda operación destructiva pasa por confirmación.
         publicados, un cambio sin confirmar que estorba y un archivo sin
         seguimiento que se pisaría.
         *Verificable:* el usuario lo prueba y lo confirma.
-        *Hecho (falta la prueba del usuario):* sección «5i» en
+        *Hecho:* sección «5i» en
         ARCHITECTURE.md y `scripts/make-merge-examples.sh`, que crea
         `~/gitcraft-ramas` y su remoto local `~/gitcraft-ramas-remoto.git`.
         - **Ramas:**
@@ -2204,6 +2204,23 @@ principio y toda operación destructiva pasa por confirmación.
           traído.
         - Si ya existen no toca nada; con `--replace`, los mueve a la
           Papelera tras preguntar.
+        *Verificado manualmente en macOS por el usuario* con
+        `~/gitcraft-ramas`, sección por sección:
+        - **Menús:** las entradas, desactivadas en la rama actual, ⇧F10 y
+          el menú de la etiqueta del grafo.
+        - **Merge:** fast-forward con la casilla, «Fetch primero» con
+          `origin/main`, merge con el mensaje editado, cambios que estorban
+          y «Recuperar mis cambios», y conflicto con abortar y con
+          continuar; «Deshacer» en cada uno.
+        - **Rebase:** limpio con «Deshacer», sobre `origin/main`, con
+          conflicto y saltar, continuar y abortar, commits publicados con el
+          aviso y el botón rojo, y la rama con un merge desactivada.
+        - **Arrastre:** clic y doble clic normales, arrastre en la barra
+          lateral, ramas remotas prohibidas, Esc y soltar fuera, en el grafo
+          y del grafo a la barra, desplazamiento automático, `origin/main`,
+          y el selector con el merge negado y el rebase posible.
+        - **Color del arrastre:** el usuario elige el cobrizo (`--drag`
+          sigue siendo `--accent`).
       *Fuera de la 8:* merge o rebase de una rama que no es la actual (salvo
       el fast-forward), conservar los merges al hacer rebase
       (`--rebase-merges`), squash merge, elegir la estrategia de merge,
