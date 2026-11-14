@@ -303,14 +303,33 @@ mod tests {
             sink.lock().expect("lock").push(c);
         })
         .expect("watch");
-        // FSEvents may report changes from just before the watch started.
-        tokio::time::sleep(Duration::from_millis(500)).await;
-        changes.lock().expect("lock").clear();
-        Watched {
+        let w = Watched {
             repo,
             changes,
             watcher,
+        };
+        drain_earlier_events(&w).await;
+        w
+    }
+
+    /// FSEvents may deliver events from creating the repository, just before
+    /// the watch started, late and at any moment (seen on CI more than half
+    /// a second later). Instead of guessing a delay, write a marker no
+    /// test produces (the stash reflog: the sample repository has no stash)
+    /// and wait for it: events are delivered in order, so once the marker
+    /// is reported every earlier event has been reported too.
+    async fn drain_earlier_events(w: &Watched) {
+        w.repo.write_file(".git/logs/refs/stash", "");
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while !w.changes().iter().any(|c| c.stash) {
+            assert!(
+                Instant::now() < deadline,
+                "the watcher never reported the marker: {:?}",
+                w.changes()
+            );
+            tokio::time::sleep(Duration::from_millis(50)).await;
         }
+        w.changes.lock().expect("lock").clear();
     }
 
     async fn wait_for_any(w: &Watched) {
