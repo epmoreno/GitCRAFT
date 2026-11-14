@@ -53,14 +53,33 @@ export type HistoryNotice =
       undoGone: boolean;
     }
   | { kind: "resetUndone"; repoId: number; branch: string }
-  | { kind: "undoRefused"; repoId: number; short: string; stashed: boolean }
+  | {
+      kind: "merged";
+      repoId: number;
+      undoId: number | null;
+      source: string;
+      target: string;
+      fastForward: boolean;
+      /** Undo is no longer possible (another write, or it failed). */
+      undoGone: boolean;
+    }
+  | { kind: "mergeUndone"; repoId: number; target: string }
+  | {
+      kind: "undoRefused";
+      repoId: number;
+      /** What could not be undone. */
+      op: "reset" | "merge";
+      short: string;
+      stashed: boolean;
+    }
   | { kind: "error"; repoId: number; error: CommandError };
 
 /** Changes saved in the stash before an operation: the entry's commit, the
  * operation, and the short id of the commit it was about (in its message). */
 export type SavedChanges = {
   oid: string;
-  pick: PickKind | "reset";
+  pick: PickKind | "reset" | "merge";
+  /** The commit's short id, or the merged branch's name. */
   short: string;
 };
 
@@ -76,8 +95,9 @@ type HistoryState = {
   requestReset: (repoId: number, oid: string) => Promise<void>;
   setResetMode: (mode: ResetMode) => Promise<void>;
   confirmReset: () => Promise<void>;
-  undoReset: () => Promise<void>;
-  /** Checks whether the last reset can still be undone. */
+  /** Undoes the last reset or merge shown in the notice. */
+  undo: () => Promise<void>;
+  /** Checks whether the last reset or merge can still be undone. */
   checkUndo: () => Promise<void>;
   closeDialog: () => void;
   dismissNotice: () => void;
@@ -86,7 +106,18 @@ type HistoryState = {
   recoverSaved: (repoId: number) => Promise<void>;
   /** Stops offering them (they stay in the stash). */
   forgetSaved: (repoId: number) => void;
+  /** Offers `saved` back once nothing is in progress (task 8's merge). */
+  rememberSaved: (repoId: number, saved: SavedChanges) => void;
 };
+
+/** The notices "Undo" can act on. */
+function undoable(notice: HistoryNotice | null) {
+  return (notice?.kind === "reset" || notice?.kind === "merged") &&
+    notice.undoId !== null &&
+    !notice.undoGone
+    ? notice
+    : null;
+}
 
 export const initialHistoryState = {
   dialog: null,
@@ -276,11 +307,12 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
       selectWhenLoaded(repoId, preview.target.oid);
     },
 
-    undoReset: async () => {
-      const notice = get().notice;
-      if (notice?.kind !== "reset" || notice.undoGone) return;
+    undo: async () => {
+      const notice = undoable(get().notice);
+      if (!notice || notice.undoId === null) return;
+      const op = notice.kind === "reset" ? "reset" : "merge";
       set({ busy: true });
-      const result = await commands.undoReset(notice.repoId, notice.undoId);
+      const result = await commands.undoOperation(notice.repoId, notice.undoId);
       set({ busy: false });
       refreshAfterRemote(notice.repoId);
       if (result.status === "error") {
@@ -288,7 +320,8 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
           notice: {
             kind: "undoRefused",
             repoId: notice.repoId,
-            short: notice.short,
+            op,
+            short: notice.kind === "reset" ? notice.short : notice.source,
             stashed: !!get().saved[notice.repoId],
           },
         });
@@ -297,21 +330,25 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
       // Everything is back, the copy included: nothing to recover.
       get().forgetSaved(notice.repoId);
       set({
-        notice: {
-          kind: "resetUndone",
-          repoId: notice.repoId,
-          branch: notice.branch,
-        },
+        notice:
+          notice.kind === "reset"
+            ? {
+                kind: "resetUndone",
+                repoId: notice.repoId,
+                branch: notice.branch,
+              }
+            : {
+                kind: "mergeUndone",
+                repoId: notice.repoId,
+                target: notice.target,
+              },
       });
     },
 
     checkUndo: async () => {
-      const notice = get().notice;
-      if (notice?.kind !== "reset" || notice.undoGone) return;
-      const result = await commands.resetUndoAvailable(
-        notice.repoId,
-        notice.undoId,
-      );
+      const notice = undoable(get().notice);
+      if (!notice || notice.undoId === null) return;
+      const result = await commands.undoAvailable(notice.repoId, notice.undoId);
       const now = get().notice;
       if (now !== notice) return;
       if (result.status === "ok" && !result.data) {
@@ -338,6 +375,9 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
       set({ notice: null });
       await stash.apply(repoId, entry, { pop: false, saveLocal: false });
     },
+
+    rememberSaved: (repoId, saved) =>
+      set((s) => ({ saved: { ...s.saved, [repoId]: saved } })),
 
     forgetSaved: (repoId) =>
       set((s) => {

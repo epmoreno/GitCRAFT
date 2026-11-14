@@ -16,11 +16,12 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::ops::branch::BlockingFile;
 use crate::ops::in_progress::{CommitRef, commit_ref};
 use crate::ops::reset::{remote_branches_containing, state_fingerprint};
+use crate::ops::stash::create_stash;
 use crate::ops::status::{in_progress, working_status};
 use crate::parse::diff::fingerprint;
 use crate::parse::status::WorkingStatus;
@@ -162,7 +163,9 @@ pub struct MovePreview {
     /// The conflicts come from git's own merge (git ≥ 2.40); otherwise they
     /// are an estimate (files changed on both sides).
     pub exact: bool,
-    /// Merge commit: the message git would write (`git fmt-merge-msg`).
+    /// Merge into the current branch (with a merge commit, or a
+    /// fast-forward where the user may ask for one): the message git would
+    /// write (`git fmt-merge-msg`).
     pub message: Option<String>,
     /// The repository as the preview saw it (HEAD, the uncommitted files and
     /// both branches): nothing is done if it changed.
@@ -694,6 +697,9 @@ async fn preview(
 
     // Predicted conflicts.
     match preview.case {
+        MoveCase::FastForward if kind == MoveKind::Merge => {
+            preview.message = Some(merge_message(git, repo, &source, cancel).await?);
+        }
         MoveCase::Merge => {
             preview.message = Some(merge_message(git, repo, &source, cancel).await?);
             let args = ["HEAD".to_owned(), source.oid.clone()];
@@ -779,4 +785,303 @@ async fn predict_rebase(
         onto = out.stdout_lossy().trim().to_owned();
     }
     Ok(None)
+}
+
+/// What the user accepted in the merge dialog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct MergeRequest {
+    /// Full ref names, as in the preview.
+    pub source: String,
+    pub target: String,
+    /// The preview's fingerprint: nothing is done if the repository changed.
+    pub expected: String,
+    /// Create a merge commit even when a fast-forward is possible.
+    pub no_ff: bool,
+    /// The merge commit's message (`None` or blank: git's own).
+    pub message: Option<String>,
+    /// Stash the changes in the way first.
+    pub save_changes: bool,
+    /// Go on even if it will stop with conflicts.
+    pub allow_conflicts: bool,
+}
+
+/// In every outcome, `saved` is the stash entry (commit id) holding the
+/// changes "save my changes" put aside, so the app can offer them back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum MoveOutcome {
+    /// Done: `head` is where the branch that moved is now.
+    Done {
+        head: String,
+        fast_forward: bool,
+        saved: Option<String>,
+    },
+    /// Started at the user's request and stopped on conflicts in these
+    /// files: a merge or rebase is waiting (task 9's banner and view).
+    Conflicted {
+        files: Vec<String>,
+        saved: Option<String>,
+    },
+    /// Nothing was done; the preview says why. `changed`: the repository
+    /// is no longer as the preview the user accepted saw it.
+    NotDone {
+        preview: Box<MovePreview>,
+        changed: bool,
+        saved: Option<String>,
+    },
+}
+
+/// Everything needed to undo a merge or rebase that ended; kept by the
+/// app, not shown.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct MoveRecord {
+    /// The local branch that moved.
+    pub branch: String,
+    /// It was the current branch (otherwise only its ref moved).
+    pub current: bool,
+    /// Where it was, and where it ended.
+    pub previous: String,
+    pub after: String,
+    /// Current branch: the index (as a tree) right before the operation,
+    /// with what was staged.
+    pub index_before: Option<String>,
+    /// The stash entry with the changes saved before it, if any.
+    pub stash: Option<String>,
+    /// Current branch: the state right after; undo only if it is still
+    /// this.
+    pub fingerprint_after: String,
+}
+
+/// Message of the stash made by "save my changes, then merge".
+pub fn merge_stash_message(source: &str) -> String {
+    format!("GitCRAFT: antes del merge de {source}")
+}
+
+async fn ref_value(
+    git: &Git,
+    repo: &Path,
+    refname: &str,
+    cancel: &CancellationToken,
+) -> Result<String> {
+    let out = git
+        .read(repo)
+        .args(["rev-parse", "-q", "--verify", "--end-of-options", refname])
+        .accept_exit_code(1)
+        .output(cancel)
+        .await?;
+    Ok(out.stdout_lossy().trim().to_owned())
+}
+
+/// Merges `source` into `target` as the user accepted it. It checks
+/// everything again and does nothing if the repository changed since the
+/// preview, if it is refused, if changes are in the way (unless
+/// `save_changes`: they are stashed first, in an entry that is never
+/// dropped automatically) or if it would conflict (unless
+/// `allow_conflicts`). Returns how to undo it when it is done.
+pub async fn merge(
+    git: &Git,
+    repo: &Path,
+    request: &MergeRequest,
+    cancel: &CancellationToken,
+) -> Result<(MoveOutcome, Option<MoveRecord>)> {
+    let not_done = |preview: MovePreview, changed, saved| {
+        Ok((
+            MoveOutcome::NotDone {
+                preview: Box::new(preview),
+                changed,
+                saved,
+            },
+            None,
+        ))
+    };
+    let mut preview = merge_preview(git, repo, &request.source, &request.target, cancel).await?;
+    if preview.fingerprint != request.expected {
+        return not_done(preview, true, None);
+    }
+    if preview.refused.is_some() || preview.case == MoveCase::UpToDate {
+        return not_done(preview, false, None);
+    }
+    let current = preview.current.as_deref() == Some(preview.moving.as_str());
+    let mut saved = None;
+    if preview.blocked.is_some() {
+        if !request.save_changes {
+            return not_done(preview, false, saved);
+        }
+        let message = merge_stash_message(&preview.source.name);
+        saved = Some(create_stash(git, repo, &message, true, cancel).await?);
+        preview = merge_preview(git, repo, &request.source, &request.target, cancel).await?;
+        if preview.refused.is_some() || preview.blocked.is_some() {
+            return not_done(preview, false, saved);
+        }
+    }
+    let commit = preview.case == MoveCase::Merge || request.no_ff;
+    if commit && !current {
+        // A merge commit is only made on the current branch.
+        return not_done(preview, false, saved);
+    }
+    if commit && !preview.conflicts.is_empty() && !request.allow_conflicts {
+        return not_done(preview, false, saved);
+    }
+    let previous = preview.target.oid.clone();
+    let target_ref = preview.target.refname.clone();
+
+    if !current {
+        // Fast-forward of another local branch: its ref alone, and only if
+        // it is still where the preview saw it.
+        git.write(repo)
+            .args(["update-ref", "-m"])
+            .arg(format!("merge {}: Fast-forward", preview.source.name))
+            .args([&target_ref, &preview.source.oid, &previous])
+            .output(cancel)
+            .await?;
+        let record = MoveRecord {
+            branch: preview.target.name.clone(),
+            current: false,
+            previous,
+            after: preview.source.oid.clone(),
+            index_before: None,
+            stash: saved.clone(),
+            fingerprint_after: String::new(),
+        };
+        return Ok((
+            MoveOutcome::Done {
+                head: record.after.clone(),
+                fast_forward: true,
+                saved,
+            },
+            Some(record),
+        ));
+    }
+
+    let index_before = git
+        .write(repo)
+        .arg("write-tree")
+        .output(cancel)
+        .await?
+        .stdout_lossy()
+        .trim()
+        .to_owned();
+    let mut cmd = git.write(repo).arg("merge");
+    if commit {
+        let message = request
+            .message
+            .as_deref()
+            .filter(|m| !m.trim().is_empty())
+            .or(preview.message.as_deref())
+            .unwrap_or_default()
+            .to_owned();
+        cmd = cmd.args(["--no-ff", "--no-edit", "-m", &message]);
+    } else {
+        cmd = cmd.arg("--ff-only");
+    }
+    let out = cmd
+        .args(["--end-of-options", &preview.source.refname])
+        .accept_exit_code(1)
+        .output(cancel)
+        .await?;
+    let status = working_status(git, repo, cancel).await?;
+    if out.exit_code == Some(1) || !status.conflicted.is_empty() || status.in_progress.is_some() {
+        return Ok((
+            MoveOutcome::Conflicted {
+                files: status.conflicted.into_iter().map(|c| c.path).collect(),
+                saved,
+            },
+            None,
+        ));
+    }
+    let head = ref_value(git, repo, &target_ref, cancel).await?;
+    let record = MoveRecord {
+        branch: preview.target.name.clone(),
+        current: true,
+        previous,
+        after: head.clone(),
+        index_before: Some(index_before),
+        stash: saved.clone(),
+        fingerprint_after: state_fingerprint(git, repo, cancel).await?,
+    };
+    Ok((
+        MoveOutcome::Done {
+            head,
+            fast_forward: !commit,
+            saved,
+        },
+        Some(record),
+    ))
+}
+
+/// Puts the branch (and, if it was the current one, the index and the
+/// working tree) back exactly as before the merge or rebase. Refuses,
+/// changing nothing, if anything changed since (`GitError::UndoConflict`).
+pub async fn undo_move(
+    git: &Git,
+    repo: &Path,
+    record: &MoveRecord,
+    cancel: &CancellationToken,
+) -> Result<()> {
+    let refname = format!("refs/heads/{}", record.branch);
+    let conflict = || GitError::UndoConflict(record.branch.clone());
+    if ref_value(git, repo, &refname, cancel).await? != record.after
+        || in_progress(git, repo, cancel).await?.is_some()
+    {
+        return Err(conflict());
+    }
+    let current = git
+        .read(repo)
+        .args(["symbolic-ref", "-q", "--short", "HEAD"])
+        .accept_exit_code(1)
+        .output(cancel)
+        .await?
+        .stdout_lossy()
+        .trim()
+        .to_owned();
+    if !record.current {
+        if current == record.branch {
+            return Err(conflict());
+        }
+        git.write(repo)
+            .args(["update-ref", "-m", "GitCRAFT: undo", &refname])
+            .args([&record.previous, &record.after])
+            .output(cancel)
+            .await?;
+        return Ok(());
+    }
+    if current != record.branch
+        || state_fingerprint(git, repo, cancel).await? != record.fingerprint_after
+    {
+        return Err(conflict());
+    }
+    // Files that differ between the two commits go back; local changes in
+    // other files stay (git refuses if one of them has local changes).
+    git.write(repo)
+        .args(["reset", "--quiet", "--keep", &record.previous])
+        .output(cancel)
+        .await?;
+    if let Some(tree) = &record.index_before {
+        // --keep resets the index: what was staged comes back.
+        git.write(repo)
+            .args(["read-tree", tree])
+            .output(cancel)
+            .await?;
+        git.write(repo)
+            .args(["update-index", "-q", "--refresh"])
+            .accept_exit_code(1)
+            .output(cancel)
+            .await?;
+    }
+    if let Some(stash) = &record.stash {
+        git.write(repo)
+            .args(["stash", "apply", "--index", "--quiet", stash])
+            .output(cancel)
+            .await?;
+    }
+    Ok(())
 }

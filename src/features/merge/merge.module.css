@@ -1,0 +1,81 @@
+.sketch {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  margin: var(--space-2) 0;
+}
+
+.edge {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 2;
+}
+
+.commit {
+  fill: var(--surface-1);
+  stroke: var(--text-muted);
+  stroke-width: 2;
+}
+
+.newCommit {
+  fill: var(--accent);
+  stroke: var(--accent-strong);
+  stroke-width: 1.5;
+}
+
+.move {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.label,
+.oldLabel,
+.movingLabel {
+  fill: var(--text-muted);
+  font-size: 12px;
+}
+
+.oldLabel {
+  fill: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.movingLabel {
+  fill: var(--accent-strong);
+  font-weight: 600;
+}
+
+.fetchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin: var(--space-2) 0;
+  font-size: var(--font-size-small);
+}
+
+.fetchButton {
+  height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius);
+  background: transparent;
+  font-size: var(--font-size-small);
+}
+
+.message {
+  min-height: 72px;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+}
+
+.option {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: var(--space-2) 0;
+}

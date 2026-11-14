@@ -1,4 +1,5 @@
 import { initialTagState, useTagStore } from "../features/history/tags";
+import { initialMergeState, useMergeStore } from "../features/merge/store";
 import "@testing-library/jest-dom/vitest";
 import i18n from "../i18n";
 import { initialBranchState, useBranchStore } from "../features/branches/store";
@@ -134,8 +135,12 @@ vi.mock("../ipc", () => ({
     revert: vi.fn(),
     resetPreview: vi.fn(),
     resetBranch: vi.fn(),
-    resetUndoAvailable: vi.fn(),
-    undoReset: vi.fn(),
+    undoAvailable: vi.fn(),
+    undoOperation: vi.fn(),
+    mergePreview: vi.fn(),
+    rebasePreview: vi.fn(),
+    mergeBranch: vi.fn(),
+    lastFetch: vi.fn(),
     checkTagName: vi.fn(),
     tagInfo: vi.fn(),
     createTag: vi.fn(),
@@ -183,6 +188,7 @@ beforeEach(() => {
   useConflictStore.setState(initialConflictState);
   useHistoryStore.setState(initialHistoryState);
   useTagStore.setState(initialTagState);
+  useMergeStore.setState(initialMergeState);
   useCreateStore.setState(initialCreateState);
   useOperationsStore.setState(initialOperationsState);
   useGraphStore.setState({ graphs: {} });

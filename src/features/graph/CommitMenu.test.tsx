@@ -59,6 +59,9 @@ describe("the menu of a commit", () => {
       "Revertir en «main»…",
       "Crear tag aquí…",
       "Restablecer «main» a este commit…",
+      // The branches on this commit (not the current one), so the keyboard
+      // reaches "Merge…" too.
+      "Hacer merge de «origin/main» en «main»…",
       "Copiar hash",
     ]);
     // Reset goes apart, with the danger style.
@@ -70,6 +73,29 @@ describe("the menu of a commit", () => {
     // The default facts say it is already in main.
     expect(pick).toBeDisabled();
     expect(pick).toHaveAttribute("title", "Ya está en «main».");
+  });
+
+  it("a branch label has its own menu, with «Hacer merge…»", async () => {
+    const { rows: all } = await rows();
+    const chip = within(all[0]!).getByText("origin/main");
+    fireEvent.contextMenu(chip, { clientX: 40, clientY: 50 });
+    const menu = screen.getByRole("menu", { name: "Rama origin/main" });
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((item) => item.textContent),
+    ).toEqual(["Hacer merge de «origin/main» en «main»…"]);
+    // The current branch's label: merging it into itself is disabled.
+    fireEvent.keyDown(menu, { key: "Escape" });
+    fireEvent.contextMenu(within(all[0]!).getByText("main"), {
+      clientX: 40,
+      clientY: 50,
+    });
+    expect(
+      screen.getByRole("menuitem", {
+        name: "Hacer merge de «main» en «main»…",
+      }),
+    ).toBeDisabled();
   });
 
   it("copies the whole hash", async () => {

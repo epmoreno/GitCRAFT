@@ -4,6 +4,9 @@ import { commands, type CommitActions } from "../../ipc";
 import { copyText } from "../../ui/clipboard";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
 import { runCommitAction } from "../history/store";
+import { mergeMenuItem } from "../merge/menu";
+import type { RefLabel } from "./refLabels";
+import { useGraphStore } from "./store";
 import {
   availability,
   DANGEROUS_ACTIONS,
@@ -19,15 +22,20 @@ export function CommitMenu({
   oid,
   x,
   y,
+  branches,
   onClose,
 }: {
   repoId: number;
   oid: string;
   x: number;
   y: number;
+  /** The labels on this commit: its branches get "Merge…" here too, so
+   * the keyboard reaches them. */
+  branches?: RefLabel[];
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const refs = useGraphStore((s) => s.graphs[repoId]?.refs ?? null);
   const [facts, setFacts] = useState<CommitActions | null>(null);
   const needsFacts = READY_ACTIONS.length > 0;
 
@@ -58,8 +66,16 @@ export function CommitMenu({
     };
   };
 
+  const mergeItems: MenuItem[] = (branches ?? [])
+    .filter((b) => (b.kind === "local" || b.kind === "remote") && !b.current)
+    .map((b, index) => ({
+      ...mergeMenuItem(t, repoId, refs, { name: b.refname, shortName: b.text }),
+      separatorBefore: index === 0,
+    }));
+
   const items: MenuItem[] = [
     ...READY_ACTIONS.map(actionItem),
+    ...mergeItems,
     {
       label: t("commitMenu.copyHash"),
       separatorBefore: READY_ACTIONS.length > 0,

@@ -65,7 +65,7 @@ beforeEach(async () => {
   useWorkdirStore.setState({
     statuses: { 1: { status: status(), error: null } },
   });
-  ipc.resetUndoAvailable.mockResolvedValue({ status: "ok", data: true });
+  ipc.undoAvailable.mockResolvedValue({ status: "ok", data: true });
 });
 
 describe("reset", () => {
@@ -195,7 +195,7 @@ describe("reset", () => {
     ).toBeNull();
 
     // Another write: the status changes and Undo is no longer available.
-    ipc.resetUndoAvailable.mockResolvedValue({ status: "ok", data: false });
+    ipc.undoAvailable.mockResolvedValue({ status: "ok", data: false });
     act(() =>
       useWorkdirStore.setState({
         statuses: { 1: { status: status(), error: null, version: 2 } },
@@ -221,12 +221,12 @@ describe("reset", () => {
     await user.click(
       within(dialog).getByRole("button", { name: "Restablecer «main»" }),
     );
-    ipc.undoReset.mockResolvedValueOnce({
+    ipc.undoOperation.mockResolvedValueOnce({
       status: "error",
       error: commandError("undoConflict"),
     });
     await user.click(await screen.findByRole("button", { name: "Deshacer" }));
-    expect(ipc.undoReset).toHaveBeenCalledWith(1, 7);
+    expect(ipc.undoOperation).toHaveBeenCalledWith(1, 7);
     expect(
       await screen.findByText(
         /Algo ha cambiado desde el reset, así que no se ha tocado nada/,
@@ -245,7 +245,7 @@ describe("reset", () => {
         },
       }),
     );
-    ipc.undoReset.mockResolvedValueOnce({ status: "ok", data: null });
+    ipc.undoOperation.mockResolvedValueOnce({ status: "ok", data: null });
     await user.click(screen.getByRole("button", { name: "Deshacer" }));
     expect(
       await screen.findByText(

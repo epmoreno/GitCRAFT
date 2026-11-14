@@ -18,10 +18,10 @@ use gitcraft_core::ops::conflict::ConflictFile;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::in_progress::{ConflictSides, ContinueOutcome};
 use gitcraft_core::ops::init::InitCheck;
-use gitcraft_core::ops::merge_rebase::MovePreview;
+use gitcraft_core::ops::merge_rebase::{MergeRequest, MovePreview};
 use gitcraft_core::ops::pick::{PickOutcome, PickPreview};
 use gitcraft_core::ops::refs::RepoRefs;
-use gitcraft_core::ops::remote::{ForcePushPreview, PullMode, PullOutcome, PushOutcome};
+use gitcraft_core::ops::remote::{ForcePushPreview, LastFetch, PullMode, PullOutcome, PushOutcome};
 use gitcraft_core::ops::reset::{ResetMode, ResetPreview};
 use gitcraft_core::ops::resolve::{MarkOutcome, ResolvedFile, Side};
 use gitcraft_core::ops::stash::{ApplyOutcome, RecoverPreview};
@@ -37,8 +37,8 @@ use crate::error::IpcError;
 use crate::history::{CommandHistory, CommandRecord};
 use crate::settings::{GeneralSettings, RecentRepository};
 use crate::state::{
-    AppState, DiscardResult, GhStatus, GraphEvent, OpenedRepository, PublishInfo, PullModeInfo,
-    RepoId, ResetResult, RestoredSession,
+    AppState, DiscardResult, GhStatus, GraphEvent, MoveResult, OpenedRepository, PublishInfo,
+    PullModeInfo, RepoId, ResetResult, RestoredSession,
 };
 use gitcraft_core::gh::LoginEvent;
 use gitcraft_core::ops::publish::{self, PublishRequest, Published};
@@ -1079,26 +1079,50 @@ pub async fn reset_branch(
     state.reset(id, oid, mode, expected).await
 }
 
-/// Whether the last reset can still be undone (no write since).
+/// Whether the last reset, merge or rebase can still be undone (no write
+/// since).
 #[tauri::command]
 #[specta::specta]
-pub async fn reset_undo_available(
+pub async fn undo_available(
     state: State<'_, AppState>,
     id: RepoId,
     undo_id: u32,
 ) -> Result<bool, IpcError> {
-    Ok(state.reset_undo_available(id, undo_id))
+    Ok(state.undo_available(id, undo_id))
 }
 
-/// Undoes the last reset exactly, if nothing changed since.
+/// Undoes the last reset, merge or rebase exactly, if nothing changed since.
 #[tauri::command]
 #[specta::specta]
-pub async fn undo_reset(
+pub async fn undo_operation(
     state: State<'_, AppState>,
     id: RepoId,
     undo_id: u32,
 ) -> Result<(), IpcError> {
-    state.undo_reset(id, undo_id).await
+    state.undo_operation(id, undo_id).await
+}
+
+/// Merges as the user accepted it in the dialog (task 8.2): checks
+/// everything again and does nothing the user did not accept.
+#[tauri::command]
+#[specta::specta]
+pub async fn merge_branch(
+    state: State<'_, AppState>,
+    id: RepoId,
+    request: MergeRequest,
+) -> Result<MoveResult, IpcError> {
+    state.merge(id, request).await
+}
+
+/// When `remote` was last fetched, as far as git can tell.
+#[tauri::command]
+#[specta::specta]
+pub async fn last_fetch(
+    state: State<'_, AppState>,
+    id: RepoId,
+    remote: String,
+) -> Result<LastFetch, IpcError> {
+    state.last_fetch(id, &remote).await
 }
 
 // --- Tags (task 10.5) ------------------------------------------------------

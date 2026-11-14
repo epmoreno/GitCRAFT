@@ -1,11 +1,13 @@
-//! What merging or rebasing one branch with another would do (task 8.1),
-//! against real repositories. The previews never change a ref, the index or
-//! the working tree.
+//! Merging or rebasing one branch with another (task 8), against real
+//! repositories: the previews never change a ref, the index or the working
+//! tree, and undo puts everything back exactly.
 
 use gitcraft_core::ops::branch::BlockingFile;
 use gitcraft_core::ops::merge_rebase::{
-    MoveBlock, MoveCase, MovePreview, MoveRefusal, merge_preview, rebase_preview,
+    MergeRequest, MoveBlock, MoveCase, MoveOutcome, MovePreview, MoveRecord, MoveRefusal,
+    merge as merge_branch, merge_preview, merge_stash_message, rebase_preview, undo_move,
 };
+use gitcraft_core::ops::remote::abort_in_progress;
 use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, GitError};
 
@@ -111,7 +113,7 @@ async fn a_fast_forward_of_the_current_branch() {
     assert_eq!(p.moving, "main");
     assert_eq!(p.commits_total, 2);
     assert_eq!(subjects(&p), ["a2", "a1"]);
-    assert_eq!(p.message, None);
+    assert_eq!(p.message.as_deref(), Some("Merge branch 'ahead'"));
     assert!(p.conflicts.is_empty());
     // Rebasing main onto ahead is the same fast-forward.
     let p = rebase(&repo, &heads("main"), &heads("ahead")).await;
@@ -457,4 +459,315 @@ async fn only_existing_branches_are_accepted() {
     .await
     .expect_err("missing");
     assert!(matches!(err, GitError::BranchChanged(_)), "{err:?}");
+}
+
+// ---- 8.2: merging, and undoing it ----
+
+/// Everything a merge and its undo may touch: refs, index, status, the
+/// stash and every file's content.
+async fn full_state(repo: &TestRepo) -> String {
+    let mut text = snapshot(repo).await;
+    text.push_str(&repo.run(&["stash", "list", "--format=%H %gs"]).await);
+    text.push_str(
+        &repo
+            .run(&["rev-parse", "--symbolic-full-name", "HEAD"])
+            .await,
+    );
+    let mut files: Vec<_> = walk(repo.path());
+    files.sort();
+    for path in files {
+        let rel = path.strip_prefix(repo.path()).expect("inside");
+        text.push_str(&format!(
+            "\n{}: {}",
+            rel.display(),
+            std::fs::read_to_string(&path).unwrap_or_default()
+        ));
+    }
+    text
+}
+
+fn walk(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(dir).expect("read dir").flatten() {
+        let path = entry.path();
+        if path.file_name().is_some_and(|n| n == ".git") {
+            continue;
+        }
+        if path.is_dir() {
+            out.extend(walk(&path));
+        } else {
+            out.push(path);
+        }
+    }
+    out
+}
+
+fn request(p: &MovePreview) -> MergeRequest {
+    MergeRequest {
+        source: p.source.refname.clone(),
+        target: p.target.refname.clone(),
+        expected: p.fingerprint.clone(),
+        no_ff: false,
+        message: None,
+        save_changes: false,
+        allow_conflicts: false,
+    }
+}
+
+async fn run_merge(repo: &TestRepo, req: &MergeRequest) -> (MoveOutcome, Option<MoveRecord>) {
+    merge_branch(repo.git(), repo.path(), req, &c())
+        .await
+        .expect("merge")
+}
+
+async fn undo(repo: &TestRepo, record: &MoveRecord) -> Result<(), GitError> {
+    undo_move(repo.git(), repo.path(), record, &c()).await
+}
+
+#[tokio::test]
+async fn a_merge_commit_with_an_edited_message_then_undo() {
+    let repo = diverged().await;
+    // Local work the merge does not touch: kept, and kept by the undo.
+    repo.write_file("other.txt", "unstaged, untouched\n");
+    repo.write_file("notes.txt", "untracked\n");
+    let before = full_state(&repo).await;
+    let p = merge(&repo, &heads("feature"), &heads("main")).await;
+    let mut req = request(&p);
+    req.message = Some("Bring feature in\n\nWith a body.".into());
+    let (outcome, record) = run_merge(&repo, &req).await;
+    let MoveOutcome::Done {
+        head,
+        fast_forward,
+        saved,
+    } = outcome
+    else {
+        panic!("expected a merge: {outcome:?}");
+    };
+    assert_eq!((fast_forward, saved), (false, None));
+    assert_eq!(head, repo.head().await);
+    assert_eq!(
+        repo.run(&["log", "-1", "--format=%B"]).await,
+        "Bring feature in\n\nWith a body."
+    );
+    assert_eq!(
+        repo.run(&["rev-list", "--parents", "-1", "HEAD"])
+            .await
+            .split(' ')
+            .count(),
+        3
+    );
+    assert_eq!(
+        std::fs::read_to_string(repo.path().join("other.txt")).expect("read"),
+        "unstaged, untouched\n"
+    );
+
+    undo(&repo, &record.expect("record")).await.expect("undo");
+    assert_eq!(full_state(&repo).await, before);
+}
+
+#[tokio::test]
+async fn a_blank_message_means_git_s_own() {
+    let repo = diverged().await;
+    let p = merge(&repo, &heads("feature"), &heads("main")).await;
+    let mut req = request(&p);
+    req.message = Some("  \n".into());
+    run_merge(&repo, &req).await;
+    assert_eq!(
+        repo.run(&["log", "-1", "--format=%B"]).await,
+        "Merge branch 'feature'"
+    );
+}
+
+#[tokio::test]
+async fn a_fast_forward_of_the_current_branch_then_undo() {
+    let repo = behind().await;
+    // Staged and unstaged work in files the fast-forward does not change.
+    repo.write_file("other.txt", "staged\n");
+    repo.run(&["add", "other.txt"]).await;
+    repo.write_file("other.txt", "staged, then changed\n");
+    let before = full_state(&repo).await;
+    let p = merge(&repo, &heads("ahead"), &heads("main")).await;
+    let (outcome, record) = run_merge(&repo, &request(&p)).await;
+    assert!(
+        matches!(
+            outcome,
+            MoveOutcome::Done {
+                fast_forward: true,
+                ..
+            }
+        ),
+        "{outcome:?}"
+    );
+    assert_eq!(repo.head().await, repo.rev_parse("ahead").await);
+    undo(&repo, &record.expect("record")).await.expect("undo");
+    assert_eq!(full_state(&repo).await, before);
+}
+
+#[tokio::test]
+async fn always_a_merge_commit_when_asked() {
+    let repo = behind().await;
+    let p = merge(&repo, &heads("ahead"), &heads("main")).await;
+    let before = full_state(&repo).await;
+    let mut req = request(&p);
+    req.no_ff = true;
+    let (outcome, record) = run_merge(&repo, &req).await;
+    assert!(
+        matches!(
+            outcome,
+            MoveOutcome::Done {
+                fast_forward: false,
+                ..
+            }
+        ),
+        "{outcome:?}"
+    );
+    assert_eq!(
+        repo.run(&["log", "-1", "--format=%s"]).await,
+        "Merge branch 'ahead'"
+    );
+    undo(&repo, &record.expect("record")).await.expect("undo");
+    assert_eq!(full_state(&repo).await, before);
+}
+
+#[tokio::test]
+async fn a_fast_forward_of_another_branch_then_undo() {
+    let repo = behind().await;
+    repo.checkout("ahead").await;
+    repo.write_file("f.txt", "local change\n");
+    let before = full_state(&repo).await;
+    let p = merge(&repo, &heads("ahead"), &heads("main")).await;
+    let (outcome, record) = run_merge(&repo, &request(&p)).await;
+    assert!(
+        matches!(
+            outcome,
+            MoveOutcome::Done {
+                fast_forward: true,
+                ..
+            }
+        ),
+        "{outcome:?}"
+    );
+    assert_eq!(repo.rev_parse("main").await, repo.rev_parse("ahead").await);
+    // Only main's ref moved.
+    assert_eq!(
+        std::fs::read_to_string(repo.path().join("f.txt")).expect("read"),
+        "local change\n"
+    );
+    let record = record.expect("record");
+    assert!(!record.current);
+    undo(&repo, &record).await.expect("undo");
+    assert_eq!(full_state(&repo).await, before);
+}
+
+#[tokio::test]
+async fn undo_refuses_once_something_changed() {
+    let repo = diverged().await;
+    let p = merge(&repo, &heads("feature"), &heads("main")).await;
+    let (_, record) = run_merge(&repo, &request(&p)).await;
+    let record = record.expect("record");
+    repo.write_file("f.txt", "edited after the merge\n");
+    let after = full_state(&repo).await;
+    let err = undo(&repo, &record).await.expect_err("refused");
+    assert!(matches!(err, GitError::UndoConflict(_)), "{err:?}");
+    assert_eq!(full_state(&repo).await, after);
+
+    // Another branch's fast-forward, then that branch moved again.
+    let repo = behind().await;
+    repo.checkout("ahead").await;
+    let p = merge(&repo, &heads("ahead"), &heads("main")).await;
+    let (_, record) = run_merge(&repo, &request(&p)).await;
+    repo.checkout("main").await;
+    let err = undo(&repo, &record.expect("record"))
+        .await
+        .expect_err("refused");
+    assert!(matches!(err, GitError::UndoConflict(_)), "{err:?}");
+}
+
+#[tokio::test]
+async fn conflicts_only_when_accepted_and_the_message_is_kept() {
+    let repo = diverged().await;
+    repo.commit_file("f.txt", "main\n", "main edits f").await;
+    let before = full_state(&repo).await;
+    let p = merge(&repo, &heads("feature"), &heads("main")).await;
+    let mut req = request(&p);
+    req.message = Some("My merge".into());
+    let (outcome, record) = run_merge(&repo, &req).await;
+    assert!(matches!(
+        outcome,
+        MoveOutcome::NotDone { changed: false, .. }
+    ));
+    assert!(record.is_none());
+    assert_eq!(full_state(&repo).await, before);
+
+    req.allow_conflicts = true;
+    let (outcome, record) = run_merge(&repo, &req).await;
+    let MoveOutcome::Conflicted { files, saved } = outcome else {
+        panic!("expected conflicts: {outcome:?}");
+    };
+    assert_eq!(
+        (files, saved, record),
+        (vec!["f.txt".to_owned()], None, None)
+    );
+    // Task 9's continue will commit with the user's message.
+    let merge_msg = std::fs::read_to_string(repo.path().join(".git/MERGE_MSG")).expect("MERGE_MSG");
+    assert!(merge_msg.starts_with("My merge"), "{merge_msg}");
+    abort_in_progress(repo.git(), repo.path(), &c())
+        .await
+        .expect("abort");
+    assert_eq!(full_state(&repo).await, before);
+}
+
+#[tokio::test]
+async fn changes_in_the_way_are_saved_only_when_asked_and_undo_brings_them_back() {
+    let repo = diverged().await;
+    repo.write_file("other.txt", "staged\n");
+    repo.run(&["add", "other.txt"]).await;
+    let before = snapshot(&repo).await;
+    let p = merge(&repo, &heads("feature"), &heads("main")).await;
+    assert_eq!(p.blocked, Some(MoveBlock::StagedChanges));
+    let mut req = request(&p);
+    let (outcome, _) = run_merge(&repo, &req).await;
+    assert!(matches!(outcome, MoveOutcome::NotDone { .. }));
+    assert_eq!(snapshot(&repo).await, before);
+
+    req.save_changes = true;
+    let (outcome, record) = run_merge(&repo, &req).await;
+    let MoveOutcome::Done { saved, .. } = outcome else {
+        panic!("expected a merge: {outcome:?}");
+    };
+    let saved = saved.expect("saved");
+    assert_eq!(
+        repo.run(&["stash", "list", "--format=%H %gs"]).await,
+        format!("{saved} On main: {}", merge_stash_message("feature"))
+    );
+    // Undo puts the branch back and the saved changes too, staged as they
+    // were; the stash entry stays.
+    undo(&repo, &record.expect("record")).await.expect("undo");
+    let without_stash_ref = |text: String| {
+        text.lines()
+            .filter(|l| !l.starts_with("refs/stash "))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    assert_eq!(without_stash_ref(snapshot(&repo).await), before);
+    assert_eq!(repo.run(&["stash", "list", "--format=%H"]).await, saved);
+}
+
+#[tokio::test]
+async fn nothing_is_done_if_the_repository_changed_since_the_preview() {
+    let repo = diverged().await;
+    let p = merge(&repo, &heads("feature"), &heads("main")).await;
+    repo.write_file("other.txt", "changed after the preview\n");
+    let before = full_state(&repo).await;
+    let (outcome, record) = run_merge(&repo, &request(&p)).await;
+    let MoveOutcome::NotDone {
+        changed, preview, ..
+    } = outcome
+    else {
+        panic!("expected nothing: {outcome:?}");
+    };
+    assert!(changed);
+    assert_ne!(preview.fingerprint, p.fingerprint);
+    assert!(record.is_none());
+    assert_eq!(full_state(&repo).await, before);
 }

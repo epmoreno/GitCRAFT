@@ -3,6 +3,7 @@ import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { GitRef, RepoRefs, StashEntry } from "../../ipc";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
+import { mergeMenuItem } from "../merge/menu";
 import { copyText } from "../../ui/clipboard";
 import { useTagStore } from "../history/tags";
 import { useBranchStore } from "../branches/store";
@@ -136,6 +137,7 @@ function LocalBranches({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
             disabled: ref.isHead,
             hint: t("branches.alreadyCurrent"),
           },
+          mergeMenuItem(t, repoId, refs, ref),
           {
             label: t("branches.createFromMenu", { name: ref.shortName }),
             onSelect: () =>
@@ -328,6 +330,7 @@ function Remotes({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
                         }),
                         onSelect: () => checkoutRemote(ref),
                       },
+                      mergeMenuItem(t, repoId, refs, ref),
                       {
                         label: t("branches.createFromMenu", {
                           name: ref.shortName,
@@ -618,6 +621,17 @@ function Item({
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
+        onKeyDown={(event) => {
+          // The menu key or ⇧F10: the same menu, under the row.
+          if (!onContextMenu || !isShortcut("commitMenu", event)) return;
+          event.preventDefault();
+          const rect = event.currentTarget.getBoundingClientRect();
+          onContextMenu({
+            clientX: rect.left + 16,
+            clientY: rect.bottom,
+            preventDefault: () => {},
+          } as unknown as MouseEvent);
+        }}
       >
         <span className={styles.label}>
           {badge && <span className={styles.badge}>{badge}</span>}

@@ -11,7 +11,11 @@ import styles from "./history.module.css";
 /** At most this many files are listed in a dialog. */
 const MAX_LISTED = 12;
 
-function Files({ files }: { files: { path: string; untracked?: boolean }[] }) {
+export function Files({
+  files,
+}: {
+  files: { path: string; untracked?: boolean }[];
+}) {
   const { t } = useTranslation();
   return (
     <ul className={styles.files}>
@@ -111,7 +115,7 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
     (s) => repoId !== null && !!s.statuses[repoId]?.status?.inProgress,
   );
   const dismiss = useHistoryStore((s) => s.dismissNotice);
-  const undo = useHistoryStore((s) => s.undoReset);
+  const undo = useHistoryStore((s) => s.undo);
   const checkUndo = useHistoryStore((s) => s.checkUndo);
   // "Undo" lasts until the next write: check again whenever the status
   // changes.
@@ -123,7 +127,10 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
   }, [version, checkUndo]);
   const recover = useHistoryStore((s) => s.recoverSaved);
   const forget = useHistoryStore((s) => s.forgetSaved);
-  const undoable = notice?.kind === "reset" && !notice.undoGone;
+  const undoable =
+    (notice?.kind === "reset" || notice?.kind === "merged") &&
+    notice.undoId !== null &&
+    !notice.undoGone;
   // While "Undo" is there it is the way back; the saved copy comes after.
   const offer = saved && !waiting && !undoable ? saved : null;
   if (repoId === null || (!notice && !offer)) return null;
@@ -158,8 +165,29 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
         {notice?.kind === "resetUndone" && (
           <p>{t("history.reset.undone", { branch: notice.branch })}</p>
         )}
+        {notice?.kind === "merged" && (
+          <p>
+            {t(notice.fastForward ? "merge.doneFastForward" : "merge.done", {
+              source: notice.source,
+              target: notice.target,
+            })}
+            {notice.undoGone && ` ${t("history.reset.undoGone")}`}
+          </p>
+        )}
+        {notice?.kind === "mergeUndone" && (
+          <p>{t("merge.undone", { target: notice.target })}</p>
+        )}
         {notice?.kind === "undoRefused" && (
-          <p>{t("history.reset.undoRefused", { short: notice.short })}</p>
+          <p>
+            {notice.op === "reset"
+              ? t("history.reset.undoRefused", { short: notice.short })
+              : t(
+                  notice.stashed
+                    ? "merge.undoRefusedStashed"
+                    : "merge.undoRefused",
+                  { source: notice.short },
+                )}
+          </p>
         )}
         {offer && (
           <p>

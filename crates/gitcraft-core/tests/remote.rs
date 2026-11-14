@@ -591,3 +591,78 @@ fn parses_the_push_rejection_fixture() {
         Some((PushReject::Stale, "[rejected] (stale info)".into()))
     );
 }
+
+mod last_fetch {
+    use super::*;
+    use gitcraft_core::ops::remote::last_fetch;
+
+    fn now() -> i64 {
+        let secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_secs();
+        i64::try_from(secs).expect("seconds")
+    }
+
+    #[tokio::test]
+    async fn the_last_fetch_of_a_remote_comes_from_fetch_head() {
+        let (repo, _other, _remote) = sandbox().await;
+        fetch(&git(), repo.path(), Some("origin"), false, &c(), |_| {})
+            .await
+            .expect("fetch");
+        let last = last_fetch(repo.git(), repo.path(), "origin", &c())
+            .await
+            .expect("last fetch");
+        assert!(last.exact);
+        let at = last.at.expect("a time");
+        assert!((now() - at).abs() < 600, "{at}");
+    }
+
+    #[tokio::test]
+    async fn after_fetching_another_remote_the_reflogs_tell() {
+        let (repo, _other, _remote) = sandbox().await;
+        let second = repo.add_bare_remote("backup").await;
+        drop(second);
+        let last = last_fetch(repo.git(), repo.path(), "origin", &c())
+            .await
+            .expect("last fetch");
+        // FETCH_HEAD is now about "backup": origin's time comes from the
+        // reflogs of its remote branches (written when they were created,
+        // with the tests' fixed clock).
+        assert!(!last.exact);
+        let selector = repo
+            .run(&[
+                "log",
+                "-g",
+                "-1",
+                "--date=unix",
+                "--format=%gd",
+                "refs/remotes/origin/main",
+            ])
+            .await;
+        let logged: i64 = selector
+            .rsplit_once("@{")
+            .and_then(|(_, t)| t.strip_suffix('}'))
+            .and_then(|t| t.parse().ok())
+            .expect("reflog time");
+        assert_eq!(last.at, Some(logged));
+    }
+
+    #[tokio::test]
+    async fn a_remote_never_fetched_has_no_time() {
+        let (repo, _other, _remote) = sandbox().await;
+        let elsewhere = tempfile::tempdir().expect("temp dir");
+        let url = elsewhere.path().join("never.git");
+        repo.run(&["remote", "add", "--", "never", url.to_str().expect("utf-8")])
+            .await;
+        let last = last_fetch(repo.git(), repo.path(), "never", &c())
+            .await
+            .expect("last fetch");
+        assert_eq!(last.at, None);
+        assert!(
+            last_fetch(repo.git(), repo.path(), "nope", &c())
+                .await
+                .is_err()
+        );
+    }
+}

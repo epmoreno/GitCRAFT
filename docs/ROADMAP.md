@@ -2023,7 +2023,7 @@ principio y toda operación destructiva pasa por confirmación.
         - **Tauri:** comandos `merge_preview` y `rebase_preview` (sin
           interfaz todavía).
         Tests: 21 de integración.
-      - [ ] **8.2 Merge y fast-forward (core y UI, desde el menú).**
+      - [x] **8.2 Merge y fast-forward (core y UI, desde el menú).**
         - **Core:** `merge(origen, destino, huella, …)`. Ejecuta
           `git merge --no-edit <origen>` en la rama actual, o el
           `update-ref` del fast-forward de otra rama. Si algo estorba:
@@ -2051,8 +2051,41 @@ principio y toda operación destructiva pasa por confirmación.
         como estaba, guardar y hacer merge, fast-forward de otra rama, y que
         no hace nada si la huella cambió. «Deshacer» de un merge con commit
         y de un fast-forward (también el de otra rama) deja todo idéntico:
-        refs, índice y archivos; y se niega si algo cambió. Tests de interfaz de cada diálogo
-        y de los menús en es/en.
+        refs, índice y archivos; y se niega si algo cambió. Tests de
+        interfaz de cada diálogo y de los menús en es/en.
+        *Cambios del usuario:* la lista muestra como mucho 20 commits y
+        «y N más». Si el origen es una rama remota, el diálogo dice cuándo
+        se hizo el último fetch de ese remoto y ofrece «Fetch primero», que
+        lo actualiza y vuelve a calcular la vista previa.
+        *Hecho:*
+        - **Core:** `merge` (con `MergeRequest`: huella, `--no-ff`, mensaje,
+          guardar cambios y aceptar conflictos) y `undo_move`. Comprobado
+          con git: `reset --keep` conserva los archivos con cambios, pero
+          vacía lo preparado, así que se guarda el índice con `write-tree`
+          y se devuelve con `read-tree`. Un mensaje en blanco usa el de git.
+          `remote::last_fetch` da el último fetch de un remoto.
+        - **Tauri:** el «Deshacer» de la sesión vale para el reset y el
+          merge (`undo_available`, `undo_operation`, que sustituyen a los
+          del reset). Comandos nuevos: `merge_branch` y `last_fetch`.
+        - **Interfaz:** `src/features/merge/`.
+          - El diálogo tiene el esquema fijo, la explicación de qué rama
+            se mueve, los commits y el mensaje editable (el botón se
+            desactiva si queda vacío).
+          - En el fast-forward hay una casilla para crear siempre un commit
+            de merge.
+          - Lo que estorba y los conflictos se muestran como en el
+            cherry-pick, y las negativas con su motivo.
+          - El aviso del resultado lleva «Deshacer» y después «Recuperar
+            mis cambios».
+          - «Hacer merge de «x» en «actual»…» está en:
+            - el menú de las ramas locales y remotas de la barra lateral;
+            - el menú propio de las etiquetas de rama del grafo (clic
+              derecho);
+            - el menú del commit, para las ramas que apuntan a él.
+          - La tecla de menú o ⇧F10 abren también el menú de una rama de la
+            barra lateral.
+        Tests: 9 de integración del merge y su «Deshacer», 3 del último
+        fetch, 1 de las URL, 1 del estado de Tauri y 15 de interfaz.
       - [ ] **8.3 Rebase (core y UI, desde el menú).**
         - **Core:** `rebase(origen, destino, huella, …)` sobre la rama actual
           (`git rebase --no-autostash <destino>`), con el mismo guardado en

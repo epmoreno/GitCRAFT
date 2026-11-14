@@ -47,11 +47,21 @@ describe("ref labels", () => {
   it("groups labels by commit with the current branch first", () => {
     const labels = labelsByCommit(sampleRefs());
     expect(labels.get(oid("e"))).toEqual([
-      { text: "main", kind: "local", current: true },
-      { text: "origin/main", kind: "remote", current: false },
+      {
+        text: "main",
+        refname: "refs/heads/main",
+        kind: "local",
+        current: true,
+      },
+      {
+        text: "origin/main",
+        refname: "refs/remotes/origin/main",
+        kind: "remote",
+        current: false,
+      },
     ]);
     expect(labels.get(oid("b"))).toEqual([
-      { text: "v1.0", kind: "tag", current: false },
+      { text: "v1.0", refname: "refs/tags/v1.0", kind: "tag", current: false },
     ]);
     expect(headOid(sampleRefs())).toBe(oid("e"));
   });
@@ -63,6 +73,7 @@ describe("ref labels", () => {
     };
     expect(labelsByCommit(refs).get(oid("c"))?.[0]).toEqual({
       text: "HEAD",
+      refname: "HEAD",
       kind: "head",
       current: true,
     });

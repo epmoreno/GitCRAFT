@@ -183,7 +183,7 @@ describe("shortcut registry", () => {
     ).toHaveTextContent("⌥↓");
     expect(
       within(section).getByRole("row", {
-        name: /Abrir el menú del commit seleccionado/,
+        name: /Abrir el menú del commit o la rama seleccionados/,
       }),
     ).toHaveTextContent("Tecla de menú⇧F10");
     // ⌥↓ is not plain ↓: the list's own arrows keep working.

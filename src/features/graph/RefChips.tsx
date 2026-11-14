@@ -15,9 +15,12 @@ const KIND_CLASS: Record<RefLabel["kind"], string | undefined> = {
 export function RefChips({
   labels,
   color,
+  onBranchMenu,
 }: {
   labels: RefLabel[] | undefined;
   color: string;
+  /** Right click on a branch label: its own menu, not the commit's. */
+  onBranchMenu?: (label: RefLabel, event: React.MouseEvent) => void;
 }) {
   const { t } = useTranslation();
   if (!labels?.length) return null;
@@ -39,6 +42,15 @@ export function RefChips({
             .filter(Boolean)
             .join(" ")}
           title={t(`graph.refKind.${label.kind}`, { name: label.text })}
+          onContextMenu={
+            onBranchMenu && (label.kind === "local" || label.kind === "remote")
+              ? (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onBranchMenu(label, event);
+                }
+              : undefined
+          }
         >
           {label.text}
         </span>

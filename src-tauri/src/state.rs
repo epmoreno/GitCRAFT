@@ -27,11 +27,13 @@ use gitcraft_core::ops::init::{self, InitCheck};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
-use gitcraft_core::ops::merge_rebase::{self, MovePreview};
+use gitcraft_core::ops::merge_rebase::{self, MergeRequest, MovePreview, MoveRecord};
 use gitcraft_core::ops::pick::{self, PickOutcome, PickPreview};
 use gitcraft_core::ops::publish::{self, PublishPreview, PublishRequest, Published};
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
-use gitcraft_core::ops::remote::{self, ForcePushPreview, PullMode, PullOutcome, PushOutcome};
+use gitcraft_core::ops::remote::{
+    self, ForcePushPreview, LastFetch, PullMode, PullOutcome, PushOutcome,
+};
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::ops::reset::{self as reset_ops, ResetMode, ResetPreview, ResetRecord};
 use gitcraft_core::ops::resolve::{self, MarkOutcome, ResolvedFile, Side};
@@ -142,8 +144,9 @@ struct RepoSession {
     watcher: Option<RepoWatcher>,
     /// Recent discards that can be undone, by id.
     discards: Vec<(u32, DiscardRecord)>,
-    /// The last reset, undoable until the next write in this repository.
-    reset_undo: Option<(u32, ResetRecord)>,
+    /// The last reset, merge or rebase, undoable until the next write in
+    /// this repository.
+    undo: Option<(u32, UndoRecord)>,
     /// Serializes this repository's writes (git's index.lock allows one).
     write_lock: Arc<tokio::sync::Mutex<()>>,
 }
@@ -205,6 +208,21 @@ pub struct AppState {
     /// Where discarded untracked files go (the system Trash).
     trash: Arc<dyn Trash>,
     inner: Mutex<Inner>,
+}
+
+/// What "Undo" can put back.
+#[derive(Debug, Clone)]
+enum UndoRecord {
+    Reset(ResetRecord),
+    Move(MoveRecord),
+}
+
+/// The outcome of a merge or rebase, with the id to undo it once done.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveResult {
+    pub outcome: gitcraft_core::ops::merge_rebase::MoveOutcome,
+    pub undo_id: Option<u32>,
 }
 
 /// The outcome of a reset, with the id to undo it.
@@ -294,7 +312,7 @@ impl AppState {
             watcher: self.watch(id, &info),
             write_lock: Arc::default(),
             discards: Vec::new(),
-            reset_undo: None,
+            undo: None,
         });
         Ok(OpenedRepository { id, info })
     }
@@ -395,8 +413,9 @@ impl AppState {
                 .iter_mut()
                 .find(|s| s.id == id)
                 .ok_or(GitError::Cancelled)?;
-            // Any other write ends what "Undo" of the last reset can do.
-            session.reset_undo = None;
+            // Any other write ends what "Undo" of the last reset, merge or
+            // rebase can do.
+            session.undo = None;
             (
                 PathBuf::from(&session.info.path),
                 Arc::clone(&session.write_lock),
@@ -1558,6 +1577,16 @@ impl AppState {
             .await?;
         let stash = record.stash.clone();
         let trashed = u32::try_from(record.trashed.len()).unwrap_or(u32::MAX);
+        let undo_id = self.remember_undo(id, UndoRecord::Reset(record))?;
+        Ok(ResetResult {
+            undo_id,
+            stash,
+            trashed,
+        })
+    }
+
+    /// Keeps `record` as what "Undo" can put back, and returns its id.
+    fn remember_undo(&self, id: RepoId, record: UndoRecord) -> Result<u32, IpcError> {
         let mut inner = self.lock();
         inner.next_discard += 1;
         let undo_id = inner.next_discard;
@@ -1566,27 +1595,25 @@ impl AppState {
             .iter_mut()
             .find(|s| s.id == id)
             .ok_or(GitError::Cancelled)?;
-        session.reset_undo = Some((undo_id, record));
-        Ok(ResetResult {
-            undo_id,
-            stash,
-            trashed,
-        })
+        session.undo = Some((undo_id, record));
+        Ok(undo_id)
     }
 
-    /// Whether the reset `undo_id` can still be undone (no write since).
-    pub fn reset_undo_available(&self, id: RepoId, undo_id: u32) -> bool {
+    /// Whether the reset, merge or rebase `undo_id` can still be undone (no
+    /// write since).
+    pub fn undo_available(&self, id: RepoId, undo_id: u32) -> bool {
         self.lock()
             .sessions
             .iter()
             .find(|s| s.id == id)
-            .and_then(|s| s.reset_undo.as_ref())
+            .and_then(|s| s.undo.as_ref())
             .is_some_and(|(u, _)| *u == undo_id)
     }
 
-    /// Puts everything back as it was before reset `undo_id`, if nothing
-    /// changed since (else `UndoConflict`, nothing touched).
-    pub async fn undo_reset(&self, id: RepoId, undo_id: u32) -> Result<(), IpcError> {
+    /// Puts everything back as it was before the reset, merge or rebase
+    /// `undo_id`, if nothing changed since (else `UndoConflict`, nothing
+    /// touched).
+    pub async fn undo_operation(&self, id: RepoId, undo_id: u32) -> Result<(), IpcError> {
         let git = self.git()?;
         let record = {
             let inner = self.lock();
@@ -1594,16 +1621,43 @@ impl AppState {
                 .sessions
                 .iter()
                 .find(|s| s.id == id)
-                .and_then(|s| s.reset_undo.as_ref())
+                .and_then(|s| s.undo.as_ref())
                 .filter(|(u, _)| *u == undo_id)
                 .map(|(_, r)| r.clone())
                 .ok_or_else(|| GitError::UndoConflict(String::new()))?
         };
         let cancel = CancellationToken::new();
         self.write(id, |repo| async move {
-            reset_ops::undo_reset(git, &repo, &record, &cancel).await
+            match &record {
+                UndoRecord::Reset(r) => reset_ops::undo_reset(git, &repo, r, &cancel).await,
+                UndoRecord::Move(r) => merge_rebase::undo_move(git, &repo, r, &cancel).await,
+            }
         })
         .await
+    }
+
+    /// Merges as the user accepted it (task 8.2). When it is done, "Undo"
+    /// stays possible until the next write in this repository.
+    pub async fn merge(&self, id: RepoId, request: MergeRequest) -> Result<MoveResult, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        let (outcome, record) = self
+            .write(id, |repo| async move {
+                merge_rebase::merge(git, &repo, &request, &cancel).await
+            })
+            .await?;
+        let undo_id = match record {
+            Some(record) => Some(self.remember_undo(id, UndoRecord::Move(record))?),
+            None => None,
+        };
+        Ok(MoveResult { outcome, undo_id })
+    }
+
+    /// When `remote` was last fetched, as far as git can tell.
+    pub async fn last_fetch(&self, id: RepoId, remote: &str) -> Result<LastFetch, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(remote::last_fetch(git, &repo, remote, &CancellationToken::new()).await?)
     }
 
     /// What merging the branch `source` into `target` would do (task 8).
@@ -2033,6 +2087,56 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_merge_can_be_undone_until_the_next_write() {
+        let f = fixture();
+        let repo = TestRepo::new().await;
+        repo.commit_file("f.txt", "base\n", "base").await;
+        repo.create_branch("ahead").await;
+        repo.checkout("ahead").await;
+        repo.commit_file("f.txt", "ahead\n", "ahead").await;
+        repo.checkout("main").await;
+        let base = repo.head().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        let merge = |preview: MovePreview| MergeRequest {
+            source: preview.source.refname,
+            target: preview.target.refname,
+            expected: preview.fingerprint,
+            no_ff: false,
+            message: None,
+            save_changes: false,
+            allow_conflicts: false,
+        };
+
+        let preview = f
+            .state
+            .merge_preview(id, "refs/heads/ahead", "refs/heads/main")
+            .await
+            .expect("preview");
+        let result = f.state.merge(id, merge(preview)).await.expect("merge");
+        let undo_id = result.undo_id.expect("undoable");
+        assert!(f.state.undo_available(id, undo_id));
+        f.state.undo_operation(id, undo_id).await.expect("undo");
+        assert_eq!(repo.head().await, base);
+
+        // Any other write in the repository ends it.
+        let preview = f
+            .state
+            .merge_preview(id, "refs/heads/ahead", "refs/heads/main")
+            .await
+            .expect("preview");
+        let result = f.state.merge(id, merge(preview)).await.expect("merge");
+        let undo_id = result.undo_id.expect("undoable");
+        repo.write_file("g.txt", "new\n");
+        f.state
+            .stage(id, Some(vec!["g.txt".into()]))
+            .await
+            .expect("stage");
+        assert!(!f.state.undo_available(id, undo_id));
+        assert!(f.state.undo_operation(id, undo_id).await.is_err());
+        assert_eq!(repo.head().await, repo.rev_parse("ahead").await);
+    }
+
+    #[tokio::test]
     async fn a_reset_can_be_undone_until_the_next_write() {
         let mut f = fixture();
         f.state = f.state.with_trash(Arc::new(TempTrash(
@@ -2046,15 +2150,18 @@ mod tests {
 
         let result = hard_reset(&f.state, id, &ids["M"]).await;
         assert!(result.stash.is_some());
-        assert!(f.state.reset_undo_available(id, result.undo_id));
-        f.state.undo_reset(id, result.undo_id).await.expect("undo");
+        assert!(f.state.undo_available(id, result.undo_id));
+        f.state
+            .undo_operation(id, result.undo_id)
+            .await
+            .expect("undo");
         assert_eq!(repo.head().await, head);
         assert_eq!(
             std::fs::read_to_string(repo.path().join("main.txt")).expect("read"),
             "b\ne\nlocal edit\n"
         );
         // Once.
-        assert!(f.state.undo_reset(id, result.undo_id).await.is_err());
+        assert!(f.state.undo_operation(id, result.undo_id).await.is_err());
 
         // Any other write in the repository ends it.
         let result = hard_reset(&f.state, id, &ids["M"]).await;
@@ -2062,8 +2169,8 @@ mod tests {
             .stage(id, Some(vec!["main.txt".into()]))
             .await
             .expect("stage");
-        assert!(!f.state.reset_undo_available(id, result.undo_id));
-        assert!(f.state.undo_reset(id, result.undo_id).await.is_err());
+        assert!(!f.state.undo_available(id, result.undo_id));
+        assert!(f.state.undo_operation(id, result.undo_id).await.is_err());
         assert_eq!(repo.head().await, ids["M"], "nothing was undone");
     }
 

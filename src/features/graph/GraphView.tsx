@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import type { RepoInfo } from "../../ipc";
 import { ConflictView } from "../conflicts/ConflictView";
 import { DiffView } from "../diff/DiffView";
+import { ContextMenu } from "../../ui/ContextMenu";
+import { mergeMenuItem } from "../merge/menu";
 import { CommitMenu } from "./CommitMenu";
 import { useRememberedScroll } from "../repo/viewState";
 import { UncommittedRow } from "../workdir/UncommittedRow";
@@ -12,7 +14,7 @@ import { drawGraph } from "./drawGraph";
 import { OptimizeNotice } from "./OptimizeNotice";
 import { LANE_COUNT, ROW_HEIGHT, graphWidth, laneColor } from "./geometry";
 import { RefChips } from "./RefChips";
-import { headOid, labelsByCommit } from "./refLabels";
+import { headOid, labelsByCommit, type RefLabel } from "./refLabels";
 import { absoluteTime, relativeTime } from "./relativeTime";
 import { useGraphStore } from "./store";
 import styles from "./graph.module.css";
@@ -60,10 +62,10 @@ export function GraphView({
 
   const [menu, setMenu] = useState<{
     oid: string;
-
     x: number;
-
     y: number;
+    /** A branch label's menu instead of the commit's. */
+    branch?: RefLabel;
   } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Each tab keeps its scroll position.
@@ -234,6 +236,15 @@ export function GraphView({
                   <RefChips
                     labels={labels.get(line.oid)}
                     color={laneColor(line.color)}
+                    onBranchMenu={(label, event) => {
+                      select(repoId, line.oid);
+                      setMenu({
+                        oid: line.oid,
+                        x: event.clientX,
+                        y: event.clientY,
+                        branch: label,
+                      });
+                    }}
                   />
                   <span className={`${styles.summary} selectable`}>
                     {line.summary}
@@ -265,12 +276,27 @@ export function GraphView({
             : t("graph.count", { count: lines.length })}
         </span>
       </footer>
-      {menu && (
+      {menu?.branch && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          label={t("merge.branchMenu", { name: menu.branch.text })}
+          items={[
+            mergeMenuItem(t, repoId, refs, {
+              name: menu.branch.refname,
+              shortName: menu.branch.text,
+            }),
+          ]}
+          onClose={() => setMenu(null)}
+        />
+      )}
+      {menu && !menu.branch && (
         <CommitMenu
           repoId={repoId}
           oid={menu.oid}
           x={menu.x}
           y={menu.y}
+          branches={labels.get(menu.oid)}
           onClose={() => setMenu(null)}
         />
       )}

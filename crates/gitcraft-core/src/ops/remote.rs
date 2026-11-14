@@ -41,6 +41,124 @@ pub(crate) async fn known_remote(
     Ok(())
 }
 
+/// When `remote` was last fetched, as far as git can tell.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct LastFetch {
+    /// Unix time in seconds; `None`: unknown (never fetched, or no trace).
+    /// Exported as a 32-bit number, like the commit times.
+    #[cfg_attr(feature = "specta", specta(type = Option<i32>))]
+    pub at: Option<i64>,
+    /// `at` is the last fetch of this remote (from `FETCH_HEAD`). Otherwise
+    /// it is the last fetch that changed one of its remote branches (from
+    /// their reflogs): it may have been fetched later, with nothing new.
+    pub exact: bool,
+}
+
+/// A URL as `FETCH_HEAD` writes it: without credentials, a trailing "/"
+/// or ".git".
+fn fetch_head_url(url: &str) -> String {
+    let mut url = url.trim().to_owned();
+    if let Some(scheme) = url.find("://") {
+        let rest = &url[scheme + 3..];
+        let host_end = rest.find('/').unwrap_or(rest.len());
+        if let Some(at) = rest[..host_end].rfind('@') {
+            url = format!("{}{}", &url[..scheme + 3], &rest[at + 1..]);
+        }
+    }
+    let mut url = url.trim_end_matches('/');
+    if let Some(stripped) = url.strip_suffix(".git") {
+        url = stripped.trim_end_matches('/');
+    }
+    url.to_owned()
+}
+
+/// When `remote` was last fetched: the time of `FETCH_HEAD` if the last
+/// fetch included it, or else the newest fetch in its remote branches'
+/// reflogs.
+pub async fn last_fetch(
+    git: &Git,
+    repo: &Path,
+    remote: &str,
+    cancel: &CancellationToken,
+) -> Result<LastFetch> {
+    known_remote(git, repo, remote, cancel).await?;
+    let urls = git
+        .read(repo)
+        .args(["remote", "get-url", "--all", "--end-of-options", remote])
+        .output(cancel)
+        .await?;
+    let urls: BTreeSet<String> = urls.stdout_lossy().lines().map(fetch_head_url).collect();
+    let path = git
+        .read(repo)
+        .args(["rev-parse", "--git-path", "FETCH_HEAD"])
+        .output(cancel)
+        .await?
+        .stdout_lossy()
+        .trim()
+        .to_owned();
+    let path = std::path::PathBuf::from(crate::platform::native_path(&path));
+    let path = if path.is_absolute() {
+        path
+    } else {
+        repo.join(path)
+    };
+    if let Ok(text) = std::fs::read_to_string(&path) {
+        let fetched = text
+            .lines()
+            .filter_map(|line| line.rsplit_once(" of "))
+            .any(|(_, url)| urls.contains(&fetch_head_url(url)));
+        let modified = std::fs::metadata(&path)
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .and_then(|d| i64::try_from(d.as_secs()).ok());
+        if fetched && modified.is_some() {
+            return Ok(LastFetch {
+                at: modified,
+                exact: true,
+            });
+        }
+    }
+    // The reflog entries of its remote branches, written by fetch or pull.
+    let refs = git
+        .read(repo)
+        .args(["for-each-ref", "--format=%(refname)"])
+        .arg(format!("refs/remotes/{remote}/"))
+        .output(cancel)
+        .await?;
+    let refs: Vec<String> = refs
+        .stdout_lossy()
+        .lines()
+        .filter(|r| !r.ends_with("/HEAD"))
+        .map(str::to_owned)
+        .collect();
+    let mut at = None;
+    for refname in refs {
+        let out = git
+            .read(repo)
+            .args(["log", "-g", "-z", "--date=unix", "--format=%gd%x1f%gs"])
+            .args(["--end-of-options", &refname])
+            .accept_exit_code(128)
+            .output(cancel)
+            .await?;
+        let newest = String::from_utf8_lossy(&out.stdout)
+            .split('\0')
+            .filter_map(|entry| {
+                let (selector, subject) = entry.trim_start_matches('\n').split_once('\u{1f}')?;
+                if !(subject.starts_with("fetch") || subject.starts_with("pull")) {
+                    return None;
+                }
+                let time = selector.rsplit_once("@{")?.1.strip_suffix('}')?;
+                time.parse::<i64>().ok()
+            })
+            .max();
+        at = at.max(newest);
+    }
+    Ok(LastFetch { at, exact: false })
+}
+
 /// Downloads new commits and refs from `remote` (all remotes when `None`),
 /// removing remote branches deleted there when `prune`. Never touches local
 /// branches or the working tree.
@@ -770,4 +888,25 @@ pub async fn force_push_preview(
         commits,
         ahead,
     })
+}
+
+#[cfg(test)]
+mod fetch_head_tests {
+    use super::fetch_head_url;
+
+    #[test]
+    fn urls_are_compared_as_fetch_head_writes_them() {
+        for (configured, written) in [
+            ("https://github.com/a/b.git", "https://github.com/a/b"),
+            (
+                "https://user:secret@github.com/a/b.git/",
+                "https://github.com/a/b",
+            ),
+            ("git@github.com:a/b.git", "git@github.com:a/b"),
+            ("/srv/repos/b.git/", "/srv/repos/b"),
+            ("/srv/repos/b", "/srv/repos/b"),
+        ] {
+            assert_eq!(fetch_head_url(configured), written, "{configured}");
+        }
+    }
 }

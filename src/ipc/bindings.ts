@@ -171,10 +171,20 @@ export const commands = {
 	 *  (`expected` fingerprint) saw it, after saving a copy of what is lost.
 	 */
 	resetBranch: (id: number, oid: string, mode: ResetMode, expected: string) => typedError<ResetResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("reset_branch", { id, oid, mode, expected })),
-	/**  Whether the last reset can still be undone (no write since). */
-	resetUndoAvailable: (id: number, undoId: number) => typedError<boolean, IpcError_Serialize>(__TAURI_INVOKE("reset_undo_available", { id, undoId })),
-	/**  Undoes the last reset exactly, if nothing changed since. */
-	undoReset: (id: number, undoId: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("undo_reset", { id, undoId })),
+	/**
+	 *  Whether the last reset, merge or rebase can still be undone (no write
+	 *  since).
+	 */
+	undoAvailable: (id: number, undoId: number) => typedError<boolean, IpcError_Serialize>(__TAURI_INVOKE("undo_available", { id, undoId })),
+	/**  Undoes the last reset, merge or rebase exactly, if nothing changed since. */
+	undoOperation: (id: number, undoId: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("undo_operation", { id, undoId })),
+	/**
+	 *  Merges as the user accepted it in the dialog (task 8.2): checks
+	 *  everything again and does nothing the user did not accept.
+	 */
+	mergeBranch: (id: number, request: MergeRequest_Deserialize) => typedError<MoveResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("merge_branch", { id, request })),
+	/**  When `remote` was last fetched, as far as git can tell. */
+	lastFetch: (id: number, remote: string) => typedError<LastFetch_Serialize, IpcError_Serialize>(__TAURI_INVOKE("last_fetch", { id, remote })),
 	checkTagName: (id: number, name: string) => typedError<TagNameCheck, IpcError_Serialize>(__TAURI_INVOKE("check_tag_name", { id, name })),
 	tagInfo: (id: number, name: string) => typedError<TagInfo | null, IpcError_Serialize>(__TAURI_INVOKE("tag_info", { id, name })),
 	/**  Creates a lightweight tag, or an annotated one with `message`. */
@@ -1401,6 +1411,39 @@ export type LargeFile = {
 	size: number | null,
 };
 
+/**  When `remote` was last fetched, as far as git can tell. */
+export type LastFetch = LastFetch_Serialize | LastFetch_Deserialize;
+
+/**  When `remote` was last fetched, as far as git can tell. */
+export type LastFetch_Deserialize = {
+	/**
+	 *  Unix time in seconds; `None`: unknown (never fetched, or no trace).
+	 *  Exported as a 32-bit number, like the commit times.
+	 */
+	at?: number | null,
+	/**
+	 *  `at` is the last fetch of this remote (from `FETCH_HEAD`). Otherwise
+	 *  it is the last fetch that changed one of its remote branches (from
+	 *  their reflogs): it may have been fetched later, with nothing new.
+	 */
+	exact: boolean,
+};
+
+/**  When `remote` was last fetched, as far as git can tell. */
+export type LastFetch_Serialize = {
+	/**
+	 *  Unix time in seconds; `None`: unknown (never fetched, or no trace).
+	 *  Exported as a 32-bit number, like the commit times.
+	 */
+	at: number | null,
+	/**
+	 *  `at` is the last fetch of this remote (from `FETCH_HEAD`). Otherwise
+	 *  it is the last fetch that changed one of its remote branches (from
+	 *  their reflogs): it may have been fetched later, with nothing new.
+	 */
+	exact: boolean,
+};
+
 /**  A commit that stops being in the branch. */
 export type LeavingCommit = {
 	commit: CommitRef,
@@ -1437,6 +1480,43 @@ export type MarkerLine = {
 	text: string,
 };
 
+/**  What the user accepted in the merge dialog. */
+export type MergeRequest = MergeRequest_Serialize | MergeRequest_Deserialize;
+
+/**  What the user accepted in the merge dialog. */
+export type MergeRequest_Deserialize = {
+	/**  Full ref names, as in the preview. */
+	source: string,
+	target: string,
+	/**  The preview's fingerprint: nothing is done if the repository changed. */
+	expected: string,
+	/**  Create a merge commit even when a fast-forward is possible. */
+	noFf: boolean,
+	/**  The merge commit's message (`None` or blank: git's own). */
+	message?: string | null,
+	/**  Stash the changes in the way first. */
+	saveChanges: boolean,
+	/**  Go on even if it will stop with conflicts. */
+	allowConflicts: boolean,
+};
+
+/**  What the user accepted in the merge dialog. */
+export type MergeRequest_Serialize = {
+	/**  Full ref names, as in the preview. */
+	source: string,
+	target: string,
+	/**  The preview's fingerprint: nothing is done if the repository changed. */
+	expected: string,
+	/**  Create a merge commit even when a fast-forward is possible. */
+	noFf: boolean,
+	/**  The merge commit's message (`None` or blank: git's own). */
+	message: string | null,
+	/**  Stash the changes in the way first. */
+	saveChanges: boolean,
+	/**  Go on even if it will stop with conflicts. */
+	allowConflicts: boolean,
+};
+
 /**  Why uncommitted changes are in the way. */
 export type MoveBlock = 
 /**  A merge commit needs nothing staged, even in other files. */
@@ -1471,6 +1551,48 @@ export type MoveKind =
 "merge" | 
 /**  `source` is replayed onto `target`: `source` moves. */
 "rebase";
+
+/**
+ *  In every outcome, `saved` is the stash entry (commit id) holding the
+ *  changes "save my changes" put aside, so the app can offer them back.
+ */
+export type MoveOutcome = MoveOutcome_Serialize | MoveOutcome_Deserialize;
+
+/**
+ *  In every outcome, `saved` is the stash entry (commit id) holding the
+ *  changes "save my changes" put aside, so the app can offer them back.
+ */
+export type MoveOutcome_Deserialize = 
+/**  Done: `head` is where the branch that moved is now. */
+{ type: "done"; head: string; fastForward: boolean; saved?: string | null } | 
+/**
+ *  Started at the user's request and stopped on conflicts in these
+ *  files: a merge or rebase is waiting (task 9's banner and view).
+ */
+{ type: "conflicted"; files: string[]; saved?: string | null } | 
+/**
+ *  Nothing was done; the preview says why. `changed`: the repository
+ *  is no longer as the preview the user accepted saw it.
+ */
+{ type: "notDone"; preview: MovePreview_Deserialize; changed: boolean; saved?: string | null };
+
+/**
+ *  In every outcome, `saved` is the stash entry (commit id) holding the
+ *  changes "save my changes" put aside, so the app can offer them back.
+ */
+export type MoveOutcome_Serialize = 
+/**  Done: `head` is where the branch that moved is now. */
+{ type: "done"; head: string; fastForward: boolean; saved: string | null } | 
+/**
+ *  Started at the user's request and stopped on conflicts in these
+ *  files: a merge or rebase is waiting (task 9's banner and view).
+ */
+{ type: "conflicted"; files: string[]; saved: string | null } | 
+/**
+ *  Nothing was done; the preview says why. `changed`: the repository
+ *  is no longer as the preview the user accepted saw it.
+ */
+{ type: "notDone"; preview: MovePreview_Serialize; changed: boolean; saved: string | null };
 
 export type MovePreview = MovePreview_Serialize | MovePreview_Deserialize;
 
@@ -1514,7 +1636,11 @@ export type MovePreview_Deserialize = {
 	 *  are an estimate (files changed on both sides).
 	 */
 	exact: boolean,
-	/**  Merge commit: the message git would write (`git fmt-merge-msg`). */
+	/**
+	 *  Merge into the current branch (with a merge commit, or a
+	 *  fast-forward where the user may ask for one): the message git would
+	 *  write (`git fmt-merge-msg`).
+	 */
 	message?: string | null,
 	/**
 	 *  The repository as the preview saw it (HEAD, the uncommitted files and
@@ -1563,7 +1689,11 @@ export type MovePreview_Serialize = {
 	 *  are an estimate (files changed on both sides).
 	 */
 	exact: boolean,
-	/**  Merge commit: the message git would write (`git fmt-merge-msg`). */
+	/**
+	 *  Merge into the current branch (with a merge commit, or a
+	 *  fast-forward where the user may ask for one): the message git would
+	 *  write (`git fmt-merge-msg`).
+	 */
 	message: string | null,
 	/**
 	 *  The repository as the preview saw it (HEAD, the uncommitted files and
@@ -1599,6 +1729,21 @@ export type MoveRefusal =
  *  flatten (the merges would be lost).
  */
 "mergesInRange";
+
+/**  The outcome of a merge or rebase, with the id to undo it once done. */
+export type MoveResult = MoveResult_Serialize | MoveResult_Deserialize;
+
+/**  The outcome of a merge or rebase, with the id to undo it once done. */
+export type MoveResult_Deserialize = {
+	outcome: MoveOutcome_Deserialize,
+	undoId?: number | null,
+};
+
+/**  The outcome of a merge or rebase, with the id to undo it once done. */
+export type MoveResult_Serialize = {
+	outcome: MoveOutcome_Serialize,
+	undoId: number | null,
+};
 
 /**
  *  A commit and the branches (local first, then remote-tracking) that point

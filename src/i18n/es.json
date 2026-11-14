@@ -897,7 +897,7 @@
         "conflictPrevious": "Ir al bloque en conflicto anterior",
         "conflictNext": "Ir al siguiente bloque en conflicto",
         "quit": "Salir de GitCRAFT",
-        "commitMenu": "Abrir el menú del commit seleccionado"
+        "commitMenu": "Abrir el menú del commit o la rama seleccionados"
       }
     }
   },
@@ -1113,7 +1113,8 @@
     "savedNotice": {
       "cherryPick": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del cherry-pick de {{short}}»).",
       "revert": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de revertir {{short}}»).",
-      "reset": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de reset a {{short}}»)."
+      "reset": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de reset a {{short}}»).",
+      "merge": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del merge de {{short}}»)."
     },
     "abortKeepsSaved": "Los cambios que guardaste antes de empezar siguen en el stash: no vuelven solos al abortar. Recupéralos después con «Recuperar mis cambios».",
     "abortKeepsSavedHere": "Si lo abortas, tus cambios guardados seguirán en el stash: no vuelven solos al abortar. Recupéralos con «Recuperar mis cambios».",
@@ -1240,5 +1241,62 @@
       "deleteOn": "Borrarlo también de «{{remote}}»…",
       "deletedRemote": "Tag «{{name}}» borrado de «{{remote}}»."
     }
+  },
+  "merge": {
+    "title": "¿Merge de «{{source}}» en «{{target}}»?",
+    "loading": "Calculando qué haría…",
+    "changed": "El repositorio ha cambiado desde la vista previa, así que no se ha hecho nada. Esta es la vista previa nueva: revísala antes de confirmar.",
+    "upToDate": "No hay nada que hacer: «{{target}}» ya tiene todos los commits de «{{source}}».",
+    "explained": {
+      "merge": "Se mueve «{{target}}»: se crea en ella un commit de merge que une los cambios de «{{source}}». «{{source}}» no cambia.",
+      "fastForward": "Se mueve «{{target}}»: avanza hasta «{{source}}» sin crear ningún commit, porque no tiene commits propios (fast-forward). «{{source}}» no cambia.",
+      "fastForwardOther": "Se mueve «{{target}}», que no es la rama actual: avanza hasta «{{source}}» sin crear ningún commit (fast-forward). Solo cambia la rama: tus archivos y tus cambios no se tocan."
+    },
+    "incoming_one": "Entra 1 commit en «{{target}}»:",
+    "incoming_other": "Entran {{count}} commits en «{{target}}»:",
+    "noFf": "Crear siempre un commit de merge",
+    "message": "Mensaje del commit de merge",
+    "blocked": {
+      "stagedChanges": "git no hace un merge con cambios preparados, aunque sean de otros archivos:",
+      "overwrite": "Hay cambios en archivos que el merge cambia:"
+    },
+    "saveExplained": "«Guardar mis cambios…» los guarda en el stash como «GitCRAFT: antes del merge de {{source}}», que nunca se borra solo, y al terminar podrás recuperarlos con «Recuperar mis cambios».",
+    "conflicts_one": "El merge producirá conflictos en 1 archivo:",
+    "conflicts_other": "El merge producirá conflictos en {{count}} archivos:",
+    "mayConflict_one": "El merge podría producir conflictos en 1 archivo:",
+    "mayConflict_other": "El merge podría producir conflictos en {{count}} archivos:",
+    "act": "Hacer merge",
+    "advance": "Avanzar «{{target}}»",
+    "actWithConflicts": "Hacer merge con conflictos",
+    "saveAndAct": "Guardar mis cambios y hacer merge",
+    "saveAndAdvance": "Guardar mis cambios y avanzar «{{target}}»",
+    "saveAndActWithConflicts": "Guardar mis cambios y hacer merge con conflictos",
+    "lastFetch": "Último fetch de «{{remote}}»: {{when}}.",
+    "lastChange": "Último fetch de «{{remote}}» que trajo cambios: {{when}}.",
+    "neverFetched": "No consta ningún fetch de «{{remote}}».",
+    "fetchFirst": "Fetch primero",
+    "fetching": "Haciendo fetch…",
+    "refused": {
+      "inProgress": "Hay una operación a medias (aviso de arriba): termínala o abórtala antes.",
+      "detached": "HEAD está separado: no hay rama actual en la que hacer el merge. Cambia antes a una rama.",
+      "sameBranch": "Es la misma rama.",
+      "remoteMoves": "«{{moving}}» es una rama remota y nunca se mueve: haz el merge en una rama local.",
+      "notCurrent": "Solo se hace merge en la rama actual, «{{current}}». Para hacerlo en «{{moving}}», cambia antes a ella.",
+      "checkedOutElsewhere": "«{{moving}}» está abierta en otro worktree: moverla desde aquí dejaría ese worktree desfasado.",
+      "unrelated": "«{{source}}» y «{{target}}» no tienen ningún commit en común.",
+      "mergesInRange": "Los commits que se rehacen incluyen merges."
+    },
+    "done": "Merge de «{{source}}» en «{{target}}» hecho.",
+    "doneFastForward": "«{{target}}» ha avanzado hasta «{{source}}» (fast-forward).",
+    "undone": "Merge deshecho: «{{target}}» está exactamente como antes.",
+    "undoRefused": "Algo ha cambiado desde el merge, así que no se ha tocado nada.",
+    "undoRefusedStashed": "Algo ha cambiado desde el merge, así que no se ha tocado nada. Tus cambios siguen en el stash («GitCRAFT: antes del merge de {{source}}»).",
+    "menu": "Hacer merge de «{{source}}» en «{{target}}»…",
+    "menuWhy": {
+      "detached": "HEAD está separado: no hay rama actual.",
+      "isCurrent": "Es la rama actual.",
+      "inProgress": "Hay una operación a medias."
+    },
+    "branchMenu": "Rama {{name}}"
   }
 }

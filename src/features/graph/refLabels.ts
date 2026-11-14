@@ -2,6 +2,8 @@ import type { RepoRefs } from "../../ipc";
 
 export type RefLabel = {
   text: string;
+  /** Full ref name (`refs/heads/…`); "HEAD" for a detached HEAD. */
+  refname: string;
   kind: "head" | "local" | "remote" | "tag";
   /** The branch HEAD is on. */
   current: boolean;
@@ -26,11 +28,17 @@ export function labelsByCommit(refs: RepoRefs | null): Map<string, RefLabel[]> {
   };
 
   if (refs.head.type === "detached") {
-    add(refs.head.oid, { text: "HEAD", kind: "head", current: true });
+    add(refs.head.oid, {
+      text: "HEAD",
+      refname: "HEAD",
+      kind: "head",
+      current: true,
+    });
   }
   for (const ref of refs.refs) {
     add(ref.target, {
       text: ref.shortName,
+      refname: ref.name,
       kind: ref.kind,
       current: ref.isHead,
     });

@@ -479,6 +479,43 @@ Núcleo en `gitcraft-core`: `ops/commit_actions.rs` (qué admite un commit),
   (`commit_actions.rs`, `pick.rs`, `revert.rs`, `reset.rs`, `tag.rs`) crean
   los suyos con `TestRepo`.
 
+## 5i. Merge y rebase de ramas (tarea 8)
+
+Núcleo en `gitcraft-core/src/ops/merge_rebase.rs`; UI en
+`src/features/merge/` (diálogo, esquema fijo por caso y entrada «Hacer merge
+de…» de los menús). Se completa en la 8.5.
+
+- **Quién se mueve:** se suelta la rama origen sobre la destino. En un
+  merge se mueve el destino; en un rebase, el origen. Solo se mueve la rama
+  actual, salvo el fast-forward de otra rama local (`update-ref` con el
+  valor esperado; se niega si está abierta en otro worktree). Las ramas
+  remotas pueden ser origen, nunca la rama que se mueve.
+- **Vista previa** (no toca refs, índice ni archivos): el caso (al día,
+  fast-forward, merge o rebase), los commits que entran o se rehacen, lo
+  que estorba, los conflictos y el mensaje de `git fmt-merge-msg`. Los
+  conflictos del merge salen de `merge-tree --write-tree`. Los del rebase,
+  de rehacer cada commit en objetos sueltos (`merge-tree --merge-base` y
+  `commit-tree`, sin refs), con el commit en el que se detendría.
+- **Ejecución del merge:** con la huella de la vista previa (la del reset
+  más las puntas de las dos ramas). Primero guarda en el stash lo que
+  estorba, si se aceptó. Después ejecuta `git merge --ff-only` o
+  `git merge --no-ff --no-edit -m <mensaje>`. Si se detiene con
+  conflictos, sigue la tarea 9, y el mensaje elegido queda en `MERGE_MSG`.
+- **«Deshacer» compartido:** la sesión de Tauri guarda un único registro
+  de «Deshacer» (`UndoRecord`: reset o merge/rebase), que cualquier otra
+  escritura invalida (`undo_available`, `undo_operation`). Al deshacer:
+  - **la rama actual:** comprueba la huella, hace `reset --keep` al commit
+    anterior (no toca los cambios de otros archivos), vuelve a poner el
+    índice de antes (`read-tree` del árbol guardado con `write-tree`) y
+    aplica la copia del stash con `--index` si la hubo;
+  - **otra rama** (fast-forward): devuelve su ref solo si sigue donde la
+    dejó el merge.
+- **Último fetch de un remoto** (`remote::last_fetch`): la hora de
+  `FETCH_HEAD` si el último fetch incluyó ese remoto (sus URL comparadas
+  como las escribe git: sin credenciales, «/» ni «.git» finales). Si no,
+  la del último fetch que cambió alguna de sus ramas remotas, sacada de sus
+  reflogs, y se dice así.
+
 ## 5f. Crear repositorios
 
 - **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama

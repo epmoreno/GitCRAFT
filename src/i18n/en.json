@@ -897,7 +897,7 @@
         "conflictPrevious": "Go to the previous conflict block",
         "conflictNext": "Go to the next conflict block",
         "quit": "Quit GitCRAFT",
-        "commitMenu": "Open the selected commit’s menu"
+        "commitMenu": "Open the menu of the selected commit or branch"
       }
     }
   },
@@ -1113,7 +1113,8 @@
     "savedNotice": {
       "cherryPick": "Your changes are still saved in the stash (“GitCRAFT: antes del cherry-pick de {{short}}”).",
       "revert": "Your changes are still saved in the stash (“GitCRAFT: antes de revertir {{short}}”).",
-      "reset": "Your changes are still saved in the stash (“GitCRAFT: antes de reset a {{short}}”)."
+      "reset": "Your changes are still saved in the stash (“GitCRAFT: antes de reset a {{short}}”).",
+      "merge": "Your changes are still saved in the stash (“GitCRAFT: antes del merge de {{short}}”)."
     },
     "abortKeepsSaved": "The changes you saved before starting are still in the stash: aborting does not bring them back. Recover them afterwards with “Recover my changes”.",
     "abortKeepsSavedHere": "If you abort it, your saved changes stay in the stash: aborting does not bring them back. Recover them with “Recover my changes”.",
@@ -1240,5 +1241,62 @@
       "deleteOn": "Delete it from “{{remote}}” too…",
       "deletedRemote": "Tag “{{name}}” deleted from “{{remote}}”."
     }
+  },
+  "merge": {
+    "title": "Merge “{{source}}” into “{{target}}”?",
+    "loading": "Working out what it would do…",
+    "changed": "The repository changed since the preview, so nothing was done. This is the new preview: check it before confirming.",
+    "upToDate": "Nothing to do: “{{target}}” already has every commit of “{{source}}”.",
+    "explained": {
+      "merge": "“{{target}}” moves: a merge commit joining the changes of “{{source}}” is created on it. “{{source}}” does not change.",
+      "fastForward": "“{{target}}” moves: it advances to “{{source}}” without creating any commit, because it has no commits of its own (fast-forward). “{{source}}” does not change.",
+      "fastForwardOther": "“{{target}}” moves, and it is not the current branch: it advances to “{{source}}” without creating any commit (fast-forward). Only the branch changes: your files and changes are not touched."
+    },
+    "incoming_one": "1 commit comes into “{{target}}”:",
+    "incoming_other": "{{count}} commits come into “{{target}}”:",
+    "noFf": "Always create a merge commit",
+    "message": "Merge commit message",
+    "blocked": {
+      "stagedChanges": "git does not merge with staged changes, even in other files:",
+      "overwrite": "There are changes in files the merge changes:"
+    },
+    "saveExplained": "“Save my changes…” saves them in the stash as “GitCRAFT: antes del merge de {{source}}”, which is never dropped by itself, and when it ends you can get them back with “Recover my changes”.",
+    "conflicts_one": "The merge will conflict in 1 file:",
+    "conflicts_other": "The merge will conflict in {{count}} files:",
+    "mayConflict_one": "The merge may conflict in 1 file:",
+    "mayConflict_other": "The merge may conflict in {{count}} files:",
+    "act": "Merge",
+    "advance": "Advance “{{target}}”",
+    "actWithConflicts": "Merge with conflicts",
+    "saveAndAct": "Save my changes and merge",
+    "saveAndAdvance": "Save my changes and advance “{{target}}”",
+    "saveAndActWithConflicts": "Save my changes and merge with conflicts",
+    "lastFetch": "Last fetch of “{{remote}}”: {{when}}.",
+    "lastChange": "Last fetch of “{{remote}}” that brought changes: {{when}}.",
+    "neverFetched": "No fetch of “{{remote}}” on record.",
+    "fetchFirst": "Fetch first",
+    "fetching": "Fetching…",
+    "refused": {
+      "inProgress": "An operation is waiting (banner above): finish or abort it first.",
+      "detached": "HEAD is detached: there is no current branch to merge into. Switch to a branch first.",
+      "sameBranch": "It is the same branch.",
+      "remoteMoves": "“{{moving}}” is a remote branch and never moves: merge into a local branch.",
+      "notCurrent": "Merges are made only into the current branch, “{{current}}”. To merge into “{{moving}}”, switch to it first.",
+      "checkedOutElsewhere": "“{{moving}}” is checked out in another worktree: moving it from here would leave that worktree out of step.",
+      "unrelated": "“{{source}}” and “{{target}}” have no commit in common.",
+      "mergesInRange": "The commits to replay include merges."
+    },
+    "done": "Merged “{{source}}” into “{{target}}”.",
+    "doneFastForward": "“{{target}}” advanced to “{{source}}” (fast-forward).",
+    "undone": "Merge undone: “{{target}}” is exactly as before.",
+    "undoRefused": "Something changed since the merge, so nothing was touched.",
+    "undoRefusedStashed": "Something changed since the merge, so nothing was touched. Your changes are still in the stash (“GitCRAFT: antes del merge de {{source}}”).",
+    "menu": "Merge “{{source}}” into “{{target}}”…",
+    "menuWhy": {
+      "detached": "HEAD is detached: there is no current branch.",
+      "isCurrent": "It is the current branch.",
+      "inProgress": "An operation is waiting."
+    },
+    "branchMenu": "Branch {{name}}"
   }
 }
