@@ -2232,6 +2232,30 @@ principio y toda operación destructiva pasa por confirmación.
       merge» desmarcada; (4) no hay rebase con commits de merge en el
       tramo, y se explica el motivo; (5) «Deshacer» ya en la 8; (6) el
       mensaje del commit de merge se puede editar en el diálogo.
+- [x] **V.3 Versión 0.3.0 (pre-release)** con las tareas 9, 10 y 8.
+      - README en los dos idiomas: «Versión temprana (v0.3.0)», las funciones
+        nuevas en «Lo que funciona» y tres capturas (grafo, conflictos y
+        merge) con texto alternativo en cada idioma; la ruta del repo de la
+        barra inferior está tapada.
+      - Versión 0.3.0 en `Cargo.toml`, `package.json` y `tauri.conf.json`.
+      - `GitCRAFT_0.3.0_aarch64.dmg` con `npm run dist` desde `6be896b`,
+        con el tag anotado `v0.3.0` sobre ese commit.
+      - GitHub Release marcada como pre-release, con el `.dmg`, su SHA-256
+        (`f721b941…6b1240`) y el enlace a VirusTotal en las notas. GitHub
+        da el mismo SHA-256, y el archivo descargado de la Release también.
+        <https://github.com/epmoreno/GitCRAFT/releases/tag/v0.3.0>
+
+      *Verificado manualmente por el usuario* con la app instalada desde el
+      `.dmg` en macOS 27.0.1:
+      - «Acerca de» muestra 0.3.0;
+      - merge arrastrando una rama, con «Deshacer», y rebase de
+        `rebase-limpio`;
+      - conflictos resueltos con la vista de conflictos y «Continuar»;
+      - cherry-pick y crear un tag;
+      - el README en GitHub, en inglés y en español, con v0.3.0, las tres
+        capturas y los enlaces;
+      - VirusTotal: 0/60 detecciones, con el mismo SHA-256.
+      Las notas de la Release las revisó en el borrador antes de publicarla.
 - [ ] **11. Deshacer/rehacer** de la última operación cuando sea seguro, basado
       en el reflog. Antes de ejecutarlo se muestra qué se va a restaurar.
       *Tests:* deshacer commit, merge, rebase y reset, y se niega con cambios
