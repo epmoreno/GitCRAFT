@@ -1667,7 +1667,7 @@ principio y toda operación destructiva pasa por confirmación.
       activado, pero la app no lo configura), herramientas de merge
       externas (`git mergetool`) y conflictos de submódulos más allá de
       elegir una versión.
-- [ ] **10. Cherry-pick, revert, reset** (soft/mixed/hard con aviso) y **crear
+- [x] **10. Cherry-pick, revert, reset** (soft/mixed/hard con aviso) y **crear
       tags** (ligeros y anotados).
       *Tests:* cada operación, también cuando acaba en conflicto (usa la 9). El
       reset hard enumera lo que se perdería antes de confirmar.
@@ -1886,11 +1886,11 @@ principio y toda operación destructiva pasa por confirmación.
           también de «x»…» solo donde está el mismo tag, con su propia
           confirmación.
         Tests: 6 de integración y 5 de interfaz.
-      - [ ] **10.6 Documentación y prueba a mano.** Sección en
+      - [x] **10.6 Documentación y prueba a mano.** Sección en
         ARCHITECTURE.md y un script de ejemplo (repo desechable con un
         remoto bare local) para probar cada operación en el Mac.
         *Verificable:* el usuario lo prueba y lo confirma.
-        *Hecho (falta la prueba del usuario):* sección «5h. Acciones sobre
+        *Hecho:* sección «5h. Acciones sobre
         un commit» en ARCHITECTURE.md y `scripts/make-history-examples.sh`,
         que crea `~/gitcraft-historial` (con un merge, una rama `feature`
         con un commit limpio y otro que choca, tags `v0.9` local y `v1.0`
@@ -1899,6 +1899,22 @@ principio y toda operación destructiva pasa por confirmación.
         que `reset --hard` pisaría) y su remoto local
         `~/gitcraft-historial-remoto.git`. Si ya existen no toca nada; con
         `--replace`, los mueve a la Papelera tras preguntar.
+        *Verificado manualmente en macOS por el usuario* con
+        `~/gitcraft-historial`, sección por sección:
+        - **Menú de un commit:** acciones desactivadas con su motivo,
+          «Restablecer» aparte y en rojo, ⇧F10, «Copiar hash» y los botones
+          del panel.
+        - **Cherry-pick:** simple, y con conflictos resueltos con la vista
+          de conflictos.
+        - **Revertir:** cambios preparados, conflicto y aviso a la vez,
+          abortar, «Recuperar mis cambios» y revert simple.
+        - **Restablecer:** vista previa en Mixed y Hard con la casilla.
+          «Deshacer» lo devuelve todo y saca `notas.txt` de la Papelera.
+          Tras otra operación, «Deshacer» desaparece y sale «Recuperar mis
+          cambios».
+        - **Tags:** nombre ya existente, anotado subido, ligero, subir
+          `v0.9`, y borrar en local y luego en el remoto con su
+          confirmación.
       *Fuera de la 10:* cherry-pick o revert de un commit de merge (más
       adelante, eligiendo el padre principal con `-m`), de varios a la vez,
       mover un tag existente (se borra y se crea), firmar tags (se respeta
@@ -1909,6 +1925,144 @@ principio y toda operación destructiva pasa por confirmación.
       commits. Hay alternativa por menú y teclado.
       *Tests:* cálculo de lo que se mueve, cancelar no toca nada, y fast-forward,
       merge y rebase, con y sin conflicto.
+      *Criterios (del usuario):* vista previa de lo que va a pasar antes de
+      tocar nada; confirmación; los cambios sin confirmar que estorben se
+      guardan en el stash, con «Recuperar mis cambios» al terminar (como en
+      la 10); los conflictos se resuelven con la vista de la 9; nunca se
+      fuerza nada.
+      *Qué significa soltar:* se arrastra la rama **origen** y se suelta
+      sobre la rama **destino**. El diálogo ofrece dos operaciones y dice
+      siempre, con un esquema, qué rama se mueve:
+      - **Merge de «origen» en «destino»:** se mueve «destino». Si
+        «destino» no tiene commits propios, es un fast-forward (avanza sin
+        crear commit); si no, se crea un commit de merge con el mensaje que
+        pone git.
+      - **Rebase de «origen» sobre «destino»:** se mueve «origen». Sus
+        commits propios se rehacen encima de «destino», con hashes nuevos.
+      *Comunes a todas:*
+      - La rama que se mueve tiene que ser la actual. Única excepción: el
+        fast-forward de una rama local que no es la actual, que es
+        `git update-ref refs/heads/<destino> <nuevo> <antiguo>` (sin tocar
+        el directorio de trabajo y solo si la rama sigue donde estaba).
+      - Se niegan, sin tocar nada, con una operación a medias o con HEAD
+        separado.
+      - Las ramas remotas solo pueden ser origen (nunca se mueven). Los
+        tags no se arrastran.
+      - Cada paso es un comando de git normal, con refs completas y los
+        argumentos separados. No se hace push: si un rebase reescribe
+        commits ya publicados, se avisa antes de que hará falta el push
+        forzado de la 6.3 (`--force-with-lease`), que sigue siendo una
+        acción aparte con su propia confirmación.
+      - Huella como en el reset: si HEAD, las ramas implicadas o los
+        cambios sin confirmar cambian entre la vista previa y la
+        confirmación, no se hace nada y se enseña la vista previa nueva.
+      - Ninguna dependencia nueva: el arrastre se hace con eventos de
+        puntero (no con el drag & drop de HTML5, que en Windows choca con
+        la recepción de archivos de Tauri), así que no hay que cambiar la
+        configuración de la ventana.
+      - [ ] **8.1 Vista previa (core).** `merge_preview(origen, destino)` y
+        `rebase_preview(origen, destino)`. Devuelven:
+        - el caso: ya al día (no hay nada que hacer), fast-forward, merge
+          o rebase;
+        - los commits que entran en «destino» (merge) o los que se rehacen
+          (rebase), con su número y su lista;
+        - en un rebase: cuáles ya están publicados, y si hay commits de
+          merge en el tramo;
+        - los cambios sin confirmar que estorban: en un merge, los archivos
+          que cambian y tienen cambios locales; en un rebase, cualquier
+          cambio en archivos con seguimiento; en los dos, los archivos sin
+          seguimiento que se pisarían;
+        - los conflictos previstos. En el merge, con
+          `merge-tree --write-tree` (exacto, como el pull). En el rebase,
+          exactos simulando cada commit con `merge-tree --merge-base` y
+          `commit-tree`: solo se escriben objetos sueltos, sin ninguna ref,
+          que git limpia solo. Dice en qué commit (n de m) se detendría y
+          con qué archivos. Con git < 2.40 son estimados, y se dice;
+        - la huella.
+        *Verificable:* integración en los tres sistemas para cada caso:
+        al día, fast-forward (actual y no actual), merge limpio y con
+        conflicto, rebase limpio, rebase que se detiene en el commit 2 de 3,
+        cambios que estorban, sin seguimiento que se pisarían, commits
+        publicados, merges en el tramo, y que la vista previa no cambia
+        ninguna ref ni el directorio de trabajo.
+      - [ ] **8.2 Merge y fast-forward (core y UI, desde el menú).**
+        - **Core:** `merge(origen, destino, huella, …)`. Ejecuta
+          `git merge --no-edit <origen>` en la rama actual, o el
+          `update-ref` del fast-forward de otra rama. Si algo estorba:
+          «Guardar mis cambios y hacer merge» (entrada de stash «GitCRAFT:
+          antes del merge de <origen>», que nunca se borra sola). Si hay
+          conflictos: la lista y «Hacer merge con conflictos»; git se
+          detiene y siguen el aviso de arriba y la vista de la 9 (continuar
+          y abortar ya existen).
+        - **Diálogo:** el esquema de qué se mueve, los commits que entran,
+          lo que estorba y los conflictos, con los mismos casos que el de
+          cherry-pick: limpio, cambios en medio, conflictos y las dos cosas.
+          En el fast-forward, una casilla «Crear siempre un commit de merge»
+          (`--no-ff`), desmarcada.
+        - **Menús:** en la barra lateral, el menú de una rama (local o
+          remota) tiene «Hacer merge de «x» en «actual»…». El menú de las
+          etiquetas de rama del grafo tiene lo mismo. Los dos se abren
+          también desde el teclado (tecla de menú o ⇧F10).
+        - **Resultado:** el aviso dice qué ha pasado, selecciona el commit
+          nuevo y ofrece «Recuperar mis cambios» si se guardaron.
+        *Verificable:* integración: fast-forward, `--no-ff`, merge limpio,
+        con conflicto que la 9 resuelve y continúa, abortar deja la rama
+        como estaba, guardar y hacer merge, fast-forward de otra rama, y que
+        no hace nada si la huella cambió. Tests de interfaz de cada diálogo
+        y de los menús en es/en.
+      - [ ] **8.3 Rebase (core y UI, desde el menú).**
+        - **Core:** `rebase(origen, destino, huella, …)` sobre la rama actual
+          (`git rebase --no-autostash <destino>`), con el mismo guardado en
+          el stash. Si se detiene, siguen el aviso, la vista de la 9 y
+          «Continuar», «Saltar» y «Abortar», que ya existen.
+        - **Diálogo:** el esquema, los commits que se rehacen (con
+          «publicado» donde toque) y, si hay commits publicados, el aviso de
+          que después hará falta un push forzado y que afecta a otras
+          personas. Lo que estorba y los conflictos previstos, con el commit
+          en el que se detendría.
+        - Si el tramo tiene commits de merge, el rebase no se ofrece y se
+          explica el motivo: git los aplanaría y se perderían los merges.
+        - **Menús:** «Hacer rebase de «actual» sobre «x»…» en los mismos
+          menús que el merge.
+        *Verificable:* integración: rebase limpio, con conflicto resuelto y
+        continuado, saltar un commit, abortar restaura la rama, guardar y
+        hacer rebase, el aviso de publicados, y que no hace nada si la
+        huella cambió. Tests de interfaz.
+      - [ ] **8.4 Arrastrar y soltar (UI).**
+        - **Qué se arrastra:** las filas de rama de la barra lateral y las
+          etiquetas de rama del grafo. Se puede soltar de una a otra (de la
+          barra al grafo y al revés).
+        - **Durante el arrastre:** el arrastre empieza al mover el puntero
+          unos píxeles con el botón pulsado, para que el clic y el doble
+          clic sigan como hoy. Una etiqueta con el nombre sigue al puntero.
+          Los destinos válidos se resaltan; sobre el que está debajo
+          aparece «Suelta para hacer merge o rebase con «x»». Los que no
+          valen (la misma rama, ramas remotas, tags) no se resaltan y el
+          cursor lo indica. La lista del grafo se desplaza sola al acercarse
+          al borde.
+        - **Soltar:** abre el diálogo de la 8.2/8.3, con Merge elegido (no
+          reescribe nada) y Rebase al lado. Esc cancela el arrastre, y
+          soltar fuera de un destino no hace nada.
+        - **Teclado:** la alternativa son los menús de la 8.2/8.3, que se
+          abren con la tecla de menú o ⇧F10.
+        *Verificable:* tests de interfaz con eventos de puntero: un clic no
+        arrastra, destinos válidos y no válidos, Esc, soltar fuera, y soltar
+        abre el diálogo con las ramas correctas desde la barra y desde el
+        grafo.
+      - [ ] **8.5 Documentación y prueba a mano.** Sección en
+        ARCHITECTURE.md y `scripts/make-merge-examples.sh`, un repo
+        desechable con un remoto bare local, con ramas para cada caso:
+        fast-forward, merge limpio, merge con conflicto, rebase limpio,
+        rebase con conflicto en el segundo commit, una rama con commits ya
+        publicados, un cambio sin confirmar que estorba y un archivo sin
+        seguimiento que se pisaría.
+        *Verificable:* el usuario lo prueba y lo confirma.
+      *Fuera de la 8:* merge o rebase de una rama que no es la actual (salvo
+      el fast-forward), conservar los merges al hacer rebase
+      (`--rebase-merges`), squash merge, elegir la estrategia de merge,
+      editar el mensaje del commit de merge antes de crearlo (se puede con
+      «Editar el último commit», 4.5), arrastrar commits sueltos (tarea 13)
+      y deshacer después del merge o del rebase (tarea 11).
 - [ ] **11. Deshacer/rehacer** de la última operación cuando sea seguro, basado
       en el reflog. Antes de ejecutarlo se muestra qué se va a restaurar.
       *Tests:* deshacer commit, merge, rebase y reset, y se niega con cambios
