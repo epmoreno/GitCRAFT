@@ -18,7 +18,7 @@ use gitcraft_core::ops::conflict::ConflictFile;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::in_progress::{ConflictSides, ContinueOutcome};
 use gitcraft_core::ops::init::InitCheck;
-use gitcraft_core::ops::merge_rebase::{MergeRequest, MovePreview};
+use gitcraft_core::ops::merge_rebase::{MergeRequest, MovePreview, RebaseRequest};
 use gitcraft_core::ops::pick::{PickOutcome, PickPreview};
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::ops::remote::{ForcePushPreview, LastFetch, PullMode, PullOutcome, PushOutcome};
@@ -1112,6 +1112,18 @@ pub async fn merge_branch(
     request: MergeRequest,
 ) -> Result<MoveResult, IpcError> {
     state.merge(id, request).await
+}
+
+/// Rebases as the user accepted it in the dialog (task 8.3): checks
+/// everything again and does nothing the user did not accept.
+#[tauri::command]
+#[specta::specta]
+pub async fn rebase_branch(
+    state: State<'_, AppState>,
+    id: RepoId,
+    request: RebaseRequest,
+) -> Result<MoveResult, IpcError> {
+    state.rebase(id, request).await
 }
 
 /// When `remote` was last fetched, as far as git can tell.

@@ -140,6 +140,7 @@ vi.mock("../ipc", () => ({
     mergePreview: vi.fn(),
     rebasePreview: vi.fn(),
     mergeBranch: vi.fn(),
+    rebaseBranch: vi.fn(),
     lastFetch: vi.fn(),
     checkTagName: vi.fn(),
     tagInfo: vi.fn(),

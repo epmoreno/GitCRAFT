@@ -3,7 +3,7 @@ import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { GitRef, RepoRefs, StashEntry } from "../../ipc";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
-import { mergeMenuItem } from "../merge/menu";
+import { branchMenuItems } from "../merge/menu";
 import { copyText } from "../../ui/clipboard";
 import { useTagStore } from "../history/tags";
 import { useBranchStore } from "../branches/store";
@@ -137,7 +137,7 @@ function LocalBranches({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
             disabled: ref.isHead,
             hint: t("branches.alreadyCurrent"),
           },
-          mergeMenuItem(t, repoId, refs, ref),
+          ...branchMenuItems(t, repoId, refs, ref),
           {
             label: t("branches.createFromMenu", { name: ref.shortName }),
             onSelect: () =>
@@ -330,7 +330,7 @@ function Remotes({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
                         }),
                         onSelect: () => checkoutRemote(ref),
                       },
-                      mergeMenuItem(t, repoId, refs, ref),
+                      ...branchMenuItems(t, repoId, refs, ref),
                       {
                         label: t("branches.createFromMenu", {
                           name: ref.shortName,

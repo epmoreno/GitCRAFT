@@ -1114,7 +1114,8 @@
       "cherryPick": "Your changes are still saved in the stash (“GitCRAFT: antes del cherry-pick de {{short}}”).",
       "revert": "Your changes are still saved in the stash (“GitCRAFT: antes de revertir {{short}}”).",
       "reset": "Your changes are still saved in the stash (“GitCRAFT: antes de reset a {{short}}”).",
-      "merge": "Your changes are still saved in the stash (“GitCRAFT: antes del merge de {{short}}”)."
+      "merge": "Your changes are still saved in the stash (“GitCRAFT: antes del merge de {{short}}”).",
+      "rebase": "Your changes are still saved in the stash (“GitCRAFT: antes del rebase de {{short}}”)."
     },
     "abortKeepsSaved": "The changes you saved before starting are still in the stash: aborting does not bring them back. Recover them afterwards with “Recover my changes”.",
     "abortKeepsSavedHere": "If you abort it, your saved changes stay in the stash: aborting does not bring them back. Recover them with “Recover my changes”.",
@@ -1288,7 +1289,7 @@
     },
     "done": "Merged “{{source}}” into “{{target}}”.",
     "doneFastForward": "“{{target}}” advanced to “{{source}}” (fast-forward).",
-    "undone": "Merge undone: “{{target}}” is exactly as before.",
+    "undone": "Merge undone: “{{branch}}” is exactly as before.",
     "undoRefused": "Something changed since the merge, so nothing was touched.",
     "undoRefusedStashed": "Something changed since the merge, so nothing was touched. Your changes are still in the stash (“GitCRAFT: antes del merge de {{source}}”).",
     "menu": "Merge “{{source}}” into “{{target}}”…",
@@ -1298,5 +1299,57 @@
       "inProgress": "An operation is waiting."
     },
     "branchMenu": "Branch {{name}}"
+  },
+  "rebase": {
+    "title": "Rebase “{{source}}” onto “{{target}}”?",
+    "explained": {
+      "rebase": "“{{source}}” moves: its commits are replayed on top of “{{target}}”, with new ids. “{{target}}” does not change.",
+      "fastForward": "No commit is replayed: “{{source}}” only advances to “{{target}}” (fast-forward). “{{target}}” does not change.",
+      "fastForwardOther": "No commit is replayed: “{{source}}”, which is not the current branch, only advances to “{{target}}” (fast-forward). Only the branch changes: your files and changes are not touched."
+    },
+    "replayed_one": "1 commit is replayed:",
+    "replayed_other": "{{count}} commits are replayed, in this order:",
+    "gained_one": "“{{source}}” gains 1 commit:",
+    "gained_other": "“{{source}}” gains {{count}} commits:",
+    "skipped_one": "1 commit is skipped because “{{target}}” already has the same change.",
+    "skipped_other": "{{count}} commits are skipped because “{{target}}” already has the same changes.",
+    "published": "published",
+    "publishedWarning_one": "1 of these commits is already published ({{remotes}}). After the rebase, “{{source}}” and its copy on the remote will have diverged: pushing it will need a forced push, which rewrites the branch on the remote and affects whoever already has that commit. GitCRAFT does not do it by itself: it is a separate action, with its own confirmation.",
+    "publishedWarning_other": "{{count}} of these commits are already published ({{remotes}}). After the rebase, “{{source}}” and its copy on the remote will have diverged: pushing it will need a forced push, which rewrites the branch on the remote and affects whoever already has those commits. GitCRAFT does not do it by itself: it is a separate action, with its own confirmation.",
+    "stopsAt": "It will stop at commit {{index}} of {{total}} (“{{subject}}”) with conflicts in:",
+    "afterStop": "What happens after that commit is not known until it is resolved.",
+    "mayConflict_one": "The rebase may conflict in 1 file:",
+    "mayConflict_other": "The rebase may conflict in {{count}} files:",
+    "blocked": {
+      "rebaseNeedsClean": "git does not rebase with uncommitted changes in tracked files:",
+      "overwrite": "There are changes in files the rebase changes:",
+      "stagedChanges": "There are staged changes in the way:"
+    },
+    "saveExplained": "“Save my changes…” saves them in the stash as “GitCRAFT: antes del rebase de {{source}}”, which is never dropped by itself, and when it ends you can get them back with “Recover my changes”.",
+    "act": "Rebase",
+    "advance": "Advance “{{source}}”",
+    "actWithConflicts": "Rebase with conflicts",
+    "saveAndAct": "Save my changes and rebase",
+    "saveAndAdvance": "Save my changes and advance “{{source}}”",
+    "saveAndActWithConflicts": "Save my changes and rebase with conflicts",
+    "upToDate": "Nothing to do: “{{source}}” is already on top of “{{target}}”.",
+    "refused": {
+      "inProgress": "An operation is waiting (banner above): finish or abort it first.",
+      "detached": "HEAD is detached: there is no current branch to rebase. Switch to a branch first.",
+      "sameBranch": "It is the same branch.",
+      "remoteMoves": "“{{moving}}” is a remote branch and never moves: rebase a local branch.",
+      "notCurrent": "Only the current branch, “{{current}}”, is rebased. To rebase “{{moving}}”, switch to it first.",
+      "checkedOutElsewhere": "“{{moving}}” is checked out in another worktree: moving it from here would leave that worktree out of step.",
+      "unrelated": "“{{source}}” and “{{target}}” have no commit in common.",
+      "mergesInRange": "The commits to replay include merges. git would flatten them and those merges would be lost, so the rebase is not offered. You can merge instead."
+    },
+    "done_one": "Rebased “{{source}}” onto “{{target}}”: 1 commit replayed.",
+    "done_other": "Rebased “{{source}}” onto “{{target}}”: {{count}} commits replayed.",
+    "doneFastForward": "“{{source}}” advanced to “{{target}}” (fast-forward).",
+    "forcePushNeeded": "Pushing it will need a forced push.",
+    "undone": "Rebase undone: “{{branch}}” has its original commits again, exactly as before.",
+    "undoRefused": "Something changed since the rebase, so nothing was touched.",
+    "undoRefusedStashed": "Something changed since the rebase, so nothing was touched. Your changes are still in the stash (“GitCRAFT: antes del rebase de {{source}}”).",
+    "menu": "Rebase “{{source}}” onto “{{target}}”…"
   }
 }

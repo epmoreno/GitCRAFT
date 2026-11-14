@@ -18,6 +18,26 @@
   stroke-width: 2;
 }
 
+.oldEdge {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.oldCommit {
+  fill: var(--surface-1);
+  stroke: var(--text-faint);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 2;
+}
+
+.newEdge {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
 .newCommit {
   fill: var(--accent);
   stroke: var(--accent-strong);

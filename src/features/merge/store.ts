@@ -3,6 +3,7 @@ import {
   commands,
   type CommandError,
   type LastFetch,
+  type MoveKind,
   type MovePreview,
 } from "../../ipc";
 import { useGraphStore } from "../graph/store";
@@ -10,12 +11,14 @@ import { useHistoryStore } from "../history/store";
 import { refreshAfterRemote, useRemoteStore } from "../remote/store";
 
 /**
- * Merging a branch into another (task 8.2): the dialog with git's preview,
- * "Fetch first" for a remote branch, and the result, which goes to the
- * history notice (with "Undo" and "Recover my changes").
+ * Merging a branch into another (task 8.2) or rebasing it onto another
+ * (8.3): the dialog with git's preview, "Fetch first" for a remote branch,
+ * and the result, which goes to the history notice (with "Undo" and
+ * "Recover my changes").
  */
 
 export type MergeDialogState = {
+  kind: MoveKind;
   repoId: number;
   /** Full ref names. */
   source: string;
@@ -23,7 +26,8 @@ export type MergeDialogState = {
   preview: MovePreview | null;
   /** The repository changed since the preview the user saw. */
   changed: boolean;
-  /** The remote of a remote source branch, and when it was last fetched. */
+  /** The remote of the remote branch taking part (the one that does not
+   * move), and when it was last fetched. */
   remote: string | null;
   lastFetch: LastFetch | null;
   fetching: boolean;
@@ -34,6 +38,12 @@ type MergeState = {
   busy: boolean;
   /** Opens the dialog for merging `source` into `target` (full ref names). */
   requestMerge: (
+    repoId: number,
+    source: string,
+    target: string,
+  ) => Promise<void>;
+  /** Opens the dialog for rebasing `source` onto `target`. */
+  requestRebase: (
     repoId: number,
     source: string,
     target: string,
@@ -69,8 +79,10 @@ export const useMergeStore = create<MergeState>()((set, get) => {
     const dialog = get().dialog;
     if (!dialog) return;
     const { repoId, source, target } = dialog;
+    const previewOf =
+      dialog.kind === "merge" ? commands.mergePreview : commands.rebasePreview;
     const [result, last] = await Promise.all([
-      commands.mergePreview(repoId, source, target),
+      previewOf(repoId, source, target),
       dialog.remote
         ? commands.lastFetch(repoId, dialog.remote)
         : Promise.resolve(null),
@@ -92,28 +104,42 @@ export const useMergeStore = create<MergeState>()((set, get) => {
     });
   };
 
+  const open = async (
+    kind: MoveKind,
+    repoId: number,
+    source: string,
+    target: string,
+  ) => {
+    useHistoryStore.setState({ notice: null });
+    // The branch that does not move: the source of a merge, the target of
+    // a rebase.
+    const fixed = kind === "merge" ? source : target;
+    const remoteBranch = fixed.startsWith("refs/remotes/")
+      ? fixed.slice("refs/remotes/".length)
+      : null;
+    set({
+      dialog: {
+        kind,
+        repoId,
+        source,
+        target,
+        preview: null,
+        changed: false,
+        remote: remoteBranch ? remoteOf(repoId, remoteBranch) : null,
+        lastFetch: null,
+        fetching: false,
+      },
+    });
+    await load(false);
+  };
+
   return {
     ...initialMergeState,
 
-    requestMerge: async (repoId, source, target) => {
-      useHistoryStore.setState({ notice: null });
-      const remoteBranch = source.startsWith("refs/remotes/")
-        ? source.slice("refs/remotes/".length)
-        : null;
-      set({
-        dialog: {
-          repoId,
-          source,
-          target,
-          preview: null,
-          changed: false,
-          remote: remoteBranch ? remoteOf(repoId, remoteBranch) : null,
-          lastFetch: null,
-          fetching: false,
-        },
-      });
-      await load(false);
-    },
+    requestMerge: (repoId, source, target) =>
+      open("merge", repoId, source, target),
+    requestRebase: (repoId, source, target) =>
+      open("rebase", repoId, source, target),
 
     fetchFirst: async () => {
       const dialog = get().dialog;
@@ -133,15 +159,17 @@ export const useMergeStore = create<MergeState>()((set, get) => {
       if (!dialog || !preview) return;
       const { repoId } = dialog;
       set({ busy: true });
-      const result = await commands.mergeBranch(repoId, {
+      const common = {
         source: dialog.source,
         target: dialog.target,
         expected: preview.fingerprint,
-        noFf,
-        message,
         saveChanges: preview.blocked !== null,
         allowConflicts: preview.conflicts.length > 0,
-      });
+      };
+      const result =
+        dialog.kind === "merge"
+          ? await commands.mergeBranch(repoId, { ...common, noFf, message })
+          : await commands.rebaseBranch(repoId, common);
       set({ busy: false });
       refreshAfterRemote(repoId);
       if (result.status === "error") {
@@ -154,7 +182,7 @@ export const useMergeStore = create<MergeState>()((set, get) => {
       if (outcome.saved) {
         history.rememberSaved(repoId, {
           oid: outcome.saved,
-          pick: "merge",
+          pick: dialog.kind,
           short: preview.source.name,
         });
       }
@@ -164,8 +192,11 @@ export const useMergeStore = create<MergeState>()((set, get) => {
           useHistoryStore.setState({
             notice: {
               kind: "merged",
+              op: dialog.kind,
               repoId,
               undoId,
+              count: preview.commitsTotal,
+              published: preview.commits.some((c) => c.published),
               source: preview.source.name,
               target: preview.target.name,
               fastForward: outcome.fastForward,

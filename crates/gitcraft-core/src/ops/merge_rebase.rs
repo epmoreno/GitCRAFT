@@ -881,6 +881,20 @@ async fn ref_value(
     Ok(out.stdout_lossy().trim().to_owned())
 }
 
+/// Exit code 1 means "stopped on conflicts" only if something is waiting;
+/// otherwise git refused (a hook, for instance): that is an error.
+fn stopped_or_failed(out: &crate::GitOutput, status: &WorkingStatus, command: &str) -> Result<()> {
+    if out.exit_code == Some(1) && status.in_progress.is_none() && status.conflicted.is_empty() {
+        return Err(GitError::Failed {
+            args: vec![command.to_owned()],
+            exit_code: out.exit_code,
+            stderr: out.stderr.clone(),
+            stdout_tail: String::from_utf8_lossy(&out.stdout).into_owned(),
+        });
+    }
+    Ok(())
+}
+
 /// Merges `source` into `target` as the user accepted it. It checks
 /// everything again and does nothing if the repository changed since the
 /// preview, if it is refused, if changes are in the way (unless
@@ -989,6 +1003,7 @@ pub async fn merge(
         .output(cancel)
         .await?;
     let status = working_status(git, repo, cancel).await?;
+    stopped_or_failed(&out, &status, "merge")?;
     if out.exit_code == Some(1) || !status.conflicted.is_empty() || status.in_progress.is_some() {
         return Ok((
             MoveOutcome::Conflicted {
@@ -1084,4 +1099,164 @@ pub async fn undo_move(
             .await?;
     }
     Ok(())
+}
+
+/// What the user accepted in the rebase dialog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct RebaseRequest {
+    /// Full ref names, as in the preview.
+    pub source: String,
+    pub target: String,
+    /// The preview's fingerprint: nothing is done if the repository changed.
+    pub expected: String,
+    /// Stash the changes in the way first.
+    pub save_changes: bool,
+    /// Go on even if it will stop with conflicts.
+    pub allow_conflicts: bool,
+}
+
+/// Message of the stash made by "save my changes, then rebase".
+pub fn rebase_stash_message(source: &str) -> String {
+    format!("GitCRAFT: antes del rebase de {source}")
+}
+
+/// Rebases `source` onto `target` as the user accepted it, with the same
+/// checks as [`merge`]. The user's configuration cannot make it do more
+/// than the preview said: no other branch is moved (`rebase.updateRefs`),
+/// no commit is squashed (`rebase.autoSquash`) and merges are not kept
+/// (`rebase.rebaseMerges`; the preview refuses them anyway). Returns how to
+/// undo it when it is done.
+pub async fn rebase(
+    git: &Git,
+    repo: &Path,
+    request: &RebaseRequest,
+    cancel: &CancellationToken,
+) -> Result<(MoveOutcome, Option<MoveRecord>)> {
+    let not_done = |preview: MovePreview, changed, saved| {
+        Ok((
+            MoveOutcome::NotDone {
+                preview: Box::new(preview),
+                changed,
+                saved,
+            },
+            None,
+        ))
+    };
+    let mut preview = rebase_preview(git, repo, &request.source, &request.target, cancel).await?;
+    if preview.fingerprint != request.expected {
+        return not_done(preview, true, None);
+    }
+    if preview.refused.is_some() || preview.case == MoveCase::UpToDate {
+        return not_done(preview, false, None);
+    }
+    let current = preview.current.as_deref() == Some(preview.moving.as_str());
+    let mut saved = None;
+    if preview.blocked.is_some() {
+        if !request.save_changes {
+            return not_done(preview, false, saved);
+        }
+        let message = rebase_stash_message(&preview.source.name);
+        saved = Some(create_stash(git, repo, &message, true, cancel).await?);
+        preview = rebase_preview(git, repo, &request.source, &request.target, cancel).await?;
+        if preview.refused.is_some() || preview.blocked.is_some() {
+            return not_done(preview, false, saved);
+        }
+    }
+    if !preview.conflicts.is_empty() && !request.allow_conflicts {
+        return not_done(preview, false, saved);
+    }
+    let previous = preview.source.oid.clone();
+    let source_ref = preview.source.refname.clone();
+    let fast_forward = preview.case == MoveCase::FastForward;
+
+    if !current {
+        // Fast-forward of another local branch: its ref alone, and only if
+        // it is still where the preview saw it.
+        git.write(repo)
+            .args(["update-ref", "-m"])
+            .arg(format!("rebase onto {}: Fast-forward", preview.target.name))
+            .args([&source_ref, &preview.target.oid, &previous])
+            .output(cancel)
+            .await?;
+        let record = MoveRecord {
+            branch: preview.source.name.clone(),
+            current: false,
+            previous,
+            after: preview.target.oid.clone(),
+            index_before: None,
+            stash: saved.clone(),
+            fingerprint_after: String::new(),
+        };
+        return Ok((
+            MoveOutcome::Done {
+                head: record.after.clone(),
+                fast_forward: true,
+                saved,
+            },
+            Some(record),
+        ));
+    }
+
+    let index_before = git
+        .write(repo)
+        .arg("write-tree")
+        .output(cancel)
+        .await?
+        .stdout_lossy()
+        .trim()
+        .to_owned();
+    let cmd = if fast_forward {
+        // Like git's rebase, but keeping local changes in other files, as
+        // the preview allowed.
+        git.write(repo).args(["merge", "--ff-only"])
+    } else {
+        // `-c`, not `--no-update-refs`…: older git ignores unknown settings
+        // but refuses unknown options.
+        git.write(repo).args([
+            "-c",
+            "rebase.updateRefs=false",
+            "-c",
+            "rebase.autoSquash=false",
+            "-c",
+            "rebase.rebaseMerges=false",
+            "rebase",
+            "--no-autostash",
+        ])
+    };
+    let out = cmd
+        .args(["--end-of-options", &preview.target.refname])
+        .accept_exit_code(1)
+        .output(cancel)
+        .await?;
+    let status = working_status(git, repo, cancel).await?;
+    stopped_or_failed(&out, &status, "rebase")?;
+    if out.exit_code == Some(1) || !status.conflicted.is_empty() || status.in_progress.is_some() {
+        return Ok((
+            MoveOutcome::Conflicted {
+                files: status.conflicted.into_iter().map(|c| c.path).collect(),
+                saved,
+            },
+            None,
+        ));
+    }
+    let head = ref_value(git, repo, &source_ref, cancel).await?;
+    let record = MoveRecord {
+        branch: preview.source.name.clone(),
+        current: true,
+        previous,
+        after: head.clone(),
+        index_before: Some(index_before),
+        stash: saved.clone(),
+        fingerprint_after: state_fingerprint(git, repo, cancel).await?,
+    };
+    Ok((
+        MoveOutcome::Done {
+            head,
+            fast_forward,
+            saved,
+        },
+        Some(record),
+    ))
 }

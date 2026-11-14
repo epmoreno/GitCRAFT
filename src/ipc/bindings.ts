@@ -183,6 +183,11 @@ export const commands = {
 	 *  everything again and does nothing the user did not accept.
 	 */
 	mergeBranch: (id: number, request: MergeRequest_Deserialize) => typedError<MoveResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("merge_branch", { id, request })),
+	/**
+	 *  Rebases as the user accepted it in the dialog (task 8.3): checks
+	 *  everything again and does nothing the user did not accept.
+	 */
+	rebaseBranch: (id: number, request: RebaseRequest) => typedError<MoveResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("rebase_branch", { id, request })),
 	/**  When `remote` was last fetched, as far as git can tell. */
 	lastFetch: (id: number, remote: string) => typedError<LastFetch_Serialize, IpcError_Serialize>(__TAURI_INVOKE("last_fetch", { id, remote })),
 	checkTagName: (id: number, name: string) => typedError<TagNameCheck, IpcError_Serialize>(__TAURI_INVOKE("check_tag_name", { id, name })),
@@ -2026,6 +2031,19 @@ export type PushReject =
 export type RebaseProgress = {
 	current: number,
 	total: number,
+};
+
+/**  What the user accepted in the rebase dialog. */
+export type RebaseRequest = {
+	/**  Full ref names, as in the preview. */
+	source: string,
+	target: string,
+	/**  The preview's fingerprint: nothing is done if the repository changed. */
+	expected: string,
+	/**  Stash the changes in the way first. */
+	saveChanges: boolean,
+	/**  Go on even if it will stop with conflicts. */
+	allowConflicts: boolean,
 };
 
 /**  Where a rebase would stop with conflicts. */

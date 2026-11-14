@@ -86,6 +86,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::undo_available,
             commands::undo_operation,
             commands::merge_branch,
+            commands::rebase_branch,
             commands::last_fetch,
             commands::check_tag_name,
             commands::tag_info,

@@ -123,6 +123,7 @@ export const ipc = {
   mergePreview: vi.mocked(commands.mergePreview),
   rebasePreview: vi.mocked(commands.rebasePreview),
   mergeBranch: vi.mocked(commands.mergeBranch),
+  rebaseBranch: vi.mocked(commands.rebaseBranch),
   lastFetch: vi.mocked(commands.lastFetch),
   checkTagName: vi.mocked(commands.checkTagName),
   tagInfo: vi.mocked(commands.tagInfo),

@@ -167,24 +167,29 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
         )}
         {notice?.kind === "merged" && (
           <p>
-            {t(notice.fastForward ? "merge.doneFastForward" : "merge.done", {
-              source: notice.source,
-              target: notice.target,
-            })}
+            {t(
+              `${notice.op}.${notice.fastForward ? "doneFastForward" : "done"}`,
+              {
+                source: notice.source,
+                target: notice.target,
+                count: notice.count,
+              },
+            )}
+            {notice.op === "rebase" &&
+              notice.published &&
+              ` ${t("rebase.forcePushNeeded", { source: notice.source })}`}
             {notice.undoGone && ` ${t("history.reset.undoGone")}`}
           </p>
         )}
         {notice?.kind === "mergeUndone" && (
-          <p>{t("merge.undone", { target: notice.target })}</p>
+          <p>{t(`${notice.op}.undone`, { branch: notice.branch })}</p>
         )}
         {notice?.kind === "undoRefused" && (
           <p>
             {notice.op === "reset"
               ? t("history.reset.undoRefused", { short: notice.short })
               : t(
-                  notice.stashed
-                    ? "merge.undoRefusedStashed"
-                    : "merge.undoRefused",
+                  `${notice.op}.${notice.stashed ? "undoRefusedStashed" : "undoRefused"}`,
                   { source: notice.short },
                 )}
           </p>

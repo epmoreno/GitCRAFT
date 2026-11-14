@@ -27,7 +27,9 @@ use gitcraft_core::ops::init::{self, InitCheck};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
-use gitcraft_core::ops::merge_rebase::{self, MergeRequest, MovePreview, MoveRecord};
+use gitcraft_core::ops::merge_rebase::{
+    self, MergeRequest, MovePreview, MoveRecord, RebaseRequest,
+};
 use gitcraft_core::ops::pick::{self, PickOutcome, PickPreview};
 use gitcraft_core::ops::publish::{self, PublishPreview, PublishRequest, Published};
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
@@ -1644,6 +1646,23 @@ impl AppState {
         let (outcome, record) = self
             .write(id, |repo| async move {
                 merge_rebase::merge(git, &repo, &request, &cancel).await
+            })
+            .await?;
+        let undo_id = match record {
+            Some(record) => Some(self.remember_undo(id, UndoRecord::Move(record))?),
+            None => None,
+        };
+        Ok(MoveResult { outcome, undo_id })
+    }
+
+    /// Rebases as the user accepted it (task 8.3), with "Undo" like the
+    /// merge.
+    pub async fn rebase(&self, id: RepoId, request: RebaseRequest) -> Result<MoveResult, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        let (outcome, record) = self
+            .write(id, |repo| async move {
+                merge_rebase::rebase(git, &repo, &request, &cancel).await
             })
             .await?;
         let undo_id = match record {

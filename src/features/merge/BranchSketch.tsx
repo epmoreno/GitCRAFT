@@ -14,13 +14,15 @@ function short(name: string) {
  *
  * - `fastForward`: `moving` advances along `other`'s commits.
  * - `merge`: `moving` gets a merge commit joining `other`.
+ * - `rebase`: `moving`'s commits are replayed on top of `other`; the old
+ *   ones are drawn faded.
  */
 export function BranchSketch({
   kind,
   moving,
   other,
 }: {
-  kind: "fastForward" | "merge";
+  kind: "fastForward" | "merge" | "rebase";
   moving: string;
   other: string;
 }) {
@@ -31,7 +33,41 @@ export function BranchSketch({
       role="presentation"
       aria-hidden="true"
     >
-      {kind === "fastForward" ? (
+      {kind === "rebase" ? (
+        <>
+          <line x1="20" y1="22" x2="140" y2="22" className={styles.edge} />
+          <path d="M 50 22 L 90 56 L 150 56" className={styles.oldEdge} />
+          <circle cx="90" cy="56" r="6" className={styles.oldCommit} />
+          <circle cx="150" cy="56" r="6" className={styles.oldCommit} />
+          <circle cx="20" cy="22" r="6" className={styles.commit} />
+          <circle cx="50" cy="22" r="6" className={styles.commit} />
+          <circle cx="140" cy="22" r="6" className={styles.commit} />
+          <line x1="140" y1="22" x2="240" y2="22" className={styles.newEdge} />
+          <rect
+            x="183"
+            y="15"
+            width="14"
+            height="14"
+            className={styles.newCommit}
+          />
+          <rect
+            x="233"
+            y="15"
+            width="14"
+            height="14"
+            className={styles.newCommit}
+          />
+          <text x="140" y="10" className={styles.label} textAnchor="middle">
+            {short(other)}
+          </text>
+          <text x="254" y="26" className={styles.movingLabel}>
+            {short(moving)}
+          </text>
+          <text x="162" y="70" className={styles.oldLabel}>
+            {short(moving)}
+          </text>
+        </>
+      ) : kind === "fastForward" ? (
         <>
           <line x1="20" y1="38" x2="200" y2="38" className={styles.edge} />
           <circle cx="20" cy="38" r="6" className={styles.commit} />

@@ -51,6 +51,7 @@ export type {
   MoveRefusal,
   MoveResult_Serialize as MoveResult,
   RebaseStop,
+  RebaseRequest,
   ResetResult_Serialize as ResetResult,
   RemoteTag,
   TagInfo,

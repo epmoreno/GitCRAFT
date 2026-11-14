@@ -12,23 +12,35 @@ import styles from "./merge.module.css";
 /** At most this many commits are listed (the user's choice). */
 export const MAX_COMMITS = 20;
 
-/** The commits that come in, at most [`MAX_COMMITS`], and "and N more". */
-function Commits({ preview }: { preview: MovePreview }) {
+/** The commits that come in or are replayed, at most [`MAX_COMMITS`], and
+ * "and N more". A rebase numbers them (the order they are replayed in) and
+ * marks the published ones. */
+function Commits({
+  preview,
+  heading,
+  rebase = false,
+}: {
+  preview: MovePreview;
+  heading: string;
+  rebase?: boolean;
+}) {
   const { t } = useTranslation();
   const shown = preview.commits.slice(0, MAX_COMMITS);
   const more = preview.commitsTotal - shown.length;
+  const List = rebase ? "ol" : "ul";
   return (
     <>
-      <h3 className={historyStyles.heading}>
-        {t("merge.incoming", {
-          count: preview.commitsTotal,
-          target: preview.target.name,
-        })}
-      </h3>
-      <ul className={historyStyles.files}>
-        {shown.map(({ commit }) => (
+      <h3 className={historyStyles.heading}>{heading}</h3>
+      <List className={historyStyles.files}>
+        {shown.map(({ commit, published }) => (
           <li key={commit.oid}>
             <code>{commit.short}</code> {commit.subject}
+            {rebase && published && (
+              <span className={historyStyles.note}>
+                {" "}
+                {t("rebase.published")}
+              </span>
+            )}
           </li>
         ))}
         {more > 0 && (
@@ -36,7 +48,7 @@ function Commits({ preview }: { preview: MovePreview }) {
             {t("history.more", { count: more })}
           </li>
         )}
-      </ul>
+      </List>
     </>
   );
 }
@@ -147,7 +159,7 @@ function Body({
                 ? t("merge.explained.fastForward", values)
                 : t("merge.explained.fastForwardOther", values)}
           </p>
-          <Commits preview={preview} />
+          <Commits preview={preview} heading={t("merge.incoming", values)} />
           {fastForward && isCurrent && (
             <label className={styles.option}>
               <input
@@ -197,7 +209,118 @@ function Body({
   );
 }
 
-/** The merge confirmation (task 8.2). */
+/** The rebase body (task 8.3). */
+function RebaseBody({
+  dialog,
+  preview,
+}: {
+  dialog: MergeDialogState;
+  preview: MovePreview;
+}) {
+  const { t } = useTranslation();
+  const values = {
+    source: preview.source.name,
+    target: preview.target.name,
+    count: preview.commitsTotal,
+  };
+  const isCurrent = preview.current === preview.source.name;
+  const fastForward = preview.case === "fastForward";
+  const published = preview.commits.filter((c) => c.published).length;
+  const refused = preview.refused;
+  const stop = preview.stopsAt;
+  return (
+    <>
+      {dialog.changed && (
+        <p className={historyStyles.warning} role="alert">
+          {t("merge.changed")}
+        </p>
+      )}
+      <FetchFirst dialog={dialog} />
+      {refused ? (
+        <p className={historyStyles.warning}>
+          {t(`rebase.refused.${refused}`, {
+            ...values,
+            moving: preview.moving,
+            current: preview.current ?? "",
+          })}
+        </p>
+      ) : preview.case === "upToDate" ? (
+        <p>{t("rebase.upToDate", values)}</p>
+      ) : (
+        <>
+          <BranchSketch
+            kind={fastForward ? "fastForward" : "rebase"}
+            moving={preview.source.name}
+            other={preview.target.name}
+          />
+          <p>
+            {fastForward
+              ? t(
+                  isCurrent
+                    ? "rebase.explained.fastForward"
+                    : "rebase.explained.fastForwardOther",
+                  values,
+                )
+              : t("rebase.explained.rebase", values)}
+          </p>
+          <Commits
+            preview={preview}
+            heading={t(
+              fastForward ? "rebase.gained" : "rebase.replayed",
+              values,
+            )}
+            rebase={!fastForward}
+          />
+          {preview.skipped > 0 && (
+            <p className={historyStyles.note}>
+              {t("rebase.skipped", { ...values, count: preview.skipped })}
+            </p>
+          )}
+          {published > 0 && (
+            <p className={historyStyles.warning}>
+              {t("rebase.publishedWarning", {
+                ...values,
+                count: published,
+                remotes: preview.publishedIn.join(", "),
+              })}
+            </p>
+          )}
+          {preview.blocked && (
+            <section aria-label={t("history.blockedTitle")}>
+              <h3 className={historyStyles.heading}>
+                {t("history.blockedTitle")}
+              </h3>
+              <p>{t(`rebase.blocked.${preview.blocked}`)}</p>
+              <Files files={preview.blocking} />
+              <p>{t("rebase.saveExplained", values)}</p>
+            </section>
+          )}
+          {preview.conflicts.length > 0 && (
+            <section aria-label={t("history.conflictsTitle")}>
+              <h3 className={historyStyles.heading}>
+                {stop
+                  ? t("rebase.stopsAt", {
+                      index: stop.index,
+                      total: preview.commitsTotal,
+                      subject: stop.commit.subject,
+                    })
+                  : t("rebase.mayConflict", {
+                      count: preview.conflicts.length,
+                    })}
+              </h3>
+              <Files files={preview.conflicts.map((path) => ({ path }))} />
+              {stop && <p>{t("rebase.afterStop")}</p>}
+              <p>{t("history.conflictExplained")}</p>
+              {preview.blocked && <p>{t("history.abortKeepsSavedHere")}</p>}
+            </section>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+/** The merge (task 8.2) or rebase (8.3) confirmation. */
 export function MergeDialog() {
   const dialog = useMergeStore((s) => s.dialog);
   if (!dialog) return null;
@@ -215,14 +338,17 @@ function MergeDialogOpen() {
   const [edited, setEdited] = useState<string | null>(null);
   if (!dialog) return null;
   const preview = dialog.preview;
+  const op = dialog.kind;
   const source = preview?.source.name ?? shortName(dialog.source);
   const target = preview?.target.name ?? shortName(dialog.target);
   const message = edited ?? preview?.message ?? "";
   const fastForward = preview?.case === "fastForward";
-  const commit = preview?.case === "merge" || (fastForward && noFf);
-  const conflicts = commit && (preview?.conflicts.length ?? 0) > 0;
+  const commit =
+    op === "merge" && (preview?.case === "merge" || (fastForward && noFf));
+  const conflicts =
+    (op === "rebase" || commit) && (preview?.conflicts.length ?? 0) > 0;
   const blocked = !!preview?.blocked;
-  const action = fastForward && !noFf ? "advance" : "act";
+  const action = fastForward && !(op === "merge" && noFf) ? "advance" : "act";
   const label = blocked
     ? conflicts
       ? "saveAndActWithConflicts"
@@ -239,9 +365,11 @@ function MergeDialogOpen() {
     !(commit && message.trim() === "");
   return (
     <ConfirmDialog
-      title={t("merge.title", { source, target })}
-      confirmLabel={t(`merge.${label}`, { source, target })}
+      title={t(`${op}.title`, { source, target })}
+      confirmLabel={t(`${op}.${label}`, { source, target })}
       cancelLabel={t("history.cancel")}
+      // A rebase that rewrites published commits: the danger style.
+      danger={op === "rebase" && !!preview?.commits.some((c) => c.published)}
       confirmDisabled={!doable || busy || dialog.fetching}
       onConfirm={() =>
         void confirm({
@@ -253,6 +381,8 @@ function MergeDialogOpen() {
     >
       {!preview ? (
         <p className={historyStyles.note}>{t("merge.loading")}</p>
+      ) : op === "rebase" ? (
+        <RebaseBody dialog={dialog} preview={preview} />
       ) : (
         <Body
           dialog={dialog}

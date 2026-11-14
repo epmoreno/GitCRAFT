@@ -1114,7 +1114,8 @@
       "cherryPick": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del cherry-pick de {{short}}»).",
       "revert": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de revertir {{short}}»).",
       "reset": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de reset a {{short}}»).",
-      "merge": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del merge de {{short}}»)."
+      "merge": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del merge de {{short}}»).",
+      "rebase": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del rebase de {{short}}»)."
     },
     "abortKeepsSaved": "Los cambios que guardaste antes de empezar siguen en el stash: no vuelven solos al abortar. Recupéralos después con «Recuperar mis cambios».",
     "abortKeepsSavedHere": "Si lo abortas, tus cambios guardados seguirán en el stash: no vuelven solos al abortar. Recupéralos con «Recuperar mis cambios».",
@@ -1288,7 +1289,7 @@
     },
     "done": "Merge de «{{source}}» en «{{target}}» hecho.",
     "doneFastForward": "«{{target}}» ha avanzado hasta «{{source}}» (fast-forward).",
-    "undone": "Merge deshecho: «{{target}}» está exactamente como antes.",
+    "undone": "Merge deshecho: «{{branch}}» está exactamente como antes.",
     "undoRefused": "Algo ha cambiado desde el merge, así que no se ha tocado nada.",
     "undoRefusedStashed": "Algo ha cambiado desde el merge, así que no se ha tocado nada. Tus cambios siguen en el stash («GitCRAFT: antes del merge de {{source}}»).",
     "menu": "Hacer merge de «{{source}}» en «{{target}}»…",
@@ -1298,5 +1299,57 @@
       "inProgress": "Hay una operación a medias."
     },
     "branchMenu": "Rama {{name}}"
+  },
+  "rebase": {
+    "title": "¿Rebase de «{{source}}» sobre «{{target}}»?",
+    "explained": {
+      "rebase": "Se mueve «{{source}}»: sus commits se rehacen encima de «{{target}}», con hashes nuevos. «{{target}}» no cambia.",
+      "fastForward": "Ningún commit se rehace: «{{source}}» solo avanza hasta «{{target}}» (fast-forward). «{{target}}» no cambia.",
+      "fastForwardOther": "Ningún commit se rehace: «{{source}}», que no es la rama actual, solo avanza hasta «{{target}}» (fast-forward). Solo cambia la rama: tus archivos y tus cambios no se tocan."
+    },
+    "replayed_one": "Se rehace 1 commit:",
+    "replayed_other": "Se rehacen {{count}} commits, en este orden:",
+    "gained_one": "«{{source}}» gana 1 commit:",
+    "gained_other": "«{{source}}» gana {{count}} commits:",
+    "skipped_one": "1 commit se salta porque «{{target}}» ya tiene el mismo cambio.",
+    "skipped_other": "{{count}} commits se saltan porque «{{target}}» ya tiene los mismos cambios.",
+    "published": "publicado",
+    "publishedWarning_one": "1 de estos commits ya está publicado ({{remotes}}). Tras el rebase, «{{source}}» y su copia en el remoto habrán divergido: para subirlo hará falta un push forzado, que reescribe la rama en el remoto y afecta a quien ya tenga ese commit. GitCRAFT no lo hace solo: es una acción aparte, con su propia confirmación.",
+    "publishedWarning_other": "{{count}} de estos commits ya están publicados ({{remotes}}). Tras el rebase, «{{source}}» y su copia en el remoto habrán divergido: para subirlo hará falta un push forzado, que reescribe la rama en el remoto y afecta a quien ya tenga esos commits. GitCRAFT no lo hace solo: es una acción aparte, con su propia confirmación.",
+    "stopsAt": "Se detendrá en el commit {{index}} de {{total}} («{{subject}}») con conflictos en:",
+    "afterStop": "Lo que pase después de ese commit no se sabe hasta resolverlo.",
+    "mayConflict_one": "El rebase podría producir conflictos en 1 archivo:",
+    "mayConflict_other": "El rebase podría producir conflictos en {{count}} archivos:",
+    "blocked": {
+      "rebaseNeedsClean": "git no hace un rebase con cambios sin confirmar en archivos con seguimiento:",
+      "overwrite": "Hay cambios en archivos que el rebase cambia:",
+      "stagedChanges": "Hay cambios preparados en medio:"
+    },
+    "saveExplained": "«Guardar mis cambios…» los guarda en el stash como «GitCRAFT: antes del rebase de {{source}}», que nunca se borra solo, y al terminar podrás recuperarlos con «Recuperar mis cambios».",
+    "act": "Hacer rebase",
+    "advance": "Avanzar «{{source}}»",
+    "actWithConflicts": "Hacer rebase con conflictos",
+    "saveAndAct": "Guardar mis cambios y hacer rebase",
+    "saveAndAdvance": "Guardar mis cambios y avanzar «{{source}}»",
+    "saveAndActWithConflicts": "Guardar mis cambios y hacer rebase con conflictos",
+    "upToDate": "No hay nada que hacer: «{{source}}» ya está encima de «{{target}}».",
+    "refused": {
+      "inProgress": "Hay una operación a medias (aviso de arriba): termínala o abórtala antes.",
+      "detached": "HEAD está separado: no hay rama actual de la que hacer rebase. Cambia antes a una rama.",
+      "sameBranch": "Es la misma rama.",
+      "remoteMoves": "«{{moving}}» es una rama remota y nunca se mueve: haz rebase de una rama local.",
+      "notCurrent": "Solo se hace rebase de la rama actual, «{{current}}». Para hacerlo de «{{moving}}», cambia antes a ella.",
+      "checkedOutElsewhere": "«{{moving}}» está abierta en otro worktree: moverla desde aquí dejaría ese worktree desfasado.",
+      "unrelated": "«{{source}}» y «{{target}}» no tienen ningún commit en común.",
+      "mergesInRange": "Los commits que habría que rehacer incluyen merges. git los aplanaría y esos merges se perderían, así que no se ofrece el rebase. Puedes hacer merge en su lugar."
+    },
+    "done_one": "Rebase de «{{source}}» sobre «{{target}}» hecho: 1 commit rehecho.",
+    "done_other": "Rebase de «{{source}}» sobre «{{target}}» hecho: {{count}} commits rehechos.",
+    "doneFastForward": "«{{source}}» ha avanzado hasta «{{target}}» (fast-forward).",
+    "forcePushNeeded": "Para subirlo hará falta un push forzado.",
+    "undone": "Rebase deshecho: «{{branch}}» vuelve a tener sus commits originales, exactamente como antes.",
+    "undoRefused": "Algo ha cambiado desde el rebase, así que no se ha tocado nada.",
+    "undoRefusedStashed": "Algo ha cambiado desde el rebase, así que no se ha tocado nada. Tus cambios siguen en el stash («GitCRAFT: antes del rebase de {{source}}»).",
+    "menu": "Hacer rebase de «{{source}}» sobre «{{target}}»…"
   }
 }

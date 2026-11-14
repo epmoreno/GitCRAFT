@@ -4,7 +4,7 @@ import { commands, type CommitActions } from "../../ipc";
 import { copyText } from "../../ui/clipboard";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
 import { runCommitAction } from "../history/store";
-import { mergeMenuItem } from "../merge/menu";
+import { branchMenuItems } from "../merge/menu";
 import type { RefLabel } from "./refLabels";
 import { useGraphStore } from "./store";
 import {
@@ -68,10 +68,10 @@ export function CommitMenu({
 
   const mergeItems: MenuItem[] = (branches ?? [])
     .filter((b) => (b.kind === "local" || b.kind === "remote") && !b.current)
-    .map((b, index) => ({
-      ...mergeMenuItem(t, repoId, refs, { name: b.refname, shortName: b.text }),
-      separatorBefore: index === 0,
-    }));
+    .flatMap((b) =>
+      branchMenuItems(t, repoId, refs, { name: b.refname, shortName: b.text }),
+    )
+    .map((item, index) => ({ ...item, separatorBefore: index === 0 }));
 
   const items: MenuItem[] = [
     ...READY_ACTIONS.map(actionItem),

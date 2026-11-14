@@ -6,7 +6,7 @@ import type { RepoInfo } from "../../ipc";
 import { ConflictView } from "../conflicts/ConflictView";
 import { DiffView } from "../diff/DiffView";
 import { ContextMenu } from "../../ui/ContextMenu";
-import { mergeMenuItem } from "../merge/menu";
+import { branchMenuItems } from "../merge/menu";
 import { CommitMenu } from "./CommitMenu";
 import { useRememberedScroll } from "../repo/viewState";
 import { UncommittedRow } from "../workdir/UncommittedRow";
@@ -281,12 +281,10 @@ export function GraphView({
           x={menu.x}
           y={menu.y}
           label={t("merge.branchMenu", { name: menu.branch.text })}
-          items={[
-            mergeMenuItem(t, repoId, refs, {
-              name: menu.branch.refname,
-              shortName: menu.branch.text,
-            }),
-          ]}
+          items={branchMenuItems(t, repoId, refs, {
+            name: menu.branch.refname,
+            shortName: menu.branch.text,
+          })}
           onClose={() => setMenu(null)}
         />
       )}

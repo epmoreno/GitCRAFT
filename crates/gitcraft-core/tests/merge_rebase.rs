@@ -3,9 +3,13 @@
 //! tree, and undo puts everything back exactly.
 
 use gitcraft_core::ops::branch::BlockingFile;
+use gitcraft_core::ops::in_progress::{ContinueOutcome, continue_in_progress, skip_current};
 use gitcraft_core::ops::merge_rebase::{
     MergeRequest, MoveBlock, MoveCase, MoveOutcome, MovePreview, MoveRecord, MoveRefusal,
     merge as merge_branch, merge_preview, merge_stash_message, rebase_preview, undo_move,
+};
+use gitcraft_core::ops::merge_rebase::{
+    RebaseRequest, rebase as rebase_branch, rebase_stash_message,
 };
 use gitcraft_core::ops::remote::abort_in_progress;
 use gitcraft_core::testing::TestRepo;
@@ -768,6 +772,227 @@ async fn nothing_is_done_if_the_repository_changed_since_the_preview() {
     };
     assert!(changed);
     assert_ne!(preview.fingerprint, p.fingerprint);
+    assert!(record.is_none());
+    assert_eq!(full_state(&repo).await, before);
+}
+
+// ---- 8.3: rebasing, and undoing it ----
+
+fn rebase_request(p: &MovePreview) -> RebaseRequest {
+    RebaseRequest {
+        source: p.source.refname.clone(),
+        target: p.target.refname.clone(),
+        expected: p.fingerprint.clone(),
+        save_changes: false,
+        allow_conflicts: false,
+    }
+}
+
+async fn run_rebase(repo: &TestRepo, req: &RebaseRequest) -> (MoveOutcome, Option<MoveRecord>) {
+    rebase_branch(repo.git(), repo.path(), req, &c())
+        .await
+        .expect("rebase")
+}
+
+async fn log(repo: &TestRepo, range: &str) -> String {
+    repo.run(&["log", "--format=%s", range]).await
+}
+
+#[tokio::test]
+async fn a_clean_rebase_then_undo() {
+    let repo = diverged().await;
+    repo.checkout("feature").await;
+    repo.write_file("notes.txt", "untracked, untouched\n");
+    let before = full_state(&repo).await;
+    let p = rebase(&repo, &heads("feature"), &heads("main")).await;
+    let (outcome, record) = run_rebase(&repo, &rebase_request(&p)).await;
+    let MoveOutcome::Done {
+        head, fast_forward, ..
+    } = outcome
+    else {
+        panic!("expected a rebase: {outcome:?}");
+    };
+    assert!(!fast_forward);
+    assert_eq!(head, repo.rev_parse("feature").await);
+    assert_eq!(
+        log(&repo, "feature").await,
+        "feature adds new.txt\nfeature edits f\nmain edits other\nbase"
+    );
+    // New ids: the old commits are no longer in the branch.
+    assert_ne!(head, p.source.oid);
+
+    undo(&repo, &record.expect("record")).await.expect("undo");
+    assert_eq!(full_state(&repo).await, before);
+}
+
+#[tokio::test]
+async fn a_rebase_that_stops_is_resolved_and_continued_with_task_9() {
+    let repo = diverged().await;
+    repo.commit_file("new.txt", "main's own\n", "main adds new.txt")
+        .await;
+    repo.checkout("feature").await;
+    repo.commit_file("h.txt", "h\n", "feature adds h").await;
+    let before = full_state(&repo).await;
+    let p = rebase(&repo, &heads("feature"), &heads("main")).await;
+    let mut req = rebase_request(&p);
+    let (outcome, _) = run_rebase(&repo, &req).await;
+    assert!(matches!(
+        outcome,
+        MoveOutcome::NotDone { changed: false, .. }
+    ));
+    assert_eq!(full_state(&repo).await, before);
+
+    req.allow_conflicts = true;
+    let (outcome, record) = run_rebase(&repo, &req).await;
+    let MoveOutcome::Conflicted { files, .. } = outcome else {
+        panic!("expected conflicts: {outcome:?}");
+    };
+    assert_eq!((files, record), (vec!["new.txt".to_owned()], None));
+    repo.write_file("new.txt", "both\n");
+    repo.run(&["add", "new.txt"]).await;
+    let done = continue_in_progress(repo.git(), repo.path(), None, &c())
+        .await
+        .expect("continue");
+    assert_eq!(done, ContinueOutcome::Done);
+    assert_eq!(
+        log(&repo, "main..feature").await,
+        "feature adds h\nfeature adds new.txt\nfeature edits f"
+    );
+}
+
+#[tokio::test]
+async fn a_stopped_rebase_can_skip_the_commit_or_be_aborted() {
+    let repo = diverged().await;
+    repo.commit_file("new.txt", "main's own\n", "main adds new.txt")
+        .await;
+    repo.checkout("feature").await;
+    repo.commit_file("h.txt", "h\n", "feature adds h").await;
+    let before = full_state(&repo).await;
+    let p = rebase(&repo, &heads("feature"), &heads("main")).await;
+    let mut req = rebase_request(&p);
+    req.allow_conflicts = true;
+
+    run_rebase(&repo, &req).await;
+    abort_in_progress(repo.git(), repo.path(), &c())
+        .await
+        .expect("abort");
+    assert_eq!(full_state(&repo).await, before);
+
+    run_rebase(&repo, &req).await;
+    skip_current(repo.git(), repo.path(), &c())
+        .await
+        .expect("skip");
+    assert_eq!(
+        log(&repo, "main..feature").await,
+        "feature adds h\nfeature edits f"
+    );
+}
+
+#[tokio::test]
+async fn changes_in_the_way_of_a_rebase_are_saved_and_undo_brings_them_back() {
+    let repo = diverged().await;
+    repo.checkout("feature").await;
+    repo.write_file("other.txt", "my unstaged change\n");
+    let before = snapshot(&repo).await;
+    let p = rebase(&repo, &heads("feature"), &heads("main")).await;
+    assert_eq!(p.blocked, Some(MoveBlock::RebaseNeedsClean));
+    let mut req = rebase_request(&p);
+    let (outcome, _) = run_rebase(&repo, &req).await;
+    assert!(matches!(outcome, MoveOutcome::NotDone { .. }));
+    assert_eq!(snapshot(&repo).await, before);
+
+    req.save_changes = true;
+    let (outcome, record) = run_rebase(&repo, &req).await;
+    let MoveOutcome::Done { saved, .. } = outcome else {
+        panic!("expected a rebase: {outcome:?}");
+    };
+    let saved = saved.expect("saved");
+    assert_eq!(
+        repo.run(&["stash", "list", "--format=%H %gs"]).await,
+        format!("{saved} On feature: {}", rebase_stash_message("feature"))
+    );
+    undo(&repo, &record.expect("record")).await.expect("undo");
+    let without_stash_ref = |text: String| {
+        text.lines()
+            .filter(|l| !l.starts_with("refs/stash "))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    assert_eq!(without_stash_ref(snapshot(&repo).await), before);
+}
+
+#[tokio::test]
+async fn a_rebase_that_is_a_fast_forward_then_undo() {
+    // Current branch: main is behind ahead.
+    let repo = behind().await;
+    repo.write_file("other.txt", "staged\n");
+    repo.run(&["add", "other.txt"]).await;
+    let before = full_state(&repo).await;
+    let p = rebase(&repo, &heads("main"), &heads("ahead")).await;
+    let (outcome, record) = run_rebase(&repo, &rebase_request(&p)).await;
+    assert!(
+        matches!(
+            outcome,
+            MoveOutcome::Done {
+                fast_forward: true,
+                ..
+            }
+        ),
+        "{outcome:?}"
+    );
+    assert_eq!(repo.head().await, repo.rev_parse("ahead").await);
+    undo(&repo, &record.expect("record")).await.expect("undo");
+    assert_eq!(full_state(&repo).await, before);
+
+    // Another branch: only its ref moves.
+    repo.checkout("ahead").await;
+    let before = full_state(&repo).await;
+    let p = rebase(&repo, &heads("main"), &heads("ahead")).await;
+    let (outcome, record) = run_rebase(&repo, &rebase_request(&p)).await;
+    assert!(matches!(outcome, MoveOutcome::Done { .. }), "{outcome:?}");
+    assert_eq!(repo.rev_parse("main").await, repo.rev_parse("ahead").await);
+    undo(&repo, &record.expect("record")).await.expect("undo");
+    assert_eq!(full_state(&repo).await, before);
+}
+
+#[tokio::test]
+async fn the_user_s_configuration_does_not_make_it_do_more() {
+    let repo = diverged().await;
+    repo.checkout("feature").await;
+    // A branch inside the range: with rebase.updateRefs a plain `git rebase`
+    // moves it too (checked by hand). The "fixup!" commit guards against
+    // rebase.autoSquash, which current git applies only to interactive
+    // rebases.
+    repo.run(&["branch", "inside", "feature~1"]).await;
+    repo.commit_file("f.txt", "feature, fixed\n", "fixup! feature edits f")
+        .await;
+    repo.run(&["config", "rebase.updateRefs", "true"]).await;
+    repo.run(&["config", "rebase.autoSquash", "true"]).await;
+    let inside = repo.rev_parse("inside").await;
+    let p = rebase(&repo, &heads("feature"), &heads("main")).await;
+    let (outcome, _) = run_rebase(&repo, &rebase_request(&p)).await;
+    assert!(matches!(outcome, MoveOutcome::Done { .. }), "{outcome:?}");
+    assert_eq!(repo.rev_parse("inside").await, inside);
+    assert_eq!(
+        log(&repo, "main..feature").await,
+        "fixup! feature edits f\nfeature adds new.txt\nfeature edits f"
+    );
+}
+
+#[tokio::test]
+async fn nothing_is_rebased_if_the_repository_changed_since_the_preview() {
+    let repo = diverged().await;
+    repo.checkout("feature").await;
+    let p = rebase(&repo, &heads("feature"), &heads("main")).await;
+    repo.checkout("main").await;
+    repo.commit_file("x.txt", "x\n", "main moves on").await;
+    repo.checkout("feature").await;
+    let before = full_state(&repo).await;
+    let (outcome, record) = run_rebase(&repo, &rebase_request(&p)).await;
+    assert!(matches!(
+        outcome,
+        MoveOutcome::NotDone { changed: true, .. }
+    ));
     assert!(record.is_none());
     assert_eq!(full_state(&repo).await, before);
 }

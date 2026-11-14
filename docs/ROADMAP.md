@@ -2086,7 +2086,7 @@ principio y toda operación destructiva pasa por confirmación.
             barra lateral.
         Tests: 9 de integración del merge y su «Deshacer», 3 del último
         fetch, 1 de las URL, 1 del estado de Tauri y 15 de interfaz.
-      - [ ] **8.3 Rebase (core y UI, desde el menú).**
+      - [x] **8.3 Rebase (core y UI, desde el menú).**
         - **Core:** `rebase(origen, destino, huella, …)` sobre la rama actual
           (`git rebase --no-autostash <destino>`), con el mismo guardado en
           el stash. Si se detiene, siguen el aviso, la vista de la 9 y
@@ -2106,6 +2106,35 @@ principio y toda operación destructiva pasa por confirmación.
         hacer rebase, el aviso de publicados, y que no hace nada si la
         huella cambió. «Deshacer» de un rebase deja todo idéntico y se
         niega si algo cambió. Tests de interfaz.
+        *Decisiones del usuario:* sin casilla para los commits publicados;
+        el botón lleva el estilo de peligro cuando los hay.
+        *Hecho:*
+        - **Core:** `rebase` (con `RebaseRequest`) en la rama actual con
+          `git rebase --no-autostash`. Se pasan `-c rebase.updateRefs=false`,
+          `-c rebase.autoSquash=false` y `-c rebase.rebaseMerges=false`
+          para que la configuración del usuario no haga más de lo que dijo
+          la vista previa: comprobado a mano que con `rebase.updateRefs` un
+          rebase normal mueve también otras ramas. Va con `-c` porque git
+          < 2.38 no conoce `--no-update-refs`. El fast-forward de la rama
+          actual usa `merge --ff-only`, que respeta los cambios en otros
+          archivos como dijo la vista previa. Si git sale con 1 sin dejar
+          nada a medias (un hook, por ejemplo), es un error, no un
+          conflicto (también en el merge).
+        - **Tauri:** `rebase_branch`, con el mismo «Deshacer».
+        - **Interfaz:** el mismo diálogo, con su cuerpo:
+          - el esquema con los commits antiguos en gris y los nuevos
+            encima;
+          - los commits numerados en el orden en que se rehacen, con
+            «publicado», y los que se saltan;
+          - el aviso de los publicados (push forzado aparte, que afecta a
+            otras personas), con el botón en estilo de peligro;
+          - en qué commit se detendría y con qué archivos;
+          - la negativa con merges en el tramo.
+          «Hacer rebase de «actual» sobre «x»…» está en los mismos menús que
+          el merge. El aviso del resultado dice cuántos commits se
+          rehicieron, recuerda el push forzado si había publicados y ofrece
+          «Deshacer».
+        Tests: 7 de integración y 9 de interfaz.
       - [ ] **8.4 Arrastrar y soltar (UI).**
         - **Qué se arrastra:** las filas de rama de la barra lateral y las
           etiquetas de rama del grafo. Se puede soltar de una a otra (de la

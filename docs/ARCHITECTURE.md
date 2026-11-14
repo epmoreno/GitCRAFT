@@ -501,6 +501,12 @@ de…» de los menús). Se completa en la 8.5.
   estorba, si se aceptó. Después ejecuta `git merge --ff-only` o
   `git merge --no-ff --no-edit -m <mensaje>`. Si se detiene con
   conflictos, sigue la tarea 9, y el mensaje elegido queda en `MERGE_MSG`.
+- **Ejecución del rebase:** `git rebase --no-autostash` en la rama actual,
+  con `-c rebase.updateRefs=false`, `-c rebase.autoSquash=false` y
+  `-c rebase.rebaseMerges=false` (con `-c` porque las versiones antiguas de
+  git ignoran los ajustes desconocidos, pero rechazan las opciones). El
+  fast-forward usa `merge --ff-only`. En los dos, un código 1 sin nada a
+  medias es un error (un hook), no un conflicto.
 - **«Deshacer» compartido:** la sesión de Tauri guarda un único registro
   de «Deshacer» (`UndoRecord`: reset o merge/rebase), que cualquier otra
   escritura invalida (`undo_available`, `undo_operation`). Al deshacer:

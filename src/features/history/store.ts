@@ -55,20 +55,33 @@ export type HistoryNotice =
   | { kind: "resetUndone"; repoId: number; branch: string }
   | {
       kind: "merged";
+      /** A merge, or a rebase (task 8.3). */
+      op: "merge" | "rebase";
       repoId: number;
       undoId: number | null;
       source: string;
       target: string;
       fastForward: boolean;
+      /** Commits that came in or were replayed. */
+      count: number;
+      /** Rebase: some replayed commits were published (a forced push will
+       * be needed). */
+      published: boolean;
       /** Undo is no longer possible (another write, or it failed). */
       undoGone: boolean;
     }
-  | { kind: "mergeUndone"; repoId: number; target: string }
+  | {
+      kind: "mergeUndone";
+      op: "merge" | "rebase";
+      repoId: number;
+      /** The branch that moved back. */
+      branch: string;
+    }
   | {
       kind: "undoRefused";
       repoId: number;
       /** What could not be undone. */
-      op: "reset" | "merge";
+      op: "reset" | "merge" | "rebase";
       short: string;
       stashed: boolean;
     }
@@ -78,7 +91,7 @@ export type HistoryNotice =
  * operation, and the short id of the commit it was about (in its message). */
 export type SavedChanges = {
   oid: string;
-  pick: PickKind | "reset" | "merge";
+  pick: PickKind | "reset" | "merge" | "rebase";
   /** The commit's short id, or the merged branch's name. */
   short: string;
 };
@@ -310,7 +323,7 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
     undo: async () => {
       const notice = undoable(get().notice);
       if (!notice || notice.undoId === null) return;
-      const op = notice.kind === "reset" ? "reset" : "merge";
+      const op = notice.kind === "reset" ? "reset" : notice.op;
       set({ busy: true });
       const result = await commands.undoOperation(notice.repoId, notice.undoId);
       set({ busy: false });
@@ -339,8 +352,9 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
               }
             : {
                 kind: "mergeUndone",
+                op: notice.op,
                 repoId: notice.repoId,
-                target: notice.target,
+                branch: notice.op === "merge" ? notice.target : notice.source,
               },
       });
     },

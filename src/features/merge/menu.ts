@@ -12,39 +12,64 @@ export type BranchName = {
   shortName: string;
 };
 
+/** Why the current branch cannot be merged with or rebased onto `branch`
+ * from a menu, or `null`. */
+function unavailable(
+  repoId: number,
+  current: string | null,
+  branch: BranchName,
+): "detached" | "isCurrent" | "inProgress" | null {
+  if (!current) return "detached";
+  if (branch.name === `refs/heads/${current}`) return "isCurrent";
+  return operationWaiting(repoId) ? "inProgress" : null;
+}
+
 /**
- * "Merge «branch» into «current»…" for a branch's menu (sidebar, graph
- * labels, commit menu). Disabled, with the reason, when there is no current
- * branch, when it is the current branch, or while an operation waits; the
- * dialog says the rest (up to date, unrelated…).
+ * The entries of a branch's menu (sidebar, graph labels, commit menu):
+ * "Merge «branch» into «current»…" and "Rebase «current» onto «branch»…".
+ * Disabled, with the reason, when there is no current branch, when it is
+ * the current branch, or while an operation waits; the dialog says the
+ * rest (up to date, unrelated…).
  */
-export function mergeMenuItem(
+export function branchMenuItems(
   t: TFunction,
   repoId: number,
   refs: RepoRefs | null,
   branch: BranchName,
-): MenuItem {
+): MenuItem[] {
   const current = refs?.head.type === "branch" ? refs.head.name : null;
-  const why = !current
-    ? "detached"
-    : branch.name === `refs/heads/${current}`
-      ? "isCurrent"
-      : operationWaiting(repoId)
-        ? "inProgress"
-        : null;
-  return {
-    label: t("merge.menu", {
-      source: branch.shortName,
-      target: current ?? "HEAD",
-    }),
+  const why = unavailable(repoId, current, branch);
+  const common = {
     disabled: why !== null,
     hint: why ? t(`merge.menuWhy.${why}`) : undefined,
-    onSelect: () => {
-      if (current) {
-        void useMergeStore
-          .getState()
-          .requestMerge(repoId, branch.name, `refs/heads/${current}`);
-      }
-    },
   };
+  const head = current ? `refs/heads/${current}` : null;
+  return [
+    {
+      ...common,
+      label: t("merge.menu", {
+        source: branch.shortName,
+        target: current ?? "HEAD",
+      }),
+      onSelect: () => {
+        if (head) {
+          void useMergeStore.getState().requestMerge(repoId, branch.name, head);
+        }
+      },
+    },
+    {
+      ...common,
+      label: t("rebase.menu", {
+        source: current ?? "HEAD",
+        target: branch.shortName,
+      }),
+      onSelect: () => {
+        if (head) {
+          void useMergeStore
+            .getState()
+            .requestRebase(repoId, head, branch.name);
+        }
+      },
+    },
+  ];
 }
