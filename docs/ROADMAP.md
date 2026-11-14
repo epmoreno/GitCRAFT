@@ -1890,6 +1890,15 @@ principio y toda operación destructiva pasa por confirmación.
         ARCHITECTURE.md y un script de ejemplo (repo desechable con un
         remoto bare local) para probar cada operación en el Mac.
         *Verificable:* el usuario lo prueba y lo confirma.
+        *Hecho (falta la prueba del usuario):* sección «5h. Acciones sobre
+        un commit» en ARCHITECTURE.md y `scripts/make-history-examples.sh`,
+        que crea `~/gitcraft-historial` (con un merge, una rama `feature`
+        con un commit limpio y otro que choca, tags `v0.9` local y `v1.0`
+        también en el remoto, un commit publicado y otro solo local, un
+        cambio sin confirmar en README.md y un `notas.txt` sin seguimiento
+        que `reset --hard` pisaría) y su remoto local
+        `~/gitcraft-historial-remoto.git`. Si ya existen no toca nada; con
+        `--replace`, los mueve a la Papelera tras preguntar.
       *Fuera de la 10:* cherry-pick o revert de un commit de merge (más
       adelante, eligiendo el padre principal con `-m`), de varios a la vez,
       mover un tag existente (se borra y se crea), firmar tags (se respeta

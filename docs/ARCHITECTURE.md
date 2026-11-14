@@ -416,6 +416,69 @@ Núcleo en `gitcraft-core`: `parse/conflict.rs` (parser puro),
   (`tests/conflict.rs`, `resolve.rs`, `in_progress.rs`, `continue.rs`) crean
   los suyos con `TestRepo`.
 
+## 5h. Acciones sobre un commit (tarea 10)
+
+Núcleo en `gitcraft-core`: `ops/commit_actions.rs` (qué admite un commit),
+`ops/pick.rs` (cherry-pick y revertir), `ops/reset.rs` y `ops/tag.rs`. UI en
+`src/features/history/` y el menú del commit en `src/features/graph/`.
+
+- **Qué se ofrece:** `commit_actions` da la rama actual, si hay una
+  operación a medias, si es un merge, si ya está en la rama y si es HEAD.
+  `commitActions.ts` decide con eso cada acción y su motivo si no se puede.
+  Una acción solo aparece en el menú y en el panel cuando funciona
+  (`READY_ACTIONS`); nunca hay botones que no hagan nada.
+- **Cherry-pick y revertir** comparten código (`PickKind`):
+  - **Vista previa** (no toca nada): motivo para negarse (merge,
+    operación a medias, HEAD separado, ya está o no está en la rama),
+    cambios que estorban (git se niega con cualquier cambio preparado,
+    aunque sea de otro archivo, y con cambios sin preparar en los archivos
+    que toca el commit) y conflictos previstos con `merge-tree
+    --merge-base`. Revertir aplica los cambios al revés. Un commit sin
+    padre se compara con el árbol vacío.
+  - **Ejecución:** se vuelve a comprobar todo y solo se hace lo aceptado.
+    Si se aceptó, primero guarda los cambios en una entrada de stash que
+    nunca se borra sola, y luego hace `git cherry-pick` o `git revert
+    --no-edit`. Si se detiene con conflictos, sigue la tarea 9 (aviso y
+    vista de conflictos).
+  - **«Recuperar mis cambios»:** usa el `apply` del stash (la entrada se
+    conserva) cuando ya no hay una operación en curso, con los diálogos
+    de la 7.x si algo choca.
+- **Reset** (la operación más delicada):
+  - **Vista previa:** los commits que salen de la rama, marcando los que
+    no tiene ninguna otra rama, remoto ni tag y los ya publicados; el
+    trabajo sin confirmar que se pierde; y los archivos sin seguimiento o
+    ignorados que `reset --hard` pisaría sin avisar (los que el commit
+    destino tiene).
+  - **Copia antes:** entrada de stash con el índice (en mixed, si había
+    algo preparado; en hard, si había cambios) y la Papelera para esos
+    archivos. Si uno no puede ir a la Papelera, se devuelven los demás y no
+    se hace el reset.
+  - **Huella:** el reset solo se hace si la huella (HEAD y cada archivo con
+    cambios: tamaño y fecha) sigue igual que en la vista previa.
+  - **«Deshacer»:** el registro vive en la sesión de Tauri y cualquier
+    escritura en ese repo lo invalida. Antes de tocar nada comprueba que la
+    huella es la de justo después del reset. Vuelve exactamente: soft, la
+    rama; mixed, la rama y el índice de la copia; hard, la rama, la copia
+    con su índice y los archivos de la Papelera.
+  - **En la interfaz:** mixed por defecto; en hard con algo que perder hay
+    que marcar «Entiendo…».
+- **Tags:**
+  - **Nombre:** válido si pasa `check-ref-format` y no empieza por «-»
+    (`git tag` los rechaza).
+  - **Crear:** nunca se mueve un tag existente. Anotado con `git tag -a -F
+    -`, el mensaje por stdin.
+  - **Borrar en local:** `update-ref -d` con el valor que se vio.
+  - **Subir:** sin forzar; un tag distinto en el remoto se rechaza y no se
+    reemplaza.
+  - **Borrar en un remoto:** es otra acción, con su propia confirmación,
+    y usa `--force-with-lease` con lo que se vio.
+  - **Red:** las consultas y los envíos al remoto van por
+    `remote_operation`, que se puede cancelar.
+- **Pruebas:** `scripts/make-history-examples.sh` crea un repo desechable
+  con su remoto local para probarlo todo; los tests de integración
+  (`commit_actions.rs`, `pick.rs`, `revert.rs`, `reset.rs`, `tag.rs`) crean
+  los suyos con `TestRepo`.
+
 ## 5f. Crear repositorios
 
 - **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama
