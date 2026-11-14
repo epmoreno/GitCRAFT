@@ -39,9 +39,11 @@ vistazo y se ejecuten rápido, sin esconder lo que Git hace por debajo:
 
 ## Capturas
 
-<!-- TODO: capturas -->
+![El grafo de commits de un repositorio de prueba: a la izquierda, la barra lateral con las ramas; en el centro, los commits con un carril de color por rama y las etiquetas de cada rama; a la derecha, el panel de detalles.](docs/screenshots/grafo.png)
 
-_Próximamente._
+![Resolución de un conflicto de merge: cada bloque en conflicto muestra los dos lados con botones para elegir uno o los dos, debajo aparece el resultado y, a la derecha, el panel de cambios sin confirmar con los archivos en conflicto.](docs/screenshots/conflictos.png)
+
+![El diálogo que se abre al soltar una rama sobre otra: elegir entre merge y rebase, un esquema del resultado, los commits que entran y el mensaje del commit de merge, que se puede editar.](docs/screenshots/merge.png)
 
 ## Qué funciona
 
