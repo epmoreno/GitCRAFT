@@ -2260,6 +2260,119 @@ principio y toda operación destructiva pasa por confirmación.
       en el reflog. Antes de ejecutarlo se muestra qué se va a restaurar.
       *Tests:* deshacer commit, merge, rebase y reset, y se niega con cambios
       sin commitear que se perderían o tras un push.
+      *Ya existe:* el «Deshacer» inmediato del reset (10.4) y del merge y el
+      rebase (8.2/8.3), con un único registro por sesión (`UndoRecord`) que
+      cualquier otra escritura invalida, y el del descarte (aviso de 10 s).
+      Los botones «Deshacer» de la barra de arriba están desactivados con
+      «Todavía no disponible».
+      *Criterios:* vista previa de lo que se va a restaurar antes de tocar
+      nada y confirmación; los cambios sin confirmar que estorben van al
+      stash con «Recuperar mis cambios» (nunca se pierden); nunca se fuerza
+      nada, así que no se deshace lo que ya está publicado (se ofrece
+      revertir); huella: solo se deshace si el repo sigue exactamente como
+      lo dejó la operación; cada paso es un comando de git normal con los
+      argumentos separados y las refs completas; ninguna dependencia nueva.
+      *Qué se puede deshacer* (solo lo que hace GitCRAFT y solo en local):
+      commit, amend, merge y fast-forward, rebase, reset, cherry-pick,
+      revert, pull (la parte local: el merge o el rebase), checkout, crear,
+      renombrar y borrar ramas, y crear y borrar tags locales.
+      *Qué no:* nada que toque un remoto (push, publicar, borrar un tag
+      remoto; un fetch no hace falta deshacerlo), el stash (tiene su propia
+      recuperación) y los descartes (siguen con su «Deshacer» de 10 s).
+      *Decisiones del usuario:* (1) varios niveles, hasta 50 por
+      repositorio, cada uno solo si el repo sigue como lo dejó esa
+      operación; (2) la pila solo dura la sesión, y lo antiguo se recupera
+      desde el historial de la rama (11.5); (3) ⌘Z / ⇧⌘Z (Ctrl+Z / Ctrl+Y
+      fuera de macOS) solo con el foco fuera de los campos de texto; (4) el
+      botón de la barra y el atajo abren siempre el diálogo con la vista
+      previa, y el «Deshacer» de los avisos sigue siendo inmediato; (5)
+      deshacer un commit deja sus cambios preparados (`reset --soft`); (6)
+      lo ya publicado no se deshace: se niega y se ofrece «Revertir»; (7)
+      si después de deshacer se hace una operación nueva, la pila de
+      «Rehacer» se vacía, como en cualquier editor.
+      - [ ] **11.1 Diario de operaciones (core).** Cada operación que
+        escribe devuelve un registro (`OpRecord`): qué fue (para el texto
+        «Deshacer commit "x"»), las refs que movió con su valor antes y
+        después, HEAD antes y después, el árbol del índice antes
+        (`write-tree`), la copia del stash si la hizo, y la huella de
+        después. Los commits antiguos no se guardan aparte: siguen en el
+        reflog (y git no los borra mientras estén en él).
+        *Verificable:* tests de que cada operación de la lista devuelve el
+        registro correcto, y de que las que no se deshacen no lo devuelven.
+      - [ ] **11.2 Deshacer y rehacer (core).** `undo_preview(record)` y
+        `undo(record)`; `redo_preview` y `redo` para lo deshecho.
+        - **Vista previa:** qué refs vuelven y adónde, los commits que salen
+          de la rama (marcando los que no quedan en ninguna otra rama ni tag,
+          que solo seguirán en el reflog), qué pasa con el índice y los
+          archivos, y lo que estorba.
+        - **Se niega**, sin tocar nada, si: hay una operación a medias; la
+          huella no es la de después de la operación (algo cambió, en
+          GitCRAFT o fuera); los commits que saldrían ya están en una rama
+          remota (haría falta un push forzado: se explica y se ofrece
+          revertir); una rama que hay que devolver está abierta en otro
+          worktree.
+        - **Cómo:** la rama actual con `reset --keep` (no toca los cambios
+          de otros archivos) más el índice de antes, como hoy en el merge;
+          deshacer un commit o un amend deja sus cambios preparados
+          (`reset --soft`); las demás refs con `update-ref` y el valor
+          esperado; el checkout vuelve a la rama anterior; una rama o un tag
+          borrados vuelven a su commit.
+        - **Rehacer:** solo justo después de deshacer y si nada ha cambiado
+          desde entonces; deja el repo exactamente como tras la operación.
+        *Verificable:* integración para cada operación de la lista: deshacer
+        deja todo idéntico a antes (refs, HEAD, índice, archivos y stash,
+        como `full_state` en la 8) y rehacer, idéntico a después. Se niega
+        tras un push, con la huella cambiada, con una operación a medias y
+        en otro worktree. Cambios sin confirmar: en otros archivos se
+        conservan; si estorban, se guardan en el stash y se recuperan.
+      - [ ] **11.3 La pila de la sesión (Tauri).** Sustituye a
+        `UndoRecord`: una pila por repositorio con las operaciones de
+        GitCRAFT, de la más reciente a la más antigua, y otra para rehacer.
+        Una operación nueva vacía la de rehacer. Si el vigilante detecta un
+        cambio hecho fuera de GitCRAFT, las entradas cuya huella ya no
+        coincide dejan de ofrecerse (con el motivo). El «Deshacer» de los
+        avisos (reset, merge, rebase) pasa a ser la entrada de arriba de la
+        pila. Comandos `undo_state` (qué se puede deshacer y rehacer, con
+        su texto), `undo_preview`, `undo`, `redo_preview` y `redo`.
+        *Verificable:* tests de la pila: orden, límite de 50, entradas
+        invalidadas por un cambio externo, que deshacer varias seguidas
+        devuelve el repo al principio, y que una operación nueva después de
+        deshacer vacía la pila de «Rehacer».
+      - [ ] **11.4 Deshacer y rehacer en la interfaz (UI).**
+        - **Barra de arriba:** «Deshacer» y «Rehacer» (este último, nuevo)
+          activados cuando hay algo; el tooltip dice qué («Deshacer commit
+          "Añade la guía"»), o por qué no.
+        - **Atajos:** ⌘Z y ⇧⌘Z en macOS; Ctrl+Z y Ctrl+Y / Ctrl+Mayús+Z en
+          Windows y Linux. Solo cuando el foco no está en un campo de texto
+          (ahí siguen deshaciendo el texto). Van por el registro de atajos.
+        - **Diálogo:** antes de ejecutarlo, la vista previa de la 11.2, con
+          el mismo esquema y la misma forma de mostrar los commits que en la
+          8, y los botones «Deshacer» o «Guardar mis cambios y deshacer».
+        - **Resultado:** aviso con lo que se ha restaurado y «Rehacer».
+        *Verificable:* tests de interfaz: botones y tooltips, atajos dentro
+        y fuera de un campo de texto, diálogo con cada negativa, guardar en
+        el stash y «Recuperar mis cambios», rehacer.
+      - [ ] **11.5 Historial de una rama (reflog) (core y UI).** En el menú
+        de una rama y de HEAD, «Historial de la rama…»: sus entradas del
+        reflog (fecha, commit y lo que git anotó), leídas con
+        `reflog show --format` y separadores `%x00`. Para cada entrada:
+        «Ver el commit», «Crear una rama aquí» (no mueve nada) y
+        «Restablecer la rama aquí…» (el flujo del reset de la 10.4, con su
+        vista previa y su «Deshacer»). Sirve para recuperar commits tras
+        reiniciar la app, o después de algo hecho fuera de GitCRAFT. El
+        texto de cada entrada solo se muestra: no se interpreta.
+        *Verificable:* parser con fixtures reales, entradas de una rama
+        borrada y vuelta a crear, recuperar un commit tras un reset hard y
+        tests de interfaz.
+      - [ ] **11.6 Documentación y prueba a mano.** Sección en
+        ARCHITECTURE.md y `scripts/make-undo-examples.sh`, un repo
+        desechable con un remoto bare local para probar cada operación de
+        la lista, una rama ya publicada (para la negativa), y un cambio sin
+        confirmar que estorba.
+        *Verificable:* el usuario lo prueba y lo confirma.
+      *Fuera de la 11:* deshacer operaciones en un remoto, deshacer
+      operaciones hechas fuera de GitCRAFT (para eso está el historial de la
+      rama), el stash y los descartes, y conservar la pila al cerrar la app.
 - [ ] **12. Búsqueda** por mensaje, autor, hash y archivo; **historial y blame**
       de un archivo.
       *Tests:* parsers con fixtures, renombrados, y la búsqueda en un repo grande
