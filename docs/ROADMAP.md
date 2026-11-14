@@ -2373,7 +2373,7 @@ principio y toda operación destructiva pasa por confirmación.
           vista previa vieja, tras un push (un pull sí se deshace), con la
           rama abierta en otro worktree, y no se rehace si algo cambió
           después de deshacer.
-      - [ ] **11.3 La pila de la sesión (Tauri).** Sustituye a
+      - [x] **11.3 La pila de la sesión (Tauri).** Sustituye a
         `UndoRecord`: una pila por repositorio con las operaciones de
         GitCRAFT, de la más reciente a la más antigua, y otra para rehacer.
         Una operación nueva vacía la de rehacer. Si el vigilante detecta un
@@ -2386,6 +2386,29 @@ principio y toda operación destructiva pasa por confirmación.
         invalidadas por un cambio externo, que deshacer varias seguidas
         devuelve el repo al principio, y que una operación nueva después de
         deshacer vacía la pila de «Rehacer».
+        *Hecho:* `src-tauri/src/undo.rs` y `AppState::recorded`.
+        - **Qué se registra:** commit y amend, crear (y cambiar a ella),
+          renombrar y borrar ramas, checkout (también guardando los cambios
+          antes), crear y borrar tags, cherry-pick, revert, reset, merge,
+          rebase y pull. Lo que se queda con conflictos se registra al
+          continuar hasta el final, y abortar no deja nada.
+        - **Cómo:** el stash que hizo la operación se reconoce porque cambia
+          `refs/stash`. El «Deshacer» de los avisos del reset, el merge y el
+          rebase usa ya la pila, con las mismas reglas que antes. El
+          `undoId` del reset puede ser nulo si no se movió nada.
+        - **Comandos nuevos:** `undo_state`, `undo_redo_preview` y
+          `undo_redo` (tipos de TypeScript regenerados). Aún no los usa la
+          interfaz (11.4).
+        Tests: 6 nuevos de la pila:
+        - el orden, y que una operación nueva tras deshacer vacía
+          «Rehacer»;
+        - el límite de 50;
+        - deshacer tres seguidas vuelve al principio;
+        - un commit hecho fuera la deja no disponible con su motivo, y
+          vuelve al deshacerlo fuera;
+        - un merge con conflictos se registra al continuar;
+        - un cherry-pick abortado no deja nada.
+        Siguen pasando los del «Deshacer» de los avisos (merge y reset).
       - [ ] **11.4 Deshacer y rehacer en la interfaz (UI).**
         - **Barra de arriba:** «Deshacer» y «Rehacer» (este último, nuevo)
           activados cuando hay algo; el tooltip dice qué («Deshacer commit

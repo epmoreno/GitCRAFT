@@ -507,15 +507,10 @@ de…» y «Hacer rebase de…» de los menús, y el arrastre).
   git ignoran los ajustes desconocidos, pero rechazan las opciones). El
   fast-forward usa `merge --ff-only`. En los dos, un código 1 sin nada a
   medias es un error (un hook), no un conflicto.
-- **«Deshacer» compartido:** la sesión de Tauri guarda un único registro
-  de «Deshacer» (`UndoRecord`: reset o merge/rebase), que cualquier otra
-  escritura invalida (`undo_available`, `undo_operation`). Al deshacer:
-  - **la rama actual:** comprueba la huella, hace `reset --keep` al commit
-    anterior (no toca los cambios de otros archivos), vuelve a poner el
-    índice de antes (`read-tree` del árbol guardado con `write-tree`) y
-    aplica la copia del stash con `--index` si la hubo;
-  - **otra rama** (fast-forward): devuelve su ref solo si sigue donde la
-    dejó el merge.
+- **«Deshacer»:** desde la tarea 11, el merge y el rebase entran en la
+  pila de deshacer de la sesión como cualquier otra operación (sección 5j);
+  el «Deshacer» de su aviso es la entrada de arriba de la pila, mientras no
+  haya otra escritura.
 - **Arrastrar y soltar** (`drag.ts`): eventos de puntero, no el drag & drop
   de HTML5 (en Windows, la recepción de archivos de Tauri se lo queda). Las
   filas de rama de la barra lateral y las etiquetas del grafo empiezan el
@@ -593,6 +588,31 @@ Núcleo en `gitcraft-core/src/ops/journal.rs`.
   - **Vista previa:** por rama, los commits que salen (y cuántos solo
     quedarán en el reflog) y los que entran; para una rama creada o
     borrada, se cuentan frente a las demás ramas, tags y ramas remotas.
+
+- **La pila de la sesión (11.3, `src-tauri/src/undo.rs`):** cada
+  repositorio abierto tiene una pila de deshacer y otra de rehacer (como
+  mucho 50 entradas cada una), que solo duran la sesión.
+  - **Registrar:** las operaciones que se pueden deshacer pasan por
+    `AppState::recorded` (o `recorded_remote`, el pull): dentro del turno
+    de escritura, `begin` (la foto y la cima del stash), la operación y
+    `finish`, que deja el registro arriba de la pila y vacía la de rehacer.
+    El stash que haya hecho la operación se reconoce porque cambia
+    `refs/stash`; los archivos de la Papelera del reset los da su
+    resultado.
+  - **Conflictos:** si la operación se queda a medias, la foto se guarda
+    como pendiente; `continue_in_progress` y `skip_current` la registran
+    cuando termina, y abortar la olvida.
+  - **Qué se ofrece:** solo la cima de cada pila (`undo_state`), y solo si
+    HEAD y las ramas y tags locales están donde la entrada los espera; si
+    algo cambió fuera de GitCRAFT, la entrada sigue en la pila pero sale
+    con su motivo, y vuelve a ofrecerse si el repo vuelve a ese punto.
+  - **Desde el diálogo:** `undo_redo_preview` y `undo_redo` (con la huella
+    de la vista previa); al terminar, la entrada pasa a la otra pila con su
+    registro actualizado.
+  - **Desde el aviso:** `undo_available` y `undo_operation` siguen como en
+    la 8 y la 10: inmediato, solo mientras no haya otra escritura (`fresh`)
+    y solo si se puede devolver todo exactamente (o la operación no movió
+    los archivos, como el fast-forward de otra rama).
 
 ## 5f. Crear repositorios
 

@@ -26,6 +26,7 @@ use gitcraft_core::ops::reset::{ResetMode, ResetPreview};
 use gitcraft_core::ops::resolve::{MarkOutcome, ResolvedFile, Side};
 use gitcraft_core::ops::stash::{ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::tag::{RemoteTag, TagInfo, TagNameCheck, TagPushOutcome};
+use gitcraft_core::ops::undo::{Direction, UndoPreview, UndoRequest};
 use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
@@ -40,6 +41,7 @@ use crate::state::{
     AppState, DiscardResult, GhStatus, GraphEvent, MoveResult, OpenedRepository, PublishInfo,
     PullModeInfo, RepoId, ResetResult, RestoredSession,
 };
+use crate::undo::{UndoResult, UndoState};
 use gitcraft_core::gh::LoginEvent;
 use gitcraft_core::ops::publish::{self, PublishRequest, Published};
 
@@ -1100,6 +1102,37 @@ pub async fn undo_operation(
     undo_id: u32,
 ) -> Result<(), IpcError> {
     state.undo_operation(id, undo_id).await
+}
+
+/// What the toolbar's Undo and Redo offer (task 11).
+#[tauri::command]
+#[specta::specta]
+pub async fn undo_state(state: State<'_, AppState>, id: RepoId) -> Result<UndoState, IpcError> {
+    state.undo_state(id).await
+}
+
+/// What undoing or redoing entry `entry` would do. Read-only.
+#[tauri::command]
+#[specta::specta]
+pub async fn undo_redo_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    entry: u32,
+    direction: Direction,
+) -> Result<UndoPreview, IpcError> {
+    state.undo_redo_preview(id, entry, direction).await
+}
+
+/// Undoes or redoes entry `entry` as the user accepted it in the dialog.
+#[tauri::command]
+#[specta::specta]
+pub async fn undo_redo(
+    state: State<'_, AppState>,
+    id: RepoId,
+    entry: u32,
+    request: UndoRequest,
+) -> Result<UndoResult, IpcError> {
+    state.undo_redo(id, entry, request).await
 }
 
 /// Merges as the user accepted it in the dialog (task 8.2): checks

@@ -22,13 +22,14 @@ use gitcraft_core::ops::discard::{
     DiscardRecord, DiscardTarget, DiscardedFile, SystemTrash, Trash, discard, preview_discard,
     undo_discard,
 };
-use gitcraft_core::ops::in_progress::{self, ConflictSides, ContinueOutcome};
+use gitcraft_core::ops::in_progress::{self, ConflictSides, ContinueOutcome, commit_ref};
 use gitcraft_core::ops::init::{self, InitCheck};
+use gitcraft_core::ops::journal::{OpKind, OpRecord};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
 };
 use gitcraft_core::ops::merge_rebase::{
-    self, MergeRequest, MovePreview, MoveRecord, RebaseRequest,
+    self, MergeRequest, MoveOutcome, MovePreview, RebaseRequest,
 };
 use gitcraft_core::ops::pick::{self, PickOutcome, PickPreview};
 use gitcraft_core::ops::publish::{self, PublishPreview, PublishRequest, Published};
@@ -37,12 +38,15 @@ use gitcraft_core::ops::remote::{
     self, ForcePushPreview, LastFetch, PullMode, PullOutcome, PushOutcome,
 };
 use gitcraft_core::ops::repo::{self, RepoInfo};
-use gitcraft_core::ops::reset::{self as reset_ops, ResetMode, ResetPreview, ResetRecord};
+use gitcraft_core::ops::reset::{self as reset_ops, ResetMode, ResetPreview};
 use gitcraft_core::ops::resolve::{self, MarkOutcome, ResolvedFile, Side};
 use gitcraft_core::ops::stage;
 use gitcraft_core::ops::stash::{self, ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::status::working_status;
 use gitcraft_core::ops::tag::{self, RemoteTag, TagInfo, TagNameCheck, TagPushOutcome};
+use gitcraft_core::ops::undo::{
+    self as undo_ops, Direction, UndoOutcome, UndoPreview, UndoRequest,
+};
 use gitcraft_core::ops::worktree::{
     SelectionAction, WorktreeArea, apply_selection, worktree_file_diff,
 };
@@ -56,6 +60,7 @@ use serde::Serialize;
 
 use crate::error::IpcError;
 use crate::settings::{GeneralSettings, RecentRepository, SavedSession, Settings, SettingsFile};
+use crate::undo::{self, Described, Finished, UndoResult, UndoStack, UndoState};
 use crate::watcher::{RepoWatcher, Suppression};
 
 pub type RepoId = u32;
@@ -146,9 +151,8 @@ struct RepoSession {
     watcher: Option<RepoWatcher>,
     /// Recent discards that can be undone, by id.
     discards: Vec<(u32, DiscardRecord)>,
-    /// The last reset, merge or rebase, undoable until the next write in
-    /// this repository.
-    undo: Option<(u32, UndoRecord)>,
+    /// What can be undone and redone (task 11).
+    stack: UndoStack,
     /// Serializes this repository's writes (git's index.lock allows one).
     write_lock: Arc<tokio::sync::Mutex<()>>,
 }
@@ -212,13 +216,6 @@ pub struct AppState {
     inner: Mutex<Inner>,
 }
 
-/// What "Undo" can put back.
-#[derive(Debug, Clone)]
-enum UndoRecord {
-    Reset(ResetRecord),
-    Move(MoveRecord),
-}
-
 /// The outcome of a merge or rebase, with the id to undo it once done.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -231,7 +228,7 @@ pub struct MoveResult {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ResetResult {
-    pub undo_id: u32,
+    pub undo_id: Option<u32>,
     /// The stash entry "GitCRAFT: antes de reset a …" with a copy of the
     /// uncommitted work, if one was made.
     pub stash: Option<String>,
@@ -314,7 +311,7 @@ impl AppState {
             watcher: self.watch(id, &info),
             write_lock: Arc::default(),
             discards: Vec::new(),
-            undo: None,
+            stack: UndoStack::default(),
         });
         Ok(OpenedRepository { id, info })
     }
@@ -415,9 +412,8 @@ impl AppState {
                 .iter_mut()
                 .find(|s| s.id == id)
                 .ok_or(GitError::Cancelled)?;
-            // Any other write ends what "Undo" of the last reset, merge or
-            // rebase can do.
-            session.undo = None;
+            // Any write ends what the "Undo" of the last notice can do.
+            session.stack.written();
             (
                 PathBuf::from(&session.info.path),
                 Arc::clone(&session.write_lock),
@@ -428,6 +424,121 @@ impl AppState {
         let result = op(path).await;
         drop(quiet);
         Ok(result?)
+    }
+
+    /// A write that can be undone (task 11): runs `op` between a snapshot
+    /// and a record, described by `describe` once it ran. Returns its
+    /// outcome and the id of its undo entry, if it made one.
+    async fn recorded<T, Fut>(
+        &self,
+        id: RepoId,
+        op: impl FnOnce(PathBuf) -> Fut,
+        describe: impl FnOnce(&T) -> Option<Described>,
+    ) -> Result<(T, Option<u32>), IpcError>
+    where
+        Fut: std::future::Future<Output = gitcraft_core::Result<T>>,
+    {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        let (out, finished) = self
+            .write(id, |repo| async move {
+                let before = undo::begin(git, &repo, &cancel).await?;
+                let out = op(repo.clone()).await?;
+                let finished = undo::finish(git, &repo, before, describe(&out), &cancel).await?;
+                Ok((out, finished))
+            })
+            .await?;
+        Ok((out, self.journal(id, finished)?))
+    }
+
+    /// Like [`recorded`](Self::recorded), for a remote operation (a pull).
+    async fn recorded_remote<T, Fut>(
+        &self,
+        id: RepoId,
+        op: impl FnOnce(PathBuf, CancellationToken) -> Fut,
+        describe: impl FnOnce(&T) -> Option<Described>,
+    ) -> Result<(T, Option<u32>), IpcError>
+    where
+        Fut: std::future::Future<Output = gitcraft_core::Result<T>>,
+    {
+        let git = self.git()?;
+        let (out, finished) = self
+            .remote_operation(id, |repo, cancel| async move {
+                let before = undo::begin(git, &repo, &cancel).await?;
+                let out = op(repo.clone(), cancel.clone()).await?;
+                let finished = undo::finish(git, &repo, before, describe(&out), &cancel).await?;
+                Ok((out, finished))
+            })
+            .await?;
+        Ok((out, self.journal(id, finished)?))
+    }
+
+    /// Continues (or skips in) an operation that stopped with conflicts:
+    /// when it ends, it is recorded as the operation that started it.
+    async fn continued<Fut>(
+        &self,
+        id: RepoId,
+        op: impl FnOnce(PathBuf) -> Fut,
+    ) -> Result<ContinueOutcome, IpcError>
+    where
+        Fut: std::future::Future<Output = gitcraft_core::Result<ContinueOutcome>>,
+    {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        let pending = self.with_stack(id, |stack| stack.pending().cloned())?;
+        let (out, finished) = self
+            .write(id, |repo| async move {
+                let out = op(repo.clone()).await?;
+                let finished = match pending {
+                    Some(pending) => undo::finish_pending(git, &repo, pending, &cancel).await?,
+                    None => Finished::Nothing,
+                };
+                Ok((out, finished))
+            })
+            .await?;
+        if !matches!(finished, Finished::Pending(_)) {
+            self.with_stack(id, |stack| stack.set_pending(None))?;
+        }
+        self.journal(id, finished)?;
+        Ok(out)
+    }
+
+    fn with_stack<R>(
+        &self,
+        id: RepoId,
+        f: impl FnOnce(&mut UndoStack) -> R,
+    ) -> Result<R, IpcError> {
+        let mut inner = self.lock();
+        let session = inner
+            .sessions
+            .iter_mut()
+            .find(|s| s.id == id)
+            .ok_or(GitError::Cancelled)?;
+        Ok(f(&mut session.stack))
+    }
+
+    /// Keeps what an operation left: a new undo entry (its id), or the
+    /// operation waiting on conflicts.
+    fn journal(&self, id: RepoId, finished: Finished) -> Result<Option<u32>, IpcError> {
+        let mut inner = self.lock();
+        inner.next_discard += 1;
+        let entry = inner.next_discard;
+        let session = inner
+            .sessions
+            .iter_mut()
+            .find(|s| s.id == id)
+            .ok_or(GitError::Cancelled)?;
+        Ok(match finished {
+            Finished::Recorded(record) => {
+                session.stack.push(entry, record);
+                Some(entry)
+            }
+            Finished::Pending(pending) => {
+                session.stack.set_pending(Some(pending));
+                None
+            }
+            Finished::Nothing => None,
+        })
     }
 
     /// Runs a remote operation (fetch, pull, push): one write at a time,
@@ -532,15 +643,37 @@ impl AppState {
     ) -> Result<PullOutcome, IpcError> {
         let git = self.git()?;
         let mode = self.pull_mode(id).await?.mode;
-        self.remote_operation(id, |repo, cancel| async move {
-            if save_local {
-                remote::stash_and_pull(git, &repo, mode, allow_conflicts, &cancel, on_progress)
-                    .await
-            } else {
-                remote::pull(git, &repo, mode, allow_conflicts, &cancel, on_progress).await
-            }
-        })
-        .await
+        let path = self.session_path(id)?;
+        let branch = remote::current_branch(git, &path, &CancellationToken::new())
+            .await
+            .unwrap_or_default();
+        let (outcome, _) = self
+            .recorded_remote(
+                id,
+                |repo, cancel| async move {
+                    if save_local {
+                        remote::stash_and_pull(
+                            git,
+                            &repo,
+                            mode,
+                            allow_conflicts,
+                            &cancel,
+                            on_progress,
+                        )
+                        .await
+                    } else {
+                        remote::pull(git, &repo, mode, allow_conflicts, &cancel, on_progress).await
+                    }
+                },
+                |outcome| match outcome {
+                    PullOutcome::Pulled { .. } | PullOutcome::Conflicted { .. } => {
+                        Described::kind(OpKind::Pull { branch })
+                    }
+                    _ => None,
+                },
+            )
+            .await?;
+        Ok(outcome)
     }
 
     /// Pushes the current branch (or publishes it to `publish_to`); forced
@@ -587,7 +720,8 @@ impl AppState {
         self.write(id, |repo| async move {
             remote::abort_in_progress(git, &repo, &cancel).await
         })
-        .await
+        .await?;
+        self.with_stack(id, |stack| stack.set_pending(None))
     }
 
     fn git(&self) -> Result<&Git, IpcError> {
@@ -633,10 +767,21 @@ impl AppState {
         let git = self.git()?;
         let message = compose_message(summary, description);
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            create_commit(git, &repo, &message, amend, &cancel).await
-        })
-        .await
+        let summary = summary.to_owned();
+        let (oid, _) = self
+            .recorded(
+                id,
+                |repo| async move { create_commit(git, &repo, &message, amend, &cancel).await },
+                |_| {
+                    Described::kind(if amend {
+                        OpKind::Amend { summary }
+                    } else {
+                        OpKind::Commit { summary }
+                    })
+                },
+            )
+            .await?;
+        Ok(oid)
     }
 
     /// The last commit, to prefill and confirm an amend.
@@ -784,16 +929,23 @@ impl AppState {
     ) -> Result<Option<CheckoutOutcome>, IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            branch::create_branch(git, &repo, &name, &start, track, &cancel).await?;
-            if !checkout {
-                return Ok(None);
-            }
-            branch::checkout_branch(git, &repo, &name, &cancel)
-                .await
-                .map(Some)
-        })
-        .await
+        let kind = OpKind::CreateBranch { name: name.clone() };
+        let (outcome, _) = self
+            .recorded(
+                id,
+                |repo| async move {
+                    branch::create_branch(git, &repo, &name, &start, track, &cancel).await?;
+                    if !checkout {
+                        return Ok(None);
+                    }
+                    branch::checkout_branch(git, &repo, &name, &cancel)
+                        .await
+                        .map(Some)
+                },
+                |_| Described::kind(kind),
+            )
+            .await?;
+        Ok(outcome)
     }
 
     pub async fn rename_branch(
@@ -804,10 +956,17 @@ impl AppState {
     ) -> Result<(), IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            branch::rename_branch(git, &repo, &old, &new, &cancel).await
-        })
-        .await
+        let kind = OpKind::RenameBranch {
+            old: old.clone(),
+            new: new.clone(),
+        };
+        self.recorded(
+            id,
+            |repo| async move { branch::rename_branch(git, &repo, &old, &new, &cancel).await },
+            |_| Described::kind(kind),
+        )
+        .await?;
+        Ok(())
     }
 
     /// What deleting branch `name` would leave without a branch.
@@ -830,10 +989,16 @@ impl AppState {
     ) -> Result<(), IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            branch::delete_branch(git, &repo, &name, &expected_tip, &cancel).await
-        })
-        .await
+        let kind = OpKind::DeleteBranch { name: name.clone() };
+        self.recorded(
+            id,
+            |repo| async move {
+                branch::delete_branch(git, &repo, &name, &expected_tip, &cancel).await
+            },
+            |_| Described::kind(kind),
+        )
+        .await?;
+        Ok(())
     }
 
     /// Switches branch, never forcing.
@@ -844,10 +1009,17 @@ impl AppState {
     ) -> Result<CheckoutOutcome, IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            branch::checkout_branch(git, &repo, &name, &cancel).await
-        })
-        .await
+        let kind = OpKind::Checkout {
+            branch: name.clone(),
+        };
+        let (outcome, _) = self
+            .recorded(
+                id,
+                |repo| async move { branch::checkout_branch(git, &repo, &name, &cancel).await },
+                |outcome| switched(outcome, kind),
+            )
+            .await?;
+        Ok(outcome)
     }
 
     /// Stashes every uncommitted change, then switches.
@@ -859,10 +1031,19 @@ impl AppState {
     ) -> Result<CheckoutOutcome, IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            branch::stash_and_checkout(git, &repo, &name, include_untracked, &cancel).await
-        })
-        .await
+        let kind = OpKind::Checkout {
+            branch: name.clone(),
+        };
+        let (outcome, _) = self
+            .recorded(
+                id,
+                |repo| async move {
+                    branch::stash_and_checkout(git, &repo, &name, include_untracked, &cancel).await
+                },
+                |outcome| switched(outcome, kind),
+            )
+            .await?;
+        Ok(outcome)
     }
 
     /// Every stash entry, newest first.
@@ -1493,10 +1674,17 @@ impl AppState {
     ) -> Result<TagInfo, IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            tag::create_tag(git, &repo, &oid, &name, message.as_deref(), &cancel).await
-        })
-        .await
+        let kind = OpKind::CreateTag { name: name.clone() };
+        let (info, _) = self
+            .recorded(
+                id,
+                |repo| async move {
+                    tag::create_tag(git, &repo, &oid, &name, message.as_deref(), &cancel).await
+                },
+                |_| Described::kind(kind),
+            )
+            .await?;
+        Ok(info)
     }
 
     pub async fn delete_tag(
@@ -1507,10 +1695,14 @@ impl AppState {
     ) -> Result<(), IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            tag::delete_tag(git, &repo, &name, &expected, &cancel).await
-        })
-        .await
+        let kind = OpKind::DeleteTag { name: name.clone() };
+        self.recorded(
+            id,
+            |repo| async move { tag::delete_tag(git, &repo, &name, &expected, &cancel).await },
+            |_| Described::kind(kind),
+        )
+        .await?;
+        Ok(())
     }
 
     /// Which remotes have tag `name` (network; cancellable).
@@ -1560,8 +1752,8 @@ impl AppState {
         Ok(reset_ops::reset_preview(git, &repo, oid, mode, &CancellationToken::new()).await?)
     }
 
-    /// Resets the current branch (see `ops::reset`); "Undo" stays possible
-    /// until the next write in this repository.
+    /// Resets the current branch (see `ops::reset`); its notice's "Undo"
+    /// stays possible until the next write in this repository.
     pub async fn reset(
         &self,
         id: RepoId,
@@ -1572,87 +1764,184 @@ impl AppState {
         let git = self.git()?;
         let trash = Arc::clone(&self.trash);
         let cancel = CancellationToken::new();
-        let record = self
-            .write(id, |repo| async move {
-                reset_ops::reset(git, &repo, &oid, mode, &expected, trash.as_ref(), &cancel).await
-            })
+        let target = oid.chars().take(7).collect::<String>();
+        let (record, undo_id) = self
+            .recorded(
+                id,
+                |repo| async move {
+                    reset_ops::reset(git, &repo, &oid, mode, &expected, trash.as_ref(), &cancel)
+                        .await
+                },
+                |record| {
+                    Some(Described {
+                        kind: OpKind::Reset { mode, target },
+                        trashed: record.trashed.clone(),
+                    })
+                },
+            )
             .await?;
-        let stash = record.stash.clone();
-        let trashed = u32::try_from(record.trashed.len()).unwrap_or(u32::MAX);
-        let undo_id = self.remember_undo(id, UndoRecord::Reset(record))?;
         Ok(ResetResult {
             undo_id,
-            stash,
-            trashed,
+            stash: record.stash,
+            trashed: u32::try_from(record.trashed.len()).unwrap_or(u32::MAX),
         })
     }
 
-    /// Keeps `record` as what "Undo" can put back, and returns its id.
-    fn remember_undo(&self, id: RepoId, record: UndoRecord) -> Result<u32, IpcError> {
-        let mut inner = self.lock();
-        inner.next_discard += 1;
-        let undo_id = inner.next_discard;
-        let session = inner
-            .sessions
-            .iter_mut()
-            .find(|s| s.id == id)
-            .ok_or(GitError::Cancelled)?;
-        session.undo = Some((undo_id, record));
-        Ok(undo_id)
-    }
-
-    /// Whether the reset, merge or rebase `undo_id` can still be undone (no
-    /// write since).
+    /// Whether the notice's "Undo" of entry `undo_id` still applies: it is
+    /// the last operation and nothing was written since.
     pub fn undo_available(&self, id: RepoId, undo_id: u32) -> bool {
-        self.lock()
-            .sessions
-            .iter()
-            .find(|s| s.id == id)
-            .and_then(|s| s.undo.as_ref())
-            .is_some_and(|(u, _)| *u == undo_id)
+        self.with_stack(id, |stack| {
+            stack
+                .top_with(Direction::Undo, undo_id)
+                .is_some_and(|e| e.fresh)
+        })
+        .unwrap_or(false)
     }
 
-    /// Puts everything back as it was before the reset, merge or rebase
-    /// `undo_id`, if nothing changed since (else `UndoConflict`, nothing
-    /// touched).
+    /// The notice's "Undo": puts everything back exactly as before entry
+    /// `undo_id`, at once, if nothing changed since (else `UndoConflict`,
+    /// nothing touched).
     pub async fn undo_operation(&self, id: RepoId, undo_id: u32) -> Result<(), IpcError> {
         let git = self.git()?;
-        let record = {
-            let inner = self.lock();
-            inner
-                .sessions
-                .iter()
-                .find(|s| s.id == id)
-                .and_then(|s| s.undo.as_ref())
-                .filter(|(u, _)| *u == undo_id)
-                .map(|(_, r)| r.clone())
-                .ok_or_else(|| GitError::UndoConflict(String::new()))?
-        };
+        let record = self
+            .with_stack(id, |stack| {
+                stack
+                    .top_with(Direction::Undo, undo_id)
+                    .filter(|e| e.fresh)
+                    .map(|e| e.record.clone())
+            })?
+            .ok_or_else(|| GitError::UndoConflict(String::new()))?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            match &record {
-                UndoRecord::Reset(r) => reset_ops::undo_reset(git, &repo, r, &cancel).await,
-                UndoRecord::Move(r) => merge_rebase::undo_move(git, &repo, r, &cancel).await,
+        let outcome = self
+            .write(id, |repo| async move {
+                let preview =
+                    undo_ops::undo_preview(git, &repo, &record, Direction::Undo, &cancel).await?;
+                if preview.refused.is_some() || (!preview.exact && moves_files(&record)) {
+                    return Err(GitError::UndoConflict(String::new()));
+                }
+                let request = UndoRequest {
+                    direction: Direction::Undo,
+                    expected: preview.fingerprint,
+                    save_changes: false,
+                };
+                undo_ops::undo(git, &repo, &record, &request, &cancel).await
+            })
+            .await?;
+        match outcome {
+            UndoOutcome::Done { record, .. } => {
+                self.with_stack(id, |stack| stack.moved(Direction::Undo, undo_id, *record))
             }
-        })
-        .await
+            UndoOutcome::NotDone { .. } => Err(GitError::UndoConflict(String::new()).into()),
+        }
     }
 
-    /// Merges as the user accepted it (task 8.2). When it is done, "Undo"
-    /// stays possible until the next write in this repository.
+    /// What the toolbar's Undo and Redo offer now.
+    pub async fn undo_state(&self, id: RepoId) -> Result<UndoState, IpcError> {
+        let git = self.git()?;
+        let path = self.session_path(id)?;
+        let (undo_top, redo_top) = self.with_stack(id, |stack| {
+            (
+                stack.top(Direction::Undo).cloned(),
+                stack.top(Direction::Redo).cloned(),
+            )
+        })?;
+        let cancel = CancellationToken::new();
+        Ok(UndoState {
+            undo: undo::stack_top(git, &path, undo_top, Direction::Undo, &cancel).await?,
+            redo: undo::stack_top(git, &path, redo_top, Direction::Redo, &cancel).await?,
+        })
+    }
+
+    /// The top entry of `direction`'s stack, if it is `entry`.
+    fn entry_record(
+        &self,
+        id: RepoId,
+        entry: u32,
+        direction: Direction,
+    ) -> Result<OpRecord, IpcError> {
+        self.with_stack(id, |stack| {
+            stack.top_with(direction, entry).map(|e| e.record.clone())
+        })?
+        .ok_or_else(|| GitError::UndoConflict(String::new()).into())
+    }
+
+    /// What undoing or redoing entry `entry` would do (the dialog).
+    pub async fn undo_redo_preview(
+        &self,
+        id: RepoId,
+        entry: u32,
+        direction: Direction,
+    ) -> Result<UndoPreview, IpcError> {
+        let git = self.git()?;
+        let path = self.session_path(id)?;
+        let record = self.entry_record(id, entry, direction)?;
+        Ok(
+            undo_ops::undo_preview(git, &path, &record, direction, &CancellationToken::new())
+                .await?,
+        )
+    }
+
+    /// Undoes or redoes entry `entry` as the user accepted it in the dialog.
+    pub async fn undo_redo(
+        &self,
+        id: RepoId,
+        entry: u32,
+        request: UndoRequest,
+    ) -> Result<UndoResult, IpcError> {
+        let git = self.git()?;
+        let direction = request.direction;
+        let record = self.entry_record(id, entry, direction)?;
+        let cancel = CancellationToken::new();
+        let outcome = self
+            .write(id, |repo| async move {
+                undo_ops::undo(git, &repo, &record, &request, &cancel).await
+            })
+            .await?;
+        Ok(match outcome {
+            UndoOutcome::Done {
+                record,
+                saved,
+                exact,
+                unstaged,
+            } => {
+                self.with_stack(id, |stack| stack.moved(direction, entry, *record))?;
+                UndoResult::Done {
+                    saved,
+                    exact,
+                    unstaged,
+                }
+            }
+            UndoOutcome::NotDone { preview } => UndoResult::NotDone { preview },
+        })
+    }
+
+    /// Merges as the user accepted it (task 8.2). When it is done, its
+    /// notice's "Undo" stays possible until the next write.
     pub async fn merge(&self, id: RepoId, request: MergeRequest) -> Result<MoveResult, IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        let (outcome, record) = self
-            .write(id, |repo| async move {
-                merge_rebase::merge(git, &repo, &request, &cancel).await
-            })
+        let source = short_ref(&request.source);
+        let (outcome, undo_id) = self
+            .recorded(
+                id,
+                |repo| async move { merge_rebase::merge(git, &repo, &request, &cancel).await },
+                |(outcome, _)| match outcome {
+                    MoveOutcome::Done { fast_forward, .. } => Described::kind(OpKind::Merge {
+                        source,
+                        fast_forward: *fast_forward,
+                    }),
+                    MoveOutcome::Conflicted { .. } => Described::kind(OpKind::Merge {
+                        source,
+                        fast_forward: false,
+                    }),
+                    MoveOutcome::NotDone { .. } => None,
+                },
+            )
             .await?;
-        let undo_id = match record {
-            Some(record) => Some(self.remember_undo(id, UndoRecord::Move(record))?),
-            None => None,
-        };
-        Ok(MoveResult { outcome, undo_id })
+        Ok(MoveResult {
+            outcome: outcome.0,
+            undo_id,
+        })
     }
 
     /// Rebases as the user accepted it (task 8.3), with "Undo" like the
@@ -1660,16 +1949,23 @@ impl AppState {
     pub async fn rebase(&self, id: RepoId, request: RebaseRequest) -> Result<MoveResult, IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        let (outcome, record) = self
-            .write(id, |repo| async move {
-                merge_rebase::rebase(git, &repo, &request, &cancel).await
-            })
+        let onto = short_ref(&request.target);
+        let (outcome, undo_id) = self
+            .recorded(
+                id,
+                |repo| async move { merge_rebase::rebase(git, &repo, &request, &cancel).await },
+                |(outcome, _)| match outcome {
+                    MoveOutcome::Done { .. } | MoveOutcome::Conflicted { .. } => {
+                        Described::kind(OpKind::Rebase { onto })
+                    }
+                    MoveOutcome::NotDone { .. } => None,
+                },
+            )
             .await?;
-        let undo_id = match record {
-            Some(record) => Some(self.remember_undo(id, UndoRecord::Move(record))?),
-            None => None,
-        };
-        Ok(MoveResult { outcome, undo_id })
+        Ok(MoveResult {
+            outcome: outcome.0,
+            undo_id,
+        })
     }
 
     /// When `remote` was last fetched, as far as git can tell.
@@ -1734,10 +2030,17 @@ impl AppState {
     ) -> Result<PickOutcome, IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            pick::revert(git, &repo, &oid, save_changes, allow_conflicts, &cancel).await
-        })
-        .await
+        let summary = self.subject(id, &oid).await?;
+        let (outcome, _) = self
+            .recorded(
+                id,
+                |repo| async move {
+                    pick::revert(git, &repo, &oid, save_changes, allow_conflicts, &cancel).await
+                },
+                |outcome| picked(outcome, OpKind::Revert { summary }),
+            )
+            .await?;
+        Ok(outcome)
     }
 
     pub async fn cherry_pick(
@@ -1749,10 +2052,27 @@ impl AppState {
     ) -> Result<PickOutcome, IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
-            pick::cherry_pick(git, &repo, &oid, save_changes, allow_conflicts, &cancel).await
-        })
-        .await
+        let summary = self.subject(id, &oid).await?;
+        let (outcome, _) = self
+            .recorded(
+                id,
+                |repo| async move {
+                    pick::cherry_pick(git, &repo, &oid, save_changes, allow_conflicts, &cancel)
+                        .await
+                },
+                |outcome| picked(outcome, OpKind::CherryPick { summary }),
+            )
+            .await?;
+        Ok(outcome)
+    }
+
+    /// The subject of commit `oid`, for the undo texts.
+    async fn subject(&self, id: RepoId, oid: &str) -> Result<String, IpcError> {
+        let git = self.git()?;
+        let path = self.session_path(id)?;
+        Ok(commit_ref(git, &path, oid, &CancellationToken::new())
+            .await?
+            .subject)
     }
 }
 
@@ -1862,7 +2182,7 @@ impl AppState {
     ) -> Result<ContinueOutcome, IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
+        self.continued(id, |repo| async move {
             in_progress::continue_in_progress(git, &repo, message.as_deref(), &cancel).await
         })
         .await
@@ -1871,7 +2191,7 @@ impl AppState {
     pub async fn skip_current(&self, id: RepoId) -> Result<ContinueOutcome, IpcError> {
         let git = self.git()?;
         let cancel = CancellationToken::new();
-        self.write(id, |repo| async move {
+        self.continued(id, |repo| async move {
             in_progress::skip_current(git, &repo, &cancel).await
         })
         .await
@@ -1887,10 +2207,45 @@ impl AppState {
     }
 }
 
+/// A switch that happened can be undone; one git refused cannot.
+fn switched(outcome: &CheckoutOutcome, kind: OpKind) -> Option<Described> {
+    matches!(outcome, CheckoutOutcome::Switched)
+        .then_some(kind)
+        .and_then(Described::kind)
+}
+
+/// A cherry-pick or revert that was done, or stopped on conflicts.
+fn picked(outcome: &PickOutcome, kind: OpKind) -> Option<Described> {
+    match outcome {
+        PickOutcome::Done { .. } | PickOutcome::Conflicted { .. } => Described::kind(kind),
+        PickOutcome::NotDone { .. } => None,
+    }
+}
+
+/// `main` for `refs/heads/main`, `origin/main` for `refs/remotes/origin/main`.
+fn short_ref(refname: &str) -> String {
+    refname
+        .strip_prefix("refs/heads/")
+        .or_else(|| refname.strip_prefix("refs/remotes/"))
+        .unwrap_or(refname)
+        .to_owned()
+}
+
+/// Whether undoing the operation changes files (HEAD or its branch moves).
+fn moves_files(record: &OpRecord) -> bool {
+    use gitcraft_core::ops::journal::HeadAt;
+    record.head_before != record.head_after
+        || match &record.head_after {
+            HeadAt::Branch { name } => record.refs.iter().any(|c| &c.refname == name),
+            HeadAt::Detached { .. } => false,
+        }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use gitcraft_core::ErrorKind;
+    use gitcraft_core::ops::undo::UndoRefusal;
     use gitcraft_core::testing::TestRepo;
 
     struct Fixture {
@@ -2169,27 +2524,26 @@ mod tests {
 
         let result = hard_reset(&f.state, id, &ids["M"]).await;
         assert!(result.stash.is_some());
-        assert!(f.state.undo_available(id, result.undo_id));
-        f.state
-            .undo_operation(id, result.undo_id)
-            .await
-            .expect("undo");
+        let undo_id = result.undo_id.expect("undoable");
+        assert!(f.state.undo_available(id, undo_id));
+        f.state.undo_operation(id, undo_id).await.expect("undo");
         assert_eq!(repo.head().await, head);
         assert_eq!(
             std::fs::read_to_string(repo.path().join("main.txt")).expect("read"),
             "b\ne\nlocal edit\n"
         );
         // Once.
-        assert!(f.state.undo_operation(id, result.undo_id).await.is_err());
+        assert!(f.state.undo_operation(id, undo_id).await.is_err());
 
         // Any other write in the repository ends it.
         let result = hard_reset(&f.state, id, &ids["M"]).await;
+        let undo_id = result.undo_id.expect("undoable");
         f.state
             .stage(id, Some(vec!["main.txt".into()]))
             .await
             .expect("stage");
-        assert!(!f.state.undo_available(id, result.undo_id));
-        assert!(f.state.undo_operation(id, result.undo_id).await.is_err());
+        assert!(!f.state.undo_available(id, undo_id));
+        assert!(f.state.undo_operation(id, undo_id).await.is_err());
         assert_eq!(repo.head().await, ids["M"], "nothing was undone");
     }
 
@@ -2556,5 +2910,236 @@ mod tests {
         let restored = state.restore_session().await;
         assert_eq!(restored.opened.len(), 2);
         assert!(restored.failed.is_empty());
+    }
+
+    // --- The undo and redo stacks (task 11.3) ---
+
+    /// Stages everything and commits `summary` through the app.
+    async fn app_commit(f: &Fixture, id: RepoId, repo: &TestRepo, file: &str, summary: &str) {
+        repo.write_file(file, &format!("{summary}\n"));
+        f.state.stage(id, None).await.expect("stage");
+        f.state
+            .commit(id, summary, "", false)
+            .await
+            .expect("commit");
+    }
+
+    async fn top(f: &Fixture, id: RepoId) -> UndoState {
+        f.state.undo_state(id).await.expect("undo state")
+    }
+
+    /// Undoes or redoes the top entry from the dialog, accepting the preview.
+    async fn from_dialog(f: &Fixture, id: RepoId, direction: Direction) -> UndoResult {
+        let state = top(f, id).await;
+        let entry = match direction {
+            Direction::Undo => state.undo,
+            Direction::Redo => state.redo,
+        }
+        .expect("an entry");
+        let preview = f
+            .state
+            .undo_redo_preview(id, entry.id, direction)
+            .await
+            .expect("preview");
+        let request = UndoRequest {
+            direction,
+            expected: preview.fingerprint,
+            save_changes: false,
+        };
+        f.state
+            .undo_redo(id, entry.id, request)
+            .await
+            .expect("undo or redo")
+    }
+
+    fn summary_of(kind: &OpKind) -> String {
+        match kind {
+            OpKind::Commit { summary } => summary.clone(),
+            OpKind::CreateBranch { name } => format!("branch {name}"),
+            OpKind::CreateTag { name } => format!("tag {name}"),
+            other => format!("{other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn the_stacks_keep_the_order_and_a_new_operation_empties_redo() {
+        let f = fixture();
+        let repo = TestRepo::new().await;
+        repo.commit_file("a.txt", "a\n", "A").await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        assert_eq!(top(&f, id).await, UndoState::default());
+
+        app_commit(&f, id, &repo, "b.txt", "B").await;
+        app_commit(&f, id, &repo, "c.txt", "C").await;
+        let state = top(&f, id).await;
+        let undo = state.undo.expect("undo");
+        assert_eq!(summary_of(&undo.kind), "C");
+        assert_eq!(undo.refused, None);
+        assert_eq!(state.redo, None);
+
+        assert!(matches!(
+            from_dialog(&f, id, Direction::Undo).await,
+            UndoResult::Done { .. }
+        ));
+        let state = top(&f, id).await;
+        assert_eq!(summary_of(&state.undo.expect("undo").kind), "B");
+        assert_eq!(summary_of(&state.redo.expect("redo").kind), "C");
+
+        // Redo, then undo again: the same entry goes back and forth.
+        from_dialog(&f, id, Direction::Redo).await;
+        assert_eq!(summary_of(&top(&f, id).await.undo.expect("undo").kind), "C");
+        from_dialog(&f, id, Direction::Undo).await;
+
+        // A new operation after undoing empties the redo stack.
+        f.state
+            .create_branch(id, "new".into(), "HEAD".into(), false, false)
+            .await
+            .expect("branch");
+        let state = top(&f, id).await;
+        assert_eq!(state.redo, None);
+        assert_eq!(summary_of(&state.undo.expect("undo").kind), "branch new");
+    }
+
+    #[tokio::test]
+    async fn the_stack_keeps_the_last_fifty() {
+        let f = fixture();
+        let repo = TestRepo::new().await;
+        repo.commit_file("a.txt", "a\n", "A").await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        for i in 0..undo::MAX_ENTRIES + 5 {
+            f.state
+                .create_branch(id, format!("b{i}"), "HEAD".into(), false, false)
+                .await
+                .expect("branch");
+        }
+        let len = f
+            .state
+            .with_stack(id, |stack| stack.len(Direction::Undo))
+            .expect("stack");
+        assert_eq!(len, undo::MAX_ENTRIES);
+    }
+
+    #[tokio::test]
+    async fn several_undos_go_back_to_the_beginning() {
+        let f = fixture();
+        let repo = TestRepo::new().await;
+        repo.commit_file("a.txt", "a\n", "A").await;
+        let refs = || repo.run(&["for-each-ref", "--format=%(refname) %(objectname)"]);
+        let start = refs().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        app_commit(&f, id, &repo, "b.txt", "B").await;
+        f.state
+            .create_branch(id, "side".into(), "HEAD".into(), false, true)
+            .await
+            .expect("branch and switch");
+        let head = repo.head().await;
+        f.state
+            .create_tag(id, head, "v1".into(), Some("one".into()))
+            .await
+            .expect("tag");
+        for _ in 0..3 {
+            assert!(matches!(
+                from_dialog(&f, id, Direction::Undo).await,
+                UndoResult::Done { .. }
+            ));
+        }
+        assert_eq!(refs().await, start);
+        assert_eq!(repo.run(&["symbolic-ref", "HEAD"]).await, "refs/heads/main");
+        assert_eq!(top(&f, id).await.undo, None);
+    }
+
+    #[tokio::test]
+    async fn a_change_made_outside_makes_the_entry_unavailable() {
+        let f = fixture();
+        let repo = TestRepo::new().await;
+        repo.commit_file("a.txt", "a\n", "A").await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        app_commit(&f, id, &repo, "b.txt", "B").await;
+
+        // A commit in the terminal.
+        repo.commit_file("c.txt", "c\n", "outside").await;
+        let undo = top(&f, id).await.undo.expect("still listed");
+        assert_eq!(undo.refused, Some(UndoRefusal::Changed));
+        let preview = f
+            .state
+            .undo_redo_preview(id, undo.id, Direction::Undo)
+            .await
+            .expect("preview");
+        assert_eq!(preview.refused, Some(UndoRefusal::Changed));
+
+        // Undone outside too: available again.
+        repo.run(&["reset", "-q", "--soft", "HEAD~1"]).await;
+        repo.run(&["reset", "-q"]).await;
+        assert_eq!(top(&f, id).await.undo.expect("listed").refused, None);
+    }
+
+    #[tokio::test]
+    async fn a_merge_continued_after_conflicts_is_recorded() {
+        let f = fixture();
+        let repo = TestRepo::new().await;
+        repo.commit_file("f.txt", "base\n", "base").await;
+        repo.create_branch("other").await;
+        repo.checkout("other").await;
+        repo.commit_file("f.txt", "other\n", "other").await;
+        repo.checkout("main").await;
+        repo.commit_file("f.txt", "main\n", "main").await;
+        let start = repo.head().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        let preview = f
+            .state
+            .merge_preview(id, "refs/heads/other", "refs/heads/main")
+            .await
+            .expect("preview");
+        let request = MergeRequest {
+            source: preview.source.refname,
+            target: preview.target.refname,
+            expected: preview.fingerprint,
+            no_ff: false,
+            message: None,
+            save_changes: false,
+            allow_conflicts: true,
+        };
+        let result = f.state.merge(id, request).await.expect("merge");
+        assert_eq!(result.undo_id, None, "waiting on conflicts");
+        assert_eq!(top(&f, id).await.undo, None);
+
+        repo.write_file("f.txt", "both\n");
+        repo.run(&["add", "f.txt"]).await;
+        f.state
+            .continue_in_progress(id, None)
+            .await
+            .expect("continue");
+        let undo = top(&f, id).await.undo.expect("recorded");
+        assert!(matches!(undo.kind, OpKind::Merge { .. }), "{:?}", undo.kind);
+        assert!(matches!(
+            from_dialog(&f, id, Direction::Undo).await,
+            UndoResult::Done { .. }
+        ));
+        assert_eq!(repo.head().await, start);
+    }
+
+    #[tokio::test]
+    async fn an_aborted_operation_leaves_nothing_to_undo() {
+        let f = fixture();
+        let repo = TestRepo::new().await;
+        repo.commit_file("f.txt", "base\n", "base").await;
+        repo.create_branch("other").await;
+        repo.checkout("other").await;
+        repo.commit_file("f.txt", "other\n", "other").await;
+        repo.checkout("main").await;
+        repo.commit_file("f.txt", "main\n", "main").await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        let other = repo.rev_parse("other").await;
+        f.state
+            .cherry_pick(id, other, false, true)
+            .await
+            .expect("cherry-pick");
+        f.state.abort_in_progress(id).await.expect("abort");
+        assert_eq!(top(&f, id).await.undo, None);
+        let pending = f
+            .state
+            .with_stack(id, |stack| stack.pending().is_some())
+            .expect("stack");
+        assert!(!pending);
     }
 }

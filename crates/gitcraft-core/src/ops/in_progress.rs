@@ -101,7 +101,7 @@ async fn commit_id(
     Ok((out.exit_code == Some(0) && !oid.is_empty()).then_some(oid))
 }
 
-pub(crate) async fn commit_ref(
+pub async fn commit_ref(
     git: &Git,
     repo: &Path,
     oid: &str,

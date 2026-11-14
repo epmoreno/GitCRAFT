@@ -46,7 +46,8 @@ export type HistoryNotice =
   | {
       kind: "reset";
       repoId: number;
-      undoId: number;
+      /** `null`: nothing moved, so there is nothing to undo. */
+      undoId: number | null;
       branch: string;
       short: string;
       /** Undo is no longer possible (another write, or it failed). */

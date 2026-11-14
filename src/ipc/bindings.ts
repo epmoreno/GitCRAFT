@@ -178,6 +178,12 @@ export const commands = {
 	undoAvailable: (id: number, undoId: number) => typedError<boolean, IpcError_Serialize>(__TAURI_INVOKE("undo_available", { id, undoId })),
 	/**  Undoes the last reset, merge or rebase exactly, if nothing changed since. */
 	undoOperation: (id: number, undoId: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("undo_operation", { id, undoId })),
+	/**  What the toolbar's Undo and Redo offer (task 11). */
+	undoState: (id: number) => typedError<UndoState_Serialize, IpcError_Serialize>(__TAURI_INVOKE("undo_state", { id })),
+	/**  What undoing or redoing entry `entry` would do. Read-only. */
+	undoRedoPreview: (id: number, entry: number, direction: Direction) => typedError<UndoPreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("undo_redo_preview", { id, entry, direction })),
+	/**  Undoes or redoes entry `entry` as the user accepted it in the dialog. */
+	undoRedo: (id: number, entry: number, request: UndoRequest) => typedError<UndoResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("undo_redo", { id, entry, request })),
 	/**
 	 *  Merges as the user accepted it in the dialog (task 8.2): checks
 	 *  everything again and does nothing the user did not accept.
@@ -347,6 +353,47 @@ export type ApplyOutcome =
 export type BlockingFile = {
 	path: string,
 	untracked: boolean,
+};
+
+/**  A local branch that moves, is created or is deleted. */
+export type BranchChange = BranchChange_Serialize | BranchChange_Deserialize;
+
+/**  A local branch that moves, is created or is deleted. */
+export type BranchChange_Deserialize = {
+	/**  Short name. */
+	branch: string,
+	from?: string | null,
+	to?: string | null,
+	/**  Commits that leave the branch, newest first (at most 50). */
+	leaving: CommitRef[],
+	leavingTotal: number,
+	/**
+	 *  Of those, the ones no other branch, tag or remote branch has: they
+	 *  will only stay in the reflog.
+	 */
+	onlyInReflog: number,
+	/**  Commits that come into the branch, newest first (at most 50). */
+	arriving: CommitRef[],
+	arrivingTotal: number,
+};
+
+/**  A local branch that moves, is created or is deleted. */
+export type BranchChange_Serialize = {
+	/**  Short name. */
+	branch: string,
+	from: string | null,
+	to: string | null,
+	/**  Commits that leave the branch, newest first (at most 50). */
+	leaving: CommitRef[],
+	leavingTotal: number,
+	/**
+	 *  Of those, the ones no other branch, tag or remote branch has: they
+	 *  will only stay in the reflog.
+	 */
+	onlyInReflog: number,
+	/**  Commits that come into the branch, newest first (at most 50). */
+	arriving: CommitRef[],
+	arrivingTotal: number,
 };
 
 /**  What deleting a branch would leave behind, shown before confirming. */
@@ -793,6 +840,8 @@ export type DiffLine_Serialize = {
 	/**  Followed by "\ No newline at end of file". */
 	noNewline: boolean,
 };
+
+export type Direction = "undo" | "redo";
 
 /**  The outcome of a discard, with the id to undo it. */
 export type DiscardResult = DiscardResult_Serialize | DiscardResult_Deserialize;
@@ -1249,6 +1298,11 @@ export type GraphLine = {
 };
 
 export type Head = Head_Serialize | Head_Deserialize;
+
+/**  Where HEAD points. */
+export type HeadAt = 
+/**  A branch (full ref name), also when it has no commits yet. */
+{ type: "branch"; name: string } | { type: "detached"; oid: string };
 
 export type Head_Deserialize = 
 /**  On a branch. `oid` is `None` while the branch has no commits yet. */
@@ -1759,6 +1813,13 @@ export type NamedCommit = {
 	branches: string[],
 };
 
+/**  What the operation was, for its texts ("Undo commit «x»"). */
+export type OpKind = { type: "commit"; summary: string } | { type: "amend"; summary: string } | 
+/**  A merge into the current branch, or the fast-forward of a branch. */
+{ type: "merge"; source: string; fastForward: boolean } | { type: "rebase"; onto: string } | { type: "reset"; mode: ResetMode; target: string } | { type: "cherryPick"; summary: string } | { type: "revert"; summary: string } | 
+/**  The local part of a pull (its merge or rebase). */
+{ type: "pull"; branch: string } | { type: "checkout"; branch: string } | { type: "createBranch"; name: string } | { type: "renameBranch"; old: string; new: string } | { type: "deleteBranch"; name: string } | { type: "createTag"; name: string } | { type: "deleteTag"; name: string };
+
 export type OpenedRepository = {
 	id: number,
 	info: RepoInfo,
@@ -2119,6 +2180,27 @@ export type RecoverPreview_Serialize = {
 	current: string | null,
 };
 
+/**  A local ref the operation created, moved or deleted. */
+export type RefChange = RefChange_Serialize | RefChange_Deserialize;
+
+/**  A local ref the operation created, moved or deleted. */
+export type RefChange_Deserialize = {
+	/**  Full ref name (`refs/heads/…`, `refs/tags/…`). */
+	refname: string,
+	/**  `None`: it did not exist (before) or no longer exists (after). */
+	before?: string | null,
+	after?: string | null,
+};
+
+/**  A local ref the operation created, moved or deleted. */
+export type RefChange_Serialize = {
+	/**  Full ref name (`refs/heads/…`, `refs/tags/…`). */
+	refname: string,
+	/**  `None`: it did not exist (before) or no longer exists (after). */
+	before: string | null,
+	after: string | null,
+};
+
 export type RefKind = "local" | "remote" | "tag";
 
 /**  The same tag on a remote. */
@@ -2252,7 +2334,7 @@ export type ResetResult = ResetResult_Serialize | ResetResult_Deserialize;
 
 /**  The outcome of a reset, with the id to undo it. */
 export type ResetResult_Deserialize = {
-	undoId: number,
+	undoId?: number | null,
 	/**
 	 *  The stash entry "GitCRAFT: antes de reset a …" with a copy of the
 	 *  uncommitted work, if one was made.
@@ -2264,7 +2346,7 @@ export type ResetResult_Deserialize = {
 
 /**  The outcome of a reset, with the id to undo it. */
 export type ResetResult_Serialize = {
-	undoId: number,
+	undoId: number | null,
 	/**
 	 *  The stash entry "GitCRAFT: antes de reset a …" with a copy of the
 	 *  uncommitted work, if one was made.
@@ -2333,6 +2415,31 @@ export type Signature = {
 	email: string,
 	/**  Unix seconds. */
 	time: number,
+};
+
+/**  The top entry of a stack, as the toolbar shows it. */
+export type StackTop = StackTop_Serialize | StackTop_Deserialize;
+
+/**  The top entry of a stack, as the toolbar shows it. */
+export type StackTop_Deserialize = {
+	id: number,
+	kind: OpKind,
+	/**
+	 *  Why it cannot be done now (only the quick checks: whether something
+	 *  changed or an operation waits; the dialog's preview says the rest).
+	 */
+	refused?: UndoRefusal | null,
+};
+
+/**  The top entry of a stack, as the toolbar shows it. */
+export type StackTop_Serialize = {
+	id: number,
+	kind: OpKind,
+	/**
+	 *  Why it cannot be done now (only the quick checks: whether something
+	 *  changed or an operation waits; the dialog's preview says the rest).
+	 */
+	refused: UndoRefusal | null,
 };
 
 export type StashEntry = StashEntry_Serialize | StashEntry_Deserialize;
@@ -2430,6 +2537,127 @@ export type TagPushOutcome = { type: "done" } |
 
 /**  Text size levels; the whole UI scales with it. */
 export type TextSize = "small" | "normal" | "large" | "larger";
+
+/**  What undoing or redoing would do. Read-only. */
+export type UndoPreview = UndoPreview_Serialize | UndoPreview_Deserialize;
+
+/**  What undoing or redoing would do. Read-only. */
+export type UndoPreview_Deserialize = {
+	direction: Direction,
+	kind: OpKind,
+	refused?: UndoRefusal | null,
+	branches: BranchChange_Deserialize[],
+	tags: RefChange_Deserialize[],
+	/**  HEAD before and after, when it changes branch. */
+	headFrom: HeadAt,
+	headTo: HeadAt,
+	/**
+	 *  Undo only: the files are exactly as the operation left them, so the
+	 *  index of before and the copies come back too.
+	 */
+	exact: boolean,
+	/**
+	 *  With `exact`: the stash entry that will be applied and the files that
+	 *  come back from the Trash.
+	 */
+	restoresStash?: string | null,
+	restoresTrashed: string[],
+	/**  Without `exact`: the copy the operation made stays in the stash. */
+	keptStash?: string | null,
+	/**  Uncommitted changes in the way (they can go to the stash first). */
+	blocking: BlockingFile[],
+	fingerprint: string,
+};
+
+/**  What undoing or redoing would do. Read-only. */
+export type UndoPreview_Serialize = {
+	direction: Direction,
+	kind: OpKind,
+	refused: UndoRefusal | null,
+	branches: BranchChange_Serialize[],
+	tags: RefChange_Serialize[],
+	/**  HEAD before and after, when it changes branch. */
+	headFrom: HeadAt,
+	headTo: HeadAt,
+	/**
+	 *  Undo only: the files are exactly as the operation left them, so the
+	 *  index of before and the copies come back too.
+	 */
+	exact: boolean,
+	/**
+	 *  With `exact`: the stash entry that will be applied and the files that
+	 *  come back from the Trash.
+	 */
+	restoresStash: string | null,
+	restoresTrashed: string[],
+	/**  Without `exact`: the copy the operation made stays in the stash. */
+	keptStash: string | null,
+	/**  Uncommitted changes in the way (they can go to the stash first). */
+	blocking: BlockingFile[],
+	fingerprint: string,
+};
+
+/**  Why it cannot be done; nothing was touched. */
+export type UndoRefusal = 
+/**  A merge, rebase, cherry-pick or revert is waiting. */
+{ type: "inProgress" } | 
+/**
+ *  HEAD, a branch or a tag is no longer where the operation (or, to
+ *  redo, the undo) left it.
+ */
+{ type: "changed" } | 
+/**
+ *  These commits would leave `branch`, but reached a remote after the
+ *  operation: taking them out would need a forced push.
+ */
+{ type: "published"; branch: string; commits: CommitRef[]; remotes: string[] } | 
+/**  The branch to move is checked out in another worktree. */
+{ type: "checkedOutElsewhere"; branch: string };
+
+/**  What the user accepted in the dialog. */
+export type UndoRequest = {
+	direction: Direction,
+	/**  The preview's fingerprint: nothing is done if the repository changed. */
+	expected: string,
+	/**  Stash the changes in the way first. */
+	saveChanges: boolean,
+};
+
+/**  The outcome of undoing or redoing from the dialog. */
+export type UndoResult = UndoResult_Serialize | UndoResult_Deserialize;
+
+/**  The outcome of undoing or redoing from the dialog. */
+export type UndoResult_Deserialize = { type: "done"; 
+/**  The stash entry with the changes that were in the way. */
+saved?: string | null; exact: boolean; 
+/**  What was staged could not be staged again. */
+unstaged: boolean } | 
+/**  Nothing was done; the dialog shows this preview again. */
+{ type: "notDone"; preview: UndoPreview_Deserialize };
+
+/**  The outcome of undoing or redoing from the dialog. */
+export type UndoResult_Serialize = { type: "done"; 
+/**  The stash entry with the changes that were in the way. */
+saved: string | null; exact: boolean; 
+/**  What was staged could not be staged again. */
+unstaged: boolean } | 
+/**  Nothing was done; the dialog shows this preview again. */
+{ type: "notDone"; preview: UndoPreview_Serialize };
+
+/**  What the toolbar's Undo and Redo offer. */
+export type UndoState = UndoState_Serialize | UndoState_Deserialize;
+
+/**  What the toolbar's Undo and Redo offer. */
+export type UndoState_Deserialize = {
+	undo?: StackTop_Deserialize | null,
+	redo?: StackTop_Deserialize | null,
+};
+
+/**  What the toolbar's Undo and Redo offer. */
+export type UndoState_Serialize = {
+	undo: StackTop_Serialize | null,
+	redo: StackTop_Serialize | null,
+};
 
 /**  Why a file can only be resolved by keeping one version whole. */
 export type WholeFileReason = 

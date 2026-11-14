@@ -6,6 +6,7 @@ mod history;
 mod settings;
 mod smoke;
 mod state;
+mod undo;
 mod watcher;
 
 use gitcraft_core::Git;
@@ -85,6 +86,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::reset_branch,
             commands::undo_available,
             commands::undo_operation,
+            commands::undo_state,
+            commands::undo_redo_preview,
+            commands::undo_redo,
             commands::merge_branch,
             commands::rebase_branch,
             commands::last_fetch,
