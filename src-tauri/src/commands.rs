@@ -21,6 +21,7 @@ use gitcraft_core::ops::init::InitCheck;
 use gitcraft_core::ops::pick::{PickOutcome, PickPreview};
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::ops::remote::{ForcePushPreview, PullMode, PullOutcome, PushOutcome};
+use gitcraft_core::ops::reset::{ResetMode, ResetPreview};
 use gitcraft_core::ops::resolve::{MarkOutcome, ResolvedFile, Side};
 use gitcraft_core::ops::stash::{ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
@@ -35,7 +36,7 @@ use crate::history::{CommandHistory, CommandRecord};
 use crate::settings::{GeneralSettings, RecentRepository};
 use crate::state::{
     AppState, DiscardResult, GhStatus, GraphEvent, OpenedRepository, PublishInfo, PullModeInfo,
-    RepoId, RestoredSession,
+    RepoId, ResetResult, RestoredSession,
 };
 use gitcraft_core::gh::LoginEvent;
 use gitcraft_core::ops::publish::{self, PublishRequest, Published};
@@ -1022,4 +1023,52 @@ pub async fn revert(
     allow_conflicts: bool,
 ) -> Result<PickOutcome, IpcError> {
     state.revert(id, oid, save_changes, allow_conflicts).await
+}
+
+/// What resetting the current branch to `oid` with `mode` would do.
+#[tauri::command]
+#[specta::specta]
+pub async fn reset_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+    mode: ResetMode,
+) -> Result<ResetPreview, IpcError> {
+    state.reset_preview(id, &oid, mode).await
+}
+
+/// Resets the current branch, if the repository is still as the preview
+/// (`expected` fingerprint) saw it, after saving a copy of what is lost.
+#[tauri::command]
+#[specta::specta]
+pub async fn reset_branch(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+    mode: ResetMode,
+    expected: String,
+) -> Result<ResetResult, IpcError> {
+    state.reset(id, oid, mode, expected).await
+}
+
+/// Whether the last reset can still be undone (no write since).
+#[tauri::command]
+#[specta::specta]
+pub async fn reset_undo_available(
+    state: State<'_, AppState>,
+    id: RepoId,
+    undo_id: u32,
+) -> Result<bool, IpcError> {
+    Ok(state.reset_undo_available(id, undo_id))
+}
+
+/// Undoes the last reset exactly, if nothing changed since.
+#[tauri::command]
+#[specta::specta]
+pub async fn undo_reset(
+    state: State<'_, AppState>,
+    id: RepoId,
+    undo_id: u32,
+) -> Result<(), IpcError> {
+    state.undo_reset(id, undo_id).await
 }

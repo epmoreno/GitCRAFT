@@ -1781,7 +1781,7 @@ principio y toda operación destructiva pasa por confirmación.
           cambios» y el aviso de abortar con cambios guardados. Está en el
           menú («Revertir en «main»…») y en el panel («Revertir…»).
         Tests: 4 de integración y 3 de interfaz.
-      - [ ] **10.4 Reset de la rama actual (core y UI).** Tres modos, con la
+      - [x] **10.4 Reset de la rama actual (core y UI).** Tres modos, con la
         explicación de cada uno: soft (los cambios de los commits quedan
         preparados), mixed (quedan sin preparar) y hard (se descartan).
         - `reset_preview(oid, modo)` devuelve los commits que dejan de estar
@@ -1813,6 +1813,38 @@ principio y toda operación destructiva pasa por confirmación.
         la Papelera, deshacer exacto, deshacer que se niega si algo cambió,
         y que no hace nada si el estado cambió tras la vista previa; tests
         de interfaz de la confirmación de cada modo.
+        *Cambios del usuario:* en Hard, si hay commits «solo en esta rama» o
+        cambios sin confirmar que se descartarían, el botón «Restablecer»
+        está desactivado hasta marcar «Entiendo que estos commits y cambios
+        saldrán de «main»». «Deshacer» sigue disponible hasta la siguiente
+        operación de escritura en ese repo, siempre comprobando antes la
+        huella. La vista previa explica que los commits «solo en esta rama»
+        solo se recuperan con «Deshacer» o desde el historial de git (tarea
+        11). El modo por defecto es Mixed, y Hard nunca está preseleccionado.
+        *Hecho:*
+        - **Core:** `ops::reset` (`reset_preview`, `reset`, `undo_reset`).
+          - La huella combina HEAD con cada archivo con cambios (tamaño y
+            fecha).
+          - Hay copia en el stash en Mixed si había algo preparado y en Hard
+            si había cambios. Los archivos sin seguimiento o ignorados que
+            git pisaría van a la Papelera; si uno no puede, se devuelven los
+            demás y no se hace el reset.
+          - «Deshacer» deja la rama, el índice y los archivos exactamente
+            como estaban; la entrada de stash se conserva.
+          - Dos errores encontrados con los tests: `--exclude` con
+            `--branches` va sin `refs/heads/`, y la lista de remotos no debe
+            incluir `origin/HEAD`.
+        - **Tauri:** el registro para deshacer vive en la sesión; cualquier
+          escritura en ese repo lo borra (`reset_undo_available`). Comandos
+          `reset_preview`, `reset_branch`, `reset_undo_available` y
+          `undo_reset`.
+        - **Interfaz:** `ResetDialog`, con el modo y su explicación, los
+          commits que salen (con «solo en esta rama» y «publicado») y lo que
+          se pierde o va a la Papelera. El aviso del resultado lleva
+          «Deshacer» mientras se pueda y después «Recuperar mis cambios» si
+          hay copia. La acción está en el menú y en el panel, separada y con
+          estilo de peligro. `ConfirmDialog` admite el botón desactivado.
+        Tests: 7 de integración, 1 del estado de Tauri y 7 de interfaz.
       - [ ] **10.5 Tags (core y UI).**
         - **Crear** en un commit: ligero o anotado (con mensaje). El nombre
           se valida con `git check-ref-format`, y si ya existe se dice y no

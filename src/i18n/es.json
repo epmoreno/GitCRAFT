@@ -1089,11 +1089,13 @@
     },
     "action": {
       "cherryPick": "Cherry-pick en «{{branch}}»…",
-      "revert": "Revertir en «{{branch}}»…"
+      "revert": "Revertir en «{{branch}}»…",
+      "reset": "Restablecer «{{branch}}» a este commit…"
     },
     "button": {
       "cherryPick": "Cherry-pick…",
-      "revert": "Revertir…"
+      "revert": "Revertir…",
+      "reset": "Restablecer…"
     }
   },
   "history": {
@@ -1106,7 +1108,8 @@
     "recover": "Recuperar mis cambios",
     "savedNotice": {
       "cherryPick": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del cherry-pick de {{short}}»).",
-      "revert": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de revertir {{short}}»)."
+      "revert": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de revertir {{short}}»).",
+      "reset": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de reset a {{short}}»)."
     },
     "abortKeepsSaved": "Los cambios que guardaste antes de empezar siguen en el stash: no vuelven solos al abortar. Recupéralos después con «Recuperar mis cambios».",
     "abortKeepsSavedHere": "Si lo abortas, tus cambios guardados seguirán en el stash: no vuelven solos al abortar. Recupéralos con «Recuperar mis cambios».",
@@ -1146,6 +1149,44 @@
       "mayConflict_one": "Revertir podría producir conflictos en 1 archivo:",
       "mayConflict_other": "Revertir podría producir conflictos en {{count}} archivos:",
       "done": "Revertido: «{{subject}}» se ha deshecho con un commit nuevo en «{{branch}}»."
+    },
+    "reset": {
+      "title": "¿Restablecer «{{branch}}» a {{short}} («{{subject}}»)?",
+      "act": "Restablecer «{{branch}}»",
+      "mode": "Modo",
+      "modes": {
+        "soft": {
+          "name": "Soft:",
+          "explained": "solo se mueve la rama; los cambios de esos commits quedan preparados."
+        },
+        "mixed": {
+          "name": "Mixed:",
+          "explained": "se mueven la rama y el índice; los cambios quedan en tus archivos, sin preparar (lo que hace git por defecto)."
+        },
+        "hard": {
+          "name": "Hard:",
+          "explained": "se mueven la rama, el índice y tus archivos; los cambios sin confirmar se descartan (con copia antes)."
+        }
+      },
+      "loading": "Calculando qué haría…",
+      "changed": "El repositorio ha cambiado desde la vista previa, así que no se ha hecho nada. Esta es la vista previa nueva: revísala antes de confirmar.",
+      "leaving_one": "Sale de «{{branch}}» 1 commit:",
+      "leaving_other": "Salen de «{{branch}}» {{count}} commits:",
+      "onlyHere": "solo en esta rama",
+      "published": "publicado",
+      "onlyHereExplained": "Los commits «solo en esta rama» no los tiene ninguna otra rama, remoto ni tag: no van a ninguna rama ni papelera visible. Solo se recuperan con «Deshacer», justo después, o desde el historial de git (tarea 11).",
+      "publishedWarning_one": "1 commit ya está publicado ({{remotes}}): para quitarlo también del remoto haría falta un push forzado, que afecta a quien ya lo tenga.",
+      "publishedWarning_other": "{{count}} commits ya están publicados ({{remotes}}): para quitarlos también del remoto haría falta un push forzado, que afecta a quien ya los tenga.",
+      "unstagedTitle": "Vuelven a «sin preparar» (su contenido no se pierde):",
+      "lostTitle": "Se descartan tus cambios sin confirmar en:",
+      "copyInStash": "Antes se guarda una copia en el stash como «GitCRAFT: antes de reset a {{short}}», que nunca se borra sola.",
+      "trashTitle": "Irán a la Papelera, porque git los sobrescribiría:",
+      "understand": "Entiendo que estos commits y cambios saldrán de «{{branch}}».",
+      "done": "«{{branch}}» restablecida a {{short}}.",
+      "undo": "Deshacer",
+      "undoGone": "Ya no se puede deshacer desde aquí: ha habido otra operación en este repositorio.",
+      "undone": "Reset deshecho: «{{branch}}» está exactamente como antes.",
+      "undoRefused": "Algo ha cambiado desde el reset, así que no se ha tocado nada. Tus cambios están en el stash («GitCRAFT: antes de reset a {{short}}», si había) y los commits siguen en el historial de git (tarea 11)."
     }
   }
 }

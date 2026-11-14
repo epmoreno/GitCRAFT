@@ -90,3 +90,39 @@
   margin: 0 var(--space-1);
   background: var(--border);
 }
+
+.modes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.mode {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.badgeDanger {
+  color: var(--danger);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+.warning {
+  padding: var(--space-1) var(--space-2);
+  border-left: 3px solid var(--warning);
+  background: var(--warning-bg);
+}
+
+.understand {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin-top: var(--space-3);
+  font-weight: 600;
+}

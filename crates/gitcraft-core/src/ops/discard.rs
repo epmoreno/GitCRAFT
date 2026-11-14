@@ -75,7 +75,7 @@ impl Trash for crate::freedesktop_trash::FreedesktopTrash {
 
 /// Once a trashed file is back in place, what the Trash kept about it goes
 /// (the freedesktop info file; nothing on macOS).
-fn forget_trashed(trashed_to: &Path) -> io::Result<()> {
+pub(crate) fn forget_trashed(trashed_to: &Path) -> io::Result<()> {
     #[cfg(all(unix, not(target_os = "macos")))]
     crate::freedesktop_trash::forget(trashed_to)?;
     #[cfg(windows)]

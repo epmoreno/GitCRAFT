@@ -9,6 +9,8 @@ type Props = {
   cancelLabel: string;
   /** Styles the confirm button as dangerous (data loss, history rewrite). */
   danger?: boolean;
+  /** The confirm button stays disabled (e.g. until a box is ticked). */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -23,6 +25,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   danger = false,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }: Props) {
@@ -69,6 +72,7 @@ export function ConfirmDialog({
           <button
             type="button"
             className={danger ? styles.danger : styles.confirm}
+            disabled={confirmDisabled}
             onClick={onConfirm}
           >
             {confirmLabel}

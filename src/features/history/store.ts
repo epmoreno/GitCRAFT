@@ -5,6 +5,8 @@ import {
   type PickKind,
   type PickOutcome,
   type PickPreview,
+  type ResetMode,
+  type ResetPreview,
 } from "../../ipc";
 import type { CommitAction } from "../graph/commitActions";
 import { useGraphStore } from "../graph/store";
@@ -18,12 +20,19 @@ import { useWorkdirStore } from "../workdir/store";
  * with "Recover my changes" once nothing is in progress.
  */
 
-/** Cherry-pick or revert waiting for confirmation (`preview.kind`). */
-export type HistoryDialog = {
-  kind: "pick";
-  repoId: number;
-  preview: PickPreview;
-};
+/** Cherry-pick or revert waiting for confirmation (`preview.kind`), or a
+ * reset, whose preview depends on the chosen mode. */
+export type HistoryDialog =
+  | { kind: "pick"; repoId: number; preview: PickPreview }
+  | {
+      kind: "reset";
+      repoId: number;
+      oid: string;
+      mode: ResetMode;
+      preview: ResetPreview | null;
+      /** The repository changed since the preview the user saw. */
+      changed: boolean;
+    };
 
 export type HistoryNotice =
   | {
@@ -33,11 +42,26 @@ export type HistoryNotice =
       subject: string;
       branch: string;
     }
+  | {
+      kind: "reset";
+      repoId: number;
+      undoId: number;
+      branch: string;
+      short: string;
+      /** Undo is no longer possible (another write, or it failed). */
+      undoGone: boolean;
+    }
+  | { kind: "resetUndone"; repoId: number; branch: string }
+  | { kind: "undoRefused"; repoId: number; short: string; stashed: boolean }
   | { kind: "error"; repoId: number; error: CommandError };
 
 /** Changes saved in the stash before an operation: the entry's commit, the
  * operation, and the short id of the commit it was about (in its message). */
-export type SavedChanges = { oid: string; pick: PickKind; short: string };
+export type SavedChanges = {
+  oid: string;
+  pick: PickKind | "reset";
+  short: string;
+};
 
 type HistoryState = {
   dialog: HistoryDialog | null;
@@ -47,6 +71,13 @@ type HistoryState = {
   /** Shows what cherry-picking or reverting `oid` would do. */
   requestPick: (repoId: number, oid: string, kind: PickKind) => Promise<void>;
   confirmPick: () => Promise<void>;
+  /** Opens the reset dialog for `oid` (Mixed by default, like git). */
+  requestReset: (repoId: number, oid: string) => Promise<void>;
+  setResetMode: (mode: ResetMode) => Promise<void>;
+  confirmReset: () => Promise<void>;
+  undoReset: () => Promise<void>;
+  /** Checks whether the last reset can still be undone. */
+  checkUndo: () => Promise<void>;
   closeDialog: () => void;
   dismissNotice: () => void;
   /** Applies the saved changes back (the entry stays in the stash), with
@@ -152,6 +183,141 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
       settle(repoId, preview, result.data);
     },
 
+    requestReset: async (repoId, oid) => {
+      set({
+        notice: null,
+        dialog: {
+          kind: "reset",
+          repoId,
+          oid,
+          mode: "mixed",
+          preview: null,
+          changed: false,
+        },
+      });
+      await get().setResetMode("mixed");
+    },
+
+    setResetMode: async (mode) => {
+      const dialog = get().dialog;
+      if (dialog?.kind !== "reset") return;
+      set({ dialog: { ...dialog, mode, preview: null } });
+      const result = await commands.resetPreview(
+        dialog.repoId,
+        dialog.oid,
+        mode,
+      );
+      const now = get().dialog;
+      if (now?.kind !== "reset" || now.mode !== mode) return;
+      if (result.status === "error") {
+        set({
+          dialog: null,
+          notice: { kind: "error", repoId: dialog.repoId, error: result.error },
+        });
+        return;
+      }
+      set({ dialog: { ...now, preview: result.data } });
+    },
+
+    confirmReset: async () => {
+      const dialog = get().dialog;
+      if (dialog?.kind !== "reset" || !dialog.preview) return;
+      const { repoId, oid, mode, preview } = dialog;
+      set({ busy: true });
+      const result = await commands.resetBranch(
+        repoId,
+        oid,
+        mode,
+        preview.fingerprint,
+      );
+      set({ busy: false });
+      if (result.status === "error") {
+        if (result.error.kind === "staleDiff") {
+          // Something changed since the preview: show the new one.
+          set({ dialog: { ...dialog, changed: true } });
+          await get().setResetMode(mode);
+          const now = get().dialog;
+          if (now?.kind === "reset") set({ dialog: { ...now, changed: true } });
+          return;
+        }
+        set({
+          dialog: null,
+          notice: { kind: "error", repoId, error: result.error },
+        });
+        refreshAfterRemote(repoId);
+        return;
+      }
+      const { undoId, stash } = result.data;
+      set({
+        dialog: null,
+        notice: {
+          kind: "reset",
+          repoId,
+          undoId,
+          branch: preview.branch ?? "",
+          short: preview.target.short,
+          undoGone: false,
+        },
+      });
+      if (stash) {
+        set((s) => ({
+          saved: {
+            ...s.saved,
+            [repoId]: {
+              oid: stash,
+              pick: "reset",
+              short: preview.target.short,
+            },
+          },
+        }));
+      }
+      refreshAfterRemote(repoId);
+      selectWhenLoaded(repoId, preview.target.oid);
+    },
+
+    undoReset: async () => {
+      const notice = get().notice;
+      if (notice?.kind !== "reset" || notice.undoGone) return;
+      set({ busy: true });
+      const result = await commands.undoReset(notice.repoId, notice.undoId);
+      set({ busy: false });
+      refreshAfterRemote(notice.repoId);
+      if (result.status === "error") {
+        set({
+          notice: {
+            kind: "undoRefused",
+            repoId: notice.repoId,
+            short: notice.short,
+            stashed: !!get().saved[notice.repoId],
+          },
+        });
+        return;
+      }
+      // Everything is back, the copy included: nothing to recover.
+      get().forgetSaved(notice.repoId);
+      set({
+        notice: {
+          kind: "resetUndone",
+          repoId: notice.repoId,
+          branch: notice.branch,
+        },
+      });
+    },
+
+    checkUndo: async () => {
+      const notice = get().notice;
+      if (notice?.kind !== "reset" || notice.undoGone) return;
+      const result = await commands.resetUndoAvailable(
+        notice.repoId,
+        notice.undoId,
+      );
+      const now = get().notice;
+      if (now !== notice) return;
+      if (result.status === "ok" && !result.data) {
+        set({ notice: { ...notice, undoGone: true } });
+      }
+    },
+
     closeDialog: () => set({ dialog: null }),
     dismissNotice: () => set({ notice: null }),
 
@@ -203,6 +369,9 @@ export function runCommitAction(
     case "cherryPick":
     case "revert":
       void useHistoryStore.getState().requestPick(repoId, oid, action);
+      return;
+    case "reset":
+      void useHistoryStore.getState().requestReset(repoId, oid);
       return;
     default:
       return;

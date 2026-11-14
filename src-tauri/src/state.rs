@@ -32,6 +32,7 @@ use gitcraft_core::ops::publish::{self, PublishPreview, PublishRequest, Publishe
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::remote::{self, ForcePushPreview, PullMode, PullOutcome, PushOutcome};
 use gitcraft_core::ops::repo::{self, RepoInfo};
+use gitcraft_core::ops::reset::{self as reset_ops, ResetMode, ResetPreview, ResetRecord};
 use gitcraft_core::ops::resolve::{self, MarkOutcome, ResolvedFile, Side};
 use gitcraft_core::ops::stage;
 use gitcraft_core::ops::stash::{self, ApplyOutcome, RecoverPreview};
@@ -139,6 +140,8 @@ struct RepoSession {
     watcher: Option<RepoWatcher>,
     /// Recent discards that can be undone, by id.
     discards: Vec<(u32, DiscardRecord)>,
+    /// The last reset, undoable until the next write in this repository.
+    reset_undo: Option<(u32, ResetRecord)>,
     /// Serializes this repository's writes (git's index.lock allows one).
     write_lock: Arc<tokio::sync::Mutex<()>>,
 }
@@ -200,6 +203,18 @@ pub struct AppState {
     /// Where discarded untracked files go (the system Trash).
     trash: Arc<dyn Trash>,
     inner: Mutex<Inner>,
+}
+
+/// The outcome of a reset, with the id to undo it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetResult {
+    pub undo_id: u32,
+    /// The stash entry "GitCRAFT: antes de reset a …" with a copy of the
+    /// uncommitted work, if one was made.
+    pub stash: Option<String>,
+    /// Untracked files moved to the Trash.
+    pub trashed: u32,
 }
 
 /// Discards that can still be undone, newest last (per session).
@@ -277,6 +292,7 @@ impl AppState {
             watcher: self.watch(id, &info),
             write_lock: Arc::default(),
             discards: Vec::new(),
+            reset_undo: None,
         });
         Ok(OpenedRepository { id, info })
     }
@@ -371,12 +387,14 @@ impl AppState {
         Fut: std::future::Future<Output = gitcraft_core::Result<T>>,
     {
         let (path, lock, quiet) = {
-            let inner = self.lock();
+            let mut inner = self.lock();
             let session = inner
                 .sessions
-                .iter()
+                .iter_mut()
                 .find(|s| s.id == id)
                 .ok_or(GitError::Cancelled)?;
+            // Any other write ends what "Undo" of the last reset can do.
+            session.reset_undo = None;
             (
                 PathBuf::from(&session.info.path),
                 Arc::clone(&session.write_lock),
@@ -1431,6 +1449,84 @@ impl AppState {
         Ok(commit_actions::commit_actions(git, &repo, oid, &CancellationToken::new()).await?)
     }
 
+    pub async fn reset_preview(
+        &self,
+        id: RepoId,
+        oid: &str,
+        mode: ResetMode,
+    ) -> Result<ResetPreview, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(reset_ops::reset_preview(git, &repo, oid, mode, &CancellationToken::new()).await?)
+    }
+
+    /// Resets the current branch (see `ops::reset`); "Undo" stays possible
+    /// until the next write in this repository.
+    pub async fn reset(
+        &self,
+        id: RepoId,
+        oid: String,
+        mode: ResetMode,
+        expected: String,
+    ) -> Result<ResetResult, IpcError> {
+        let git = self.git()?;
+        let trash = Arc::clone(&self.trash);
+        let cancel = CancellationToken::new();
+        let record = self
+            .write(id, |repo| async move {
+                reset_ops::reset(git, &repo, &oid, mode, &expected, trash.as_ref(), &cancel).await
+            })
+            .await?;
+        let stash = record.stash.clone();
+        let trashed = u32::try_from(record.trashed.len()).unwrap_or(u32::MAX);
+        let mut inner = self.lock();
+        inner.next_discard += 1;
+        let undo_id = inner.next_discard;
+        let session = inner
+            .sessions
+            .iter_mut()
+            .find(|s| s.id == id)
+            .ok_or(GitError::Cancelled)?;
+        session.reset_undo = Some((undo_id, record));
+        Ok(ResetResult {
+            undo_id,
+            stash,
+            trashed,
+        })
+    }
+
+    /// Whether the reset `undo_id` can still be undone (no write since).
+    pub fn reset_undo_available(&self, id: RepoId, undo_id: u32) -> bool {
+        self.lock()
+            .sessions
+            .iter()
+            .find(|s| s.id == id)
+            .and_then(|s| s.reset_undo.as_ref())
+            .is_some_and(|(u, _)| *u == undo_id)
+    }
+
+    /// Puts everything back as it was before reset `undo_id`, if nothing
+    /// changed since (else `UndoConflict`, nothing touched).
+    pub async fn undo_reset(&self, id: RepoId, undo_id: u32) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let record = {
+            let inner = self.lock();
+            inner
+                .sessions
+                .iter()
+                .find(|s| s.id == id)
+                .and_then(|s| s.reset_undo.as_ref())
+                .filter(|(u, _)| *u == undo_id)
+                .map(|(_, r)| r.clone())
+                .ok_or_else(|| GitError::UndoConflict(String::new()))?
+        };
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            reset_ops::undo_reset(git, &repo, &record, &cancel).await
+        })
+        .await
+    }
+
     pub async fn cherry_pick_preview(
         &self,
         id: RepoId,
@@ -1814,6 +1910,52 @@ mod tests {
             std::fs::rename(path, &to)?;
             Ok(to)
         }
+    }
+
+    async fn hard_reset(state: &AppState, id: RepoId, target: &str) -> ResetResult {
+        let preview = state
+            .reset_preview(id, target, ResetMode::Hard)
+            .await
+            .expect("preview");
+        state
+            .reset(id, target.to_owned(), ResetMode::Hard, preview.fingerprint)
+            .await
+            .expect("reset")
+    }
+
+    #[tokio::test]
+    async fn a_reset_can_be_undone_until_the_next_write() {
+        let mut f = fixture();
+        f.state = f.state.with_trash(Arc::new(TempTrash(
+            tempfile::tempdir().expect("tempdir"),
+            Default::default(),
+        )));
+        let (repo, ids) = TestRepo::sample_history().await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        let head = repo.head().await;
+        repo.write_file("main.txt", "b\ne\nlocal edit\n");
+
+        let result = hard_reset(&f.state, id, &ids["M"]).await;
+        assert!(result.stash.is_some());
+        assert!(f.state.reset_undo_available(id, result.undo_id));
+        f.state.undo_reset(id, result.undo_id).await.expect("undo");
+        assert_eq!(repo.head().await, head);
+        assert_eq!(
+            std::fs::read_to_string(repo.path().join("main.txt")).expect("read"),
+            "b\ne\nlocal edit\n"
+        );
+        // Once.
+        assert!(f.state.undo_reset(id, result.undo_id).await.is_err());
+
+        // Any other write in the repository ends it.
+        let result = hard_reset(&f.state, id, &ids["M"]).await;
+        f.state
+            .stage(id, Some(vec!["main.txt".into()]))
+            .await
+            .expect("stage");
+        assert!(!f.state.reset_undo_available(id, result.undo_id));
+        assert!(f.state.undo_reset(id, result.undo_id).await.is_err());
+        assert_eq!(repo.head().await, ids["M"], "nothing was undone");
     }
 
     #[tokio::test]

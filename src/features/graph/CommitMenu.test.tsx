@@ -54,7 +54,18 @@ describe("the menu of a commit", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["Cherry-pick en «main»…", "Revertir en «main»…", "Copiar hash"]);
+    ).toEqual([
+      "Cherry-pick en «main»…",
+      "Revertir en «main»…",
+      "Restablecer «main» a este commit…",
+      "Copiar hash",
+    ]);
+    // Reset goes apart, with the danger style.
+    const reset = within(menu).getByRole("menuitem", {
+      name: "Restablecer «main» a este commit…",
+    });
+    expect(reset.className).toMatch(/danger/);
+    expect(reset.previousElementSibling?.tagName).toBe("HR");
     // The default facts say it is already in main.
     expect(pick).toBeDisabled();
     expect(pick).toHaveAttribute("title", "Ya está en «main».");

@@ -116,6 +116,10 @@ export const ipc = {
   cherryPick: vi.mocked(commands.cherryPick),
   revertPreview: vi.mocked(commands.revertPreview),
   revert: vi.mocked(commands.revert),
+  resetPreview: vi.mocked(commands.resetPreview),
+  resetBranch: vi.mocked(commands.resetBranch),
+  resetUndoAvailable: vi.mocked(commands.resetUndoAvailable),
+  undoReset: vi.mocked(commands.undoReset),
 };
 
 export function resetIpcMock() {

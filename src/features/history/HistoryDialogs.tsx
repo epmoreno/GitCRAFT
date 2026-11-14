@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { PickPreview } from "../../ipc";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { ErrorReport } from "../../ui/ErrorReport";
 import { useWorkdirStore } from "../workdir/store";
+import { ResetDialog } from "./ResetDialog";
 import { useHistoryStore } from "./store";
 import styles from "./history.module.css";
 
@@ -90,6 +92,7 @@ export function HistoryDialogs() {
   if (dialog?.kind === "pick") {
     return <PickDialog preview={dialog.preview} />;
   }
+  if (dialog?.kind === "reset") return <ResetDialog key={dialog.oid} />;
   return null;
 }
 
@@ -108,9 +111,21 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
     (s) => repoId !== null && !!s.statuses[repoId]?.status?.inProgress,
   );
   const dismiss = useHistoryStore((s) => s.dismissNotice);
+  const undo = useHistoryStore((s) => s.undoReset);
+  const checkUndo = useHistoryStore((s) => s.checkUndo);
+  // "Undo" lasts until the next write: check again whenever the status
+  // changes.
+  const version = useWorkdirStore((s) =>
+    repoId === null ? 0 : (s.statuses[repoId]?.version ?? 0),
+  );
+  useEffect(() => {
+    void checkUndo();
+  }, [version, checkUndo]);
   const recover = useHistoryStore((s) => s.recoverSaved);
   const forget = useHistoryStore((s) => s.forgetSaved);
-  const offer = saved && !waiting ? saved : null;
+  const undoable = notice?.kind === "reset" && !notice.undoGone;
+  // While "Undo" is there it is the way back; the saved copy comes after.
+  const offer = saved && !waiting && !undoable ? saved : null;
   if (repoId === null || (!notice && !offer)) return null;
   return (
     <div
@@ -131,12 +146,37 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
             )}
           </p>
         )}
+        {notice?.kind === "reset" && (
+          <p>
+            {t("history.reset.done", {
+              branch: notice.branch,
+              short: notice.short,
+            })}
+            {notice.undoGone && ` ${t("history.reset.undoGone")}`}
+          </p>
+        )}
+        {notice?.kind === "resetUndone" && (
+          <p>{t("history.reset.undone", { branch: notice.branch })}</p>
+        )}
+        {notice?.kind === "undoRefused" && (
+          <p>{t("history.reset.undoRefused", { short: notice.short })}</p>
+        )}
         {offer && (
           <p>
             {t(`history.savedNotice.${offer.pick}`, { short: offer.short })}
           </p>
         )}
       </div>
+      {undoable && (
+        <button
+          type="button"
+          className={styles.toastAction}
+          disabled={busy}
+          onClick={() => void undo()}
+        >
+          {t("history.reset.undo")}
+        </button>
+      )}
       {offer && (
         <button
           type="button"

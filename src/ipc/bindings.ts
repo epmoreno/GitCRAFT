@@ -154,6 +154,17 @@ export const commands = {
 	revertPreview: (id: number, oid: string) => typedError<PickPreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("revert_preview", { id, oid })),
 	/**  Reverts `oid` with a new commit, after the same checks as cherry-pick. */
 	revert: (id: number, oid: string, saveChanges: boolean, allowConflicts: boolean) => typedError<PickOutcome_Serialize, IpcError_Serialize>(__TAURI_INVOKE("revert", { id, oid, saveChanges, allowConflicts })),
+	/**  What resetting the current branch to `oid` with `mode` would do. */
+	resetPreview: (id: number, oid: string, mode: ResetMode) => typedError<ResetPreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("reset_preview", { id, oid, mode })),
+	/**
+	 *  Resets the current branch, if the repository is still as the preview
+	 *  (`expected` fingerprint) saw it, after saving a copy of what is lost.
+	 */
+	resetBranch: (id: number, oid: string, mode: ResetMode, expected: string) => typedError<ResetResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("reset_branch", { id, oid, mode, expected })),
+	/**  Whether the last reset can still be undone (no write since). */
+	resetUndoAvailable: (id: number, undoId: number) => typedError<boolean, IpcError_Serialize>(__TAURI_INVOKE("reset_undo_available", { id, undoId })),
+	/**  Undoes the last reset exactly, if nothing changed since. */
+	undoReset: (id: number, undoId: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("undo_reset", { id, undoId })),
 	/**
 	 *  Pushes the current branch to its upstream, or publishes it to
 	 *  `publish_to` creating the upstream. `force_lease`: force only if the
@@ -1355,6 +1366,21 @@ export type LargeFile = {
 	size: number | null,
 };
 
+/**  A commit that stops being in the branch. */
+export type LeavingCommit = {
+	commit: CommitRef,
+	/**
+	 *  No other branch, remote branch or tag has it: after the reset only
+	 *  the reflog (and "Undo") keeps it.
+	 */
+	onlyHere: boolean,
+	/**
+	 *  A remote branch has it: undoing it there needs a forced push, which
+	 *  affects whoever already has it.
+	 */
+	published: boolean,
+};
+
 export type LineKind = "context" | "added" | "removed";
 
 /**  What the sign-in reports while it waits for the browser. */
@@ -1772,6 +1798,103 @@ export type RepoRefs_Serialize = {
 	refs: GitRef_Serialize[],
 	/**  Configured remotes, including those without fetched branches. */
 	remotes: string[],
+};
+
+export type ResetMode = 
+/**  Only the branch moves: the commits' changes stay staged. */
+"soft" | 
+/**  The branch and the index move: the changes stay, unstaged. */
+"mixed" | 
+/**  Branch, index and working tree move: uncommitted work is discarded. */
+"hard";
+
+export type ResetPreview = ResetPreview_Serialize | ResetPreview_Deserialize;
+
+export type ResetPreview_Deserialize = {
+	mode: ResetMode,
+	branch?: string | null,
+	target: CommitRef,
+	refused?: ResetRefusal | null,
+	/**  Newest first, at most [`MAX_LISTED`]. */
+	leaving: LeavingCommit[],
+	leavingTotal: number,
+	/**  Remote branches that have some of the leaving commits. */
+	publishedIn: string[],
+	/**  Hard: tracked files whose uncommitted changes are discarded. */
+	lostChanges: string[],
+	/**  Mixed: staged files that end up unstaged (their content stays). */
+	unstagedByReset: string[],
+	/**
+	 *  Hard: untracked (or ignored) files the target tracks, which git would
+	 *  overwrite: they go to the Trash first.
+	 */
+	overwrittenUntracked: string[],
+	/**  Whether a stash entry will hold a copy of the uncommitted work. */
+	savesStash: boolean,
+	/**
+	 *  Identifies the state the preview saw (HEAD and the uncommitted
+	 *  files): the reset only happens if it is still the same.
+	 */
+	fingerprint: string,
+};
+
+export type ResetPreview_Serialize = {
+	mode: ResetMode,
+	branch: string | null,
+	target: CommitRef,
+	refused: ResetRefusal | null,
+	/**  Newest first, at most [`MAX_LISTED`]. */
+	leaving: LeavingCommit[],
+	leavingTotal: number,
+	/**  Remote branches that have some of the leaving commits. */
+	publishedIn: string[],
+	/**  Hard: tracked files whose uncommitted changes are discarded. */
+	lostChanges: string[],
+	/**  Mixed: staged files that end up unstaged (their content stays). */
+	unstagedByReset: string[],
+	/**
+	 *  Hard: untracked (or ignored) files the target tracks, which git would
+	 *  overwrite: they go to the Trash first.
+	 */
+	overwrittenUntracked: string[],
+	/**  Whether a stash entry will hold a copy of the uncommitted work. */
+	savesStash: boolean,
+	/**
+	 *  Identifies the state the preview saw (HEAD and the uncommitted
+	 *  files): the reset only happens if it is still the same.
+	 */
+	fingerprint: string,
+};
+
+export type ResetRefusal = "inProgress" | "detached" | 
+/**  The branch is already at that commit. */
+"isHead";
+
+/**  The outcome of a reset, with the id to undo it. */
+export type ResetResult = ResetResult_Serialize | ResetResult_Deserialize;
+
+/**  The outcome of a reset, with the id to undo it. */
+export type ResetResult_Deserialize = {
+	undoId: number,
+	/**
+	 *  The stash entry "GitCRAFT: antes de reset a …" with a copy of the
+	 *  uncommitted work, if one was made.
+	 */
+	stash?: string | null,
+	/**  Untracked files moved to the Trash. */
+	trashed: number,
+};
+
+/**  The outcome of a reset, with the id to undo it. */
+export type ResetResult_Serialize = {
+	undoId: number,
+	/**
+	 *  The stash entry "GitCRAFT: antes de reset a …" with a copy of the
+	 *  uncommitted work, if one was made.
+	 */
+	stash: string | null,
+	/**  Untracked files moved to the Trash. */
+	trashed: number,
 };
 
 /**

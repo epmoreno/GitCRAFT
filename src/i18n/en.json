@@ -1089,11 +1089,13 @@
     },
     "action": {
       "cherryPick": "Cherry-pick onto “{{branch}}”…",
-      "revert": "Revert in “{{branch}}”…"
+      "revert": "Revert in “{{branch}}”…",
+      "reset": "Reset “{{branch}}” to this commit…"
     },
     "button": {
       "cherryPick": "Cherry-pick…",
-      "revert": "Revert…"
+      "revert": "Revert…",
+      "reset": "Reset…"
     }
   },
   "history": {
@@ -1106,7 +1108,8 @@
     "recover": "Recover my changes",
     "savedNotice": {
       "cherryPick": "Your changes are still saved in the stash (“GitCRAFT: antes del cherry-pick de {{short}}”).",
-      "revert": "Your changes are still saved in the stash (“GitCRAFT: antes de revertir {{short}}”)."
+      "revert": "Your changes are still saved in the stash (“GitCRAFT: antes de revertir {{short}}”).",
+      "reset": "Your changes are still saved in the stash (“GitCRAFT: antes de reset a {{short}}”)."
     },
     "abortKeepsSaved": "The changes you saved before starting are still in the stash: aborting does not bring them back. Recover them afterwards with “Recover my changes”.",
     "abortKeepsSavedHere": "If you abort it, your saved changes stay in the stash: aborting does not bring them back. Recover them with “Recover my changes”.",
@@ -1146,6 +1149,44 @@
       "mayConflict_one": "Reverting may conflict in 1 file:",
       "mayConflict_other": "Reverting may conflict in {{count}} files:",
       "done": "Reverted: “{{subject}}” was undone with a new commit in “{{branch}}”."
+    },
+    "reset": {
+      "title": "Reset “{{branch}}” to {{short}} (“{{subject}}”)?",
+      "act": "Reset “{{branch}}”",
+      "mode": "Mode",
+      "modes": {
+        "soft": {
+          "name": "Soft:",
+          "explained": "only the branch moves; those commits’ changes stay staged."
+        },
+        "mixed": {
+          "name": "Mixed:",
+          "explained": "the branch and the index move; the changes stay in your files, unstaged (git’s default)."
+        },
+        "hard": {
+          "name": "Hard:",
+          "explained": "the branch, the index and your files move; uncommitted changes are discarded (with a copy first)."
+        }
+      },
+      "loading": "Working out what it would do…",
+      "changed": "The repository changed since the preview, so nothing was done. This is the new preview: check it before confirming.",
+      "leaving_one": "1 commit leaves “{{branch}}”:",
+      "leaving_other": "{{count}} commits leave “{{branch}}”:",
+      "onlyHere": "only on this branch",
+      "published": "published",
+      "onlyHereExplained": "Commits “only on this branch” are on no other branch, remote or tag: they go to no visible branch or trash. They can only be recovered with “Undo”, right after, or from git’s history (task 11).",
+      "publishedWarning_one": "1 commit is already published ({{remotes}}): removing it from the remote too would need a forced push, which affects whoever already has it.",
+      "publishedWarning_other": "{{count}} commits are already published ({{remotes}}): removing them from the remote too would need a forced push, which affects whoever already has them.",
+      "unstagedTitle": "Back to unstaged (their content is kept):",
+      "lostTitle": "Your uncommitted changes are discarded in:",
+      "copyInStash": "A copy is saved first in the stash as “GitCRAFT: antes de reset a {{short}}”, which is never dropped by itself.",
+      "trashTitle": "Going to the Trash, because git would overwrite them:",
+      "understand": "I understand these commits and changes will leave “{{branch}}”.",
+      "done": "“{{branch}}” reset to {{short}}.",
+      "undo": "Undo",
+      "undoGone": "It can no longer be undone from here: another operation ran in this repository.",
+      "undone": "Reset undone: “{{branch}}” is exactly as before.",
+      "undoRefused": "Something changed since the reset, so nothing was touched. Your changes are in the stash (“GitCRAFT: antes de reset a {{short}}”, if there were any) and the commits are still in git’s history (task 11)."
     }
   }
 }
