@@ -2290,7 +2290,7 @@ principio y toda operación destructiva pasa por confirmación.
       lo ya publicado no se deshace: se niega y se ofrece «Revertir»; (7)
       si después de deshacer se hace una operación nueva, la pila de
       «Rehacer» se vacía, como en cualquier editor.
-      - [ ] **11.1 Diario de operaciones (core).** Cada operación que
+      - [x] **11.1 Diario de operaciones (core).** Cada operación que
         escribe devuelve un registro (`OpRecord`): qué fue (para el texto
         «Deshacer commit "x"»), las refs que movió con su valor antes y
         después, HEAD antes y después, el árbol del índice antes
@@ -2299,6 +2299,22 @@ principio y toda operación destructiva pasa por confirmación.
         reflog (y git no los borra mientras estén en él).
         *Verificable:* tests de que cada operación de la lista devuelve el
         registro correcto, y de que las que no se deshacen no lo devuelven.
+        *Hecho:* `ops/journal.rs`, igual para todas las operaciones:
+        `snapshot` justo antes (HEAD, las ramas y tags locales y el índice
+        como árbol) y `record` justo después, que compara y devuelve el
+        `OpRecord` con las refs que cambiaron, o nada si no se movió ninguna
+        rama ni tag local y HEAD sigue igual. Lleva dos huellas: la de las
+        refs (`refsAfter`), para saber si la operación se puede deshacer, y
+        la completa con los archivos sin confirmar (`fingerprintAfter`),
+        para saber si se puede devolver todo exactamente. Las operaciones no
+        cambian: la 11.3 las envuelve en Tauri.
+        Tests: 13 de integración. Cubren commit (también el primero), amend,
+        fast-forward, rebase, cherry-pick, revert, reset, pull, checkout
+        (también a un commit suelto), crear, renombrar (la rama actual) y
+        borrar ramas, y crear y borrar tags anotados. También comprueban que
+        preparar, el stash, el fetch y el push no dejan registro, las
+        huellas, que la foto no cambia nada y que con conflictos no hay
+        índice.
       - [ ] **11.2 Deshacer y rehacer (core).** `undo_preview(record)` y
         `undo(record)`; `redo_preview` y `redo` para lo deshecho.
         - **Vista previa:** qué refs vuelven y adónde, los commits que salen

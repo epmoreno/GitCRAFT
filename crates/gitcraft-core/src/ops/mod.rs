@@ -10,6 +10,7 @@ pub mod conflict;
 pub mod discard;
 pub mod in_progress;
 pub mod init;
+pub mod journal;
 pub mod log;
 pub mod maintenance;
 pub mod merge_rebase;

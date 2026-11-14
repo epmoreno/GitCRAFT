@@ -535,6 +535,31 @@ de…» y «Hacer rebase de…» de los menús, y el arrastre).
   la del último fetch que cambió alguna de sus ramas remotas, sacada de sus
   reflogs, y se dice así.
 
+## 5j. Deshacer y rehacer (tarea 11)
+
+Núcleo en `gitcraft-core/src/ops/journal.rs`.
+
+- **Diario de operaciones (11.1):** igual para todas las operaciones. Justo
+  antes, `snapshot` guarda HEAD (la rama, también sin commits, o el commit
+  si está separado), las ramas y tags locales con su valor
+  (`for-each-ref` con separador `%00`) y el índice como árbol
+  (`write-tree`; solo escribe un objeto, y no hay árbol si hay
+  conflictos). Justo después, `record` compara y devuelve un `OpRecord`:
+  - qué fue (`OpKind`, para los textos);
+  - las refs que se crearon, movieron o borraron, con su valor antes y
+    después (un tag anotado guarda su objeto, con el mensaje);
+  - HEAD antes y después, el índice de antes y las copias que hizo la
+    operación (la entrada del stash y los archivos de la Papelera);
+  - dos huellas de después: `refsAfter` (HEAD y las ramas y tags locales)
+    y `fingerprintAfter` (eso más los archivos sin confirmar, como la del
+    reset).
+
+  Si no se movió ninguna rama ni tag local y HEAD sigue igual, no hay
+  registro: preparar, el stash, los descartes, el fetch y el push no se
+  deshacen desde aquí. Las ramas remotas no cuentan, así que de un pull
+  solo queda la parte local. Los commits antiguos no se copian: siguen en
+  el reflog, que además impide que git los borre.
+
 ## 5f. Crear repositorios
 
 - **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama
