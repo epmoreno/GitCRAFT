@@ -15,7 +15,7 @@ GitCRAFT – a visual, fast, open-source Git client
 <li lang="pt">Português: GitCRAFT – um cliente Git visual, rápido e de código aberto</li>
 </ul>
 
-> **Early version (v0.2.1).** GitCRAFT is usable day to day for the features
+> **Early version (v0.3.0).** GitCRAFT is usable day to day for the features
 > listed below, but it is young: expect rough edges and missing features (see
 > [what is not there yet](#not-there-yet)). Your repositories are safe:
 > destructive operations always ask first, and GitCRAFT runs your own `git`.
@@ -58,6 +58,19 @@ _The interface is shown in Spanish; it is also available in English._
   without a branch), checkout with stash-or-cancel; sidebar filter.
 - **Stash**: list, create, apply, pop, drop with confirmation, recover a
   single file.
+- **Merge and rebase**: from a branch's menu or by dragging one branch onto
+  another, with a preview of what will happen first (fast-forward, the
+  commits that come in, conflicts it would have, commits already published)
+  and an editable merge message; changes in the way can be saved first and
+  recovered later, and the result can be undone right away.
+- **Conflicts**: a side-by-side view for each conflicting block (yours, theirs
+  and the result), choose either side, both or edit by hand; then continue,
+  skip or abort the merge, rebase, cherry-pick or revert.
+- **Commit actions**: cherry-pick, revert and reset (soft, mixed or hard)
+  from a commit's menu, with a preview; a hard reset lists what would be lost,
+  keeps a recoverable copy first and can be undone right away.
+- **Tags**: create lightweight and annotated tags, push them, and delete them
+  locally or on the remote (with its own confirmation).
 - **Remotes**: fetch, pull (merge or rebase) and push with progress and
   cancel, ahead/behind indicators, forced push only with
   `--force-with-lease`; optional automatic fetch.
@@ -74,9 +87,8 @@ _The interface is shown in Spanish; it is also available in English._
 
 ### Not there yet
 
-Merge and rebase from the UI, conflict resolution, cherry-pick, revert, reset,
-tags, history search, file history and blame, submodules, worktrees, LFS and a
-light theme are planned. The next phases are in
+History search, file history and blame, interactive rebase, undoing any
+recent operation, submodules, worktrees, LFS and a light theme are planned. The next phases are in
 [docs/ROADMAP.md](docs/ROADMAP.md) (in Spanish).
 
 ## Install

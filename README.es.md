@@ -15,7 +15,7 @@ GitCRAFT – cliente Git visual, rápido y de código abierto
 <li lang="pt">Português: GitCRAFT – um cliente Git visual, rápido e de código aberto</li>
 </ul>
 
-> **Versión temprana (v0.2.1).** GitCRAFT se puede usar a diario para las
+> **Versión temprana (v0.3.0).** GitCRAFT se puede usar a diario para las
 > funciones de abajo, pero es joven: puede tener asperezas y le faltan
 > funciones (ver [lo que aún no hay](#lo-que-aún-no-hay)). Tus repositorios
 > están a salvo: las operaciones destructivas siempre preguntan antes, y
@@ -61,6 +61,20 @@ vistazo y se ejecuten rápido, sin esconder lo que Git hace por debajo:
   lateral.
 - **Stash**: listar, crear, aplicar, pop, borrar con confirmación, recuperar un
   solo archivo.
+- **Merge y rebase**: desde el menú de una rama o arrastrando una rama sobre
+  otra, con una vista previa de lo que va a pasar (fast-forward, los commits
+  que entran, los conflictos que tendría, los commits ya publicados) y el
+  mensaje del merge editable; los cambios que estorban se pueden guardar antes
+  y recuperar después, y el resultado se puede deshacer en el momento.
+- **Conflictos**: una vista lado a lado para cada bloque en conflicto (lo tuyo,
+  lo que llega y el resultado), elegir un lado, los dos o editar a mano; y
+  después continuar, saltar o abortar el merge, rebase, cherry-pick o revert.
+- **Acciones sobre un commit**: cherry-pick, revert y reset (soft, mixed o
+  hard) desde el menú de un commit, con vista previa; el reset hard enumera lo
+  que se perdería, guarda antes una copia recuperable y se puede deshacer en el
+  momento.
+- **Tags**: crear tags ligeros y anotados, subirlos, y borrarlos en local o en
+  el remoto (con su propia confirmación).
 - **Remotos**: fetch, pull (merge o rebase) y push con progreso y cancelación,
   indicadores de commits por delante y por detrás, push forzado solo con
   `--force-with-lease`; fetch automático opcional.
@@ -79,9 +93,9 @@ vistazo y se ejecuten rápido, sin esconder lo que Git hace por debajo:
 
 ### Lo que aún no hay
 
-Están previstos merge y rebase desde la interfaz, resolución de conflictos,
-cherry-pick, revert, reset, tags, búsqueda en el historial, historial y blame
-de un archivo, submódulos, worktrees, LFS y un tema claro. Las próximas fases
+Están previstos la búsqueda en el historial, el historial y blame de un
+archivo, el rebase interactivo, deshacer cualquier operación reciente,
+submódulos, worktrees, LFS y un tema claro. Las próximas fases
 están en [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Instalar
