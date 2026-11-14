@@ -434,7 +434,7 @@ pub async fn reset(
 }
 
 /// Best effort: moves trashed files back to where they were.
-fn put_back(repo: &Path, trashed: &[(String, PathBuf)]) {
+pub(crate) fn put_back(repo: &Path, trashed: &[(String, PathBuf)]) {
     for (path, to) in trashed {
         let original = repo.join(path);
         if let Some(parent) = original.parent() {

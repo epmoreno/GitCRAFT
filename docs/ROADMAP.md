@@ -2290,6 +2290,12 @@ principio y toda operación destructiva pasa por confirmación.
       lo ya publicado no se deshace: se niega y se ofrece «Revertir»; (7)
       si después de deshacer se hace una operación nueva, la pila de
       «Rehacer» se vacía, como en cualquier editor.
+      *Aclaración de la (1), del usuario:* «sigue como lo dejó» se refiere a
+      las ramas y tags locales y a HEAD. Los cambios sin confirmar se
+      conservan siempre (lo que estorbe va al stash si se acepta); si además
+      los archivos están exactamente igual que tras la operación, también
+      vuelve el índice de antes. Así se pueden deshacer varios commits
+      seguidos aunque cada uno deje sus cambios preparados.
       - [x] **11.1 Diario de operaciones (core).** Cada operación que
         escribe devuelve un registro (`OpRecord`): qué fue (para el texto
         «Deshacer commit "x"»), las refs que movió con su valor antes y
@@ -2315,7 +2321,7 @@ principio y toda operación destructiva pasa por confirmación.
         preparar, el stash, el fetch y el push no dejan registro, las
         huellas, que la foto no cambia nada y que con conflictos no hay
         índice.
-      - [ ] **11.2 Deshacer y rehacer (core).** `undo_preview(record)` y
+      - [x] **11.2 Deshacer y rehacer (core).** `undo_preview(record)` y
         `undo(record)`; `redo_preview` y `redo` para lo deshecho.
         - **Vista previa:** qué refs vuelven y adónde, los commits que salen
           de la rama (marcando los que no quedan en ninguna otra rama ni tag,
@@ -2341,6 +2347,32 @@ principio y toda operación destructiva pasa por confirmación.
         tras un push, con la huella cambiada, con una operación a medias y
         en otro worktree. Cambios sin confirmar: en otros archivos se
         conservan; si estorban, se guardan en el stash y se recuperan.
+        *Hecho:* `ops/undo.rs`, con `undo_preview` y `undo` para los dos
+        sentidos (`Direction`). Se mueve con `reset --soft` (commit, amend,
+        reset soft y mixed), con `reset --keep` y lo preparado otra vez
+        preparado (el resto), con `switch` (checkout), con `branch --move`
+        (renombrar) y con `update-ref --stdin` con el valor esperado (las
+        demás refs). Al deshacer, si los archivos están como los dejó la
+        operación, vuelven el índice, su stash y la Papelera. «Publicado»
+        es lo que llegó a un remoto después de la operación, para poder
+        deshacer un pull.
+        *Diferencia con el plan:* rehacer deja las ramas, los tags y HEAD
+        exactamente como tras la operación, pero no vuelve a guardar en el
+        stash ni a llevar a la Papelera lo que la operación guardó: los
+        cambios sin confirmar se conservan siempre.
+        Tests: 17 de integración, con los criterios de la 8. Cubren:
+        - commit (también el primero y con HEAD separado), dos commits
+          seguidos, amend, merge, rebase, fast-forward de otra rama,
+          cherry-pick, revert, reset mixed y hard con su copia, checkout,
+          ramas (borrar, renombrar la actual, crear) y un tag anotado con
+          su mensaje; deshacer deja todo idéntico y rehacer, como después;
+        - los cambios posteriores se conservan, y lo preparado sigue
+          preparado;
+        - lo que estorba solo va al stash si se acepta;
+        - se niega con las refs cambiadas, con un merge a medias, con una
+          vista previa vieja, tras un push (un pull sí se deshace), con la
+          rama abierta en otro worktree, y no se rehace si algo cambió
+          después de deshacer.
       - [ ] **11.3 La pila de la sesión (Tauri).** Sustituye a
         `UndoRecord`: una pila por repositorio con las operaciones de
         GitCRAFT, de la más reciente a la más antigua, y otra para rehacer.

@@ -560,6 +560,40 @@ Núcleo en `gitcraft-core/src/ops/journal.rs`.
   solo queda la parte local. Los commits antiguos no se copian: siguen en
   el reflog, que además impide que git los borre.
 
+- **Deshacer y rehacer (11.2, `ops/undo.rs`):** el mismo registro en un
+  sentido o en el otro. Solo se ofrece mientras HEAD y las ramas y tags
+  locales estén donde los dejó el lado de partida (`refsAfter` para
+  deshacer, `refsBefore` para rehacer); la vista previa (`undo_preview`)
+  no toca nada y la ejecución (`undo`) repite la vista previa y solo sigue
+  si la huella es la misma.
+  - **Cómo se mueve HEAD:** commit, amend y reset soft o mixed con
+    `reset --soft` (los archivos no cambian; en el mixed, el índice va con
+    el commit). Merge, rebase, cherry-pick, revert, pull y reset hard con
+    `reset --keep`, que solo cambia los archivos que difieren entre los dos
+    commits; lo preparado se vuelve a preparar después (`diff --cached
+    --binary` y `apply --cached`). El checkout vuelve con `switch`; un
+    renombrado, con `branch --move`; las demás refs, con una sola
+    transacción de `update-ref --stdin` con el valor esperado.
+  - **Exacto:** al deshacer, si además los archivos están como los dejó la
+    operación (`fingerprintAfter`), vuelve el índice de antes (`read-tree`)
+    o se aplica su copia del stash con `--index`, y los archivos de la
+    Papelera vuelven a su sitio. Las copias se gastan: el registro que
+    devuelve ya no las tiene.
+  - **Los cambios sin confirmar nunca se pierden:** lo que estorba (cambios
+    o archivos sin seguimiento en archivos que cambian) se lista, y solo
+    va al stash («GitCRAFT: antes de deshacer» o «… de rehacer») si se
+    acepta. Rehacer tampoco descarta nada: un reset hard rehecho conserva
+    los cambios que el deshacer devolvió.
+  - **Nunca se fuerza:** se niega si un commit que saldría de una rama
+    llegó a un remoto después de la operación (no está en las ramas
+    remotas de `remotesAfter`). Así se puede deshacer un pull (esos
+    commits ya estaban en el remoto) pero no un commit ya subido. También
+    se niega con una operación a medias y si la rama está abierta en otro
+    worktree.
+  - **Vista previa:** por rama, los commits que salen (y cuántos solo
+    quedarán en el reflog) y los que entran; para una rama creada o
+    borrada, se cuentan frente a las demás ramas, tags y ramas remotas.
+
 ## 5f. Crear repositorios
 
 - **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama

@@ -121,9 +121,16 @@ pub struct OpRecord {
     pub stash: Option<String>,
     /// Untracked files it moved to the Trash: (path in the repo, where it is).
     pub trashed: Vec<(String, PathBuf)>,
+    /// HEAD and the local branches and tags right before: an undone
+    /// operation can be redone while they are still these.
+    pub refs_before: String,
     /// HEAD and the local branches and tags right after: the operation can
     /// be undone while they are still these.
     pub refs_after: String,
+    /// The remote-tracking branches right after (their commits): commits
+    /// that reach a remote only later were published after the operation,
+    /// and undoing it would need a forced push.
+    pub remotes_after: Vec<String>,
     /// Also the uncommitted files right after: if it is still this, undo
     /// puts back exactly what there was before.
     pub fingerprint_after: String,
@@ -270,7 +277,19 @@ pub async fn record(
     if changes.is_empty() && head == before.head {
         return Ok(None);
     }
+    let refs_before = refs_fingerprint(&before.head, &before.refs);
     let refs_after = refs_fingerprint(&head, &refs);
+    let remotes_after = git
+        .read(repo)
+        .args(["for-each-ref", "--format=%(objectname)", "refs/remotes"])
+        .output(cancel)
+        .await?
+        .stdout_lossy()
+        .lines()
+        .map(str::to_owned)
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect();
     let fingerprint_after = full_fingerprint(git, repo, &refs_after, cancel).await?;
     Ok(Some(OpRecord {
         kind,
@@ -280,7 +299,9 @@ pub async fn record(
         index_before: before.index,
         stash: saved.stash,
         trashed: saved.trashed,
+        refs_before,
         refs_after,
+        remotes_after,
         fingerprint_after,
     }))
 }

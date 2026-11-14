@@ -28,7 +28,7 @@ use crate::parse::status::WorkingStatus;
 use crate::{CancellationToken, Git, GitError, Result};
 
 /// Commits listed at most; `commits_total` says how many there are.
-const MAX_LISTED: usize = 50;
+pub(crate) const MAX_LISTED: usize = 50;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -263,7 +263,7 @@ async fn lines(
     Ok(out.stdout_lossy().lines().map(str::to_owned).collect())
 }
 
-async fn changed(
+pub(crate) async fn changed(
     git: &Git,
     repo: &Path,
     from: &str,
@@ -280,7 +280,7 @@ async fn changed(
 
 /// Id, short id and subject of each commit in `args` (a `git log` range or
 /// list), at most [`MAX_LISTED`].
-async fn commit_refs(
+pub(crate) async fn commit_refs(
     git: &Git,
     repo: &Path,
     args: &[&str],
@@ -315,7 +315,7 @@ async fn commit_refs(
 }
 
 /// Whether a worktree has `branch` (a local branch name) checked out.
-async fn checked_out_somewhere(
+pub(crate) async fn checked_out_somewhere(
     git: &Git,
     repo: &Path,
     branch: &str,
@@ -332,7 +332,7 @@ async fn checked_out_somewhere(
 
 /// The uncommitted changes and untracked files in the way of changing the
 /// files in `touched`; with `all_tracked`, any change in a tracked file is.
-fn in_the_way(
+pub(crate) fn in_the_way(
     status: &WorkingStatus,
     touched: &BTreeSet<String>,
     all_tracked: bool,
