@@ -1351,5 +1351,18 @@
     "undoRefused": "Something changed since the rebase, so nothing was touched.",
     "undoRefusedStashed": "Something changed since the rebase, so nothing was touched. Your changes are still in the stash (“GitCRAFT: antes del rebase de {{source}}”).",
     "menu": "Rebase “{{source}}” onto “{{target}}”…"
+  },
+  "drop": {
+    "legend": "What do you want to do?",
+    "merge": {
+      "name": "Merge:",
+      "explained": "“{{target}}” gets the changes of “{{source}}” with a merge commit (or advances, if it can). Nothing is rewritten."
+    },
+    "rebase": {
+      "name": "Rebase:",
+      "explained": "the commits of “{{source}}” are replayed on top of “{{target}}”, with new ids."
+    },
+    "hint": "Drop to merge or rebase with “{{name}}”",
+    "label": "Dragging branch {{name}}"
   }
 }

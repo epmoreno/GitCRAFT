@@ -2135,7 +2135,7 @@ principio y toda operación destructiva pasa por confirmación.
           rehicieron, recuerda el push forzado si había publicados y ofrece
           «Deshacer».
         Tests: 7 de integración y 9 de interfaz.
-      - [ ] **8.4 Arrastrar y soltar (UI).**
+      - [x] **8.4 Arrastrar y soltar (UI).**
         - **Qué se arrastra:** las filas de rama de la barra lateral y las
           etiquetas de rama del grafo. Se puede soltar de una a otra (de la
           barra al grafo y al revés).
@@ -2156,6 +2156,29 @@ principio y toda operación destructiva pasa por confirmación.
         arrastra, destinos válidos y no válidos, Esc, soltar fuera, y soltar
         abre el diálogo con las ramas correctas desde la barra y desde el
         grafo.
+        *Hecho:*
+        - `src/features/merge/drag.ts`: el arrastre con eventos de puntero.
+          - Empieza a los 4 píxeles; el clic que sigue a soltar no hace
+            nada.
+          - Los destinos son elementos con `data-drop-branch`; `canDrop`
+            solo acepta otra rama local del mismo repositorio. Las ramas
+            remotas y los tags también lo llevan, para que el cursor diga
+            que ahí no se puede soltar.
+          - Esc cancela, y la lista del grafo (`data-drag-scroll`) se
+            desplaza sola cerca de sus bordes.
+        - `DragLayer`: la etiqueta con el nombre que sigue al puntero y el
+          texto «Suelta para hacer merge o rebase con «x»».
+        - El diálogo abierto al soltar tiene el selector Merge / Rebase (con
+          Merge elegido) y recalcula la vista previa al cambiar.
+        - **Colores:** salen de tokens (`--drag`, `--drag-contrast`,
+          `--drag-tint`), y para cambiarlos basta con `--drag`. Hoy es el
+          cobrizo de `--accent`. El test de contraste comprueba el texto de
+          la etiqueta (4,5:1), el contorno de los destinos sobre cada
+          superficie (3:1) y el texto sobre el fondo tenue. También se
+          comprobó que con el azul de la paleta (`--lane-7`) sigue
+          cumpliendo. En las etiquetas del grafo solo cambia el contorno,
+          porque la de la rama actual tiene fondo sólido con texto oscuro.
+        Tests: 7 de interfaz y los de contraste.
       - [ ] **8.5 Documentación y prueba a mano.** Sección en
         ARCHITECTURE.md y `scripts/make-merge-examples.sh`, un repo
         desechable con un remoto bare local, con ramas para cada caso:

@@ -58,6 +58,14 @@
   --danger-border: color-mix(in srgb, var(--danger) 60%, transparent);
   --success-border: color-mix(in srgb, var(--success) 60%, transparent);
   --text-selection-bg: color-mix(in srgb, var(--accent) 35%, transparent);
+  /*
+   * Dragging a branch (task 8.4): the label under the pointer and the drop
+   * targets. To recolour it, change --drag alone (the contrast test checks
+   * --drag-contrast on it, and the outline on every surface).
+   */
+  --drag: var(--accent);
+  --drag-contrast: var(--accent-contrast);
+  --drag-tint: color-mix(in srgb, var(--drag) 16%, transparent);
   --backdrop: rgb(0 0 0 / 45%);
   --shadow-popover: 0 10px 30px rgb(0 0 0 / 45%);
   --shadow-dialog: 0 16px 48px rgb(0 0 0 / 50%);

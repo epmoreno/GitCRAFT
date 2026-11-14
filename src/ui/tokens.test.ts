@@ -112,6 +112,7 @@ const STATE_BACKGROUNDS = [
  */
 const TINTS = [
   "accent-tint",
+  "drag-tint",
   "diff-added-bg",
   "diff-removed-bg",
   "diff-picked-bg",
@@ -209,13 +210,16 @@ describe("design tokens: contrast (WCAG AA)", () => {
         ...LANES.map((bg) => [bg, token(bg)] as [string, Rgba]),
       ]),
       ...on("danger-contrast", withStates("danger", token("danger"))),
+      // The dragged branch's label (task 8.4).
+      ...on("drag-contrast", [["drag", token("drag")]]),
     ];
     expect(failures(pairs, 4.5)).toEqual([]);
   });
 
   it("control borders, the focus ring and graph lanes reach 3:1 (also hovered and pressed)", () => {
     const pairs: [string, Rgba, string, Rgba][] = [
-      ...["border-control", "focus-ring"].flatMap((fg) =>
+      // --drag outlines the drop targets (task 8.4).
+      ...["border-control", "focus-ring", "drag"].flatMap((fg) =>
         INTERACTIVE_BACKGROUNDS.flatMap((bg) =>
           withStates(bg, token(bg)).map(
             ([label, colour]) =>

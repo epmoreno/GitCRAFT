@@ -516,6 +516,12 @@ de…» de los menús). Se completa en la 8.5.
     aplica la copia del stash con `--index` si la hubo;
   - **otra rama** (fast-forward): devuelve su ref solo si sigue donde la
     dejó el merge.
+- **Arrastrar y soltar** (`drag.ts`): eventos de puntero, no el drag & drop
+  de HTML5 (en Windows, la recepción de archivos de Tauri se lo queda). Las
+  filas de rama de la barra lateral y las etiquetas del grafo empiezan el
+  arrastre; los destinos se reconocen por `data-drop-branch` y solo valen
+  otras ramas locales. Soltar abre el mismo diálogo, con el selector
+  Merge / Rebase. Los colores salen de `--drag` (tokens.css).
 - **Último fetch de un remoto** (`remote::last_fetch`): la hora de
   `FETCH_HEAD` si el último fetch incluyó ese remoto (sus URL comparadas
   como las escribe git: sin credenciales, «/» ni «.git» finales). Si no,

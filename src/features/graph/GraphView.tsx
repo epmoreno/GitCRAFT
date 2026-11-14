@@ -177,6 +177,8 @@ export function GraphView({
         ref={scrollRef}
         className={styles.scroller}
         role="listbox"
+        // Scrolls by itself while a branch is dragged near its edges.
+        data-drag-scroll
         // Focusable so it can be scrolled with the keyboard and so the
         // selection can tell whether the history has the focus.
         tabIndex={0}
@@ -236,6 +238,7 @@ export function GraphView({
                   <RefChips
                     labels={labels.get(line.oid)}
                     color={laneColor(line.color)}
+                    repoId={repoId}
                     onBranchMenu={(label, event) => {
                       select(repoId, line.oid);
                       setMenu({

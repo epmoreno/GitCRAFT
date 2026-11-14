@@ -333,6 +333,7 @@ function MergeDialogOpen() {
   const busy = useMergeStore((s) => s.busy);
   const close = useMergeStore((s) => s.close);
   const confirm = useMergeStore((s) => s.confirm);
+  const switchKind = useMergeStore((s) => s.switchKind);
   const [noFf, setNoFf] = useState(false);
   // `null` until the user edits it: git's message, also after a new preview.
   const [edited, setEdited] = useState<string | null>(null);
@@ -379,6 +380,29 @@ function MergeDialogOpen() {
       }
       onCancel={close}
     >
+      {dialog.switchable && (
+        <fieldset className={historyStyles.modes}>
+          <legend>{t("drop.legend")}</legend>
+          {(["merge", "rebase"] as const).map((kind) => (
+            <label key={kind} className={historyStyles.mode}>
+              <input
+                type="radio"
+                name="drop-kind"
+                value={kind}
+                checked={op === kind}
+                onChange={() => void switchKind(kind)}
+              />
+              <span>
+                <strong>{t(`drop.${kind}.name`)}</strong>{" "}
+                {t(`drop.${kind}.explained`, {
+                  source: shortName(dialog.source),
+                  target: shortName(dialog.target),
+                })}
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
       {!preview ? (
         <p className={historyStyles.note}>{t("merge.loading")}</p>
       ) : op === "rebase" ? (

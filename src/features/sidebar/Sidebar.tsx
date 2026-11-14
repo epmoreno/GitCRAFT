@@ -3,7 +3,9 @@ import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { GitRef, RepoRefs, StashEntry } from "../../ipc";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
-import { branchMenuItems } from "../merge/menu";
+import { beginBranchDrag, dropTargetProps, useDropState } from "../merge/drag";
+import { branchMenuItems, type BranchName } from "../merge/menu";
+import dragStyles from "../merge/merge.module.css";
 import { copyText } from "../../ui/clipboard";
 import { useTagStore } from "../history/tags";
 import { useBranchStore } from "../branches/store";
@@ -235,6 +237,11 @@ function LocalBranches({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
               onContextMenu={(event) =>
                 onMenu(event, ref.shortName, menuFor(ref))
               }
+              drag={
+                repoId === null
+                  ? undefined
+                  : { repoId, branch: ref, draggable: true }
+              }
             />
           ))}
           {branches.length === 0 && !detached && (
@@ -321,6 +328,11 @@ function Remotes({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
                   label={ref.shortName.slice(remote.length + 1)}
                   onClick={() => onSelect(ref.target)}
                   onDoubleClick={() => checkoutRemote(ref)}
+                  drag={
+                    repoId === null
+                      ? undefined
+                      : { repoId, branch: ref, draggable: true }
+                  }
                   onContextMenu={(event) => {
                     if (repoId === null) return;
                     onMenu(event, ref.shortName, [
@@ -389,6 +401,11 @@ function Tags({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
               key={ref.name}
               label={ref.shortName}
               onClick={() => onSelect(ref.target)}
+              drag={
+                repoId === null
+                  ? undefined
+                  : { repoId, branch: ref, draggable: false }
+              }
               onContextMenu={(event) => {
                 if (repoId === null) return;
                 onMenu(event, ref.shortName, [
@@ -583,6 +600,7 @@ function Item({
   onClick,
   onDoubleClick,
   onContextMenu,
+  drag,
 }: {
   label: string;
   current?: boolean;
@@ -597,8 +615,13 @@ function Item({
   onClick: () => void;
   onDoubleClick?: () => void;
   onContextMenu?: (event: MouseEvent) => void;
+  /** A branch or tag while something is dragged (task 8.4): only local
+   * branches receive drops, but every ref says so (the cursor shows where
+   * it cannot be dropped). `draggable`: branches, not tags. */
+  drag?: { repoId: number; branch: BranchName; draggable: boolean };
 }) {
   const { t } = useTranslation();
+  const dropState = useDropState(drag?.repoId ?? null, drag?.branch.name ?? "");
   return (
     <li>
       <button
@@ -609,6 +632,8 @@ function Item({
           stacked && styles.stacked,
           badge && styles.ours,
           selected && styles.selected,
+          dropState === "target" && dragStyles.dropTarget,
+          dropState === "over" && dragStyles.dropOver,
         ]
           .filter(Boolean)
           .join(" ")}
@@ -621,6 +646,12 @@ function Item({
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
+        onPointerDown={
+          drag?.draggable
+            ? (event) => beginBranchDrag(event, drag.repoId, drag.branch)
+            : undefined
+        }
+        {...(drag ? dropTargetProps(drag.repoId, drag.branch) : {})}
         onKeyDown={(event) => {
           // The menu key or ⇧F10: the same menu, under the row.
           if (!onContextMenu || !isShortcut("commitMenu", event)) return;

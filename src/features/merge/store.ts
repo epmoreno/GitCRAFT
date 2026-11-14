@@ -19,6 +19,9 @@ import { refreshAfterRemote, useRemoteStore } from "../remote/store";
 
 export type MergeDialogState = {
   kind: MoveKind;
+  /** Opened by a drop (task 8.4): the dialog lets the user switch between
+   * merge and rebase. */
+  switchable: boolean;
   repoId: number;
   /** Full ref names. */
   source: string;
@@ -48,6 +51,15 @@ type MergeState = {
     source: string,
     target: string,
   ) => Promise<void>;
+  /** `source` was dropped on `target`: merge by default (it rewrites
+   * nothing), rebase one click away. */
+  requestDrop: (
+    repoId: number,
+    source: string,
+    target: string,
+  ) => Promise<void>;
+  /** In a dialog opened by a drop: merge or rebase, same two branches. */
+  switchKind: (kind: MoveKind) => Promise<void>;
   /** Fetches the source's remote, then shows the preview again. */
   fetchFirst: () => Promise<void>;
   confirm: (options: {
@@ -88,7 +100,13 @@ export const useMergeStore = create<MergeState>()((set, get) => {
         : Promise.resolve(null),
     ]);
     const now = get().dialog;
-    if (now?.repoId !== repoId || now.source !== source) return;
+    if (
+      now?.repoId !== repoId ||
+      now.source !== source ||
+      now.kind !== dialog.kind
+    ) {
+      return;
+    }
     if (result.status === "error") {
       set({ dialog: null });
       showError(repoId, result.error);
@@ -104,28 +122,38 @@ export const useMergeStore = create<MergeState>()((set, get) => {
     });
   };
 
-  const open = async (
+  /** The remote of the branch that does not move (the source of a merge,
+   * the target of a rebase), if it is a remote branch. */
+  const remoteFor = (
     kind: MoveKind,
     repoId: number,
     source: string,
     target: string,
   ) => {
-    useHistoryStore.setState({ notice: null });
-    // The branch that does not move: the source of a merge, the target of
-    // a rebase.
     const fixed = kind === "merge" ? source : target;
-    const remoteBranch = fixed.startsWith("refs/remotes/")
-      ? fixed.slice("refs/remotes/".length)
+    return fixed.startsWith("refs/remotes/")
+      ? remoteOf(repoId, fixed.slice("refs/remotes/".length))
       : null;
+  };
+
+  const open = async (
+    kind: MoveKind,
+    repoId: number,
+    source: string,
+    target: string,
+    switchable = false,
+  ) => {
+    useHistoryStore.setState({ notice: null });
     set({
       dialog: {
         kind,
+        switchable,
         repoId,
         source,
         target,
         preview: null,
         changed: false,
-        remote: remoteBranch ? remoteOf(repoId, remoteBranch) : null,
+        remote: remoteFor(kind, repoId, source, target),
         lastFetch: null,
         fetching: false,
       },
@@ -140,6 +168,25 @@ export const useMergeStore = create<MergeState>()((set, get) => {
       open("merge", repoId, source, target),
     requestRebase: (repoId, source, target) =>
       open("rebase", repoId, source, target),
+    requestDrop: (repoId, source, target) =>
+      open("merge", repoId, source, target, true),
+
+    switchKind: async (kind) => {
+      const dialog = get().dialog;
+      if (!dialog?.switchable || dialog.kind === kind) return;
+      const { repoId, source, target } = dialog;
+      set({
+        dialog: {
+          ...dialog,
+          kind,
+          preview: null,
+          changed: false,
+          remote: remoteFor(kind, repoId, source, target),
+          lastFetch: null,
+        },
+      });
+      await load(false);
+    },
 
     fetchFirst: async () => {
       const dialog = get().dialog;

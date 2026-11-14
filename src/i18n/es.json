@@ -1351,5 +1351,18 @@
     "undoRefused": "Algo ha cambiado desde el rebase, así que no se ha tocado nada.",
     "undoRefusedStashed": "Algo ha cambiado desde el rebase, así que no se ha tocado nada. Tus cambios siguen en el stash («GitCRAFT: antes del rebase de {{source}}»).",
     "menu": "Hacer rebase de «{{source}}» sobre «{{target}}»…"
+  },
+  "drop": {
+    "legend": "¿Qué quieres hacer?",
+    "merge": {
+      "name": "Merge:",
+      "explained": "«{{target}}» recibe los cambios de «{{source}}» con un commit de merge (o avanza, si puede). No reescribe nada."
+    },
+    "rebase": {
+      "name": "Rebase:",
+      "explained": "los commits de «{{source}}» se rehacen encima de «{{target}}», con hashes nuevos."
+    },
+    "hint": "Suelta para hacer merge o rebase con «{{name}}»",
+    "label": "Arrastrando la rama {{name}}"
   }
 }

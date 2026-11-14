@@ -28,6 +28,7 @@ import {
   HistoryToast,
 } from "../features/history/HistoryDialogs";
 import { TagDialogs, TagToast } from "../features/history/TagDialogs";
+import { DragLayer } from "../features/merge/DragLayer";
 import { MergeDialog } from "../features/merge/MergeDialog";
 import { reportIfSmokeRun } from "./smoke";
 import { isShortcut } from "./shortcuts";
@@ -168,6 +169,7 @@ export function App() {
         <HistoryDialogs />
         <TagDialogs />
         <MergeDialog />
+        <DragLayer />
       </div>
       <OperationsPanel />
     </div>
