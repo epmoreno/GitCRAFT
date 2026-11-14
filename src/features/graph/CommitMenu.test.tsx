@@ -57,6 +57,7 @@ describe("the menu of a commit", () => {
     ).toEqual([
       "Cherry-pick en «main»…",
       "Revertir en «main»…",
+      "Crear tag aquí…",
       "Restablecer «main» a este commit…",
       "Copiar hash",
     ]);

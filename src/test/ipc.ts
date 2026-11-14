@@ -120,6 +120,13 @@ export const ipc = {
   resetBranch: vi.mocked(commands.resetBranch),
   resetUndoAvailable: vi.mocked(commands.resetUndoAvailable),
   undoReset: vi.mocked(commands.undoReset),
+  checkTagName: vi.mocked(commands.checkTagName),
+  tagInfo: vi.mocked(commands.tagInfo),
+  createTag: vi.mocked(commands.createTag),
+  deleteTag: vi.mocked(commands.deleteTag),
+  remoteTags: vi.mocked(commands.remoteTags),
+  pushTag: vi.mocked(commands.pushTag),
+  deleteRemoteTag: vi.mocked(commands.deleteRemoteTag),
 };
 
 export function resetIpcMock() {

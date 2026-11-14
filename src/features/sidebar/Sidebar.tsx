@@ -3,6 +3,8 @@ import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { GitRef, RepoRefs, StashEntry } from "../../ipc";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
+import { copyText } from "../../ui/clipboard";
+import { useTagStore } from "../history/tags";
 import { useBranchStore } from "../branches/store";
 import { selectedStash, stashSelection, useGraphStore } from "../graph/store";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
@@ -393,6 +395,28 @@ function Tags({ refs, repoId, filter, onSelect, onMenu }: ListProps) {
                     }),
                     onSelect: () =>
                       requestCreate(repoId, ref.name, ref.shortName),
+                  },
+                  ...(refs?.remotes ?? []).map((remote, i) => ({
+                    label: t("tags.menu.push", { remote }),
+                    separatorBefore: i === 0,
+                    onSelect: () =>
+                      void useTagStore
+                        .getState()
+                        .push(repoId, ref.shortName, remote),
+                  })),
+                  {
+                    label: t("tags.menu.copyName"),
+                    separatorBefore: true,
+                    onSelect: () => void copyText(ref.shortName),
+                  },
+                  {
+                    label: t("tags.menu.delete"),
+                    danger: true,
+                    separatorBefore: true,
+                    onSelect: () =>
+                      void useTagStore
+                        .getState()
+                        .requestDelete(repoId, ref.shortName),
                   },
                 ]);
               }}

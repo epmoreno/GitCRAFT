@@ -102,6 +102,8 @@
     "trashFailed_windows": "An untracked file couldn’t be moved to the Recycle Bin (for example, because its disk has no Recycle Bin), so nothing was discarded. GitCRAFT never deletes a file instead of moving it to the Recycle Bin.",
     "invalidBranchName": "That is not a valid branch name.",
     "branchExists": "A branch with that name already exists.",
+    "invalidTagName": "That is not a valid tag name.",
+    "tagExists": "A tag with that name already exists. GitCRAFT never moves a tag: delete it first to create it on another commit.",
     "branchChanged": "The branch changed since it was shown (it was moved, renamed or deleted). Nothing was done; check the sidebar and try again.",
     "branchInWorktree": "That branch is in use in another worktree of this repository.",
     "stashChanged": "That entry is no longer in the stash (it was applied or deleted elsewhere). Nothing was done.",
@@ -1090,12 +1092,14 @@
     "action": {
       "cherryPick": "Cherry-pick onto “{{branch}}”…",
       "revert": "Revert in “{{branch}}”…",
-      "reset": "Reset “{{branch}}” to this commit…"
+      "reset": "Reset “{{branch}}” to this commit…",
+      "createTag": "Create a tag here…"
     },
     "button": {
       "cherryPick": "Cherry-pick…",
       "revert": "Revert…",
-      "reset": "Reset…"
+      "reset": "Reset…",
+      "createTag": "Create tag…"
     }
   },
   "history": {
@@ -1187,6 +1191,54 @@
       "undoGone": "It can no longer be undone from here: another operation ran in this repository.",
       "undone": "Reset undone: “{{branch}}” is exactly as before.",
       "undoRefused": "Something changed since the reset, so nothing was touched. Your changes are in the stash (“GitCRAFT: antes de reset a {{short}}”, if there were any) and the commits are still in git’s history (task 11)."
+    }
+  },
+  "tags": {
+    "create": {
+      "title": "Create a tag on {{short}} (“{{subject}}”)",
+      "act": "Create tag",
+      "name": "Name",
+      "invalid": "Not a valid tag name.",
+      "exists": "A tag with that name already exists (GitCRAFT never moves it).",
+      "type": "Type",
+      "annotated": "Annotated:",
+      "annotatedExplained": "with a message, author and date (usual for versions).",
+      "lightweight": "Lightweight:",
+      "lightweightExplained": "just a name for the commit.",
+      "message": "Message",
+      "pushTo": "Also push it to “{{remote}}” after creating it",
+      "pushToMany": "Also push it, after creating it, to:",
+      "remote": "Remote"
+    },
+    "menu": {
+      "push": "Push to “{{remote}}”",
+      "copyName": "Copy name",
+      "delete": "Delete tag…"
+    },
+    "delete": {
+      "title": "Delete the tag “{{name}}”?",
+      "act": "Delete tag",
+      "explained": "It is deleted only in your copy. It marked commit {{short}}.",
+      "checking": "Checking whether a remote has it…",
+      "alsoOn": "It is also on {{remotes}}: it is not deleted there.",
+      "differentOn": "{{remotes}} has a different tag with that name: it is not touched.",
+      "checkFailed": "The remotes could not be checked:"
+    },
+    "deleteRemote": {
+      "title": "Delete the tag “{{name}}” from “{{remote}}”?",
+      "act": "Delete from “{{remote}}”",
+      "affectsOthers": "This affects other people: whoever already has the tag keeps it in their copy (it is not deleted for them), and if someone pushes it again, it will reappear on “{{remote}}”.",
+      "lease": "It is only deleted if on “{{remote}}” it still points to {{short}}, as now."
+    },
+    "notice": {
+      "created": "Tag “{{name}}” created.",
+      "createdAndPushed": "Tag “{{name}}” created and pushed to “{{remote}}”.",
+      "pushed": "Tag “{{name}}” pushed to “{{remote}}”.",
+      "rejected": "“{{remote}}” did not accept the tag “{{name}}” (for example, because it has a different one with that name). Nothing changed:",
+      "deleted": "Tag “{{name}}” deleted.",
+      "deletedStillOn": "Tag “{{name}}” deleted locally. It is still on {{remotes}}.",
+      "deleteOn": "Delete it from “{{remote}}” too…",
+      "deletedRemote": "Tag “{{name}}” deleted from “{{remote}}”."
     }
   }
 }

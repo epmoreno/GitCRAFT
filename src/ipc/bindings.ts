@@ -165,6 +165,20 @@ export const commands = {
 	resetUndoAvailable: (id: number, undoId: number) => typedError<boolean, IpcError_Serialize>(__TAURI_INVOKE("reset_undo_available", { id, undoId })),
 	/**  Undoes the last reset exactly, if nothing changed since. */
 	undoReset: (id: number, undoId: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("undo_reset", { id, undoId })),
+	checkTagName: (id: number, name: string) => typedError<TagNameCheck, IpcError_Serialize>(__TAURI_INVOKE("check_tag_name", { id, name })),
+	tagInfo: (id: number, name: string) => typedError<TagInfo | null, IpcError_Serialize>(__TAURI_INVOKE("tag_info", { id, name })),
+	/**  Creates a lightweight tag, or an annotated one with `message`. */
+	createTag: (id: number, oid: string, name: string, message: string | null) => typedError<TagInfo, IpcError_Serialize>(__TAURI_INVOKE("create_tag", { id, oid, name, message })),
+	/**
+	 *  Deletes the local tag if it still points to `expected`; remotes are not
+	 *  touched.
+	 */
+	deleteTag: (id: number, name: string, expected: string) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("delete_tag", { id, name, expected })),
+	/**  The remotes that have tag `name`, asked now over the network. */
+	remoteTags: (id: number, name: string) => typedError<RemoteTag[], IpcError_Serialize>(__TAURI_INVOKE("remote_tags", { id, name })),
+	pushTag: (id: number, remote: string, name: string) => typedError<TagPushOutcome, IpcError_Serialize>(__TAURI_INVOKE("push_tag", { id, remote, name })),
+	/**  Deletes tag `name` on `remote` if it still points to `expected` there. */
+	deleteRemoteTag: (id: number, remote: string, name: string, expected: string) => typedError<TagPushOutcome, IpcError_Serialize>(__TAURI_INVOKE("delete_remote_tag", { id, remote, name, expected })),
 	/**
 	 *  Pushes the current branch to its upstream, or publishes it to
 	 *  `publish_to` creating the upstream. `force_lease`: force only if the
@@ -850,7 +864,7 @@ export type EntryKind = "file" | "executable" | "symlink" | "submodule";
  */
 export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | 
 /**  No user.name / user.email configured. */
-"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "undoUnsupported" | "trashFailed" | "invalidBranchName" | "branchExists" | "branchChanged" | 
+"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "undoUnsupported" | "trashFailed" | "invalidBranchName" | "branchExists" | "invalidTagName" | "tagExists" | "branchChanged" | 
 /**  The branch is checked out in another worktree. */
 "branchInWorktree" | "stashChanged" | "nothingToStash" | 
 /**  The file is no longer in conflict; nothing was done. */
@@ -1753,6 +1767,15 @@ export type RecoverPreview_Serialize = {
 
 export type RefKind = "local" | "remote" | "tag";
 
+/**  The same tag on a remote. */
+export type RemoteTag = {
+	remote: string,
+	/**  What the remote's `refs/tags/<name>` points to. */
+	oid: string,
+	/**  It points to the same object as the local tag. */
+	same: boolean,
+};
+
 /**  Emitted when an open repository changed outside GitCRAFT. */
 export type RepoChanged = {
 	id: number,
@@ -2026,6 +2049,30 @@ export type StatusEntry_Serialize = {
 	oldPath: string | null,
 	status: FileStatus,
 };
+
+/**  A tag as the user sees it. */
+export type TagInfo = {
+	name: string,
+	/**  What `refs/tags/<name>` points to (the tag object if annotated). */
+	oid: string,
+	/**  The commit it marks. */
+	commit: string,
+	annotated: boolean,
+};
+
+export type TagNameCheck = "valid" | 
+/**  Not a name git accepts for a tag. */
+"invalid" | 
+/**  A tag with that name already exists (it is never moved). */
+"exists";
+
+export type TagPushOutcome = { type: "done" } | 
+/**
+ *  Refused by the remote (a different tag with that name exists there,
+ *  it changed since it was shown, a hook…); nothing changed. `detail`
+ *  is git's summary.
+ */
+{ type: "rejected"; detail: string };
 
 /**  Text size levels; the whole UI scales with it. */
 export type TextSize = "small" | "normal" | "large" | "larger";

@@ -15,6 +15,7 @@ export type CommitAction = "cherryPick" | "revert" | "reset" | "createTag";
 export const READY_ACTIONS: readonly CommitAction[] = [
   "cherryPick",
   "revert",
+  "createTag",
   "reset",
 ];
 

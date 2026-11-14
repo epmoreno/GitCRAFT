@@ -1845,7 +1845,7 @@ principio y toda operación destructiva pasa por confirmación.
           hay copia. La acción está en el menú y en el panel, separada y con
           estilo de peligro. `ConfirmDialog` admite el botón desactivado.
         Tests: 7 de integración, 1 del estado de Tauri y 7 de interfaz.
-      - [ ] **10.5 Tags (core y UI).**
+      - [x] **10.5 Tags (core y UI).**
         - **Crear** en un commit: ligero o anotado (con mensaje). El nombre
           se valida con `git check-ref-format`, y si ya existe se dice y no
           se mueve.
@@ -1864,6 +1864,28 @@ principio y toda operación destructiva pasa por confirmación.
         nombre inválido o repetido, subir, borrar local, y borrar en el
         remoto (contra un remoto bare de prueba), que solo ocurre con su
         confirmación; tests de interfaz de las dos confirmaciones.
+        *Decisiones del usuario:* tipo por defecto, anotado; casilla
+        «Subirlo también a «origin» después de crearlo», desmarcada por
+        defecto y con el remoto a elegir si hay varios.
+        *Hecho:*
+        - **Core:** `ops::tag` (`check_tag_name`, `tag_info`, `create_tag`,
+          `delete_tag`, `remote_tags`, `push_tag`, `delete_remote_tag`).
+          - Un nombre es válido si pasa `check-ref-format` y no empieza por
+            «-» (comprobado: `check-ref-format` acepta `-x`, pero
+            `git tag` lo rechaza).
+          - El borrado local usa `update-ref -d` con el valor esperado.
+          - Subir nunca fuerza y el remoto rechaza un tag distinto. Borrar
+            en el remoto usa `--force-with-lease` con lo que se vio.
+          - Errores nuevos: `InvalidTagName` y `TagExists`.
+        - **Interfaz:** «Crear tag aquí…» en el menú del commit y en el
+          panel. El diálogo comprueba el nombre al escribir, pide el mensaje
+          si es anotado y tiene la casilla de subir con el remoto a elegir.
+          El menú del tag en la barra lateral tiene «Subir a «x»», «Copiar
+          nombre» y «Borrar tag…». El borrado local comprueba al abrir en
+          qué remotos está y lo dice; después, el aviso ofrece «Borrarlo
+          también de «x»…» solo donde está el mismo tag, con su propia
+          confirmación.
+        Tests: 6 de integración y 5 de interfaz.
       - [ ] **10.6 Documentación y prueba a mano.** Sección en
         ARCHITECTURE.md y un script de ejemplo (repo desechable con un
         remoto bare local) para probar cada operación en el Mac.

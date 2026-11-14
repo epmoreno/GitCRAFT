@@ -24,6 +24,7 @@ use gitcraft_core::ops::remote::{ForcePushPreview, PullMode, PullOutcome, PushOu
 use gitcraft_core::ops::reset::{ResetMode, ResetPreview};
 use gitcraft_core::ops::resolve::{MarkOutcome, ResolvedFile, Side};
 use gitcraft_core::ops::stash::{ApplyOutcome, RecoverPreview};
+use gitcraft_core::ops::tag::{RemoteTag, TagInfo, TagNameCheck, TagPushOutcome};
 use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
@@ -1071,4 +1072,87 @@ pub async fn undo_reset(
     undo_id: u32,
 ) -> Result<(), IpcError> {
     state.undo_reset(id, undo_id).await
+}
+
+// --- Tags (task 10.5) ------------------------------------------------------
+
+#[tauri::command]
+#[specta::specta]
+pub async fn check_tag_name(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+) -> Result<TagNameCheck, IpcError> {
+    state.check_tag_name(id, &name).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn tag_info(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+) -> Result<Option<TagInfo>, IpcError> {
+    state.tag_info(id, &name).await
+}
+
+/// Creates a lightweight tag, or an annotated one with `message`.
+#[tauri::command]
+#[specta::specta]
+pub async fn create_tag(
+    state: State<'_, AppState>,
+    id: RepoId,
+    oid: String,
+    name: String,
+    message: Option<String>,
+) -> Result<TagInfo, IpcError> {
+    state.create_tag(id, oid, name, message).await
+}
+
+/// Deletes the local tag if it still points to `expected`; remotes are not
+/// touched.
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_tag(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+    expected: String,
+) -> Result<(), IpcError> {
+    state.delete_tag(id, name, expected).await
+}
+
+/// The remotes that have tag `name`, asked now over the network.
+#[tauri::command]
+#[specta::specta]
+pub async fn remote_tags(
+    state: State<'_, AppState>,
+    id: RepoId,
+    name: String,
+) -> Result<Vec<RemoteTag>, IpcError> {
+    state.remote_tags(id, name).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn push_tag(
+    state: State<'_, AppState>,
+    id: RepoId,
+    remote: String,
+    name: String,
+) -> Result<TagPushOutcome, IpcError> {
+    state.push_tag(id, remote, name).await
+}
+
+/// Deletes tag `name` on `remote` if it still points to `expected` there.
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_remote_tag(
+    state: State<'_, AppState>,
+    id: RepoId,
+    remote: String,
+    name: String,
+    expected: String,
+) -> Result<TagPushOutcome, IpcError> {
+    state.delete_remote_tag(id, remote, name, expected).await
 }

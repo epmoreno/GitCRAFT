@@ -24,7 +24,7 @@ pub async fn remotes(git: &Git, repo: &Path, cancel: &CancellationToken) -> Resu
 }
 
 /// Remote names reach git's command line only if they are configured.
-async fn known_remote(
+pub(crate) async fn known_remote(
     git: &Git,
     repo: &Path,
     remote: &str,

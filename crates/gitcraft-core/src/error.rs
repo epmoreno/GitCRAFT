@@ -67,6 +67,13 @@ pub enum GitError {
     #[error("a branch named {0:?} already exists")]
     BranchExists(String),
 
+    #[error("{0:?} is not a valid tag name")]
+    InvalidTagName(String),
+
+    /// A tag with that name exists; tags are never moved.
+    #[error("a tag named {0:?} already exists")]
+    TagExists(String),
+
     /// The branch moved or disappeared since it was shown; nothing was done.
     #[error("branch {0:?} changed since it was shown")]
     BranchChanged(String),
@@ -166,6 +173,8 @@ pub enum ErrorKind {
     TrashFailed,
     InvalidBranchName,
     BranchExists,
+    InvalidTagName,
+    TagExists,
     BranchChanged,
     /// The branch is checked out in another worktree.
     BranchInWorktree,
@@ -233,6 +242,8 @@ impl GitError {
             Self::TrashFailed { .. } => ErrorKind::TrashFailed,
             Self::InvalidBranchName(_) => ErrorKind::InvalidBranchName,
             Self::BranchExists(_) => ErrorKind::BranchExists,
+            Self::InvalidTagName(_) => ErrorKind::InvalidTagName,
+            Self::TagExists(_) => ErrorKind::TagExists,
             Self::BranchChanged(_) => ErrorKind::BranchChanged,
             Self::StashChanged(_) => ErrorKind::StashChanged,
             Self::NothingToStash => ErrorKind::NothingToStash,
@@ -300,6 +311,8 @@ impl GitError {
             | Self::StaleDiff
             | Self::InvalidBranchName(_)
             | Self::BranchExists(_)
+            | Self::InvalidTagName(_)
+            | Self::TagExists(_)
             | Self::BranchChanged(_)
             | Self::StashChanged(_)
             | Self::NothingToStash

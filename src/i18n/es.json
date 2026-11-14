@@ -102,6 +102,8 @@
     "trashFailed_windows": "No se ha podido mover un archivo sin seguimiento a la Papelera de reciclaje (por ejemplo, porque su disco no tiene Papelera de reciclaje), así que no se ha descartado nada. GitCRAFT nunca borra un archivo en lugar de moverlo a la Papelera de reciclaje.",
     "invalidBranchName": "Ese nombre no es válido para una rama.",
     "branchExists": "Ya existe una rama con ese nombre.",
+    "invalidTagName": "Ese no es un nombre de tag válido.",
+    "tagExists": "Ya existe un tag con ese nombre. GitCRAFT nunca mueve un tag: bórralo antes si quieres crearlo en otro commit.",
     "branchChanged": "La rama ha cambiado desde que se mostró (alguien la movió, la renombró o la borró). No se ha hecho nada; revisa la barra lateral y vuelve a intentarlo.",
     "branchInWorktree": "Esa rama está en uso en otro worktree de este repositorio.",
     "stashChanged": "Esa entrada ya no está en el stash (se aplicó o borró desde otro sitio). No se ha hecho nada.",
@@ -1090,12 +1092,14 @@
     "action": {
       "cherryPick": "Cherry-pick en «{{branch}}»…",
       "revert": "Revertir en «{{branch}}»…",
-      "reset": "Restablecer «{{branch}}» a este commit…"
+      "reset": "Restablecer «{{branch}}» a este commit…",
+      "createTag": "Crear tag aquí…"
     },
     "button": {
       "cherryPick": "Cherry-pick…",
       "revert": "Revertir…",
-      "reset": "Restablecer…"
+      "reset": "Restablecer…",
+      "createTag": "Crear tag…"
     }
   },
   "history": {
@@ -1187,6 +1191,54 @@
       "undoGone": "Ya no se puede deshacer desde aquí: ha habido otra operación en este repositorio.",
       "undone": "Reset deshecho: «{{branch}}» está exactamente como antes.",
       "undoRefused": "Algo ha cambiado desde el reset, así que no se ha tocado nada. Tus cambios están en el stash («GitCRAFT: antes de reset a {{short}}», si había) y los commits siguen en el historial de git (tarea 11)."
+    }
+  },
+  "tags": {
+    "create": {
+      "title": "Crear tag en {{short}} («{{subject}}»)",
+      "act": "Crear tag",
+      "name": "Nombre",
+      "invalid": "No es un nombre de tag válido.",
+      "exists": "Ya existe un tag con ese nombre (GitCRAFT nunca lo mueve).",
+      "type": "Tipo",
+      "annotated": "Anotado:",
+      "annotatedExplained": "con mensaje, autor y fecha (lo habitual para versiones).",
+      "lightweight": "Ligero:",
+      "lightweightExplained": "solo un nombre para el commit.",
+      "message": "Mensaje",
+      "pushTo": "Subirlo también a «{{remote}}» después de crearlo",
+      "pushToMany": "Subirlo también, después de crearlo, a:",
+      "remote": "Remoto"
+    },
+    "menu": {
+      "push": "Subir a «{{remote}}»",
+      "copyName": "Copiar nombre",
+      "delete": "Borrar tag…"
+    },
+    "delete": {
+      "title": "¿Borrar el tag «{{name}}»?",
+      "act": "Borrar tag",
+      "explained": "Se borra solo en tu copia. Marcaba el commit {{short}}.",
+      "checking": "Comprobando si está en algún remoto…",
+      "alsoOn": "También está en {{remotes}}: allí no se borra.",
+      "differentOn": "En {{remotes}} hay otro tag distinto con ese nombre: no se toca.",
+      "checkFailed": "No se ha podido comprobar en los remotos:"
+    },
+    "deleteRemote": {
+      "title": "¿Borrar el tag «{{name}}» de «{{remote}}»?",
+      "act": "Borrar de «{{remote}}»",
+      "affectsOthers": "Afecta a otras personas: quien ya tenga el tag lo conserva en su copia (no se le borra), y si alguien lo vuelve a subir, reaparecerá en «{{remote}}».",
+      "lease": "Solo se borrará si en «{{remote}}» sigue apuntando a {{short}}, como ahora."
+    },
+    "notice": {
+      "created": "Tag «{{name}}» creado.",
+      "createdAndPushed": "Tag «{{name}}» creado y subido a «{{remote}}».",
+      "pushed": "Tag «{{name}}» subido a «{{remote}}».",
+      "rejected": "«{{remote}}» no ha aceptado el tag «{{name}}» (por ejemplo, porque allí hay otro distinto con ese nombre). No se ha cambiado nada:",
+      "deleted": "Tag «{{name}}» borrado.",
+      "deletedStillOn": "Tag «{{name}}» borrado en local. Sigue en {{remotes}}.",
+      "deleteOn": "Borrarlo también de «{{remote}}»…",
+      "deletedRemote": "Tag «{{name}}» borrado de «{{remote}}»."
     }
   }
 }

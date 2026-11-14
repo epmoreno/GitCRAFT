@@ -22,4 +22,5 @@ pub mod resolve;
 pub mod stage;
 pub mod stash;
 pub mod status;
+pub mod tag;
 pub mod worktree;

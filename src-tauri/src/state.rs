@@ -37,6 +37,7 @@ use gitcraft_core::ops::resolve::{self, MarkOutcome, ResolvedFile, Side};
 use gitcraft_core::ops::stage;
 use gitcraft_core::ops::stash::{self, ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::status::working_status;
+use gitcraft_core::ops::tag::{self, RemoteTag, TagInfo, TagNameCheck, TagPushOutcome};
 use gitcraft_core::ops::worktree::{
     SelectionAction, WorktreeArea, apply_selection, worktree_file_diff,
 };
@@ -1447,6 +1448,83 @@ impl AppState {
         let git = self.git()?;
         let repo = self.session_path(id)?;
         Ok(commit_actions::commit_actions(git, &repo, oid, &CancellationToken::new()).await?)
+    }
+
+    pub async fn check_tag_name(&self, id: RepoId, name: &str) -> Result<TagNameCheck, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(tag::check_tag_name(git, &repo, name, &CancellationToken::new()).await?)
+    }
+
+    pub async fn tag_info(&self, id: RepoId, name: &str) -> Result<Option<TagInfo>, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(tag::tag_info(git, &repo, name, &CancellationToken::new()).await?)
+    }
+
+    pub async fn create_tag(
+        &self,
+        id: RepoId,
+        oid: String,
+        name: String,
+        message: Option<String>,
+    ) -> Result<TagInfo, IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            tag::create_tag(git, &repo, &oid, &name, message.as_deref(), &cancel).await
+        })
+        .await
+    }
+
+    pub async fn delete_tag(
+        &self,
+        id: RepoId,
+        name: String,
+        expected: String,
+    ) -> Result<(), IpcError> {
+        let git = self.git()?;
+        let cancel = CancellationToken::new();
+        self.write(id, |repo| async move {
+            tag::delete_tag(git, &repo, &name, &expected, &cancel).await
+        })
+        .await
+    }
+
+    /// Which remotes have tag `name` (network; cancellable).
+    pub async fn remote_tags(&self, id: RepoId, name: String) -> Result<Vec<RemoteTag>, IpcError> {
+        let git = self.git()?;
+        self.remote_operation(id, |repo, cancel| async move {
+            tag::remote_tags(git, &repo, &name, &cancel).await
+        })
+        .await
+    }
+
+    pub async fn push_tag(
+        &self,
+        id: RepoId,
+        remote: String,
+        name: String,
+    ) -> Result<TagPushOutcome, IpcError> {
+        let git = self.git()?;
+        self.remote_operation(id, |repo, cancel| async move {
+            tag::push_tag(git, &repo, &remote, &name, &cancel).await
+        })
+        .await
+    }
+
+    pub async fn delete_remote_tag(
+        &self,
+        id: RepoId,
+        remote: String,
+        name: String,
+        expected: String,
+    ) -> Result<TagPushOutcome, IpcError> {
+        let git = self.git()?;
+        self.remote_operation(id, |repo, cancel| async move {
+            tag::delete_remote_tag(git, &repo, &remote, &name, &expected, &cancel).await
+        })
+        .await
     }
 
     pub async fn reset_preview(

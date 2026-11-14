@@ -27,6 +27,7 @@ import {
   HistoryDialogs,
   HistoryToast,
 } from "../features/history/HistoryDialogs";
+import { TagDialogs, TagToast } from "../features/history/TagDialogs";
 import { reportIfSmokeRun } from "./smoke";
 import { isShortcut } from "./shortcuts";
 import { StartPage } from "../features/repo/StartPage";
@@ -152,6 +153,7 @@ export function App() {
           <RemoteToast />
           <RemoteProgress />
           <HistoryToast repoId={active?.id ?? null} />
+          <TagToast repoId={active?.id ?? null} />
         </main>
         <DetailPanel repoId={active?.id ?? null} />
         <DiscardDialog />
@@ -163,6 +165,7 @@ export function App() {
         <PublishDialog />
         <UnsavedDialog />
         <HistoryDialogs />
+        <TagDialogs />
       </div>
       <OperationsPanel />
     </div>

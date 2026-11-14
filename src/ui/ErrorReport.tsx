@@ -24,6 +24,8 @@ const KINDS = {
   trashFailed: true,
   invalidBranchName: true,
   branchExists: true,
+  invalidTagName: true,
+  tagExists: true,
   branchChanged: true,
   branchInWorktree: true,
   stashChanged: true,

@@ -1,3 +1,4 @@
+import { initialTagState, useTagStore } from "../features/history/tags";
 import "@testing-library/jest-dom/vitest";
 import i18n from "../i18n";
 import { initialBranchState, useBranchStore } from "../features/branches/store";
@@ -135,6 +136,13 @@ vi.mock("../ipc", () => ({
     resetBranch: vi.fn(),
     resetUndoAvailable: vi.fn(),
     undoReset: vi.fn(),
+    checkTagName: vi.fn(),
+    tagInfo: vi.fn(),
+    createTag: vi.fn(),
+    deleteTag: vi.fn(),
+    remoteTags: vi.fn(),
+    pushTag: vi.fn(),
+    deleteRemoteTag: vi.fn(),
   },
   setUiZoom: vi.fn(),
   ghLogin: vi.fn(),
@@ -174,6 +182,7 @@ beforeEach(() => {
   useRemoteStore.setState(initialRemoteState);
   useConflictStore.setState(initialConflictState);
   useHistoryStore.setState(initialHistoryState);
+  useTagStore.setState(initialTagState);
   useCreateStore.setState(initialCreateState);
   useOperationsStore.setState(initialOperationsState);
   useGraphStore.setState({ graphs: {} });

@@ -13,6 +13,7 @@ import { useGraphStore } from "../graph/store";
 import { refreshAfterRemote } from "../remote/store";
 import { useStashStore } from "../stash/store";
 import { useWorkdirStore } from "../workdir/store";
+import { useTagStore } from "./tags";
 
 /**
  * Operations on one commit of the graph (task 10): their dialogs, their
@@ -372,6 +373,9 @@ export function runCommitAction(
       return;
     case "reset":
       void useHistoryStore.getState().requestReset(repoId, oid);
+      return;
+    case "createTag":
+      void useTagStore.getState().requestCreate(repoId, oid);
       return;
     default:
       return;
