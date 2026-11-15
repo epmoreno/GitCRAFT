@@ -838,29 +838,6 @@ pub enum MoveOutcome {
     },
 }
 
-/// Everything needed to undo a merge or rebase that ended; kept by the
-/// app, not shown.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "specta", derive(specta::Type))]
-pub struct MoveRecord {
-    /// The local branch that moved.
-    pub branch: String,
-    /// It was the current branch (otherwise only its ref moved).
-    pub current: bool,
-    /// Where it was, and where it ended.
-    pub previous: String,
-    pub after: String,
-    /// Current branch: the index (as a tree) right before the operation,
-    /// with what was staged.
-    pub index_before: Option<String>,
-    /// The stash entry with the changes saved before it, if any.
-    pub stash: Option<String>,
-    /// Current branch: the state right after; undo only if it is still
-    /// this.
-    pub fingerprint_after: String,
-}
-
 /// Message of the stash made by "save my changes, then merge".
 pub fn merge_stash_message(source: &str) -> String {
     format!("GitCRAFT: antes del merge de {source}")
@@ -900,22 +877,19 @@ fn stopped_or_failed(out: &crate::GitOutput, status: &WorkingStatus, command: &s
 /// preview, if it is refused, if changes are in the way (unless
 /// `save_changes`: they are stashed first, in an entry that is never
 /// dropped automatically) or if it would conflict (unless
-/// `allow_conflicts`). Returns how to undo it when it is done.
+/// `allow_conflicts`).
 pub async fn merge(
     git: &Git,
     repo: &Path,
     request: &MergeRequest,
     cancel: &CancellationToken,
-) -> Result<(MoveOutcome, Option<MoveRecord>)> {
+) -> Result<MoveOutcome> {
     let not_done = |preview: MovePreview, changed, saved| {
-        Ok((
-            MoveOutcome::NotDone {
-                preview: Box::new(preview),
-                changed,
-                saved,
-            },
-            None,
-        ))
+        Ok(MoveOutcome::NotDone {
+            preview: Box::new(preview),
+            changed,
+            saved,
+        })
     };
     let mut preview = merge_preview(git, repo, &request.source, &request.target, cancel).await?;
     if preview.fingerprint != request.expected {
@@ -957,33 +931,13 @@ pub async fn merge(
             .args([&target_ref, &preview.source.oid, &previous])
             .output(cancel)
             .await?;
-        let record = MoveRecord {
-            branch: preview.target.name.clone(),
-            current: false,
-            previous,
-            after: preview.source.oid.clone(),
-            index_before: None,
-            stash: saved.clone(),
-            fingerprint_after: String::new(),
-        };
-        return Ok((
-            MoveOutcome::Done {
-                head: record.after.clone(),
-                fast_forward: true,
-                saved,
-            },
-            Some(record),
-        ));
+        return Ok(MoveOutcome::Done {
+            head: preview.source.oid.clone(),
+            fast_forward: true,
+            saved,
+        });
     }
 
-    let index_before = git
-        .write(repo)
-        .arg("write-tree")
-        .output(cancel)
-        .await?
-        .stdout_lossy()
-        .trim()
-        .to_owned();
     let mut cmd = git.write(repo).arg("merge");
     if commit {
         let message = request
@@ -1005,100 +959,17 @@ pub async fn merge(
     let status = working_status(git, repo, cancel).await?;
     stopped_or_failed(&out, &status, "merge")?;
     if out.exit_code == Some(1) || !status.conflicted.is_empty() || status.in_progress.is_some() {
-        return Ok((
-            MoveOutcome::Conflicted {
-                files: status.conflicted.into_iter().map(|c| c.path).collect(),
-                saved,
-            },
-            None,
-        ));
+        return Ok(MoveOutcome::Conflicted {
+            files: status.conflicted.into_iter().map(|c| c.path).collect(),
+            saved,
+        });
     }
     let head = ref_value(git, repo, &target_ref, cancel).await?;
-    let record = MoveRecord {
-        branch: preview.target.name.clone(),
-        current: true,
-        previous,
-        after: head.clone(),
-        index_before: Some(index_before),
-        stash: saved.clone(),
-        fingerprint_after: state_fingerprint(git, repo, cancel).await?,
-    };
-    Ok((
-        MoveOutcome::Done {
-            head,
-            fast_forward: !commit,
-            saved,
-        },
-        Some(record),
-    ))
-}
-
-/// Puts the branch (and, if it was the current one, the index and the
-/// working tree) back exactly as before the merge or rebase. Refuses,
-/// changing nothing, if anything changed since (`GitError::UndoConflict`).
-pub async fn undo_move(
-    git: &Git,
-    repo: &Path,
-    record: &MoveRecord,
-    cancel: &CancellationToken,
-) -> Result<()> {
-    let refname = format!("refs/heads/{}", record.branch);
-    let conflict = || GitError::UndoConflict(record.branch.clone());
-    if ref_value(git, repo, &refname, cancel).await? != record.after
-        || in_progress(git, repo, cancel).await?.is_some()
-    {
-        return Err(conflict());
-    }
-    let current = git
-        .read(repo)
-        .args(["symbolic-ref", "-q", "--short", "HEAD"])
-        .accept_exit_code(1)
-        .output(cancel)
-        .await?
-        .stdout_lossy()
-        .trim()
-        .to_owned();
-    if !record.current {
-        if current == record.branch {
-            return Err(conflict());
-        }
-        git.write(repo)
-            .args(["update-ref", "-m", "GitCRAFT: undo", &refname])
-            .args([&record.previous, &record.after])
-            .output(cancel)
-            .await?;
-        return Ok(());
-    }
-    if current != record.branch
-        || state_fingerprint(git, repo, cancel).await? != record.fingerprint_after
-    {
-        return Err(conflict());
-    }
-    // Files that differ between the two commits go back; local changes in
-    // other files stay (git refuses if one of them has local changes).
-    git.write(repo)
-        .args(["reset", "--quiet", "--keep", &record.previous])
-        .output(cancel)
-        .await?;
-    if let Some(tree) = &record.index_before {
-        // --keep resets the index: what was staged comes back.
-        git.write(repo)
-            .args(["read-tree", tree])
-            .output(cancel)
-            .await?;
-        git.write(repo)
-            .args(["update-index", "-q", "--refresh"])
-            .accept_exit_code(1)
-            .output(cancel)
-            .await?;
-    }
-    if let Some(stash) = &record.stash {
-        git.write(repo)
-            .args(["stash", "apply", "--index", "--quiet", stash])
-            .output(cancel)
-            .await?;
-    }
-    Ok(())
+    Ok(MoveOutcome::Done {
+        head,
+        fast_forward: !commit,
+        saved,
+    })
 }
 
 /// What the user accepted in the rebase dialog.
@@ -1126,23 +997,20 @@ pub fn rebase_stash_message(source: &str) -> String {
 /// checks as [`merge`]. The user's configuration cannot make it do more
 /// than the preview said: no other branch is moved (`rebase.updateRefs`),
 /// no commit is squashed (`rebase.autoSquash`) and merges are not kept
-/// (`rebase.rebaseMerges`; the preview refuses them anyway). Returns how to
-/// undo it when it is done.
+/// (`rebase.rebaseMerges`; the preview refuses them anyway). Undoing it is
+/// the journal's job (`ops::journal`, `ops::undo`).
 pub async fn rebase(
     git: &Git,
     repo: &Path,
     request: &RebaseRequest,
     cancel: &CancellationToken,
-) -> Result<(MoveOutcome, Option<MoveRecord>)> {
+) -> Result<MoveOutcome> {
     let not_done = |preview: MovePreview, changed, saved| {
-        Ok((
-            MoveOutcome::NotDone {
-                preview: Box::new(preview),
-                changed,
-                saved,
-            },
-            None,
-        ))
+        Ok(MoveOutcome::NotDone {
+            preview: Box::new(preview),
+            changed,
+            saved,
+        })
     };
     let mut preview = rebase_preview(git, repo, &request.source, &request.target, cancel).await?;
     if preview.fingerprint != request.expected {
@@ -1180,33 +1048,13 @@ pub async fn rebase(
             .args([&source_ref, &preview.target.oid, &previous])
             .output(cancel)
             .await?;
-        let record = MoveRecord {
-            branch: preview.source.name.clone(),
-            current: false,
-            previous,
-            after: preview.target.oid.clone(),
-            index_before: None,
-            stash: saved.clone(),
-            fingerprint_after: String::new(),
-        };
-        return Ok((
-            MoveOutcome::Done {
-                head: record.after.clone(),
-                fast_forward: true,
-                saved,
-            },
-            Some(record),
-        ));
+        return Ok(MoveOutcome::Done {
+            head: preview.target.oid.clone(),
+            fast_forward: true,
+            saved,
+        });
     }
 
-    let index_before = git
-        .write(repo)
-        .arg("write-tree")
-        .output(cancel)
-        .await?
-        .stdout_lossy()
-        .trim()
-        .to_owned();
     let cmd = if fast_forward {
         // Like git's rebase, but keeping local changes in other files, as
         // the preview allowed.
@@ -1233,30 +1081,15 @@ pub async fn rebase(
     let status = working_status(git, repo, cancel).await?;
     stopped_or_failed(&out, &status, "rebase")?;
     if out.exit_code == Some(1) || !status.conflicted.is_empty() || status.in_progress.is_some() {
-        return Ok((
-            MoveOutcome::Conflicted {
-                files: status.conflicted.into_iter().map(|c| c.path).collect(),
-                saved,
-            },
-            None,
-        ));
+        return Ok(MoveOutcome::Conflicted {
+            files: status.conflicted.into_iter().map(|c| c.path).collect(),
+            saved,
+        });
     }
     let head = ref_value(git, repo, &source_ref, cancel).await?;
-    let record = MoveRecord {
-        branch: preview.source.name.clone(),
-        current: true,
-        previous,
-        after: head.clone(),
-        index_before: Some(index_before),
-        stash: saved.clone(),
-        fingerprint_after: state_fingerprint(git, repo, cancel).await?,
-    };
-    Ok((
-        MoveOutcome::Done {
-            head,
-            fast_forward,
-            saved,
-        },
-        Some(record),
-    ))
+    Ok(MoveOutcome::Done {
+        head,
+        fast_forward,
+        saved,
+    })
 }

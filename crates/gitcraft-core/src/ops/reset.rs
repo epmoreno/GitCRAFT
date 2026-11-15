@@ -102,7 +102,8 @@ pub struct ResetPreview {
     pub fingerprint: String,
 }
 
-/// Everything needed to undo a reset; kept by the app, not shown.
+/// What a reset did and the copies it saved first (undoing it is the
+/// journal's job: `ops::journal`, `ops::undo`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
@@ -116,8 +117,6 @@ pub struct ResetRecord {
     pub stash: Option<String>,
     /// Untracked files moved to the Trash: (path in the repo, where it is).
     pub trashed: Vec<(String, PathBuf)>,
-    /// The state right after the reset: undo only if it is still this.
-    pub fingerprint_after: String,
 }
 
 /// Message of the stash entry made before a reset.
@@ -354,7 +353,7 @@ pub async fn reset_preview(
 
 /// Resets the current branch to `oid` with `mode`, if the repository is
 /// still as the preview (`expected`) saw it. Saves a copy of what would be
-/// lost first (see the module docs). Returns how to undo it.
+/// lost first (see the module docs). Returns what it saved.
 pub async fn reset(
     git: &Git,
     repo: &Path,
@@ -429,7 +428,6 @@ pub async fn reset(
         target: preview.target.oid,
         stash,
         trashed,
-        fingerprint_after: state_fingerprint(git, repo, cancel).await?,
     })
 }
 
@@ -444,57 +442,4 @@ pub(crate) fn put_back(repo: &Path, trashed: &[(String, PathBuf)]) {
             let _ = forget_trashed(to);
         }
     }
-}
-
-/// Puts the branch, the index, the working tree and the trashed files back
-/// as they were before the reset, exactly. Refuses, changing nothing, if
-/// anything changed since the reset (`GitError::UndoConflict`).
-pub async fn undo_reset(
-    git: &Git,
-    repo: &Path,
-    record: &ResetRecord,
-    cancel: &CancellationToken,
-) -> Result<()> {
-    let branch = git
-        .read(repo)
-        .args(["symbolic-ref", "-q", "--short", "HEAD"])
-        .accept_exit_code(1)
-        .output(cancel)
-        .await?;
-    if branch.stdout_lossy().trim() != record.branch
-        || state_fingerprint(git, repo, cancel).await? != record.fingerprint_after
-    {
-        return Err(GitError::UndoConflict(record.branch.clone()));
-    }
-    let reset = |flag: &'static str| {
-        git.write(repo)
-            .args(["reset", "--quiet", flag, &record.previous])
-            .output(cancel)
-    };
-    match record.mode {
-        ResetMode::Soft => {
-            reset("--soft").await?;
-        }
-        ResetMode::Mixed => {
-            reset("--mixed").await?;
-            if let Some(stash) = &record.stash {
-                // The index as it was: the stash's index commit.
-                git.write(repo)
-                    .args(["read-tree", &format!("{stash}^2")])
-                    .output(cancel)
-                    .await?;
-            }
-        }
-        ResetMode::Hard => {
-            reset("--hard").await?;
-            if let Some(stash) = &record.stash {
-                git.write(repo)
-                    .args(["stash", "apply", "--index", "--quiet", stash])
-                    .output(cancel)
-                    .await?;
-            }
-            put_back(repo, &record.trashed);
-        }
-    }
-    Ok(())
 }

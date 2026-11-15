@@ -1813,27 +1813,12 @@ impl AppState {
             })?
             .ok_or_else(|| GitError::UndoConflict(String::new()))?;
         let cancel = CancellationToken::new();
-        let outcome = self
+        let record = self
             .write(id, |repo| async move {
-                let preview =
-                    undo_ops::undo_preview(git, &repo, &record, Direction::Undo, &cancel).await?;
-                if preview.refused.is_some() || (!preview.exact && moves_files(&record)) {
-                    return Err(GitError::UndoConflict(String::new()));
-                }
-                let request = UndoRequest {
-                    direction: Direction::Undo,
-                    expected: preview.fingerprint,
-                    save_changes: false,
-                };
-                undo_ops::undo(git, &repo, &record, &request, &cancel).await
+                undo_ops::undo_exactly(git, &repo, &record, &cancel).await
             })
             .await?;
-        match outcome {
-            UndoOutcome::Done { record, .. } => {
-                self.with_stack(id, |stack| stack.moved(Direction::Undo, undo_id, *record))
-            }
-            UndoOutcome::NotDone { .. } => Err(GitError::UndoConflict(String::new()).into()),
-        }
+        self.with_stack(id, |stack| stack.moved(Direction::Undo, undo_id, record))
     }
 
     /// What the toolbar's Undo and Redo offer now.
@@ -1926,7 +1911,7 @@ impl AppState {
             .recorded(
                 id,
                 |repo| async move { merge_rebase::merge(git, &repo, &request, &cancel).await },
-                |(outcome, _)| match outcome {
+                |outcome| match outcome {
                     MoveOutcome::Done { fast_forward, .. } => Described::kind(OpKind::Merge {
                         source,
                         fast_forward: *fast_forward,
@@ -1939,10 +1924,7 @@ impl AppState {
                 },
             )
             .await?;
-        Ok(MoveResult {
-            outcome: outcome.0,
-            undo_id,
-        })
+        Ok(MoveResult { outcome, undo_id })
     }
 
     /// Rebases as the user accepted it (task 8.3), with "Undo" like the
@@ -1955,7 +1937,7 @@ impl AppState {
             .recorded(
                 id,
                 |repo| async move { merge_rebase::rebase(git, &repo, &request, &cancel).await },
-                |(outcome, _)| match outcome {
+                |outcome| match outcome {
                     MoveOutcome::Done { .. } | MoveOutcome::Conflicted { .. } => {
                         Described::kind(OpKind::Rebase { onto })
                     }
@@ -1963,10 +1945,7 @@ impl AppState {
                 },
             )
             .await?;
-        Ok(MoveResult {
-            outcome: outcome.0,
-            undo_id,
-        })
+        Ok(MoveResult { outcome, undo_id })
     }
 
     /// Where branch `refname` (or `HEAD`) has been: its reflog (task 11.5).
@@ -2237,16 +2216,6 @@ fn short_ref(refname: &str) -> String {
         .or_else(|| refname.strip_prefix("refs/remotes/"))
         .unwrap_or(refname)
         .to_owned()
-}
-
-/// Whether undoing the operation changes files (HEAD or its branch moves).
-fn moves_files(record: &OpRecord) -> bool {
-    use gitcraft_core::ops::journal::HeadAt;
-    record.head_before != record.head_after
-        || match &record.head_after {
-            HeadAt::Branch { name } => record.refs.iter().any(|c| &c.refname == name),
-            HeadAt::Detached { .. } => false,
-        }
 }
 
 #[cfg(test)]

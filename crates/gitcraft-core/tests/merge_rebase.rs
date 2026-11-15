@@ -4,14 +4,18 @@
 
 use gitcraft_core::ops::branch::BlockingFile;
 use gitcraft_core::ops::in_progress::{ContinueOutcome, continue_in_progress, skip_current};
+use gitcraft_core::ops::journal::{
+    OpKind, OpRecord, Saved, record as journal_record, snapshot as journal_snapshot,
+};
 use gitcraft_core::ops::merge_rebase::{
-    MergeRequest, MoveBlock, MoveCase, MoveOutcome, MovePreview, MoveRecord, MoveRefusal,
-    merge as merge_branch, merge_preview, merge_stash_message, rebase_preview, undo_move,
+    MergeRequest, MoveBlock, MoveCase, MoveOutcome, MovePreview, MoveRefusal,
+    merge as merge_branch, merge_preview, merge_stash_message, rebase_preview,
 };
 use gitcraft_core::ops::merge_rebase::{
     RebaseRequest, rebase as rebase_branch, rebase_stash_message,
 };
 use gitcraft_core::ops::remote::abort_in_progress;
+use gitcraft_core::ops::undo::{moves_files, undo_exactly};
 use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, GitError};
 
@@ -518,14 +522,47 @@ fn request(p: &MovePreview) -> MergeRequest {
     }
 }
 
-async fn run_merge(repo: &TestRepo, req: &MergeRequest) -> (MoveOutcome, Option<MoveRecord>) {
-    merge_branch(repo.git(), repo.path(), req, &c())
+/// Runs `op` between a journal snapshot and record (task 11), as the app
+/// does: the record exists only when the operation was done.
+async fn journaled(
+    repo: &TestRepo,
+    op: impl std::future::Future<Output = MoveOutcome>,
+) -> (MoveOutcome, Option<OpRecord>) {
+    let snap = journal_snapshot(repo.git(), repo.path(), &c())
         .await
-        .expect("merge")
+        .expect("snapshot");
+    let outcome = op.await;
+    let MoveOutcome::Done { saved, .. } = &outcome else {
+        return (outcome, None);
+    };
+    let saved = Saved {
+        stash: saved.clone(),
+        trashed: Vec::new(),
+    };
+    let kind = OpKind::Merge {
+        source: "x".into(),
+        fast_forward: false,
+    };
+    let record = journal_record(repo.git(), repo.path(), snap, kind, saved, &c())
+        .await
+        .expect("record");
+    (outcome, record)
 }
 
-async fn undo(repo: &TestRepo, record: &MoveRecord) -> Result<(), GitError> {
-    undo_move(repo.git(), repo.path(), record, &c()).await
+async fn run_merge(repo: &TestRepo, req: &MergeRequest) -> (MoveOutcome, Option<OpRecord>) {
+    journaled(repo, async {
+        merge_branch(repo.git(), repo.path(), req, &c())
+            .await
+            .expect("merge")
+    })
+    .await
+}
+
+/// The notice's "Undo": exactly as before, or nothing.
+async fn undo(repo: &TestRepo, record: &OpRecord) -> Result<(), GitError> {
+    undo_exactly(repo.git(), repo.path(), record, &c())
+        .await
+        .map(|_| ())
 }
 
 #[tokio::test]
@@ -658,7 +695,7 @@ async fn a_fast_forward_of_another_branch_then_undo() {
         "local change\n"
     );
     let record = record.expect("record");
-    assert!(!record.current);
+    assert!(!moves_files(&record), "only another branch's ref moved");
     undo(&repo, &record).await.expect("undo");
     assert_eq!(full_state(&repo).await, before);
 }
@@ -788,10 +825,13 @@ fn rebase_request(p: &MovePreview) -> RebaseRequest {
     }
 }
 
-async fn run_rebase(repo: &TestRepo, req: &RebaseRequest) -> (MoveOutcome, Option<MoveRecord>) {
-    rebase_branch(repo.git(), repo.path(), req, &c())
-        .await
-        .expect("rebase")
+async fn run_rebase(repo: &TestRepo, req: &RebaseRequest) -> (MoveOutcome, Option<OpRecord>) {
+    journaled(repo, async {
+        rebase_branch(repo.git(), repo.path(), req, &c())
+            .await
+            .expect("rebase")
+    })
+    .await
 }
 
 async fn log(repo: &TestRepo, range: &str) -> String {

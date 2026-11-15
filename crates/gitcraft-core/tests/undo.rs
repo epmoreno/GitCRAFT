@@ -376,16 +376,26 @@ async fn resets_are_undone_exactly_with_their_copies() {
     repo.write_file("a.txt", "unstaged\n");
     let before = full_state(&repo).await;
 
-    // Mixed: the index comes back.
+    // Mixed: the index comes back. Its copy (as the reset makes it) only
+    // holds the index: the files never moved, so it is not applied.
+    let copy = repo.run(&["stash", "create"]).await;
     let kind = OpKind::Reset {
         mode: ResetMode::Mixed,
         target: target.clone(),
     };
+    let saved = Saved {
+        stash: Some(copy),
+        trashed: Vec::new(),
+    };
     let rec = recorded!(
         repo,
         kind,
+        saved,
         repo.run(&["reset", "-q", "--mixed", &target]).await
     );
+    let p = preview(&repo, &rec, Direction::Undo).await;
+    assert!(p.exact);
+    assert_eq!(p.restores_stash, None);
     done(&repo, &rec, Direction::Undo).await;
     assert_eq!(full_state(&repo).await, before);
 

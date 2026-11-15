@@ -7,9 +7,14 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use gitcraft_core::ops::discard::Trash;
-use gitcraft_core::ops::reset::{
-    ResetMode, ResetPreview, ResetRefusal, reset, reset_preview, reset_stash_message, undo_reset,
+use gitcraft_core::ops::journal::{
+    OpKind, OpRecord, Saved, record as journal_record, snapshot as journal_snapshot,
 };
+use gitcraft_core::ops::reset::ResetRecord;
+use gitcraft_core::ops::reset::{
+    ResetMode, ResetPreview, ResetRefusal, reset, reset_preview, reset_stash_message,
+};
+use gitcraft_core::ops::undo::undo_exactly;
 use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, ErrorKind};
 
@@ -40,6 +45,26 @@ impl Trash for FakeTrash {
         std::fs::rename(path, &to)?;
         Ok(to)
     }
+}
+
+/// The journal's record of a reset (task 11), with the copies it saved.
+async fn recorded(
+    repo: &TestRepo,
+    snap: gitcraft_core::ops::journal::Snapshot,
+    reset: &ResetRecord,
+) -> OpRecord {
+    let kind = OpKind::Reset {
+        mode: reset.mode,
+        target: reset.target.clone(),
+    };
+    let saved = Saved {
+        stash: reset.stash.clone(),
+        trashed: reset.trashed.clone(),
+    };
+    journal_record(repo.git(), repo.path(), snap, kind, saved, &c())
+        .await
+        .expect("record")
+        .expect("the branch moved")
 }
 
 /// HEAD, the branch, the index tree and every file outside .git.
@@ -130,6 +155,9 @@ async fn soft_keeps_the_changes_staged_and_undoes_exactly() {
     assert!(!p.saves_stash && p.lost_changes.is_empty());
 
     let trash = FakeTrash::new();
+    let snap = journal_snapshot(repo.git(), repo.path(), &c())
+        .await
+        .expect("snapshot");
     let record = reset(
         repo.git(),
         repo.path(),
@@ -141,6 +169,7 @@ async fn soft_keeps_the_changes_staged_and_undoes_exactly() {
     )
     .await
     .expect("reset");
+    let op = recorded(&repo, snap, &record).await;
     assert_eq!(repo.head().await, p.target.oid);
     assert_eq!(record.stash, None);
     // c3's changes are staged; the working tree did not move.
@@ -151,7 +180,7 @@ async fn soft_keeps_the_changes_staged_and_undoes_exactly() {
     );
     assert_eq!(snapshot(&repo).await.3, before.3);
 
-    undo_reset(repo.git(), repo.path(), &record, &c())
+    undo_exactly(repo.git(), repo.path(), &op, &c())
         .await
         .expect("undo");
     assert_eq!(snapshot(&repo).await, before);
@@ -169,6 +198,9 @@ async fn mixed_saves_the_staged_work_and_undoes_the_index() {
     assert!(p.saves_stash);
 
     let trash = FakeTrash::new();
+    let snap = journal_snapshot(repo.git(), repo.path(), &c())
+        .await
+        .expect("snapshot");
     let record = reset(
         repo.git(),
         repo.path(),
@@ -180,6 +212,7 @@ async fn mixed_saves_the_staged_work_and_undoes_the_index() {
     )
     .await
     .expect("reset");
+    let op = recorded(&repo, snap, &record).await;
     let stash = record.stash.clone().expect("a copy");
     // The staged version is in the copy's index.
     assert_eq!(
@@ -188,7 +221,7 @@ async fn mixed_saves_the_staged_work_and_undoes_the_index() {
     );
     assert_eq!(repo.run(&["diff", "--cached", "--name-only"]).await, "");
 
-    undo_reset(repo.git(), repo.path(), &record, &c())
+    undo_exactly(repo.git(), repo.path(), &op, &c())
         .await
         .expect("undo");
     assert_eq!(snapshot(&repo).await, before);
@@ -215,6 +248,9 @@ async fn hard_copies_everything_it_would_lose_and_undoes_exactly() {
     assert!(p.saves_stash);
 
     let trash = FakeTrash::new();
+    let snap = journal_snapshot(repo.git(), repo.path(), &c())
+        .await
+        .expect("snapshot");
     let record = reset(
         repo.git(),
         repo.path(),
@@ -226,6 +262,7 @@ async fn hard_copies_everything_it_would_lose_and_undoes_exactly() {
     )
     .await
     .expect("reset");
+    let op = recorded(&repo, snap, &record).await;
     // The working tree is c1; the copy and the Trash have the rest.
     assert_eq!(
         std::fs::read_to_string(repo.path().join("f.txt")).expect("f"),
@@ -254,7 +291,7 @@ async fn hard_copies_everything_it_would_lose_and_undoes_exactly() {
         "untracked, not in the way\n"
     );
 
-    undo_reset(repo.git(), repo.path(), &record, &c())
+    undo_exactly(repo.git(), repo.path(), &op, &c())
         .await
         .expect("undo");
     assert_eq!(snapshot(&repo).await, before);
@@ -291,6 +328,9 @@ async fn undo_refuses_once_something_changed() {
     let repo = history().await;
     let p = preview(&repo, "HEAD~1", ResetMode::Hard).await;
     let trash = FakeTrash::new();
+    let snap = journal_snapshot(repo.git(), repo.path(), &c())
+        .await
+        .expect("snapshot");
     let record = reset(
         repo.git(),
         repo.path(),
@@ -302,8 +342,9 @@ async fn undo_refuses_once_something_changed() {
     )
     .await
     .expect("reset");
+    let op = recorded(&repo, snap, &record).await;
     repo.write_file("f.txt", "new work after the reset\n");
-    let err = undo_reset(repo.git(), repo.path(), &record, &c())
+    let err = undo_exactly(repo.git(), repo.path(), &op, &c())
         .await
         .expect_err("changed");
     assert_eq!(err.kind(), ErrorKind::UndoConflict);

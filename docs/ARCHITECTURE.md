@@ -455,11 +455,13 @@ Núcleo en `gitcraft-core`: `ops/commit_actions.rs` (qué admite un commit),
     se hace el reset.
   - **Huella:** el reset solo se hace si la huella (HEAD y cada archivo con
     cambios: tamaño y fecha) sigue igual que en la vista previa.
-  - **«Deshacer»:** el registro vive en la sesión de Tauri y cualquier
-    escritura en ese repo lo invalida. Antes de tocar nada comprueba que la
-    huella es la de justo después del reset. Vuelve exactamente: soft, la
-    rama; mixed, la rama y el índice de la copia; hard, la rama, la copia
-    con su índice y los archivos de la Papelera.
+  - **«Deshacer»:** desde la tarea 11 es el de la pila de la sesión
+    (sección 5j): el reset devuelve lo que guardó (la entrada del stash y
+    los archivos de la Papelera) y el aviso usa `undo_exactly`, que solo
+    actúa si todo está como lo dejó el reset. Vuelve exactamente: soft, la
+    rama; mixed, la rama y el índice de antes (su copia del stash no se
+    aplica: los archivos no se movieron); hard, la rama, la copia con su
+    índice y los archivos de la Papelera.
   - **En la interfaz:** mixed por defecto; en hard con algo que perder hay
     que marcar «Entiendo…».
 - **Tags:**
@@ -641,6 +643,18 @@ Núcleo en `gitcraft-core/src/ops/journal.rs`.
   selecciona en el grafo), «Crear una rama aquí…» (el diálogo de nueva
   rama) y «Restablecer «x» aquí…» (el reset de la 10.4, solo en la rama
   actual).
+
+- **Una sola forma de deshacer (11.6):** el «Deshacer» inmediato de los
+  avisos es `undo::undo_exactly` (todo exacto, o nada). Las funciones
+  propias de la 8 y la 10 (`undo_move`, `undo_reset`) ya no existen; sus
+  tests pasan ahora por el diario y `undo_exactly`.
+- **Pruebas:** `scripts/make-undo-examples.sh` crea un repo desechable con
+  su remoto local: dos commits publicados y uno solo en local en `main`,
+  un commit que solo queda en el historial de `main` (tras un reset
+  hard), las ramas `feature` (para merge y rebase) y `vieja` (para
+  borrarla y recuperarla), un tag anotado, un cambio sin confirmar y un
+  archivo sin seguimiento. Los tests de integración (`journal.rs`,
+  `undo.rs` y `reflog.rs`) crean los suyos con `TestRepo`.
 
 ## 5f. Crear repositorios
 

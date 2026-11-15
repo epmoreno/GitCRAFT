@@ -2488,6 +2488,20 @@ principio y toda operación destructiva pasa por confirmación.
         la lista, una rama ya publicada (para la negativa), y un cambio sin
         confirmar que estorba.
         *Verificable:* el usuario lo prueba y lo confirma.
+        *Hecho (falta la prueba del usuario):*
+        - **Una sola forma de deshacer:** `undo_reset` y `undo_move` ya no
+          existen, y `merge` y `rebase` ya no devuelven `MoveRecord`. El
+          «Deshacer» de los avisos es `undo_exactly` en el núcleo. Sus
+          tests de la 8 y la 10 se conservan, pasando por el diario.
+        - **Fallo corregido:** al cambiar los tests apareció uno real, de
+          la 11.2. Al deshacer exactamente un reset mixed se aplicaba su
+          copia del stash, aunque el mixed no movió los archivos, y fallaba
+          (desde la 11.3 también en el aviso). Ahora la copia solo se
+          aplica si la operación cambió archivos; si no, vuelve el índice.
+          Hay un test nuevo.
+        - **Documentación y script:** sección 5j en ARCHITECTURE.md y
+          `scripts/make-undo-examples.sh`, que crea `~/gitcraft-deshacer` y
+          `~/gitcraft-deshacer-remoto.git`.
       *Mejora futura:* revertir varios commits a la vez (por ejemplo, los
       publicados que impiden deshacer una operación).
       *Fuera de la 11:* deshacer operaciones en un remoto, deshacer

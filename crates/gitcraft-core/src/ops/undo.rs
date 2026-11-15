@@ -479,9 +479,14 @@ pub async fn undo_preview(
         }
     }
 
+    // The stash copy goes back to the files only if the operation changed
+    // them; a soft move (commit, soft or mixed reset) left them as they
+    // were, and its index comes back from the tree saved before.
+    let files_moved = plan.switches() && !renamed
+        || (plan.head_commits().is_some() && head_move(&record.kind) == HeadMove::Keep);
     let (restores_stash, restores_trashed, kept_stash) = if exact {
         (
-            record.stash.clone(),
+            record.stash.clone().filter(|_| files_moved),
             record.trashed.iter().map(|(p, _)| p.clone()).collect(),
             None,
         )
@@ -753,8 +758,10 @@ pub async fn undo(
     // 3. Exactly as before: the index and the copies.
     let mut updated = record.clone();
     let moved_files = !renamed && (plan.head_commits().is_some() || plan.switches());
+    let files_changed = plan.switches() && !renamed
+        || (plan.head_commits().is_some() && head_move(&record.kind) == HeadMove::Keep);
     if exact && moved_files {
-        if let Some(stash) = &record.stash {
+        if let Some(stash) = record.stash.as_ref().filter(|_| files_changed) {
             git.write(repo)
                 .args(["stash", "apply", "--index", "--quiet", stash])
                 .output(cancel)
@@ -779,4 +786,40 @@ pub async fn undo(
         exact,
         unstaged: !staging_kept,
     })
+}
+
+/// Whether undoing `record` moves files: HEAD changes branch, or the commit
+/// it is on moves.
+pub fn moves_files(record: &OpRecord) -> bool {
+    record.head_before != record.head_after
+        || match &record.head_after {
+            HeadAt::Branch { name } => record.refs.iter().any(|c| &c.refname == name),
+            HeadAt::Detached { .. } => false,
+        }
+}
+
+/// The notice's immediate "Undo" (tasks 8 and 10): everything goes back
+/// exactly as before, or nothing is done (`GitError::UndoConflict`). An
+/// operation that moved no files (another branch's fast-forward, a tag)
+/// only needs its refs where it left them. Returns the updated record.
+pub async fn undo_exactly(
+    git: &Git,
+    repo: &Path,
+    record: &OpRecord,
+    cancel: &CancellationToken,
+) -> Result<OpRecord> {
+    let conflict = || GitError::UndoConflict(String::new());
+    let preview = undo_preview(git, repo, record, Direction::Undo, cancel).await?;
+    if preview.refused.is_some() || (!preview.exact && moves_files(record)) {
+        return Err(conflict());
+    }
+    let request = UndoRequest {
+        direction: Direction::Undo,
+        expected: preview.fingerprint,
+        save_changes: false,
+    };
+    match undo(git, repo, record, &request, cancel).await? {
+        UndoOutcome::Done { record, .. } => Ok(*record),
+        UndoOutcome::NotDone { .. } => Err(conflict()),
+    }
 }
