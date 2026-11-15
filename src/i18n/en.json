@@ -1470,6 +1470,37 @@
     },
     "unstaged": "What you had staged could not be staged again: the changes are still in your files.",
     "undoButton": "Undo",
-    "redoButton": "Redo"
+    "redoButton": "Redo",
+    "showHistory": "Show the history of “{{branch}}”",
+    "showHistoryHead": "Show the history of HEAD"
+  },
+  "reflog": {
+    "menu": "History of “{{branch}}”…",
+    "menuHead": "History of HEAD…",
+    "title": "History of “{{branch}}”",
+    "titleHead": "History of HEAD",
+    "lead": "Where “{{branch}}” has been, newest first.",
+    "leadHead": "The branches and commits you have been on, newest first.",
+    "noted": "Git keeps this record.",
+    "unreachable_one": "Commits that are no longer on any branch can be lost after {{count}} day: to keep them, create a branch.",
+    "unreachable_other": "Commits that are no longer on any branch can be lost after about {{count}} days: to keep them, create a branch.",
+    "unreachableNever": "This repository is set never to drop from the history commits that are no longer on any branch.",
+    "reachable_one": "The other entries are kept for {{count}} day.",
+    "reachable_other": "The other entries are kept for about {{count}} days.",
+    "reachableNever": "The other entries are never dropped.",
+    "loading": "Reading the history…",
+    "failed": "The history could not be read.",
+    "empty": "Git keeps no history for this branch: it is new, it was deleted and created again, or the repository is set not to record it.",
+    "entries": "History entries",
+    "onlyHere": "· only in this history",
+    "more": "Showing the {{count}} most recent entries.",
+    "entryMenu": "Entry {{short}}",
+    "show": "Show the commit",
+    "notInGraph": "It is not in the graph because it is on no branch: create a branch here to see it",
+    "createBranch": "Create a branch here…",
+    "reset": "Reset “{{branch}}” here…",
+    "switchFirst": "Switch to “{{branch}}” first",
+    "detached": "You are not on any branch",
+    "close": "Close"
   }
 }

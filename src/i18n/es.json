@@ -1470,6 +1470,37 @@
     },
     "unstaged": "Lo que tenías preparado no se pudo volver a preparar: los cambios siguen en tus archivos.",
     "undoButton": "Deshacer",
-    "redoButton": "Rehacer"
+    "redoButton": "Rehacer",
+    "showHistory": "Ver el historial de «{{branch}}»",
+    "showHistoryHead": "Ver el historial de HEAD"
+  },
+  "reflog": {
+    "menu": "Historial de «{{branch}}»…",
+    "menuHead": "Historial de HEAD…",
+    "title": "Historial de «{{branch}}»",
+    "titleHead": "Historial de HEAD",
+    "lead": "Dónde ha estado «{{branch}}», de lo más reciente a lo más antiguo.",
+    "leadHead": "Por qué ramas y commits has pasado, de lo más reciente a lo más antiguo.",
+    "noted": "Lo anota git.",
+    "unreachable_one": "Los commits que ya no están en ninguna rama se pueden perder pasado {{count}} día: si quieres conservarlos, crea una rama.",
+    "unreachable_other": "Los commits que ya no están en ninguna rama se pueden perder pasados unos {{count}} días: si quieres conservarlos, crea una rama.",
+    "unreachableNever": "Este repositorio está configurado para no borrar nunca del historial los commits que ya no están en ninguna rama.",
+    "reachable_one": "Las demás entradas se guardan {{count}} día.",
+    "reachable_other": "Las demás entradas se guardan unos {{count}} días.",
+    "reachableNever": "Las demás entradas no se borran nunca.",
+    "loading": "Leyendo el historial…",
+    "failed": "No se pudo leer el historial.",
+    "empty": "Git no guarda historial de esta rama: es nueva, se borró y se volvió a crear, o el repositorio está configurado para no anotarlo.",
+    "entries": "Entradas del historial",
+    "onlyHere": "· solo en este historial",
+    "more": "Se muestran las {{count}} entradas más recientes.",
+    "entryMenu": "Entrada {{short}}",
+    "show": "Ver el commit",
+    "notInGraph": "No está en el grafo porque no está en ninguna rama: crea una rama aquí para verlo",
+    "createBranch": "Crear una rama aquí…",
+    "reset": "Restablecer «{{branch}}» aquí…",
+    "switchFirst": "Cámbiate antes a «{{branch}}»",
+    "detached": "No estás en ninguna rama",
+    "close": "Cerrar"
   }
 }

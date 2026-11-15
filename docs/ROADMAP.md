@@ -2447,7 +2447,7 @@ principio y toda operación destructiva pasa por confirmación.
           (`madeCopies`), para el aviso de rehacer.
         Tests: 15 de interfaz y uno más del núcleo (rehacer un reset hard
         no descarta los cambios).
-      - [ ] **11.5 Historial de una rama (reflog) (core y UI).** En el menú
+      - [x] **11.5 Historial de una rama (reflog) (core y UI).** En el menú
         de una rama y de HEAD, «Historial de la rama…»: sus entradas del
         reflog (fecha, commit y lo que git anotó), leídas con
         `reflog show --format` y separadores `%x00`. Para cada entrada:
@@ -2459,6 +2459,28 @@ principio y toda operación destructiva pasa por confirmación.
         *Verificable:* parser con fixtures reales, entradas de una rama
         borrada y vuelta a crear, recuperar un commit tras un reset hard y
         tests de interfaz.
+        *Decisiones del usuario:* (1) restablecer solo en la rama actual; en
+        otra, desactivado con «Cámbiate antes a «x»»; (2) la marca «solo en
+        este historial»; (3) modal, y «Ver el commit» lo cierra y selecciona
+        el commit en el grafo; (4) el texto dice que los commits que ya no
+        están en ninguna rama se pueden perder antes (30 días por defecto)
+        que las demás entradas (90), con los valores reales del repositorio.
+        *Hecho:* `ops/reflog.rs` y `parse/reflog.rs` (núcleo), el comando
+        `branch_reflog` y `src/features/reflog/`.
+        - **Cada entrada:** fecha, commit, título, la marca «solo en este
+          historial» y el texto de git tal cual.
+        - **Plazos:** de `gc.reflogExpire` y `gc.reflogExpireUnreachable`,
+          o los de git por defecto.
+        - **Dónde se abre:** en el menú de las ramas locales (barra, grafo y
+          menú del commit), «Historial de HEAD…» en la rama actual, y el
+          botón «Ver el historial de «x»» del deshacer cuando algo ha
+          cambiado.
+        - **Teclado:** flechas y ⇧F10 o la tecla de menú. Esc cierra antes
+          el menú de una entrada que el diálogo.
+        Tests: 7 de integración y 2 del parser con un fixture real (un
+        commit perdido tras un reset hard se encuentra y se rescata con una
+        rama; HEAD; una rama borrada y vuelta a crear; los plazos
+        configurados) y 11 de interfaz.
       - [ ] **11.6 Documentación y prueba a mano.** Quitar del núcleo
         `undo_reset` y `undo_move` con sus tests (ya no los usa la app).
         Sección en ARCHITECTURE.md y `scripts/make-undo-examples.sh`, un repo

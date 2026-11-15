@@ -16,6 +16,7 @@ pub mod maintenance;
 pub mod merge_rebase;
 pub mod pick;
 pub mod publish;
+pub mod reflog;
 pub mod refs;
 pub mod remote;
 pub mod repo;

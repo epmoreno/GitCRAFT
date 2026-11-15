@@ -1,0 +1,74 @@
+/* The history of a branch (task 11.5) */
+.dialog {
+  width: min(760px, 100%);
+}
+
+.list {
+  max-height: min(55vh, 480px);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 7.5em 5em minmax(0, 1fr) minmax(0, 1fr) 1.5em;
+  gap: var(--space-2);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.row:hover,
+.row:focus-visible {
+  background-color: var(--surface-3);
+}
+
+.when {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.oid {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+}
+
+.subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  color: var(--danger);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+.message {
+  overflow: hidden;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more {
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.note {
+  color: var(--text-faint);
+  font-size: var(--font-size-small);
+}

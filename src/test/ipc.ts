@@ -123,6 +123,7 @@ export const ipc = {
   undoState: vi.mocked(commands.undoState),
   undoRedoPreview: vi.mocked(commands.undoRedoPreview),
   undoRedo: vi.mocked(commands.undoRedo),
+  branchReflog: vi.mocked(commands.branchReflog),
   mergePreview: vi.mocked(commands.mergePreview),
   rebasePreview: vi.mocked(commands.rebasePreview),
   mergeBranch: vi.mocked(commands.mergeBranch),

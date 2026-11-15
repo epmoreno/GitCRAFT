@@ -89,6 +89,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::undo_state,
             commands::undo_redo_preview,
             commands::undo_redo,
+            commands::branch_reflog,
             commands::merge_branch,
             commands::rebase_branch,
             commands::last_fetch,

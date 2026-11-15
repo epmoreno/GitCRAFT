@@ -6,6 +6,7 @@ import { setPlatformForTests } from "../../app/platform";
 import { cleanStatus, ipc, oid } from "../../test/ipc";
 import { HistoryToast } from "../history/HistoryDialogs";
 import { useHistoryStore } from "../history/store";
+import { useReflogStore } from "../reflog/store";
 import { useWorkdirStore } from "../workdir/store";
 import { UndoButtons } from "./UndoButtons";
 import { UndoDialog } from "./UndoDialog";
@@ -338,9 +339,39 @@ describe("the dialog", () => {
     ).toBeEnabled();
   });
 
-  it("other refusals: something changed, an operation waits, a worktree", async () => {
+  it("something changed: the branch history is the way back", async () => {
     const dialog = await openDialog(preview({ refused: { type: "changed" } }));
     expect(dialog).toHaveTextContent("usa el historial de la rama");
+    expect(
+      within(dialog).queryByRole("button", { name: "Deshacer" }),
+    ).toBeNull();
+    ipc.branchReflog.mockResolvedValue({
+      status: "ok",
+      data: {
+        refname: "refs/heads/main",
+        entries: [],
+        more: false,
+        expiry: {
+          reachable: { type: "days", days: 90 },
+          unreachable: { type: "days", days: 30 },
+        },
+      },
+    });
+    const user = userEvent.setup();
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "Ver el historial de «main»",
+      }),
+    );
+    expect(ipc.branchReflog).toHaveBeenCalledWith(1, "refs/heads/main");
+    expect(useReflogStore.getState().dialog?.refname).toBe("refs/heads/main");
+  });
+
+  it("an operation waiting: nothing to press", async () => {
+    const dialog = await openDialog(
+      preview({ refused: { type: "inProgress" } }),
+    );
+    expect(dialog).toHaveTextContent("a medias");
     expect(
       within(dialog).getByRole("button", { name: "Deshacer" }),
     ).toBeDisabled();

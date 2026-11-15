@@ -20,6 +20,7 @@ use gitcraft_core::ops::in_progress::{ConflictSides, ContinueOutcome};
 use gitcraft_core::ops::init::InitCheck;
 use gitcraft_core::ops::merge_rebase::{MergeRequest, MovePreview, RebaseRequest};
 use gitcraft_core::ops::pick::{PickOutcome, PickPreview};
+use gitcraft_core::ops::reflog::Reflog;
 use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::ops::remote::{ForcePushPreview, LastFetch, PullMode, PullOutcome, PushOutcome};
 use gitcraft_core::ops::reset::{ResetMode, ResetPreview};
@@ -1102,6 +1103,17 @@ pub async fn undo_operation(
     undo_id: u32,
 ) -> Result<(), IpcError> {
     state.undo_operation(id, undo_id).await
+}
+
+/// Where a branch (or HEAD) has been, from git's reflog (task 11.5).
+#[tauri::command]
+#[specta::specta]
+pub async fn branch_reflog(
+    state: State<'_, AppState>,
+    id: RepoId,
+    refname: String,
+) -> Result<Reflog, IpcError> {
+    state.branch_reflog(id, &refname).await
 }
 
 /// What the toolbar's Undo and Redo offer (task 11).

@@ -184,6 +184,8 @@ export const commands = {
 	undoRedoPreview: (id: number, entry: number, direction: Direction) => typedError<UndoPreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("undo_redo_preview", { id, entry, direction })),
 	/**  Undoes or redoes entry `entry` as the user accepted it in the dialog. */
 	undoRedo: (id: number, entry: number, request: UndoRequest) => typedError<UndoResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("undo_redo", { id, entry, request })),
+	/**  Where a branch (or HEAD) has been, from git's reflog (task 11.5). */
+	branchReflog: (id: number, refname: string) => typedError<Reflog, IpcError_Serialize>(__TAURI_INVOKE("branch_reflog", { id, refname })),
 	/**
 	 *  Merges as the user accepted it in the dialog (task 8.2): checks
 	 *  everything again and does nothing the user did not accept.
@@ -988,6 +990,13 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 "ghUnreachable" | 
 /**  `gh` failed for another reason (its output says why). */
 "ghFailed" | "cancelled" | "timedOut" | "unknown";
+
+/**  How long git keeps reflog entries before `git gc` expires them. */
+export type Expiry = 
+/**  About this many days. */
+{ type: "days"; days: number } | 
+/**  Never expired (`never`, `false`). */
+{ type: "never" };
 
 export type FailedRestore = FailedRestore_Serialize | FailedRestore_Deserialize;
 
@@ -2202,6 +2211,47 @@ export type RefChange_Serialize = {
 };
 
 export type RefKind = "local" | "remote" | "tag";
+
+export type Reflog = {
+	/**  `HEAD` or a full branch name. */
+	refname: string,
+	/**  Newest first, at most [`MAX_ENTRIES`]. */
+	entries: ReflogEntry[],
+	/**  There are older entries than these. */
+	more: boolean,
+	expiry: ReflogExpiry,
+};
+
+export type ReflogEntry = {
+	/**  Position, newest first (`main@{index}`). */
+	index: number,
+	oid: string,
+	short: string,
+	/**  When the ref moved there, in unix seconds. */
+	time: number,
+	/**
+	 *  What git noted ("commit: …", "reset: moving to …"). Shown as it is,
+	 *  never interpreted.
+	 */
+	message: string,
+	/**  The subject of the commit it pointed to. */
+	subject: string,
+	/**
+	 *  No branch, tag, remote branch or HEAD has the commit: only this
+	 *  history does, until git expires it.
+	 */
+	onlyHere: boolean,
+};
+
+/**
+ *  The repository's `gc.reflogExpire` (entries whose commit a branch
+ *  still has) and `gc.reflogExpireUnreachable` (commits no branch has),
+ *  or git's defaults (90 and 30 days).
+ */
+export type ReflogExpiry = {
+	reachable: Expiry,
+	unreachable: Expiry,
+};
 
 /**  The same tag on a remote. */
 export type RemoteTag = {

@@ -626,6 +626,22 @@ Núcleo en `gitcraft-core/src/ops/journal.rs`.
   rebase y reset deshechos. Si un único commit publicado impide deshacer,
   el diálogo ofrece revertirlo con el diálogo de la tarea 10.
 
+- **Historial de una rama (11.5, `ops/reflog.rs`, `src/features/reflog/`):**
+  el reflog de una rama local o de HEAD, con `log -g -z --date=unix` y
+  separadores `%x1f` (hasta 200 entradas). El texto que anotó git solo se
+  muestra; nunca se interpreta. Cada entrada sabe si su commit ya no está
+  en ninguna rama, tag, rama remota ni HEAD (un `rev-list` con `--not
+  --branches --tags --remotes HEAD`): son los que git puede perder. El
+  plazo sale de la configuración real (`gc.reflogExpire` y
+  `gc.reflogExpireUnreachable`, leídos con `--type=expiry-date`; si no
+  están, los 90 y 30 días de git; no se leen las variantes por patrón de
+  ref). El diálogo se abre desde el menú de una rama («Historial de «x»…»,
+  y «Historial de HEAD…» en la actual) o desde el deshacer que se niega
+  porque algo ha cambiado. Cada entrada lleva a «Ver el commit» (lo
+  selecciona en el grafo), «Crear una rama aquí…» (el diálogo de nueva
+  rama) y «Restablecer «x» aquí…» (el reset de la 10.4, solo en la rama
+  actual).
+
 ## 5f. Crear repositorios
 
 - **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama

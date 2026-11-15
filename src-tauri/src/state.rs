@@ -33,6 +33,7 @@ use gitcraft_core::ops::merge_rebase::{
 };
 use gitcraft_core::ops::pick::{self, PickOutcome, PickPreview};
 use gitcraft_core::ops::publish::{self, PublishPreview, PublishRequest, Published};
+use gitcraft_core::ops::reflog::{self, Reflog};
 use gitcraft_core::ops::refs::{RepoRefs, read_refs};
 use gitcraft_core::ops::remote::{
     self, ForcePushPreview, LastFetch, PullMode, PullOutcome, PushOutcome,
@@ -1966,6 +1967,13 @@ impl AppState {
             outcome: outcome.0,
             undo_id,
         })
+    }
+
+    /// Where branch `refname` (or `HEAD`) has been: its reflog (task 11.5).
+    pub async fn branch_reflog(&self, id: RepoId, refname: &str) -> Result<Reflog, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(reflog::reflog(git, &repo, refname, &CancellationToken::new()).await?)
     }
 
     /// When `remote` was last fetched, as far as git can tell.

@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { RepoRefs } from "../../ipc";
 import type { MenuItem } from "../../ui/ContextMenu";
 import { operationWaiting } from "../history/store";
+import { useReflogStore } from "../reflog/store";
 import { useMergeStore } from "./store";
 
 /** A branch as the menus know it. */
@@ -45,6 +46,20 @@ export function branchMenuItems(
   };
   const head = current ? `refs/heads/${current}` : null;
   return [
+    ...mergeItems(t, repoId, branch, current, head, common),
+    ...historyItems(t, repoId, branch, head),
+  ];
+}
+
+function mergeItems(
+  t: TFunction,
+  repoId: number,
+  branch: BranchName,
+  current: string | null,
+  head: string | null,
+  common: { disabled: boolean; hint: string | undefined },
+): MenuItem[] {
+  return [
     {
       ...common,
       label: t("merge.menu", {
@@ -72,4 +87,28 @@ export function branchMenuItems(
       },
     },
   ];
+}
+
+/** "History of «branch»…" for a local branch, and "History of HEAD…" for
+ * the current one (task 11.5). */
+function historyItems(
+  t: TFunction,
+  repoId: number,
+  branch: BranchName,
+  head: string | null,
+): MenuItem[] {
+  if (!branch.name.startsWith("refs/heads/")) return [];
+  const open = (refname: string) => () =>
+    void useReflogStore.getState().open(repoId, refname);
+  const items: MenuItem[] = [
+    {
+      label: t("reflog.menu", { branch: branch.shortName }),
+      separatorBefore: true,
+      onSelect: open(branch.name),
+    },
+  ];
+  if (branch.name === head) {
+    items.push({ label: t("reflog.menuHead"), onSelect: open("HEAD") });
+  }
+  return items;
 }

@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { BranchChange, CommitRef, UndoPreview } from "../../ipc";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { Files } from "../history/HistoryDialogs";
+import { useReflogStore } from "../reflog/store";
 import styles from "../history/history.module.css";
 import { describeOp } from "./describe";
 import { useUndoStore } from "./store";
@@ -206,19 +207,35 @@ export function UndoDialog() {
     refused?.type === "published" && refused.commits.length === 1
       ? refused.commits[0]
       : undefined;
+  // Something changed: the branch history is the way back (task 11.5).
+  const history =
+    refused?.type === "changed" && direction === "undo"
+      ? preview.headFrom.type === "branch"
+        ? preview.headFrom.name
+        : "HEAD"
+      : null;
   const blocked = preview.blocking.length > 0;
   const confirmLabel = revertable
     ? t("undo.revert", { subject: revertable.subject })
-    : t(blocked ? `undo.saveAndAct.${direction}` : `undo.act.${direction}`);
+    : history
+      ? history === "HEAD"
+        ? t("undo.showHistoryHead")
+        : t("undo.showHistory", {
+            branch: history.replace(/^refs\/heads\//, ""),
+          })
+      : t(blocked ? `undo.saveAndAct.${direction}` : `undo.act.${direction}`);
   return (
     <ConfirmDialog
       title={t(`undo.title.${direction}`, { what })}
       confirmLabel={confirmLabel}
       cancelLabel={t(refused ? "undo.close" : "history.cancel")}
-      confirmDisabled={busy || (!!refused && !revertable)}
+      confirmDisabled={busy || (!!refused && !revertable && !history)}
       onConfirm={() => {
         if (revertable) revertInstead(revertable.oid);
-        else void confirm(blocked);
+        else if (history) {
+          close();
+          void useReflogStore.getState().open(dialog.repoId, history);
+        } else void confirm(blocked);
       }}
       onCancel={close}
     >
