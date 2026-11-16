@@ -32,7 +32,7 @@ export function DetailPanel({ repoId }: { repoId: number | null }) {
   );
   // A file history over the graph shows its chosen commit here instead.
   const selectedOid =
-    graph?.openFile?.kind === "history"
+    graph?.openFile?.kind === "history" || graph?.openFile?.kind === "blame"
       ? graph.openFile.chosen
       : (graph?.selectedOid ?? null);
   const [loaded, setLoaded] = useState<Loaded | null>(null);

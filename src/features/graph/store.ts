@@ -36,10 +36,23 @@ export type OpenFile =
   /** The history of a file (task 12.4), from `rev` (`HEAD` or a commit
    * id) back. `chosen` is the commit picked in it ({@link WORKTREE} for
    * its uncommitted changes), which the detail panel shows. */
-  | { kind: "history"; path: string; rev: string; chosen: string | null };
+  | { kind: "history"; path: string; rev: string; chosen: string | null }
+  /** The blame of a file at `rev` (task 12.6). `chosen` is the commit
+   * picked in it; `back` the blames to return to ("Blame before this
+   * commit" pushes the current one). */
+  | {
+      kind: "blame";
+      path: string;
+      rev: string;
+      chosen: string | null;
+      back: { path: string; rev: string }[];
+    };
 
 /** The files whose diff `DiffView` shows. */
-export type DiffFile = Exclude<OpenFile, { kind: "conflict" | "history" }>;
+export type DiffFile = Exclude<
+  OpenFile,
+  { kind: "conflict" | "history" | "blame" }
+>;
 
 export type RepoGraph = {
   status: "loading" | "done" | "error";
@@ -67,8 +80,12 @@ type GraphState = {
   hideOptimizeNotice: (repoId: number) => void;
   openFileDiff: (repoId: number, file: OpenFile) => void;
   closeFile: (repoId: number) => void;
-  /** Picks a commit in the open file history. */
+  /** Picks a commit in the open file history or blame. */
   chooseInHistory: (repoId: number, chosen: string | null) => void;
+  /** The open blame moves to `path` at `rev`, remembering where it was. */
+  blameBefore: (repoId: number, path: string, rev: string) => void;
+  /** The open blame goes back one step, if it can. */
+  blameBack: (repoId: number) => void;
   forget: (repoId: number) => void;
 };
 
@@ -208,10 +225,41 @@ export const useGraphStore = create<GraphState>()((set, get) => {
 
     chooseInHistory: (repoId, chosen) => {
       const graph = get().graphs[repoId];
-      if (graph?.openFile?.kind !== "history") return;
-      const history = graph.openFile;
+      const open = graph?.openFile;
+      if (!graph || (open?.kind !== "history" && open?.kind !== "blame")) {
+        return;
+      }
+      patch(repoId, graph.loadId, () => ({ openFile: { ...open, chosen } }));
+    },
+
+    blameBefore: (repoId, path, rev) => {
+      const graph = get().graphs[repoId];
+      const open = graph?.openFile;
+      if (!graph || open?.kind !== "blame") return;
       patch(repoId, graph.loadId, () => ({
-        openFile: { ...history, chosen },
+        openFile: {
+          kind: "blame",
+          path,
+          rev,
+          chosen: null,
+          back: [...open.back, { path: open.path, rev: open.rev }],
+        },
+      }));
+    },
+
+    blameBack: (repoId) => {
+      const graph = get().graphs[repoId];
+      const open = graph?.openFile;
+      if (!graph || open?.kind !== "blame") return;
+      const previous = open.back.at(-1);
+      if (!previous) return;
+      patch(repoId, graph.loadId, () => ({
+        openFile: {
+          kind: "blame",
+          ...previous,
+          chosen: null,
+          back: open.back.slice(0, -1),
+        },
       }));
     },
 

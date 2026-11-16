@@ -16,7 +16,7 @@ import { headOid } from "../graph/refLabels";
 import { absoluteTime, relativeTime } from "../graph/relativeTime";
 import { useGraphStore, WORKTREE, type DiffFile } from "../graph/store";
 import { useWorkdirStore } from "../workdir/store";
-import { WidthHandle } from "./WidthHandle";
+import { WidthHandle } from "../../ui/WidthHandle";
 import styles from "./fileHistory.module.css";
 
 const ROW_HEIGHT = 46;
@@ -354,6 +354,22 @@ export function FileHistoryView({
             short: menu.entry.oid.slice(0, 7),
           })}
           items={[
+            {
+              label: t("fileHistory.blameHere"),
+              disabled: menu.entry.status === "deleted",
+              hint:
+                menu.entry.status === "deleted"
+                  ? t("fileHistory.deletedHere")
+                  : undefined,
+              onSelect: () =>
+                useGraphStore.getState().openFileDiff(repoId, {
+                  kind: "blame",
+                  path: menu.entry.path,
+                  rev: menu.entry.oid,
+                  chosen: null,
+                  back: [],
+                }),
+            },
             {
               label: t("fileHistory.showInGraph"),
               onSelect: () => {

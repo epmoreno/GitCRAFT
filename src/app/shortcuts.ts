@@ -36,6 +36,7 @@ export type ShortcutGroup =
   | "history"
   | "search"
   | "fileHistory"
+  | "blame"
   | "general";
 
 export type Shortcut = {
@@ -137,14 +138,27 @@ export const SHORTCUTS = {
     group: "search",
     chords: [{ key: "Enter", shift: true }],
   },
-  /** The history of a file (task 12.4): its list and its divider. */
+  /** The blame of a file (task 12.6). */
+  blameBack: {
+    group: "blame",
+    chords: [
+      { key: "[", primary: true, os: "mac" },
+      // Keyboards where "[" needs ⌥ (Spanish, for instance).
+      { key: "[", primary: true, alt: true, os: "mac" },
+      { key: "ArrowLeft", alt: true, os: "other" },
+    ],
+  },
+  blameNext: { group: "blame", chords: [{ key: "ArrowDown" }] },
+  blamePrevious: { group: "blame", chords: [{ key: "ArrowUp" }] },
+  /** The history of a file (task 12.4); the pane* keys work on any
+   * vertical divider (its list, the blame's column). */
   fileHistoryNext: { group: "fileHistory", chords: [{ key: "ArrowDown" }] },
   fileHistoryPrevious: { group: "fileHistory", chords: [{ key: "ArrowUp" }] },
-  paneWider: { group: "fileHistory", chords: [{ key: "ArrowRight" }] },
-  paneNarrower: { group: "fileHistory", chords: [{ key: "ArrowLeft" }] },
-  paneWidest: { group: "fileHistory", chords: [{ key: "End" }] },
-  paneNarrowest: { group: "fileHistory", chords: [{ key: "Home" }] },
-  paneReset: { group: "fileHistory", chords: [{ key: "Enter" }] },
+  paneWider: { group: "general", chords: [{ key: "ArrowRight" }] },
+  paneNarrower: { group: "general", chords: [{ key: "ArrowLeft" }] },
+  paneWidest: { group: "general", chords: [{ key: "End" }] },
+  paneNarrowest: { group: "general", chords: [{ key: "Home" }] },
+  paneReset: { group: "general", chords: [{ key: "Enter" }] },
   conflictPrevious: {
     group: "conflicts",
     chords: [{ key: "ArrowUp", alt: true }],

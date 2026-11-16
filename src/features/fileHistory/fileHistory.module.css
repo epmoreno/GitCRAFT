@@ -138,38 +138,6 @@
   font-family: var(--font-mono);
 }
 
-/* The divider between the list and the diff. */
-.handle {
-  flex: none;
-  width: 7px;
-  margin: 0 -3px;
-  position: relative;
-  z-index: 1;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.handle::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 3px;
-  width: 1px;
-  background: var(--border-strong);
-}
-
-.handle:hover::after,
-.handle:focus-visible::after {
-  left: 2px;
-  width: 3px;
-  background-color: var(--accent);
-}
-
-.handle:focus-visible {
-  outline-offset: -2px;
-}
-
 .diffPane {
   display: flex;
   flex: 1;

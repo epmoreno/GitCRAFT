@@ -2820,7 +2820,7 @@ principio y toda operación destructiva pasa por confirmación.
         antes del final y cancelar) con un fixture real, el de las rutas
         entrecomilladas, y uno en Tauri (un blame nuevo cancela el
         anterior).
-      - [ ] **12.6 Blame (UI).** Se para antes para enseñar el diseño. El
+      - [x] **12.6 Blame (UI).** Se para antes para enseñar el diseño. El
         archivo con una columna a la izquierda por trozo (hash corto, autor,
         fecha relativa), virtualizado; las líneas aún sin atribuir se ven
         en gris hasta que llegan. Clic en un trozo: lo selecciona en el
@@ -2829,6 +2829,43 @@ principio y toda operación destructiva pasa por confirmación.
         Entradas: el menú de un archivo, como el historial.
         *Verificable:* tests de interfaz (por partes, navegación, menú) y
         prueba a mano.
+        *Decisiones del usuario sobre el diseño:* (1) «Blame antes de este
+        commit» guarda un camino de vuelta, con «← Blame anterior» y ⌘[ en
+        macOS (Alt+← en Windows y Linux), en el registro de atajos y en
+        Ajustes; (2) franjas alternas (colorear por antigüedad, mejora
+        futura); (3) hash, autor y fecha en la columna izquierda, con
+        anchura ajustable con el separador.
+        *Hecho:* `src/features/blame/BlameView.tsx`; el separador del
+        historial de un archivo pasa a `src/ui/WidthHandle.tsx`, compartido.
+        - **Vista:** sobre el grafo (`openFile.kind = "blame"`, con la
+          ruta, el commit, el commit elegido y el camino de vuelta). «Volver
+          al grafo» o Esc; el panel de detalle muestra el commit elegido.
+        - **Líneas:** virtualizadas; la columna (hash, autor, fecha) solo
+          en la primera línea de cada grupo, fija al desplazar en
+          horizontal; número de línea y texto en monoespaciada, sin ajustar.
+          Franjas alternas por grupo en el orden del archivo. Lo aún sin
+          atribuir, con la columna en gris; arriba, la barra y «1.234 de
+          5.000 líneas (24 %)» con «Cancelar».
+        - **Grupo:** clic, lo elige y marca todas sus líneas; ↑ / ↓ pasan
+          de grupo en grupo; clic derecho o ⇧F10: «Ver el commit en el
+          grafo», «Blame antes de este commit» (desactivado en el primer
+          commit del archivo, con el motivo) e «Historial del archivo».
+        - **Atajos:** «Blame anterior» con ⌘[ (también ⌥⌘[, para los
+          teclados en los que «[» necesita ⌥, como el español) y Alt+← en
+          Windows y Linux. Las teclas del separador (← / →, Inicio / Fin,
+          Intro) valen ahora para cualquier separador vertical.
+        - **Casos:** más de 20.000 líneas, «Hacer el blame» o «Volver»;
+          binario, inexistente en ese commit y más de 16 MB, explicados.
+        - **Entradas:** «Blame…» en el menú de un archivo de un commit y de
+          «Cambios sin confirmar» (en HEAD), y «Blame en este commit» en el
+          de una fila del historial de un archivo (desactivado donde el
+          archivo se borró).
+        Tests: 15 de interfaz (las líneas y la columna, las franjas, lo
+        pendiente y el progreso, cancelar, elegir un grupo, las flechas,
+        «Blame antes» y la vuelta con el botón y ⌘[, Alt+← en Windows, el
+        primer commit, ver en el grafo, historial, archivo grande, binario,
+        inexistente y enorme, Esc, la entrada desde el historial de un
+        archivo, la anchura de la columna).
       - [ ] **12.7 Rendimiento, documentación y prueba a mano.** Banco
         `npm run bench:search` (búsqueda en mensajes, por archivo,
         historial de un archivo y blame) con repo sintético y, con
@@ -2839,6 +2876,8 @@ principio y toda operación destructiva pasa por confirmación.
         *Verificable:* el usuario lo prueba y lo confirma.
       *Mejora futura (decisión del usuario):* buscar en el contenido de los
       cambios (`git log -S`/`-G`, qué commit añadió o quitó un texto).
+      *Mejora futura (decisión del usuario):* una opción para colorear el
+      blame según la antigüedad de cada commit, además de las franjas.
       *Fuera de la 12:* filtros combinados (autor y fechas a la vez), blame del archivo sin
       confirmar y búsqueda en el stash.
 - [ ] **13. Rebase interactivo visual:** reordenar, squash, editar mensaje y

@@ -544,7 +544,20 @@ function FileRow({
             x={menu.x}
             y={menu.y}
             label={t("files.menu", { path: entry.path })}
-            items={[{ label: t("files.history"), onSelect: openHistory }]}
+            items={[
+              { label: t("files.history"), onSelect: openHistory },
+              {
+                label: t("files.blame"),
+                onSelect: () =>
+                  open(repoId, {
+                    kind: "blame",
+                    path: entry.path,
+                    rev: "HEAD",
+                    chosen: null,
+                    back: [],
+                  }),
+              },
+            ]}
             onClose={() => setMenu(null)}
           />
         </span>

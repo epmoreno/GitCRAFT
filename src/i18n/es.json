@@ -203,7 +203,8 @@
     "untrackedCount_other": "{{count}} archivos sin seguimiento",
     "menu": "Archivo {{path}}",
     "showDiff": "Ver el diff",
-    "history": "Historial del archivo"
+    "history": "Historial del archivo",
+    "blame": "Blame…"
   },
   "diff": {
     "label": "Diff de {{path}}",
@@ -858,7 +859,8 @@
         "conflicts": "Vista de conflictos",
         "history": "Historial",
         "search": "Búsqueda en el historial",
-        "fileHistory": "Historial de un archivo"
+        "fileHistory": "Historial de un archivo",
+        "blame": "Blame"
       },
       "key": {
         " ": "Espacio",
@@ -912,11 +914,14 @@
         "findPreviousInField": "En el campo de búsqueda: resultado anterior",
         "fileHistoryNext": "Historial de un archivo: commit siguiente (más antiguo)",
         "fileHistoryPrevious": "Historial de un archivo: commit anterior",
-        "paneWider": "Separador de la lista: más ancha",
-        "paneNarrower": "Separador de la lista: más estrecha",
-        "paneWidest": "Separador de la lista: lo más ancha posible",
-        "paneNarrowest": "Separador de la lista: lo más estrecha posible",
-        "paneReset": "Separador de la lista: anchura inicial (también con doble clic)"
+        "paneWider": "Separador vertical: el panel de la izquierda, más ancho",
+        "paneNarrower": "Separador vertical: el panel de la izquierda, más estrecho",
+        "paneWidest": "Separador vertical: lo más ancho posible",
+        "paneNarrowest": "Separador vertical: lo más estrecho posible",
+        "paneReset": "Separador vertical: anchura inicial (también con doble clic)",
+        "blameBack": "Blame: volver al blame anterior",
+        "blameNext": "Blame: grupo de líneas siguiente",
+        "blamePrevious": "Blame: grupo de líneas anterior"
       }
     }
   },
@@ -1595,6 +1600,37 @@
     "renamedFrom": "renombrado desde {{path}}",
     "resize": "Anchura de la lista",
     "entryMenu": "Commit {{short}}",
-    "showInGraph": "Ver el commit en el grafo"
+    "showInGraph": "Ver el commit en el grafo",
+    "blameHere": "Blame en este commit",
+    "deletedHere": "El archivo se borró en este commit"
+  },
+  "blame": {
+    "label": "Blame de {{path}}",
+    "title": "Blame de",
+    "at": "en",
+    "backToGraph": "Volver al grafo",
+    "backToGraphHint": "Volver al grafo (Esc)",
+    "previous": "Blame anterior",
+    "previousHint": "Volver al blame anterior ({{shortcut}})",
+    "progress": "Progreso del blame",
+    "attributed_one": "{{done}} de {{total}} línea ({{percent}} %)",
+    "attributed_other": "{{done}} de {{total}} líneas ({{percent}} %)",
+    "cancel": "Cancelar",
+    "failed": "No se ha podido hacer el blame.",
+    "binary": "Es un archivo binario: no tiene líneas que atribuir.",
+    "missing": "El archivo no existe en ese commit.",
+    "tooLarge": "Pesa {{size}} MB y el límite para el blame es 16 MB.",
+    "large_one": "Este archivo tiene {{lines}} línea: el blame puede tardar.",
+    "large_other": "Este archivo tiene {{lines}} líneas: el blame puede tardar.",
+    "start": "Hacer el blame",
+    "cancelLarge": "Volver",
+    "tableLabel": "Líneas de {{path}} y el commit de cada una",
+    "chunkLabel": "{{short}}, {{author}}, {{when}}: líneas {{first}} a {{last}}. {{summary}}",
+    "chunkMenu": "Commit {{short}}",
+    "showInGraph": "Ver el commit en el grafo",
+    "before": "Blame antes de este commit",
+    "firstCommit": "Es el primer commit de este archivo",
+    "fileHistory": "Historial del archivo",
+    "resize": "Anchura de la columna del blame"
   }
 }

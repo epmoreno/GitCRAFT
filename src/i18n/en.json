@@ -203,7 +203,8 @@
     "untrackedCount_other": "{{count}} untracked files",
     "menu": "File {{path}}",
     "showDiff": "Show the diff",
-    "history": "File history"
+    "history": "File history",
+    "blame": "Blame…"
   },
   "diff": {
     "label": "Diff of {{path}}",
@@ -858,7 +859,8 @@
         "conflicts": "Conflict view",
         "history": "History",
         "search": "History search",
-        "fileHistory": "File history"
+        "fileHistory": "File history",
+        "blame": "Blame"
       },
       "key": {
         " ": "Space",
@@ -912,11 +914,14 @@
         "findPreviousInField": "In the search field: previous result",
         "fileHistoryNext": "File history: next (older) commit",
         "fileHistoryPrevious": "File history: previous commit",
-        "paneWider": "List divider: wider",
-        "paneNarrower": "List divider: narrower",
-        "paneWidest": "List divider: as wide as possible",
-        "paneNarrowest": "List divider: as narrow as possible",
-        "paneReset": "List divider: initial width (also with a double click)"
+        "paneWider": "Vertical divider: the left pane, wider",
+        "paneNarrower": "Vertical divider: the left pane, narrower",
+        "paneWidest": "Vertical divider: as wide as possible",
+        "paneNarrowest": "Vertical divider: as narrow as possible",
+        "paneReset": "Vertical divider: initial width (also with a double click)",
+        "blameBack": "Blame: back to the previous blame",
+        "blameNext": "Blame: next group of lines",
+        "blamePrevious": "Blame: previous group of lines"
       }
     }
   },
@@ -1595,6 +1600,37 @@
     "renamedFrom": "renamed from {{path}}",
     "resize": "List width",
     "entryMenu": "Commit {{short}}",
-    "showInGraph": "Show the commit in the graph"
+    "showInGraph": "Show the commit in the graph",
+    "blameHere": "Blame at this commit",
+    "deletedHere": "The file was deleted in this commit"
+  },
+  "blame": {
+    "label": "Blame of {{path}}",
+    "title": "Blame of",
+    "at": "at",
+    "backToGraph": "Back to the graph",
+    "backToGraphHint": "Back to the graph (Esc)",
+    "previous": "Previous blame",
+    "previousHint": "Back to the previous blame ({{shortcut}})",
+    "progress": "Blame progress",
+    "attributed_one": "{{done}} of {{total}} line ({{percent}} %)",
+    "attributed_other": "{{done}} of {{total}} lines ({{percent}} %)",
+    "cancel": "Cancel",
+    "failed": "The blame could not be done.",
+    "binary": "It is a binary file: it has no lines to attribute.",
+    "missing": "The file does not exist in that commit.",
+    "tooLarge": "It is {{size}} MB and the limit for blame is 16 MB.",
+    "large_one": "This file has {{lines}} line: the blame may take a while.",
+    "large_other": "This file has {{lines}} lines: the blame may take a while.",
+    "start": "Blame it",
+    "cancelLarge": "Back",
+    "tableLabel": "Lines of {{path}} and the commit of each",
+    "chunkLabel": "{{short}}, {{author}}, {{when}}: lines {{first}} to {{last}}. {{summary}}",
+    "chunkMenu": "Commit {{short}}",
+    "showInGraph": "Show the commit in the graph",
+    "before": "Blame before this commit",
+    "firstCommit": "It is this file's first commit",
+    "fileHistory": "File history",
+    "resize": "Width of the blame column"
   }
 }

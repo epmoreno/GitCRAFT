@@ -1,6 +1,6 @@
 import { useRef, type KeyboardEvent, type PointerEvent } from "react";
-import { whichShortcut } from "../../app/shortcuts";
-import styles from "./fileHistory.module.css";
+import { whichShortcut } from "../app/shortcuts";
+import styles from "./WidthHandle.module.css";
 
 const KEYS = [
   "paneWider",
@@ -15,7 +15,7 @@ const MIN = 200;
 
 /**
  * Vertical divider that sets the width of the pane on its left (the list
- * of a file history), by dragging or with the keyboard: →/← widen and
+ * of a file history, the blame's column), by dragging or with the keyboard: →/← widen and
  * narrow it, Home/End go to the limits, Enter or a double click go back to
  * the natural width.
  */

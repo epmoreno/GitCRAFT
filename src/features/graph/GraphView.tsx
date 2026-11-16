@@ -19,6 +19,7 @@ import { absoluteTime, relativeTime } from "./relativeTime";
 import { useGraphStore } from "./store";
 import { SearchBar } from "../search/SearchBar";
 import { FileHistoryView } from "../fileHistory/FileHistoryView";
+import { BlameView } from "../blame/BlameView";
 import { searchOf, useSearchStore } from "../search/store";
 import styles from "./graph.module.css";
 import { ErrorReport } from "../../ui/ErrorReport";
@@ -331,7 +332,16 @@ export function GraphView({
           onClose={() => setMenu(null)}
         />
       )}
-      {graph?.openFile?.kind === "history" ? (
+      {graph?.openFile?.kind === "blame" ? (
+        <BlameView
+          key={`${graph.openFile.rev}:${graph.openFile.path}`}
+          repoId={repoId}
+          path={graph.openFile.path}
+          rev={graph.openFile.rev}
+          chosen={graph.openFile.chosen}
+          canGoBack={graph.openFile.back.length > 0}
+        />
+      ) : graph?.openFile?.kind === "history" ? (
         <FileHistoryView
           key={`${graph.openFile.rev}:${graph.openFile.path}`}
           repoId={repoId}

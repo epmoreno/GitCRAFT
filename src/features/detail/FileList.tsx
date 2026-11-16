@@ -209,6 +209,17 @@ function FileRow({
                   chosen: null,
                 }),
             },
+            {
+              label: t("files.blame"),
+              onSelect: () =>
+                open(repoId, {
+                  kind: "blame",
+                  path: file.path,
+                  rev: oid,
+                  chosen: null,
+                  back: [],
+                }),
+            },
           ]}
           onClose={() => setMenu(null)}
         />
