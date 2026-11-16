@@ -2704,7 +2704,7 @@ principio y toda operación destructiva pasa por confirmación.
         cargar; casillas por campo; hash corto; fuera de toda rama;
         expresión inválida; Esc; pestañas; dibujo de los puntos) y uno de
         contraste.
-      - [ ] **12.3 Historial de un archivo (core y Tauri).**
+      - [x] **12.3 Historial de un archivo (core y Tauri).**
         `ops::file_history(path, sink, cancel)`: `git log --follow
         --name-status -z --format=…` en streaming, por páginas, con la ruta
         que tenía el archivo en cada commit (para los renombrados) y el tipo
@@ -2713,6 +2713,27 @@ principio y toda operación destructiva pasa por confirmación.
         *Verificable:* parser con fixture real (renombrado con cambios,
         borrado y vuelto a crear, rutas con espacios y no ASCII), tests de
         integración, y cancelar a mitad.
+        *Hecho:* `ops/file_history.rs` y `parse/file_history.rs` en el
+        núcleo, y los comandos `file_history` (lotes por `Channel`) y
+        `cancel_file_history`.
+        - **Formato:** cada commit empieza con U+001E y sus campos (hash,
+          autor, email, fecha, asunto); detrás, sus tokens de
+          `--name-status`. El parser va token a token, así funciona según
+          llega la salida.
+        - **Desde dónde:** `HEAD` o un hash completo (cualquier otra cosa se
+          rechaza); la ruta va detrás de `--`. Un repo sin commits o una
+          ruta vacía no dan nada, sin error.
+        - **Por partes:** lotes de 100 o cada 50 ms, como la búsqueda; sin
+          porcentaje (git filtra por dentro), con el total al final.
+        - **Sesión:** abrir el historial de otro archivo cancela el
+          anterior, igual que `cancel_file_history` y cerrar el repo.
+        Tests: 9 de integración (renombrado con cambios, borrado y vuelto a
+        crear, una rama fusionada, ruta con espacios y acentos, desde otro
+        commit, el nombre antiguo que ya no existe, un archivo llamado
+        `--all`, comienzos no válidos, repo vacío; 1.500 commits: el primer
+        lote llega antes del final y cancelar lo para) con un fixture real
+        de la salida de git, y uno en Tauri (otro historial cancela el
+        anterior).
       - [ ] **12.4 Historial de un archivo (UI).** Se para antes para
         enseñar el diseño. Lista de commits virtualizada (fecha, autor,
         asunto, ruta si cambió) junto al diff de ese archivo en el commit

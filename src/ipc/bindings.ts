@@ -194,6 +194,13 @@ export const commands = {
 	/**  Cancels the history search in progress, if any. */
 	cancelSearch: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_search", { id })),
 	/**
+	 *  The history of one file (task 12.3): batches on `on_batch`, the count
+	 *  when it ends. Opening another file's history cancels this one.
+	 */
+	fileHistory: (id: number, path: string, rev: string, onBatch: Channel<FileHistoryEntry_Deserialize[]>) => typedError<FileHistorySummary, IpcError_Serialize>(__TAURI_INVOKE("file_history", { id, path, rev, onBatch })),
+	/**  Cancels reading a file's history, if it is still going. */
+	cancelFileHistory: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_file_history", { id })),
+	/**
 	 *  Merges as the user accepted it in the dialog (task 8.2): checks
 	 *  everything again and does nothing the user did not accept.
 	 */
@@ -1079,6 +1086,44 @@ export type FileDiff_Serialize = {
 	 *  with stale line positions.
 	 */
 	fingerprint: string,
+};
+
+/**  One commit that changed the file. */
+export type FileHistoryEntry = FileHistoryEntry_Serialize | FileHistoryEntry_Deserialize;
+
+/**  One commit that changed the file. */
+export type FileHistoryEntry_Deserialize = {
+	oid: string,
+	authorName: string,
+	authorEmail: string,
+	/**  Unix seconds. */
+	authorTime: number,
+	summary: string,
+	/**  The file's path in this commit. */
+	path: string,
+	/**  Its path before, when this commit renamed (or copied) it. */
+	oldPath?: string | null,
+	status: FileStatus,
+};
+
+/**  One commit that changed the file. */
+export type FileHistoryEntry_Serialize = {
+	oid: string,
+	authorName: string,
+	authorEmail: string,
+	/**  Unix seconds. */
+	authorTime: number,
+	summary: string,
+	/**  The file's path in this commit. */
+	path: string,
+	/**  Its path before, when this commit renamed (or copied) it. */
+	oldPath: string | null,
+	status: FileStatus,
+};
+
+export type FileHistorySummary = {
+	/**  Entries in all. */
+	count: number,
 };
 
 export type FileStatus = "added" | "modified" | "deleted" | "renamed" | "copied" | 

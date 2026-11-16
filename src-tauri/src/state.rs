@@ -22,6 +22,7 @@ use gitcraft_core::ops::discard::{
     DiscardRecord, DiscardTarget, DiscardedFile, SystemTrash, Trash, discard, preview_discard,
     undo_discard,
 };
+use gitcraft_core::ops::file_history::{self, FileHistorySummary};
 use gitcraft_core::ops::in_progress::{self, ConflictSides, ContinueOutcome, commit_ref};
 use gitcraft_core::ops::init::{self, InitCheck};
 use gitcraft_core::ops::journal::{OpKind, OpRecord};
@@ -54,6 +55,7 @@ use gitcraft_core::ops::worktree::{
 };
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
+use gitcraft_core::parse::file_history::FileHistoryEntry;
 use gitcraft_core::parse::stash::StashEntry;
 use gitcraft_core::parse::status::WorkingStatus;
 use gitcraft_core::patch::HunkSelection;
@@ -151,6 +153,8 @@ struct RepoSession {
     operation: Option<CancellationToken>,
     /// Cancels the history search in progress, if any (task 12.1).
     search: Option<CancellationToken>,
+    /// Cancels the file history being read, if any (task 12.3).
+    file_history: Option<CancellationToken>,
     /// Reports external ref changes; `None` if watching failed.
     watcher: Option<RepoWatcher>,
     /// Recent discards that can be undone, by id.
@@ -313,6 +317,7 @@ impl AppState {
             graph_load: None,
             operation: None,
             search: None,
+            file_history: None,
             watcher: self.watch(id, &info),
             write_lock: Arc::default(),
             discards: Vec::new(),
@@ -346,9 +351,14 @@ impl AppState {
             return false;
         };
         let session = inner.sessions.remove(index);
-        for token in [session.graph_load, session.operation, session.search]
-            .into_iter()
-            .flatten()
+        for token in [
+            session.graph_load,
+            session.operation,
+            session.search,
+            session.file_history,
+        ]
+        .into_iter()
+        .flatten()
         {
             token.cancel();
         }
@@ -1990,6 +2000,45 @@ impl AppState {
         Ok(result?)
     }
 
+    /// The commits that changed `path` from `rev` (`HEAD` or a commit id)
+    /// back, following renames (task 12.3), in batches. Opening another
+    /// file's history cancels this one; so do [`Self::cancel_file_history`]
+    /// and closing the repository.
+    pub async fn file_history(
+        &self,
+        id: RepoId,
+        path: &str,
+        rev: &str,
+        on_batch: impl FnMut(Vec<FileHistoryEntry>),
+    ) -> Result<FileHistorySummary, IpcError> {
+        let git = self.git()?;
+        let (repo, cancel) = {
+            let mut inner = self.lock();
+            let session = inner
+                .sessions
+                .iter_mut()
+                .find(|s| s.id == id)
+                .ok_or(GitError::Cancelled)?;
+            if let Some(previous) = session.file_history.take() {
+                previous.cancel();
+            }
+            let cancel = CancellationToken::new();
+            session.file_history = Some(cancel.clone());
+            (PathBuf::from(&session.info.path), cancel)
+        };
+        Ok(file_history::file_history(git, &repo, path, rev, &cancel, on_batch).await?)
+    }
+
+    /// Cancels session `id`'s file history, if one is being read.
+    pub fn cancel_file_history(&self, id: RepoId) {
+        let mut inner = self.lock();
+        if let Some(session) = inner.sessions.iter_mut().find(|s| s.id == id)
+            && let Some(token) = session.file_history.take()
+        {
+            token.cancel();
+        }
+    }
+
     /// Cancels session `id`'s history search, if one is running.
     pub fn cancel_search(&self, id: RepoId) {
         let mut inner = self.lock();
@@ -2784,6 +2833,38 @@ mod tests {
         };
         let (first, ()) = tokio::join!(first, cancel);
         assert_eq!(first.expect_err("cancelled").kind, ErrorKind::Cancelled);
+    }
+
+    #[tokio::test]
+    async fn reads_a_file_history_and_a_new_one_cancels_it() {
+        let f = fixture();
+        let repo = TestRepo::new().await;
+        for i in 0..300 {
+            repo.commit_file("a.txt", &format!("{i}\n"), &format!("A {i}"))
+                .await;
+        }
+        repo.commit_file("b.txt", "b\n", "B").await;
+        let opened = f.state.open_repository(repo.path()).await.expect("open");
+        let started = tokio::sync::Notify::new();
+        let first = f
+            .state
+            .file_history(opened.id, "a.txt", "HEAD", |_| started.notify_one());
+        let second = async {
+            started.notified().await;
+            let mut entries = Vec::new();
+            let summary = f
+                .state
+                .file_history(opened.id, "b.txt", "HEAD", |batch| entries.extend(batch))
+                .await;
+            (summary, entries)
+        };
+        let (first, (second, entries)) = tokio::join!(first, second);
+        // The first may have finished already on a fast machine.
+        if let Err(err) = first {
+            assert_eq!(err.kind, ErrorKind::Cancelled);
+        }
+        assert_eq!(second.expect("second").count, 1);
+        assert_eq!(entries[0].summary, "B");
     }
 
     #[tokio::test]

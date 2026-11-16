@@ -8,6 +8,7 @@ import {
   type GraphEvent,
   type LoginEvent,
   type RepoChanged,
+  type FileHistoryEntry_Serialize,
   type SearchBatch,
   type SearchQuery,
 } from "./bindings";
@@ -69,6 +70,8 @@ export type {
   Reflog,
   ReflogEntry,
   ReflogExpiry,
+  FileHistoryEntry_Serialize as FileHistoryEntry,
+  FileHistorySummary,
   SearchBatch,
   SearchField,
   SearchQuery,
@@ -184,6 +187,26 @@ export function searchCommits(
   const channel = new Channel<SearchBatch>();
   channel.onmessage = onBatch;
   return commands.searchCommits(id, query, channel);
+}
+
+/** The commits that changed `path` from `rev` (`HEAD` or a commit id)
+ * back, following renames (task 12.3), in batches. */
+export function fileHistory(
+  id: number,
+  path: string,
+  rev: string,
+  onBatch: (batch: FileHistoryEntry_Serialize[]) => void,
+) {
+  const channel = new Channel<FileHistoryEntry_Serialize[]>();
+  channel.onmessage = onBatch;
+  // The generated parameter type is the Deserialize variant; what arrives
+  // is what Rust serializes.
+  return commands.fileHistory(
+    id,
+    path,
+    rev,
+    channel as unknown as Parameters<typeof commands.fileHistory>[3],
+  );
 }
 
 /** Writes the repository's commit-graph, reporting git's progress lines. */

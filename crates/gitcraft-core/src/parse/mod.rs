@@ -4,6 +4,7 @@ pub mod commit;
 pub mod conflict;
 pub mod diff;
 pub mod diff_tree;
+pub mod file_history;
 pub mod log;
 pub mod reflog;
 pub mod refs;

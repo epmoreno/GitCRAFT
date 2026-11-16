@@ -16,6 +16,7 @@ use gitcraft_core::ops::config::{
 };
 use gitcraft_core::ops::conflict::ConflictFile;
 use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
+use gitcraft_core::ops::file_history::FileHistorySummary;
 use gitcraft_core::ops::in_progress::{ConflictSides, ContinueOutcome};
 use gitcraft_core::ops::init::InitCheck;
 use gitcraft_core::ops::merge_rebase::{MergeRequest, MovePreview, RebaseRequest};
@@ -32,6 +33,7 @@ use gitcraft_core::ops::undo::{Direction, UndoPreview, UndoRequest};
 use gitcraft_core::ops::worktree::{SelectionAction, WorktreeArea};
 use gitcraft_core::parse::commit::CommitDetails;
 use gitcraft_core::parse::diff::FileDiff;
+use gitcraft_core::parse::file_history::FileHistoryEntry;
 use gitcraft_core::parse::stash::StashEntry;
 use gitcraft_core::parse::status::WorkingStatus;
 use gitcraft_core::patch::HunkSelection;
@@ -1122,6 +1124,33 @@ pub async fn search_commits(
             let _ = on_batch.send(batch);
         })
         .await
+}
+
+/// The history of one file (task 12.3): batches on `on_batch`, the count
+/// when it ends. Opening another file's history cancels this one.
+#[tauri::command]
+#[specta::specta]
+pub async fn file_history(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+    rev: String,
+    on_batch: Channel<Vec<FileHistoryEntry>>,
+) -> Result<FileHistorySummary, IpcError> {
+    state
+        .file_history(id, &path, &rev, |batch| {
+            // The window may be gone; there is nobody left to tell.
+            let _ = on_batch.send(batch);
+        })
+        .await
+}
+
+/// Cancels reading a file's history, if it is still going.
+#[tauri::command]
+#[specta::specta]
+pub async fn cancel_file_history(state: State<'_, AppState>, id: RepoId) -> Result<(), IpcError> {
+    state.cancel_file_history(id);
+    Ok(())
 }
 
 /// Cancels the history search in progress, if any.
