@@ -35,6 +35,7 @@ export type ShortcutGroup =
   | "conflicts"
   | "history"
   | "search"
+  | "fileHistory"
   | "general";
 
 export type Shortcut = {
@@ -136,6 +137,14 @@ export const SHORTCUTS = {
     group: "search",
     chords: [{ key: "Enter", shift: true }],
   },
+  /** The history of a file (task 12.4): its list and its divider. */
+  fileHistoryNext: { group: "fileHistory", chords: [{ key: "ArrowDown" }] },
+  fileHistoryPrevious: { group: "fileHistory", chords: [{ key: "ArrowUp" }] },
+  paneWider: { group: "fileHistory", chords: [{ key: "ArrowRight" }] },
+  paneNarrower: { group: "fileHistory", chords: [{ key: "ArrowLeft" }] },
+  paneWidest: { group: "fileHistory", chords: [{ key: "End" }] },
+  paneNarrowest: { group: "fileHistory", chords: [{ key: "Home" }] },
+  paneReset: { group: "fileHistory", chords: [{ key: "Enter" }] },
   conflictPrevious: {
     group: "conflicts",
     chords: [{ key: "ArrowUp", alt: true }],

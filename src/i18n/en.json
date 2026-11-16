@@ -200,7 +200,10 @@
     },
     "openDiff": "Show the diff of {{path}}",
     "untrackedCount_one": "{{count}} untracked file",
-    "untrackedCount_other": "{{count}} untracked files"
+    "untrackedCount_other": "{{count}} untracked files",
+    "menu": "File {{path}}",
+    "showDiff": "Show the diff",
+    "history": "File history"
   },
   "diff": {
     "label": "Diff of {{path}}",
@@ -854,7 +857,8 @@
         "diff": "Diff",
         "conflicts": "Conflict view",
         "history": "History",
-        "search": "History search"
+        "search": "History search",
+        "fileHistory": "File history"
       },
       "key": {
         " ": "Space",
@@ -905,7 +909,14 @@
         "findNext": "Go to the next (older) result",
         "findPrevious": "Go to the previous result",
         "findNextInField": "In the search field: next result",
-        "findPreviousInField": "In the search field: previous result"
+        "findPreviousInField": "In the search field: previous result",
+        "fileHistoryNext": "File history: next (older) commit",
+        "fileHistoryPrevious": "File history: previous commit",
+        "paneWider": "List divider: wider",
+        "paneNarrower": "List divider: narrower",
+        "paneWidest": "List divider: as wide as possible",
+        "paneNarrowest": "List divider: as narrow as possible",
+        "paneReset": "List divider: initial width (also with a double click)"
       }
     }
   },
@@ -1550,5 +1561,40 @@
     "failed": "The history could not be searched.",
     "outside": "Commit {{short}} is not on any branch: only the branch history still has it.",
     "createBranch": "Create a branch here…"
+  },
+  "fileHistory": {
+    "label": "History of {{path}}",
+    "title": "History of",
+    "back": "Back to the graph",
+    "backHint": "Back to the graph (Esc)",
+    "loading_one": "{{count}} commit…",
+    "loading_other": "{{count}} commits…",
+    "count_one": "{{count}} commit",
+    "count_other": "{{count}} commits",
+    "cancel": "Cancel",
+    "failed": "The file's history could not be read.",
+    "empty": "This file has no history yet.",
+    "listLabel": "Commits that changed {{path}}",
+    "uncommitted": "Uncommitted",
+    "area": {
+      "staged": "Staged",
+      "unstaged": "Not staged",
+      "untracked": "New, untracked"
+    },
+    "status": {
+      "added": "added",
+      "modified": "modified",
+      "deleted": "deleted",
+      "renamed": "renamed",
+      "copied": "copied",
+      "typeChanged": "type changed",
+      "unmerged": "in conflict",
+      "untracked": "untracked",
+      "unknown": "changed"
+    },
+    "renamedFrom": "renamed from {{path}}",
+    "resize": "List width",
+    "entryMenu": "Commit {{short}}",
+    "showInGraph": "Show the commit in the graph"
   }
 }

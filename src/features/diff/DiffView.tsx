@@ -40,6 +40,68 @@ function load(repoId: number, file: DiffFile, full: boolean) {
 export function DiffView({ repoId, file }: { repoId: number; file: DiffFile }) {
   const { t } = useTranslation();
   const close = useGraphStore((s) => s.closeFile);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (isShortcut("escape", event)) close(repoId);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [repoId, close]);
+
+  return (
+    <section
+      className={styles.view}
+      aria-label={t("diff.label", { path: file.path })}
+    >
+      <header className={styles.header}>
+        <button
+          type="button"
+          className={styles.back}
+          title={t("diff.backHint")}
+          onClick={() => close(repoId)}
+        >
+          ← {t("diff.back")}
+        </button>
+        <DiffTitle file={file} />
+      </header>
+      <DiffContent repoId={repoId} file={file} />
+    </section>
+  );
+}
+
+/** The file's path (and old path), and its commit or area. */
+export function DiffTitle({ file }: { file: DiffFile }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <span className={`${styles.path} selectable`}>
+        {file.oldPath && (
+          <span className={styles.oldPath}>{file.oldPath} → </span>
+        )}
+        {file.path}
+      </span>
+      {file.kind === "commit" ? (
+        <code className={`${styles.sha} selectable`}>
+          {file.oid.slice(0, 7)}
+        </code>
+      ) : (
+        <span className={styles.area}>{t(`diff.area.${file.area}`)}</span>
+      )}
+    </>
+  );
+}
+
+/** The scrolling diff of `file`, loaded on demand (also embedded in the
+ * history of a file, task 12.4). */
+export function DiffContent({
+  repoId,
+  file,
+}: {
+  repoId: number;
+  file: DiffFile;
+}) {
+  const { t } = useTranslation();
   // Uncommitted diffs follow the status: re-read when it changes.
   const version = useWorkdirStore((s) =>
     file.kind === "worktree" ? (s.statuses[repoId]?.version ?? 0) : 0,
@@ -66,14 +128,6 @@ export function DiffView({ repoId, file }: { repoId: number; file: DiffFile }) {
     };
   }, [repoId, key]);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (isShortcut("escape", event)) close(repoId);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [repoId, close]);
-
   // While a refreshed diff of the same file loads, keep showing the last one.
   const sameFile =
     loaded !== null &&
@@ -82,34 +136,7 @@ export function DiffView({ repoId, file }: { repoId: number; file: DiffFile }) {
   const current = loaded?.key === key || sameFile ? loaded : null;
 
   return (
-    <section
-      className={styles.view}
-      aria-label={t("diff.label", { path: file.path })}
-    >
-      <header className={styles.header}>
-        <button
-          type="button"
-          className={styles.back}
-          title={t("diff.backHint")}
-          onClick={() => close(repoId)}
-        >
-          ← {t("diff.back")}
-        </button>
-        <span className={`${styles.path} selectable`}>
-          {file.oldPath && (
-            <span className={styles.oldPath}>{file.oldPath} → </span>
-          )}
-          {file.path}
-        </span>
-        {file.kind === "commit" ? (
-          <code className={`${styles.sha} selectable`}>
-            {file.oid.slice(0, 7)}
-          </code>
-        ) : (
-          <span className={styles.area}>{t(`diff.area.${file.area}`)}</span>
-        )}
-      </header>
-
+    <>
       <div ref={body} className={styles.body}>
         {!current ? (
           <p className={styles.message}>{t("diff.loading")}</p>
@@ -130,7 +157,7 @@ export function DiffView({ repoId, file }: { repoId: number; file: DiffFile }) {
           />
         )}
       </div>
-    </section>
+    </>
   );
 }
 

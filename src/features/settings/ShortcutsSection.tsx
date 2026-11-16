@@ -18,6 +18,7 @@ const GROUPS: ShortcutGroup[] = [
   "conflicts",
   "history",
   "search",
+  "fileHistory",
   "general",
 ];
 

@@ -32,10 +32,14 @@ export type OpenFile =
       oldPath: string | null;
     }
   /** A file in conflict, shown in the conflict view (task 9). */
-  | { kind: "conflict"; path: string };
+  | { kind: "conflict"; path: string }
+  /** The history of a file (task 12.4), from `rev` (`HEAD` or a commit
+   * id) back. `chosen` is the commit picked in it ({@link WORKTREE} for
+   * its uncommitted changes), which the detail panel shows. */
+  | { kind: "history"; path: string; rev: string; chosen: string | null };
 
 /** The files whose diff `DiffView` shows. */
-export type DiffFile = Exclude<OpenFile, { kind: "conflict" }>;
+export type DiffFile = Exclude<OpenFile, { kind: "conflict" | "history" }>;
 
 export type RepoGraph = {
   status: "loading" | "done" | "error";
@@ -63,6 +67,8 @@ type GraphState = {
   hideOptimizeNotice: (repoId: number) => void;
   openFileDiff: (repoId: number, file: OpenFile) => void;
   closeFile: (repoId: number) => void;
+  /** Picks a commit in the open file history. */
+  chooseInHistory: (repoId: number, chosen: string | null) => void;
   forget: (repoId: number) => void;
 };
 
@@ -198,6 +204,15 @@ export const useGraphStore = create<GraphState>()((set, get) => {
     openFileDiff: (repoId, file) => {
       const graph = get().graphs[repoId];
       if (graph) patch(repoId, graph.loadId, () => ({ openFile: file }));
+    },
+
+    chooseInHistory: (repoId, chosen) => {
+      const graph = get().graphs[repoId];
+      if (graph?.openFile?.kind !== "history") return;
+      const history = graph.openFile;
+      patch(repoId, graph.loadId, () => ({
+        openFile: { ...history, chosen },
+      }));
     },
 
     closeFile: (repoId) => {

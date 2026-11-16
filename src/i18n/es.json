@@ -200,7 +200,10 @@
     },
     "openDiff": "Ver el diff de {{path}}",
     "untrackedCount_one": "{{count}} archivo sin seguimiento",
-    "untrackedCount_other": "{{count}} archivos sin seguimiento"
+    "untrackedCount_other": "{{count}} archivos sin seguimiento",
+    "menu": "Archivo {{path}}",
+    "showDiff": "Ver el diff",
+    "history": "Historial del archivo"
   },
   "diff": {
     "label": "Diff de {{path}}",
@@ -854,7 +857,8 @@
         "diff": "Diff",
         "conflicts": "Vista de conflictos",
         "history": "Historial",
-        "search": "Búsqueda en el historial"
+        "search": "Búsqueda en el historial",
+        "fileHistory": "Historial de un archivo"
       },
       "key": {
         " ": "Espacio",
@@ -905,7 +909,14 @@
         "findNext": "Ir al resultado siguiente (más antiguo)",
         "findPrevious": "Ir al resultado anterior",
         "findNextInField": "En el campo de búsqueda: resultado siguiente",
-        "findPreviousInField": "En el campo de búsqueda: resultado anterior"
+        "findPreviousInField": "En el campo de búsqueda: resultado anterior",
+        "fileHistoryNext": "Historial de un archivo: commit siguiente (más antiguo)",
+        "fileHistoryPrevious": "Historial de un archivo: commit anterior",
+        "paneWider": "Separador de la lista: más ancha",
+        "paneNarrower": "Separador de la lista: más estrecha",
+        "paneWidest": "Separador de la lista: lo más ancha posible",
+        "paneNarrowest": "Separador de la lista: lo más estrecha posible",
+        "paneReset": "Separador de la lista: anchura inicial (también con doble clic)"
       }
     }
   },
@@ -1550,5 +1561,40 @@
     "failed": "No se ha podido buscar en el historial.",
     "outside": "El commit {{short}} no está en ninguna rama: solo queda en el historial de las ramas.",
     "createBranch": "Crear una rama aquí…"
+  },
+  "fileHistory": {
+    "label": "Historial de {{path}}",
+    "title": "Historial de",
+    "back": "Volver al grafo",
+    "backHint": "Volver al grafo (Esc)",
+    "loading_one": "{{count}} commit…",
+    "loading_other": "{{count}} commits…",
+    "count_one": "{{count}} commit",
+    "count_other": "{{count}} commits",
+    "cancel": "Cancelar",
+    "failed": "No se ha podido leer el historial del archivo.",
+    "empty": "Este archivo aún no tiene historial.",
+    "listLabel": "Commits que cambiaron {{path}}",
+    "uncommitted": "Sin confirmar",
+    "area": {
+      "staged": "Preparado",
+      "unstaged": "Sin preparar",
+      "untracked": "Nuevo, sin seguimiento"
+    },
+    "status": {
+      "added": "añadido",
+      "modified": "modificado",
+      "deleted": "borrado",
+      "renamed": "renombrado",
+      "copied": "copiado",
+      "typeChanged": "cambio de tipo",
+      "unmerged": "en conflicto",
+      "untracked": "sin seguimiento",
+      "unknown": "cambiado"
+    },
+    "renamedFrom": "renombrado desde {{path}}",
+    "resize": "Anchura de la lista",
+    "entryMenu": "Commit {{short}}",
+    "showInGraph": "Ver el commit en el grafo"
   }
 }

@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { isShortcut } from "../../app/shortcuts";
+import { ContextMenu } from "../../ui/ContextMenu";
 import { useTranslation } from "react-i18next";
 import {
   commands,
@@ -34,6 +36,7 @@ export function FileList({
   isMerge,
   untracked = false,
   action,
+  withHistory = false,
 }: {
   repoId: number;
   oid: string;
@@ -42,6 +45,8 @@ export function FileList({
   untracked?: boolean;
   /** An extra button per file (e.g. "Recover"). */
   action?: (file: FileChange) => ReactNode;
+  /** Each file's menu offers its history (a commit's files, task 12.4). */
+  withHistory?: boolean;
 }) {
   const { t } = useTranslation();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
@@ -96,6 +101,7 @@ export function FileList({
               oid={oid}
               file={file}
               action={action?.(file)}
+              withHistory={withHistory}
             />
           ))}
         </ul>
@@ -109,14 +115,24 @@ function FileRow({
   oid,
   file,
   action,
+  withHistory,
 }: {
   repoId: number;
   oid: string;
   file: FileChange;
   action?: ReactNode;
+  withHistory: boolean;
 }) {
   const { t } = useTranslation();
   const open = useGraphStore((s) => s.openFileDiff);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const showDiff = () =>
+    open(repoId, {
+      kind: "commit",
+      oid,
+      path: file.path,
+      oldPath: file.oldPath,
+    });
   const isOpen = useGraphStore((s) => {
     const current = s.graphs[repoId]?.openFile;
     return (
@@ -135,14 +151,20 @@ function FileRow({
         className={styles.file}
         title={t("files.openDiff", { path: file.path })}
         aria-current={isOpen || undefined}
-        onClick={() =>
-          open(repoId, {
-            kind: "commit",
-            oid,
-            path: file.path,
-            oldPath: file.oldPath,
-          })
-        }
+        aria-haspopup={withHistory ? "menu" : undefined}
+        onClick={showDiff}
+        onContextMenu={(event) => {
+          if (!withHistory) return;
+          event.preventDefault();
+          setMenu({ x: event.clientX, y: event.clientY });
+        }}
+        onKeyDown={(event) => {
+          // The menu key or ⇧F10: the file's menu, under it.
+          if (!withHistory || !isShortcut("commitMenu", event)) return;
+          event.preventDefault();
+          const rect = event.currentTarget.getBoundingClientRect();
+          setMenu({ x: rect.left + 24, y: rect.bottom });
+        }}
       >
         <span
           className={`${styles.status} ${styles[`status-${file.status}`] ?? ""}`}
@@ -170,6 +192,27 @@ function FileRow({
         )}
       </button>
       {action}
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          label={t("files.menu", { path: file.path })}
+          items={[
+            { label: t("files.showDiff"), onSelect: showDiff },
+            {
+              label: t("files.history"),
+              onSelect: () =>
+                open(repoId, {
+                  kind: "history",
+                  path: file.path,
+                  rev: oid,
+                  chosen: null,
+                }),
+            },
+          ]}
+          onClose={() => setMenu(null)}
+        />
+      )}
     </li>
   );
 }

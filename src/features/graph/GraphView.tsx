@@ -18,6 +18,7 @@ import { headOid, labelsByCommit, type RefLabel } from "./refLabels";
 import { absoluteTime, relativeTime } from "./relativeTime";
 import { useGraphStore } from "./store";
 import { SearchBar } from "../search/SearchBar";
+import { FileHistoryView } from "../fileHistory/FileHistoryView";
 import { searchOf, useSearchStore } from "../search/store";
 import styles from "./graph.module.css";
 import { ErrorReport } from "../../ui/ErrorReport";
@@ -330,7 +331,15 @@ export function GraphView({
           onClose={() => setMenu(null)}
         />
       )}
-      {graph?.openFile?.kind === "conflict" ? (
+      {graph?.openFile?.kind === "history" ? (
+        <FileHistoryView
+          key={`${graph.openFile.rev}:${graph.openFile.path}`}
+          repoId={repoId}
+          path={graph.openFile.path}
+          rev={graph.openFile.rev}
+          chosen={graph.openFile.chosen}
+        />
+      ) : graph?.openFile?.kind === "conflict" ? (
         <ConflictView
           key={graph.openFile.path}
           repoId={repoId}

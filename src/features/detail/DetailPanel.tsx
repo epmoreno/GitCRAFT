@@ -30,7 +30,11 @@ export function DetailPanel({ repoId }: { repoId: number | null }) {
   const graph = useGraphStore((s) =>
     repoId === null ? undefined : s.graphs[repoId],
   );
-  const selectedOid = graph?.selectedOid ?? null;
+  // A file history over the graph shows its chosen commit here instead.
+  const selectedOid =
+    graph?.openFile?.kind === "history"
+      ? graph.openFile.chosen
+      : (graph?.selectedOid ?? null);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const panel = useRef<HTMLElement>(null);
   useRememberedScroll(
@@ -167,6 +171,7 @@ function CommitInfo({
         repoId={repoId}
         oid={details.oid}
         isMerge={details.parents.length > 1}
+        withHistory
       />
     </article>
   );

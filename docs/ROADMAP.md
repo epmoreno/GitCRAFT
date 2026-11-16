@@ -2734,7 +2734,7 @@ principio y toda operación destructiva pasa por confirmación.
         lote llega antes del final y cancelar lo para) con un fixture real
         de la salida de git, y uno en Tauri (otro historial cancela el
         anterior).
-      - [ ] **12.4 Historial de un archivo (UI).** Se para antes para
+      - [x] **12.4 Historial de un archivo (UI).** Se para antes para
         enseñar el diseño. Lista de commits virtualizada (fecha, autor,
         asunto, ruta si cambió) junto al diff de ese archivo en el commit
         elegido (reutiliza `DiffView`). Entradas: «Historial del archivo»
@@ -2742,6 +2742,44 @@ principio y toda operación destructiva pasa por confirmación.
         «Ver el commit» lo selecciona en el grafo.
         *Verificable:* tests de interfaz y prueba a mano con un archivo
         renombrado.
+        *Decisiones del usuario sobre el diseño:* (1) lista a la izquierda
+        con anchura ajustable y diff a la derecha; (2) si el archivo tiene
+        cambios sin confirmar, una fila «Sin confirmar» arriba, distinta de
+        los commits, con el diff de lo preparado y lo no preparado; sin
+        cambios, no aparece; (3) no se listan los merges que no cambian el
+        archivo por sí mismos (lo que hace git). Menú (clic derecho y ⇧F10)
+        en la lista de archivos del panel de detalle, aprobado.
+        *Hecho:* `src/features/fileHistory/` (`FileHistoryView`,
+        `WidthHandle`).
+        - **Vista:** sobre el grafo, como la de conflictos
+          (`openFile.kind = "history"`, con la ruta, el commit de inicio y el
+          elegido). El panel de detalle muestra el commit elegido en la
+          lista; el grafo conserva su selección y su desplazamiento. «Volver
+          al grafo» o Esc (después de cerrar un menú abierto).
+        - **Lista:** virtualizada; asunto, autor, fecha, cómo cambió
+          (añadido, modificado, borrado, «renombrado desde…») y la ruta si
+          era otra. «N commits…» y «Cancelar» mientras llega. ↑ / ↓ cambian
+          de fila; ⇧F10 o clic derecho, «Ver el commit en el grafo».
+        - **Sin confirmar:** solo si el historial empieza en el commit
+          actual; fondo de aviso y cursiva; a la derecha, un diff por cada
+          parte (preparado, sin preparar o nuevo).
+        - **Diff:** el mismo de siempre, separado en `DiffContent` y
+          `DiffTitle` para poder ponerlo dentro de la vista; con la ruta que
+          tenía el archivo en ese commit.
+        - **Separador:** se arrastra; ← / → (16 px), Inicio / Fin, Intro o
+          doble clic para la anchura inicial. Atajos en el registro (grupo
+          «Historial de un archivo»).
+        - **Entradas:** «Historial del archivo» en el menú de cada archivo
+          de un commit (empieza en ese commit; también «Ver el diff») y en el
+          de cada archivo de «Cambios sin confirmar» (empieza en HEAD). Los
+          archivos de esa lista no tenían menú: ahora lo tienen, con clic
+          derecho y ⇧F10.
+        Tests: 14 de interfaz (las dos entradas, con clic derecho y ⇧F10;
+        la lista y el primero elegido; el diff con la ruta de entonces; las
+        flechas; el panel de detalle; sin historial; contador y cancelar;
+        «Sin confirmar» con lo preparado y lo no preparado, sin cambios y
+        desde otro commit; Esc y «Volver al grafo»; el menú de la fila; el
+        separador).
       - [ ] **12.5 Blame (core y Tauri).** `ops::blame(path, rev, sink,
         cancel)` con `git blame --incremental` (porcelain): git manda los
         trozos según los va atribuyendo, así llegan por partes y con

@@ -456,11 +456,32 @@ function FileRow({
   const hasDiff = !entry.path.endsWith("/");
   // In the tree the row itself takes the keyboard focus, not its buttons.
   const inner = tree ? -1 : undefined;
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const openHistory = () =>
+    open(repoId, {
+      kind: "history",
+      path: entry.path,
+      rev: "HEAD",
+      chosen: null,
+    });
   return (
     <li
       className={isOpen ? `${styles.file} ${styles.fileOpen}` : styles.file}
       {...(tree && { ...treeItemProps(tree), "aria-selected": isOpen })}
       onDoubleClick={disabled ? undefined : onAction}
+      onContextMenu={(event) => {
+        if (!hasDiff) return;
+        event.preventDefault();
+        setMenu({ x: event.clientX, y: event.clientY });
+      }}
+      onKeyDown={(event) => {
+        // The menu key or ⇧F10: the file's menu (task 12.4).
+        if (!hasDiff || !isShortcut("commitMenu", event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const rect = event.currentTarget.getBoundingClientRect();
+        setMenu({ x: rect.left + 24, y: rect.bottom });
+      }}
     >
       <StatusLetter status={entry.status} />
       {hasDiff ? (
@@ -511,6 +532,23 @@ function FileRow({
       >
         {actionLabel}
       </button>
+      {menu && (
+        // Inside the row: keep its clicks and keys from reaching it.
+        <span
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <ContextMenu
+            x={menu.x}
+            y={menu.y}
+            label={t("files.menu", { path: entry.path })}
+            items={[{ label: t("files.history"), onSelect: openHistory }]}
+            onClose={() => setMenu(null)}
+          />
+        </span>
+      )}
     </li>
   );
 }
