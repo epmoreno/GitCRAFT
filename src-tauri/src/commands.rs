@@ -6,6 +6,7 @@ use std::sync::Arc;
 use tauri::State;
 use tauri::ipc::Channel;
 
+use gitcraft_core::ops::blame::{BlameOutcome, BlameStream};
 use gitcraft_core::ops::branch::{BranchDeletion, BranchNameCheck, CheckoutOutcome};
 use gitcraft_core::ops::clone::{self, Destination};
 use gitcraft_core::ops::commit::CommitChanges;
@@ -1143,6 +1144,34 @@ pub async fn file_history(
             let _ = on_batch.send(batch);
         })
         .await
+}
+
+/// Blames a file at `rev` (task 12.5): its text, then batches of lines
+/// attributed to commits, on `on_event`. A new blame cancels the previous.
+#[tauri::command]
+#[specta::specta]
+pub async fn blame_file(
+    state: State<'_, AppState>,
+    id: RepoId,
+    path: String,
+    rev: String,
+    force: bool,
+    on_event: Channel<BlameStream>,
+) -> Result<BlameOutcome, IpcError> {
+    state
+        .blame(id, &path, &rev, force, |event| {
+            // The window may be gone; there is nobody left to tell.
+            let _ = on_event.send(event);
+        })
+        .await
+}
+
+/// Cancels the blame in progress, if any.
+#[tauri::command]
+#[specta::specta]
+pub async fn cancel_blame(state: State<'_, AppState>, id: RepoId) -> Result<(), IpcError> {
+    state.cancel_blame(id);
+    Ok(())
 }
 
 /// Cancels reading a file's history, if it is still going.

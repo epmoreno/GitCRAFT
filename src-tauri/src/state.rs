@@ -6,6 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use gitcraft_core::gh::{GITHUB_HOST, Gh, GhAccount, LoginEvent};
 use gitcraft_core::graph::{GraphLine, load_graph};
+use gitcraft_core::ops::blame::{self as blame_ops, BlameOutcome, BlameStream};
 use gitcraft_core::ops::branch::{
     self, BranchDeletion, BranchNameCheck, CheckoutOutcome, check_branch_name,
     preview_branch_deletion,
@@ -155,6 +156,8 @@ struct RepoSession {
     search: Option<CancellationToken>,
     /// Cancels the file history being read, if any (task 12.3).
     file_history: Option<CancellationToken>,
+    /// Cancels the blame in progress, if any (task 12.5).
+    blame: Option<CancellationToken>,
     /// Reports external ref changes; `None` if watching failed.
     watcher: Option<RepoWatcher>,
     /// Recent discards that can be undone, by id.
@@ -318,6 +321,7 @@ impl AppState {
             operation: None,
             search: None,
             file_history: None,
+            blame: None,
             watcher: self.watch(id, &info),
             write_lock: Arc::default(),
             discards: Vec::new(),
@@ -356,6 +360,7 @@ impl AppState {
             session.operation,
             session.search,
             session.file_history,
+            session.blame,
         ]
         .into_iter()
         .flatten()
@@ -2029,6 +2034,45 @@ impl AppState {
         Ok(file_history::file_history(git, &repo, path, rev, &cancel, on_batch).await?)
     }
 
+    /// Blames `path` at `rev` (task 12.5): the text, then batches. A new
+    /// blame cancels the one in progress; so do [`Self::cancel_blame`] and
+    /// closing the repository. `force` starts a big file's blame.
+    pub async fn blame(
+        &self,
+        id: RepoId,
+        path: &str,
+        rev: &str,
+        force: bool,
+        on_event: impl FnMut(BlameStream),
+    ) -> Result<BlameOutcome, IpcError> {
+        let git = self.git()?;
+        let (repo, cancel) = {
+            let mut inner = self.lock();
+            let session = inner
+                .sessions
+                .iter_mut()
+                .find(|s| s.id == id)
+                .ok_or(GitError::Cancelled)?;
+            if let Some(previous) = session.blame.take() {
+                previous.cancel();
+            }
+            let cancel = CancellationToken::new();
+            session.blame = Some(cancel.clone());
+            (PathBuf::from(&session.info.path), cancel)
+        };
+        Ok(blame_ops::blame(git, &repo, path, rev, force, &cancel, on_event).await?)
+    }
+
+    /// Cancels session `id`'s blame, if one is running.
+    pub fn cancel_blame(&self, id: RepoId) {
+        let mut inner = self.lock();
+        if let Some(session) = inner.sessions.iter_mut().find(|s| s.id == id)
+            && let Some(token) = session.blame.take()
+        {
+            token.cancel();
+        }
+    }
+
     /// Cancels session `id`'s file history, if one is being read.
     pub fn cancel_file_history(&self, id: RepoId) {
         let mut inner = self.lock();
@@ -2865,6 +2909,36 @@ mod tests {
         }
         assert_eq!(second.expect("second").count, 1);
         assert_eq!(entries[0].summary, "B");
+    }
+
+    #[tokio::test]
+    async fn blames_a_file_and_a_new_blame_cancels_it() {
+        let f = fixture();
+        let repo = TestRepo::new().await;
+        let mut content = String::new();
+        for i in 0..400 {
+            content.push_str(&format!("{i}\n"));
+            repo.commit_file("a.txt", &content, &format!("A {i}")).await;
+        }
+        repo.commit_file("b.txt", "b\n", "B").await;
+        let opened = f.state.open_repository(repo.path()).await.expect("open");
+        let started = tokio::sync::Notify::new();
+        let first = f.state.blame(opened.id, "a.txt", "HEAD", false, |event| {
+            if matches!(event, BlameStream::Batch(_)) {
+                started.notify_one();
+            }
+        });
+        let second = async {
+            started.notified().await;
+            f.state
+                .blame(opened.id, "b.txt", "HEAD", false, |_| {})
+                .await
+        };
+        let (first, second) = tokio::join!(first, second);
+        if let Err(err) = first {
+            assert_eq!(err.kind, ErrorKind::Cancelled);
+        }
+        assert_eq!(second.expect("second"), BlameOutcome::Done { lines: 1 });
     }
 
     #[tokio::test]

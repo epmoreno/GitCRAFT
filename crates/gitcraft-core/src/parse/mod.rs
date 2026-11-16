@@ -1,5 +1,6 @@
 //! Pure parsers for git's machine-readable output. No I/O here.
 
+pub mod blame;
 pub mod commit;
 pub mod conflict;
 pub mod diff;

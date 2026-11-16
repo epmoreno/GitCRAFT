@@ -8,6 +8,7 @@ import {
   type GraphEvent,
   type LoginEvent,
   type RepoChanged,
+  type BlameStream_Serialize,
   type FileHistoryEntry_Serialize,
   type SearchBatch,
   type SearchQuery,
@@ -70,6 +71,12 @@ export type {
   Reflog,
   ReflogEntry,
   ReflogExpiry,
+  BlameBatch_Serialize as BlameBatch,
+  BlameChunk_Serialize as BlameChunk,
+  BlameCommit,
+  BlameOutcome,
+  BlamePrevious,
+  BlameStream_Serialize as BlameStream,
   FileHistoryEntry_Serialize as FileHistoryEntry,
   FileHistorySummary,
   SearchBatch,
@@ -206,6 +213,27 @@ export function fileHistory(
     path,
     rev,
     channel as unknown as Parameters<typeof commands.fileHistory>[3],
+  );
+}
+
+/** Blames `path` at `rev` (task 12.5): its text, then batches of lines
+ * attributed to commits. `force` starts the blame of a big file. */
+export function blameFile(
+  id: number,
+  path: string,
+  rev: string,
+  force: boolean,
+  onEvent: (event: BlameStream_Serialize) => void,
+) {
+  const channel = new Channel<BlameStream_Serialize>();
+  channel.onmessage = onEvent;
+  // As in fileHistory: what arrives is what Rust serializes.
+  return commands.blameFile(
+    id,
+    path,
+    rev,
+    force,
+    channel as unknown as Parameters<typeof commands.blameFile>[4],
   );
 }
 

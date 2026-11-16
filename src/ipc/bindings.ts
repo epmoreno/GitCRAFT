@@ -201,6 +201,13 @@ export const commands = {
 	/**  Cancels reading a file's history, if it is still going. */
 	cancelFileHistory: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_file_history", { id })),
 	/**
+	 *  Blames a file at `rev` (task 12.5): its text, then batches of lines
+	 *  attributed to commits, on `on_event`. A new blame cancels the previous.
+	 */
+	blameFile: (id: number, path: string, rev: string, force: boolean, onEvent: Channel<BlameStream_Deserialize>) => typedError<BlameOutcome, IpcError_Serialize>(__TAURI_INVOKE("blame_file", { id, path, rev, force, onEvent })),
+	/**  Cancels the blame in progress, if any. */
+	cancelBlame: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_blame", { id })),
+	/**
 	 *  Merges as the user accepted it in the dialog (task 8.2): checks
 	 *  everything again and does nothing the user did not accept.
 	 */
@@ -364,6 +371,113 @@ export type ApplyOutcome =
  *  accepted that); the entry is kept, even for a pop.
  */
 { type: "conflicted"; files: string[] };
+
+export type BlameBatch = BlameBatch_Serialize | BlameBatch_Deserialize;
+
+export type BlameBatch_Deserialize = {
+	/**  Commits seen for the first time. */
+	commits: BlameCommit[],
+	chunks: BlameChunk_Deserialize[],
+	/**  Lines attributed so far, these included. */
+	attributed: number,
+};
+
+export type BlameBatch_Serialize = {
+	/**  Commits seen for the first time. */
+	commits: BlameCommit[],
+	chunks: BlameChunk_Serialize[],
+	/**  Lines attributed so far, these included. */
+	attributed: number,
+};
+
+/**  Consecutive lines of the file that come from one commit. */
+export type BlameChunk = BlameChunk_Serialize | BlameChunk_Deserialize;
+
+/**  Consecutive lines of the file that come from one commit. */
+export type BlameChunk_Deserialize = {
+	oid: string,
+	/**  First line in the file, 1-based. */
+	line: number,
+	count: number,
+	/**  First line in that commit's version of the file, 1-based. */
+	origLine: number,
+	/**
+	 *  The file's path in that commit (it may have been renamed or moved
+	 *  from another file).
+	 */
+	path: string,
+	/**
+	 *  The commit before it and the file's path there: "blame before this
+	 *  commit". `None` at a boundary.
+	 */
+	previous?: BlamePrevious | null,
+};
+
+/**  Consecutive lines of the file that come from one commit. */
+export type BlameChunk_Serialize = {
+	oid: string,
+	/**  First line in the file, 1-based. */
+	line: number,
+	count: number,
+	/**  First line in that commit's version of the file, 1-based. */
+	origLine: number,
+	/**
+	 *  The file's path in that commit (it may have been renamed or moved
+	 *  from another file).
+	 */
+	path: string,
+	/**
+	 *  The commit before it and the file's path there: "blame before this
+	 *  commit". `None` at a boundary.
+	 */
+	previous: BlamePrevious | null,
+};
+
+/**  A commit some lines come from, sent once. */
+export type BlameCommit = {
+	oid: string,
+	authorName: string,
+	authorEmail: string,
+	/**  Unix seconds. */
+	authorTime: number,
+	summary: string,
+	/**
+	 *  The history starts here (a root commit, or a `--since` limit): there
+	 *  is nothing before it to blame.
+	 */
+	boundary: boolean,
+};
+
+/**  How it ended. */
+export type BlameOutcome = { type: "done"; lines: number } | 
+/**  The file is not in that commit. */
+{ type: "missing" } | { type: "binary" } | 
+/**  Over [`MAX_BYTES`]. */
+{ type: "tooLarge"; bytes: number | null } | 
+/**  Over [`LARGE_LINES`] and not `force`: nothing was blamed yet. */
+{ type: "large"; lines: number };
+
+export type BlamePrevious = {
+	oid: string,
+	path: string,
+};
+
+/**  What the blame stream carries. */
+export type BlameStream = BlameStream_Serialize | BlameStream_Deserialize;
+
+/**  What the blame stream carries. */
+export type BlameStream_Deserialize = 
+/**  The file at that commit, once, before any batch. */
+{ type: "text"; lines: string[] } | {
+	type: "batch",
+} & BlameBatch_Deserialize;
+
+/**  What the blame stream carries. */
+export type BlameStream_Serialize = 
+/**  The file at that commit, once, before any batch. */
+{ type: "text"; lines: string[] } | {
+	type: "batch",
+} & BlameBatch_Serialize;
 
 /**  A file whose uncommitted change blocks switching branches. */
 export type BlockingFile = {

@@ -2780,7 +2780,7 @@ principio y toda operación destructiva pasa por confirmación.
         «Sin confirmar» con lo preparado y lo no preparado, sin cambios y
         desde otro commit; Esc y «Volver al grafo»; el menú de la fila; el
         separador).
-      - [ ] **12.5 Blame (core y Tauri).** `ops::blame(path, rev, sink,
+      - [x] **12.5 Blame (core y Tauri).** `ops::blame(path, rev, sink,
         cancel)` con `git blame --incremental` (porcelain): git manda los
         trozos según los va atribuyendo, así llegan por partes y con
         progreso real (líneas atribuidas de cuántas). Respeta el
@@ -2792,6 +2792,34 @@ principio y toda operación destructiva pasa por confirmación.
         integración (renombrado, archivo binario, cancelar a mitad) y un
         test de que el primer lote llega antes del final en un archivo
         sintético grande.
+        *Hecho:* `ops/blame.rs` y `parse/blame.rs` en el núcleo, y los
+        comandos `blame_file` (por `Channel`) y `cancel_blame`.
+        - **Primero el texto:** el archivo en ese commit (`git cat-file`),
+          entero, una vez; después, los grupos de líneas según git los
+          atribuye (`--incremental`), en lotes de 200 grupos o cada 50 ms,
+          con las líneas atribuidas hasta entonces (progreso real). *Cambio
+          sobre el plan:* el texto se manda entero en vez de pedirlo por
+          rangos; la interfaz lo virtualiza, y el límite de tamaño de abajo
+          lo mantiene pequeño.
+        - **Cada commit se manda una vez** (autor, email, fecha, asunto y si
+          es el principio de la historia); cada grupo, con su commit, sus
+          líneas, la ruta que tenía el archivo entonces y el commit anterior
+          con su ruta («blame antes de este commit»).
+        - **Se niega o pregunta:** archivo binario (un byte nulo al
+          principio, como git) o que no está en ese commit; más de 16 MB, no
+          se hace; más de 20.000 líneas, devuelve `large` sin empezar, y se
+          repite con `force` si el usuario acepta.
+        - **Respeta** el `blame.ignoreRevsFile` del repo. Las rutas que git
+          pone entre comillas se desentrecomillan.
+        - **Sesión:** un blame nuevo cancela el anterior, igual que
+          `cancel_blame` y cerrar el repo.
+        Tests: 11 de integración (cada línea con su commit a través de un
+        renombrado, un commit en dos grupos mandado una vez, antes de un
+        commit, `ignoreRevsFile`, binario, inexistente, enorme y grande con
+        y sin `force`, vacío, comienzos no válidos; 1.500 commits: lotes
+        antes del final y cancelar) con un fixture real, el de las rutas
+        entrecomilladas, y uno en Tauri (un blame nuevo cancela el
+        anterior).
       - [ ] **12.6 Blame (UI).** Se para antes para enseñar el diseño. El
         archivo con una columna a la izquierda por trozo (hash corto, autor,
         fecha relativa), virtualizado; las líneas aún sin atribuir se ven

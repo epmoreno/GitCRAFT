@@ -1,0 +1,38 @@
+07ec30fcbefa563f86786ebd61af0f4d2125c9a8 6 6 1
+author GitCRAFT Test
+author-mail <test@gitcraft.invalid>
+author-time 1700000180
+author-tz +0000
+committer GitCRAFT Test
+committer-mail <test@gitcraft.invalid>
+committer-time 1700000180
+committer-tz +0000
+summary C: mueve y añade
+previous f6c9e1c25728fdf61ec82aebd10c4bf9b10cb9b4 guía.txt
+filename docs/guía nueva.txt
+f6c9e1c25728fdf61ec82aebd10c4bf9b10cb9b4 2 2 1
+author GitCRAFT Test
+author-mail <test@gitcraft.invalid>
+author-time 1700000120
+author-tz +0000
+committer GitCRAFT Test
+committer-mail <test@gitcraft.invalid>
+committer-time 1700000120
+committer-tz +0000
+summary B: cambia la dos
+previous e98ec51bd1439e5d7d6ad8d4153e2ce4e17c6446 guía.txt
+filename guía.txt
+e98ec51bd1439e5d7d6ad8d4153e2ce4e17c6446 1 1 1
+author GitCRAFT Test
+author-mail <test@gitcraft.invalid>
+author-time 1700000060
+author-tz +0000
+committer GitCRAFT Test
+committer-mail <test@gitcraft.invalid>
+committer-time 1700000060
+committer-tz +0000
+summary A: crea la guía
+boundary
+filename guía.txt
+e98ec51bd1439e5d7d6ad8d4153e2ce4e17c6446 3 3 3
+filename guía.txt

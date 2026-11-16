@@ -94,6 +94,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::cancel_search,
             commands::file_history,
             commands::cancel_file_history,
+            commands::blame_file,
+            commands::cancel_blame,
             commands::merge_branch,
             commands::rebase_branch,
             commands::last_fetch,

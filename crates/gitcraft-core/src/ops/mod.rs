@@ -1,5 +1,6 @@
 //! High-level git operations built on the runner.
 
+pub mod blame;
 pub mod branch;
 pub mod clone;
 pub mod commit;
