@@ -1,4 +1,5 @@
 import { unsavedPaths, useConflictStore } from "../conflicts/store";
+import { useSearchStore } from "../search/store";
 import { create } from "zustand";
 import { useGraphStore } from "../graph/store";
 import { useRemoteStore } from "../remote/store";
@@ -224,6 +225,7 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
     useWorkdirStore.getState().forget(id);
     useStashStore.getState().forget(id);
     useRemoteStore.getState().forget(id);
+    useSearchStore.getState().forget(id);
     forgetView(id);
     useConflictStore.getState().clearRepo(id);
     await commands.closeRepository(id);

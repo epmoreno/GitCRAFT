@@ -8,6 +8,8 @@ import {
   type GraphEvent,
   type LoginEvent,
   type RepoChanged,
+  type SearchBatch,
+  type SearchQuery,
 } from "./bindings";
 
 export { commands } from "./bindings";
@@ -170,6 +172,18 @@ export function streamGraph(id: number, onEvent: (event: GraphEvent) => void) {
   const channel = new Channel<GraphEvent>();
   channel.onmessage = onEvent;
   return commands.loadGraph(id, channel);
+}
+
+/** Searches the history (task 12.1); results arrive in batches. A new
+ * search cancels the previous one; so does `commands.cancelSearch`. */
+export function searchCommits(
+  id: number,
+  query: SearchQuery,
+  onBatch: (batch: SearchBatch) => void,
+) {
+  const channel = new Channel<SearchBatch>();
+  channel.onmessage = onBatch;
+  return commands.searchCommits(id, query, channel);
 }
 
 /** Writes the repository's commit-graph, reporting git's progress lines. */

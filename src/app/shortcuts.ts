@@ -34,6 +34,7 @@ export type ShortcutGroup =
   | "diff"
   | "conflicts"
   | "history"
+  | "search"
   | "general";
 
 export type Shortcut = {
@@ -112,6 +113,28 @@ export const SHORTCUTS = {
       { key: "z", primary: true, shift: true },
       { key: "y", ctrl: true, os: "other" },
     ],
+  },
+  /** Only while the history is on screen (task 12.2). */
+  find: { group: "search", chords: [{ key: "f", primary: true }] },
+  findNext: {
+    group: "search",
+    chords: [
+      { key: "g", primary: true },
+      { key: "F3", os: "other" },
+    ],
+  },
+  findPrevious: {
+    group: "search",
+    chords: [
+      { key: "g", primary: true, shift: true },
+      { key: "F3", shift: true, os: "other" },
+    ],
+  },
+  /** In the search field. */
+  findNextInField: { group: "search", chords: [{ key: "Enter" }] },
+  findPreviousInField: {
+    group: "search",
+    chords: [{ key: "Enter", shift: true }],
   },
   conflictPrevious: {
     group: "conflicts",

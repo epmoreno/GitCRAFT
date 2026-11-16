@@ -62,6 +62,14 @@
   box-shadow: var(--selected-marker);
 }
 
+/* Not matched by the search (task 12.2): all its text fades. */
+.rowDimmed .summary,
+.rowDimmed .author,
+.rowDimmed .date,
+.rowDimmed .sha {
+  color: var(--text-dimmed);
+}
+
 .scroller:not(:focus-within) .rowSelected {
   background-color: var(--selected-inactive-bg);
 }

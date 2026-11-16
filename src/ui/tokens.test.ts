@@ -183,6 +183,28 @@ describe("design tokens: contrast (WCAG AA)", () => {
     expect(failures(pairs, 4.5)).toEqual([]);
   });
 
+  it("history rows a search does not match stay legible and look apart", () => {
+    // Only on the history's background, also hovered; never selected.
+    const backgrounds = withStates("surface-0", token("surface-0"));
+    const pairs = backgrounds.map(
+      ([label, colour]) =>
+        ["text-dimmed", token("text-dimmed"), label, colour] as [
+          string,
+          Rgba,
+          string,
+          Rgba,
+        ],
+    );
+    expect(failures(pairs, 3)).toEqual([]);
+    // The faintest result text vs the dimmed text, on the same background.
+    const apart = (a: string) =>
+      luminance(over(token(a), token("surface-0"))) /
+      luminance(over(token("text-dimmed"), token("surface-0")));
+    for (const result of ["text", "text-muted", "text-faint"]) {
+      expect(apart(result)).toBeGreaterThan(1.8);
+    }
+  });
+
   it("selected text (always --text) reaches 4.5:1", () => {
     const pairs = SURFACES.map(
       (s) =>

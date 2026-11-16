@@ -2,6 +2,7 @@ import { initialTagState, useTagStore } from "../features/history/tags";
 import { initialMergeState, useMergeStore } from "../features/merge/store";
 import { initialUndoState, useUndoStore } from "../features/undo/store";
 import { initialReflogState, useReflogStore } from "../features/reflog/store";
+import { initialSearchState, useSearchStore } from "../features/search/store";
 import "@testing-library/jest-dom/vitest";
 import i18n from "../i18n";
 import { initialBranchState, useBranchStore } from "../features/branches/store";
@@ -162,6 +163,7 @@ vi.mock("../ipc", () => ({
   ghLogin: vi.fn(),
   pickFolder: vi.fn(),
   streamGraph: vi.fn(),
+  searchCommits: vi.fn(),
   optimizeRepository: vi.fn(),
   fetchRemote: vi.fn(),
   pullBranch: vi.fn(),
@@ -200,6 +202,7 @@ beforeEach(() => {
   useMergeStore.setState(initialMergeState);
   useUndoStore.setState(initialUndoState);
   useReflogStore.setState(initialReflogState);
+  useSearchStore.setState(initialSearchState);
   useCreateStore.setState(initialCreateState);
   useOperationsStore.setState(initialOperationsState);
   useGraphStore.setState({ graphs: {} });

@@ -2655,7 +2655,7 @@ principio y toda operación destructiva pasa por confirmación.
         trabajando en el repo (se comprueba con `lsof`). Además, 2 en Tauri
         (una búsqueda nueva o «Cancelar» paran la anterior; HEAD separado) y
         2 casos más del clasificador de errores.
-      - [ ] **12.2 Búsqueda (UI).** Se para antes para enseñar el diseño.
+      - [x] **12.2 Búsqueda (UI).** Se para antes para enseñar el diseño.
         Barra de búsqueda encima del grafo con ⌘F (Ctrl+F) por el registro
         de atajos: campo, selector Mensaje / Autor / Hash / Archivo, las
         dos casillas, contador, «Anterior» / «Siguiente», progreso y
@@ -2666,6 +2666,44 @@ principio y toda operación destructiva pasa por confirmación.
         *Verificable:* tests de interfaz (atajo, cada campo, contador,
         navegación, cancelar, Esc, búsqueda nueva que cancela la anterior)
         y prueba a mano.
+        *Decisiones del usuario sobre el diseño:* (1) se atenúan el texto y
+        también los puntos del grafo de los commits que no coinciden; las
+        líneas no cambian; los resultados cumplen el contraste y los
+        atenuados se distinguen claramente; (2) cada pestaña conserva su
+        búsqueda y la repite al volver; (3) «Siguiente» va hacia commits más
+        antiguos; «Expresión regular» desactivada, con su motivo, en Hash y
+        Archivo. Añadido: ⌘F (Ctrl+F) solo abre la barra con el historial a
+        la vista, nunca bajo el diff, la vista de conflictos o un diálogo.
+        *Hecho:* `src/features/search/` (`SearchBar`, `store`, `navigate`).
+        - **Barra:** encima de las cabeceras del grafo, empujándolo; campo,
+          Mensaje / Autor / Hash / Archivo, las dos casillas, contador
+          («120+ resultados», «3 de 120+», «Sin resultados»), ↑ / ↓,
+          progreso (con % en las búsquedas literales) y «Cancelar».
+        - **Atajos** por el registro (grupo «Búsqueda en el historial»): ⌘F;
+          ⌘G / ⇧⌘G (también F3 / ⇧F3 en Windows y Linux); Intro / ⇧Intro en
+          el campo; Esc cierra.
+        - **Navegación:** desde el commit seleccionado, en el orden del
+          grafo, y da la vuelta al final. Si el resultado aún no está
+          cargado, espera a que llegue y lo selecciona.
+        - **Atenuado:** token nuevo `--text-dimmed` (3,84:1 sobre el fondo
+          del historial, por debajo a propósito de los demás textos, que
+          siguen ≥ 4,5:1); el test de contraste lo comprueba (≥ 3:1, también
+          con hover) y que se separa claramente del texto más tenue de un
+          resultado. Los puntos del grafo, al 30 % de opacidad. La fila
+          seleccionada nunca se atenúa. Las etiquetas de rama no cambian.
+        - **Hash:** «Escribe al menos 4 caracteres del hash» / «solo
+          números y letras de la a a la f», sin buscar; fuera de toda rama,
+          «Crear una rama aquí…». **Expresión regular inválida:** el campo
+          en rojo y el motivo de git debajo.
+        - **Pestañas:** al salir se cancela la búsqueda en marcha y al
+          volver se repite; también cuando el historial se recarga.
+        Tests: 18 de interfaz (⌘F y Ctrl+F, no con un diff, la vista de
+        conflictos ni un diálogo; pausa al escribir; atenuado; «120+»;
+        progreso; cancelar; búsqueda que sustituye a la anterior; Intro,
+        ⇧Intro y la vuelta; ⌘G fuera del campo; esperar a un resultado sin
+        cargar; casillas por campo; hash corto; fuera de toda rama;
+        expresión inválida; Esc; pestañas; dibujo de los puntos) y uno de
+        contraste.
       - [ ] **12.3 Historial de un archivo (core y Tauri).**
         `ops::file_history(path, sink, cancel)`: `git log --follow
         --name-status -z --format=…` en streaming, por páginas, con la ruta

@@ -853,7 +853,8 @@
         "general": "Dialogs and menus",
         "diff": "Diff",
         "conflicts": "Conflict view",
-        "history": "History"
+        "history": "History",
+        "search": "History search"
       },
       "key": {
         " ": "Space",
@@ -899,7 +900,12 @@
         "quit": "Quit GitCRAFT",
         "commitMenu": "Open the menu of the selected commit or branch",
         "undo": "Undo the last operation (with a preview)",
-        "redo": "Redo the last undone operation (with a preview)"
+        "redo": "Redo the last undone operation (with a preview)",
+        "find": "Search the history",
+        "findNext": "Go to the next (older) result",
+        "findPrevious": "Go to the previous result",
+        "findNextInField": "In the search field: next result",
+        "findPreviousInField": "In the search field: previous result"
       }
     }
   },
@@ -1504,5 +1510,45 @@
     "switchFirst": "Switch to “{{branch}}” first",
     "detached": "You are not on any branch",
     "close": "Close"
+  },
+  "search": {
+    "label": "Search the history",
+    "field": "Text to search for",
+    "in": "Search in",
+    "fieldName": {
+      "message": "Message",
+      "author": "Author",
+      "hash": "Hash",
+      "path": "File"
+    },
+    "placeholder": {
+      "message": "Search the messages…",
+      "author": "Name or email…",
+      "hash": "At least 4 characters of the hash…",
+      "path": "Part of the file path…"
+    },
+    "regex": "Regular expression",
+    "regexOnly": "Only for the message and the author",
+    "matchCase": "Match case",
+    "searching": "Searching…",
+    "none": "No results",
+    "results_one": "{{total}} result",
+    "results_other": "{{total}} results",
+    "position": "{{position}} of {{total}}",
+    "previous": "Previous result ({{shortcut}})",
+    "next": "Next result, older ({{shortcut}})",
+    "previousLabel": "Previous result",
+    "nextLabel": "Next result",
+    "progress": "Search progress",
+    "cancel": "Cancel",
+    "close": "Close the search",
+    "hash": {
+      "short": "Type at least 4 characters of the hash.",
+      "notHex": "A hash only has digits and the letters a to f."
+    },
+    "invalidPattern": "Git cannot read that regular expression: {{reason}}. Check it, or untick “Regular expression” to search for the text as it is.",
+    "failed": "The history could not be searched.",
+    "outside": "Commit {{short}} is not on any branch: only the branch history still has it.",
+    "createBranch": "Create a branch here…"
   }
 }

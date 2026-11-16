@@ -21,6 +21,13 @@
   --text: #dde1e6;
   --text-muted: #b0b7c0;
   --text-faint: #9ca4ae;
+  /*
+   * History rows a search does not match (task 12.2): deliberately below
+   * the other text tokens, so results stand out. Still ≥ 3:1 on the
+   * history's surfaces and clearly apart from --text-faint (contrast test).
+   * A selected row is never dimmed.
+   */
+  --text-dimmed: #6b737c;
 
   --accent: #d9925f;
   --accent-strong: #e4a477;

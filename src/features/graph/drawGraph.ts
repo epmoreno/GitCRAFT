@@ -9,12 +9,18 @@ type DrawOptions = {
   pixelRatio: number;
   headOid: string | null;
   selectedOid: string | null;
+  /** Commits a search does not match: their nodes are drawn faded (the
+   * lines keep their colour, so the graph keeps its shape). */
+  isDimmed?: (oid: string) => boolean;
   /** Colour behind nodes (punches the line through hollow merge nodes). */
   background: string;
   ringColor: string;
   /** Resolved lane colours (the canvas cannot use CSS variables). */
   laneColors: readonly string[];
 };
+
+/** Opacity of the nodes of commits a search does not match. */
+export const DIMMED_NODE_ALPHA = 0.3;
 
 /** Draws the rows visible in the viewport. Lines first, then nodes on top. */
 export function drawGraph(ctx: CanvasRenderingContext2D, o: DrawOptions) {
@@ -56,6 +62,10 @@ export function drawGraph(ctx: CanvasRenderingContext2D, o: DrawOptions) {
     const y = i * ROW_HEIGHT - o.scrollTop + ROW_HEIGHT / 2;
     const color = laneColor(line.color);
     const isMerge = line.merge;
+    ctx.globalAlpha =
+      o.isDimmed?.(line.oid) && line.oid !== o.selectedOid
+        ? DIMMED_NODE_ALPHA
+        : 1;
 
     ctx.beginPath();
     ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
@@ -79,4 +89,5 @@ export function drawGraph(ctx: CanvasRenderingContext2D, o: DrawOptions) {
       ctx.stroke();
     }
   }
+  ctx.globalAlpha = 1;
 }

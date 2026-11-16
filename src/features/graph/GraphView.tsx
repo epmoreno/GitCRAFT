@@ -17,6 +17,8 @@ import { RefChips } from "./RefChips";
 import { headOid, labelsByCommit, type RefLabel } from "./refLabels";
 import { absoluteTime, relativeTime } from "./relativeTime";
 import { useGraphStore } from "./store";
+import { SearchBar } from "../search/SearchBar";
+import { searchOf, useSearchStore } from "../search/store";
 import styles from "./graph.module.css";
 import { ErrorReport } from "../../ui/ErrorReport";
 
@@ -57,6 +59,19 @@ export function GraphView({
   const labels = useMemo(() => labelsByCommit(refs), [refs]);
   const head = useMemo(() => headOid(refs), [refs]);
   const now = Date.now();
+
+  // A search with results under way: the commits it does not match fade.
+  const search = useSearchStore((s) => searchOf(s.searches, repoId));
+  const searching =
+    search.open && (search.status === "running" || search.status === "done");
+  const matches = search.matches;
+  const version = search.version;
+  const isDimmed = useMemo(
+    () => (searching ? (oid: string) => !matches.has(oid) : undefined),
+    // `matches` changes in place: `version` says when.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [searching, matches, version],
+  );
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -115,9 +130,10 @@ export function GraphView({
       pixelRatio: ratio,
       headOid: head,
       selectedOid,
+      isDimmed,
       ...canvasColors(),
     });
-  }, [lines, width, head, selectedOid]);
+  }, [lines, width, head, selectedOid, isDimmed]);
 
   useEffect(() => {
     const scroller = scrollRef.current;
@@ -146,6 +162,14 @@ export function GraphView({
 
   return (
     <div className={styles.view}>
+      <SearchBar
+        repoId={repoId}
+        lines={lines}
+        graphDone={status === "done"}
+        loadId={graph?.loadId ?? 0}
+        selectedOid={selectedOid}
+        available={!graph?.openFile}
+      />
       <div className={styles.header} style={{ paddingLeft: width }}>
         <span>{t("graph.columnDescription")}</span>
         <span>{t("graph.columnAuthor")}</span>
@@ -211,14 +235,19 @@ export function GraphView({
             const line = lines[item.index];
             if (!line) return null;
             const selected = line.oid === selectedOid;
+            const dimmed = !selected && !!isDimmed?.(line.oid);
             return (
               <div
                 key={line.oid}
                 role="option"
                 aria-selected={selected}
-                className={
-                  selected ? `${styles.row} ${styles.rowSelected}` : styles.row
-                }
+                className={[
+                  styles.row,
+                  selected && styles.rowSelected,
+                  dimmed && styles.rowDimmed,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 style={{
                   transform: `translateY(${item.start}px)`,
                   paddingLeft: width,

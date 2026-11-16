@@ -853,7 +853,8 @@
         "general": "Diálogos y menús",
         "diff": "Diff",
         "conflicts": "Vista de conflictos",
-        "history": "Historial"
+        "history": "Historial",
+        "search": "Búsqueda en el historial"
       },
       "key": {
         " ": "Espacio",
@@ -899,7 +900,12 @@
         "quit": "Salir de GitCRAFT",
         "commitMenu": "Abrir el menú del commit o la rama seleccionados",
         "undo": "Deshacer la última operación (con vista previa)",
-        "redo": "Rehacer lo último que se deshizo (con vista previa)"
+        "redo": "Rehacer lo último que se deshizo (con vista previa)",
+        "find": "Buscar en el historial",
+        "findNext": "Ir al resultado siguiente (más antiguo)",
+        "findPrevious": "Ir al resultado anterior",
+        "findNextInField": "En el campo de búsqueda: resultado siguiente",
+        "findPreviousInField": "En el campo de búsqueda: resultado anterior"
       }
     }
   },
@@ -1504,5 +1510,45 @@
     "switchFirst": "Cámbiate antes a «{{branch}}»",
     "detached": "No estás en ninguna rama",
     "close": "Cerrar"
+  },
+  "search": {
+    "label": "Buscar en el historial",
+    "field": "Texto a buscar",
+    "in": "Buscar en",
+    "fieldName": {
+      "message": "Mensaje",
+      "author": "Autor",
+      "hash": "Hash",
+      "path": "Archivo"
+    },
+    "placeholder": {
+      "message": "Buscar en los mensajes…",
+      "author": "Nombre o email…",
+      "hash": "Al menos 4 caracteres del hash…",
+      "path": "Parte de la ruta del archivo…"
+    },
+    "regex": "Expresión regular",
+    "regexOnly": "Solo para el mensaje y el autor",
+    "matchCase": "Distinguir mayúsculas",
+    "searching": "Buscando…",
+    "none": "Sin resultados",
+    "results_one": "{{total}} resultado",
+    "results_other": "{{total}} resultados",
+    "position": "{{position}} de {{total}}",
+    "previous": "Resultado anterior ({{shortcut}})",
+    "next": "Resultado siguiente, más antiguo ({{shortcut}})",
+    "previousLabel": "Resultado anterior",
+    "nextLabel": "Resultado siguiente",
+    "progress": "Progreso de la búsqueda",
+    "cancel": "Cancelar",
+    "close": "Cerrar la búsqueda",
+    "hash": {
+      "short": "Escribe al menos 4 caracteres del hash.",
+      "notHex": "Un hash solo tiene números y letras de la a a la f."
+    },
+    "invalidPattern": "Git no entiende esa expresión regular: {{reason}}. Revísala, o desmarca «Expresión regular» para buscar el texto tal cual.",
+    "failed": "No se ha podido buscar en el historial.",
+    "outside": "El commit {{short}} no está en ninguna rama: solo queda en el historial de las ramas.",
+    "createBranch": "Crear una rama aquí…"
   }
 }
