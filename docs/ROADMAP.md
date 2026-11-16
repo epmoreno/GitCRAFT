@@ -2452,6 +2452,9 @@ principio y toda operación destructiva pasa por confirmación.
         GitCRAFT), «Deshacer» y «Rehacer» siguen activos: el diálogo explica
         el motivo y ofrece «Ver el historial de «x»», también al rehacer.
         Solo los desactiva una operación a medias.
+        *Verificado manualmente en macOS por el usuario:* «Deshacer» y
+        «Rehacer» activos tras un cambio desde la terminal, con el motivo en
+        el tooltip y el diálogo con «Ver el historial».
       - [x] **11.5 Historial de una rama (reflog) (core y UI).** En el menú
         de una rama y de HEAD, «Historial de la rama…»: sus entradas del
         reflog (fecha, commit y lo que git anotó), leídas con
@@ -2524,6 +2527,20 @@ principio y toda operación destructiva pasa por confirmación.
         - **H.** El historial de una rama: el texto de 30/90 días, la marca,
           el rescate con una rama, «Ver el commit», «Restablecer» solo en la
           actual, HEAD, el teclado y la configuración del repo.
+      *Arreglos visuales tras la 11 (pedidos por el usuario):*
+      - **Avisos apilados:** todos los avisos (resultados, «Deshacer» y el
+        progreso de fetch, pull y push) van en una sola columna abajo y
+        centrada en el historial, sin solaparse. No pasa de la mitad del
+        historial y se desplaza si hay más. *Decisión del usuario:* sin un
+        número máximo de avisos visibles.
+      - **Tooltips en su propia capa,** al final de la página: ningún panel
+        que recorte su contenido los corta.
+      *Verificado manualmente en macOS por el usuario:* tres avisos a la vez
+      sin solaparse, abajo y centrados, sin tapar la cabecera ni «Cambios
+      sin confirmar»; la columna no pasa de la mitad con la ventana bajita y
+      se recolocan al cerrar uno. El tooltip de «Restablecer…» entero, también
+      con el panel estrecho, los demás del panel de detalle y «Operaciones»
+      dentro de la ventana.
       *Mejora futura:* revertir varios commits a la vez (por ejemplo, los
       publicados que impiden deshacer una operación).
       *Fuera de la 11:* deshacer operaciones en un remoto, deshacer
@@ -2533,6 +2550,143 @@ principio y toda operación destructiva pasa por confirmación.
       de un archivo.
       *Tests:* parsers con fixtures, renombrados, y la búsqueda en un repo grande
       no bloquea la UI y se puede cancelar.
+      *Plan (pendiente de aprobación).*
+      *Ya existe:* el grafo carga todo el historial alcanzable (100k commits
+      en ~0,5 s, `docs/benchmarks.md`) con el asunto, el autor y el hash de
+      cada commit. El cuerpo del mensaje se pide aparte (detalle). Está la
+      lectura en streaming con `Channel`, la cancelación por
+      `CancellationToken` (que mata el grupo de procesos de git) y el aviso
+      «Optimizar repositorio», que escribe el `commit-graph` con
+      `--changed-paths`: sus filtros de Bloom aceleran mucho el historial
+      de un archivo.
+      *Criterios para repos grandes (medidos con git/git, ~78k commits):*
+      - **Nada bloquea la interfaz:** todo lo lento va en Rust, en tareas
+        de lectura (en paralelo, sin la cola de escrituras y con
+        `GIT_OPTIONAL_LOCKS=0`), y nunca se envía al WebView más de lo que
+        se ve.
+      - **Resultados por partes:** llegan por `Channel` en lotes (cada 100
+        resultados o cada 50 ms, lo que llegue antes) y se pueden usar
+        desde el primero.
+      - **Progreso real cuando se puede:** la búsqueda en mensajes sabe
+        cuántos commits ha revisado de cuántos (%), y el blame cuántas
+        líneas ha atribuido de cuántas (%). El historial de un archivo y la
+        búsqueda por archivo no pueden saberlo (git filtra por dentro):
+        muestran cuántos llevan y una barra indeterminada.
+      - **Cancelación:** botón «Cancelar» y Esc. Una búsqueda nueva, cambiar
+        de pestaña o cerrar el repo cancelan la anterior. Lo cancelado no
+        deja procesos de git vivos (test).
+      - **Objetivos** (se miden en la 12.7 y se apuntan en
+        `docs/benchmarks.md`): búsqueda en mensajes, primer resultado
+        < 300 ms y completa < 3 s; historial de un archivo, primera página
+        < 500 ms con `commit-graph`; blame, primeras líneas < 1 s.
+      - **Seguridad:** todo es lectura; el texto buscado y las rutas van
+        como argumentos separados (`--grep=…`, `--author=…`, `--` antes de
+        las rutas) y como texto literal, salvo que se pida una expresión
+        regular (`--fixed-strings` por defecto). Ninguna dependencia nueva.
+      *Decisiones que propongo (pendientes del usuario):*
+      1. **Cómo se ven los resultados:** se resaltan en el grafo, el resto
+         se atenúa y se salta entre ellos con «Siguiente» y «Anterior» (⌘G
+         / ⇧⌘G) y un contador «3 de 120». El grafo no pierde su forma.
+         Alternativa: filtrar el grafo y mostrar solo los que coinciden
+         (las líneas entre ellos dejarían de tener sentido).
+      2. **Dónde se abren el historial y el blame de un archivo:** en una
+         vista que ocupa la zona del historial, como la de conflictos, con
+         «Volver al grafo» y Esc; el panel de detalle sigue mostrando el
+         commit elegido. Se abren desde el menú de un archivo (en el
+         detalle de un commit y en «Cambios sin confirmar») y desde la
+         búsqueda por archivo.
+      3. **Texto literal y sin distinguir mayúsculas por defecto,** con una
+         casilla «Expresión regular» y otra «Distinguir mayúsculas».
+      4. **Buscar en el contenido de los cambios** (`git log -S`, «qué
+         commit añadió o quitó este texto») queda como mejora futura: es
+         lo más lento con diferencia y no lo pide la tarea.
+      5. **Medir con git/git:** la 12.7 necesita un clon de git/git
+         (~300 MB de descarga) fuera del repo de GitCRAFT. Se pedirá
+         permiso antes de clonarlo; los tests automáticos usan repos
+         sintéticos.
+      - [ ] **12.1 Búsqueda (core y Tauri).** `ops::search(query, sink,
+        cancel)`, con `SearchQuery { text, field, regex, match_case }` y
+        `field` Message / Author / Hash / Path.
+        - **Mensaje:** como texto literal, `git log --format=%H%x1f%B -z`
+          sobre las mismas refs que el grafo y el filtro en Rust, así se
+          conoce el progreso (commits revisados de cuántos). Como expresión
+          regular, se le pasa a git (`--grep=… -E`), sin porcentaje: así no
+          hace falta el crate `regex`.
+        - **Autor:** `--author=` (nombre y email), literal con
+          `--fixed-strings`.
+        - **Hash:** primero en los commits del grafo (prefijo, sin ir a
+          git); si no está, `git rev-parse --verify <prefijo>^{commit}`, y
+          si es un commit fuera de toda rama se dice y se ofrece crear una
+          rama (como en el historial de la rama).
+        - **Archivo:** commits que tocan una ruta, con pathspec
+          `:(icase,glob)**/*texto*` (o la ruta exacta si existe);
+          `--format=%H -z`.
+        Cada lote lleva los oids, el total y el progreso.
+        *Verificable:* tests de integración con repos temporales (cada
+        campo, literal frente a regex, mayúsculas, guiones al principio,
+        caracteres no ASCII), un fixture de la salida real y un test que
+        cancela a mitad en un repo sintético de 50k commits y comprueba que
+        no queda ningún git vivo y que el primer lote llega antes del final.
+      - [ ] **12.2 Búsqueda (UI).** Se para antes para enseñar el diseño.
+        Barra de búsqueda encima del grafo con ⌘F (Ctrl+F) por el registro
+        de atajos: campo, selector Mensaje / Autor / Hash / Archivo, las
+        dos casillas, contador, «Anterior» / «Siguiente», progreso y
+        «Cancelar». Se busca al escribir, con 250 ms de espera, y cada
+        búsqueda nueva cancela la anterior. Los resultados se marcan en el
+        grafo según la decisión 1; «Siguiente» selecciona el commit y lo
+        muestra en el detalle. Esc cierra la barra y quita el resaltado.
+        *Verificable:* tests de interfaz (atajo, cada campo, contador,
+        navegación, cancelar, Esc, búsqueda nueva que cancela la anterior)
+        y prueba a mano.
+      - [ ] **12.3 Historial de un archivo (core y Tauri).**
+        `ops::file_history(path, sink, cancel)`: `git log --follow
+        --name-status -z --format=…` en streaming, por páginas, con la ruta
+        que tenía el archivo en cada commit (para los renombrados) y el tipo
+        de cambio (añadido, modificado, renombrado, borrado). Sigue
+        funcionando si el archivo ya no existe.
+        *Verificable:* parser con fixture real (renombrado con cambios,
+        borrado y vuelto a crear, rutas con espacios y no ASCII), tests de
+        integración, y cancelar a mitad.
+      - [ ] **12.4 Historial de un archivo (UI).** Se para antes para
+        enseñar el diseño. Lista de commits virtualizada (fecha, autor,
+        asunto, ruta si cambió) junto al diff de ese archivo en el commit
+        elegido (reutiliza `DiffView`). Entradas: «Historial del archivo»
+        en el menú de un archivo del detalle y de «Cambios sin confirmar».
+        «Ver el commit» lo selecciona en el grafo.
+        *Verificable:* tests de interfaz y prueba a mano con un archivo
+        renombrado.
+      - [ ] **12.5 Blame (core y Tauri).** `ops::blame(path, rev, sink,
+        cancel)` con `git blame --incremental` (porcelain): git manda los
+        trozos según los va atribuyendo, así llegan por partes y con
+        progreso real (líneas atribuidas de cuántas). Respeta el
+        `blame.ignoreRevsFile` del repo. Se niega con los binarios y avisa
+        de los muy grandes antes de empezar. El contenido del archivo se
+        lee una vez (`git cat-file`) y las líneas se piden por rangos.
+        *Verificable:* parser con fixture real (commits repetidos en varios
+        trozos, líneas movidas desde otro archivo, `boundary`), tests de
+        integración (renombrado, archivo binario, cancelar a mitad) y un
+        test de que el primer lote llega antes del final en un archivo
+        sintético grande.
+      - [ ] **12.6 Blame (UI).** Se para antes para enseñar el diseño. El
+        archivo con una columna a la izquierda por trozo (hash corto, autor,
+        fecha relativa), virtualizado; las líneas aún sin atribuir se ven
+        en gris hasta que llegan. Clic en un trozo: lo selecciona en el
+        detalle. Menú del trozo: «Ver el commit», «Blame antes de este
+        commit» (el mismo archivo en el padre) e «Historial del archivo».
+        Entradas: el menú de un archivo, como el historial.
+        *Verificable:* tests de interfaz (por partes, navegación, menú) y
+        prueba a mano.
+      - [ ] **12.7 Rendimiento, documentación y prueba a mano.** Banco
+        `npm run bench:search` (búsqueda en mensajes, por archivo,
+        historial de un archivo y blame) con repo sintético y, con
+        permiso, git/git; resultados en `docs/benchmarks.md` frente a los
+        objetivos. Sección en ARCHITECTURE.md y
+        `scripts/make-search-examples.sh` con un repo desechable (renombrados,
+        archivos grandes, nombres con espacios y acentos).
+        *Verificable:* el usuario lo prueba y lo confirma.
+      *Fuera de la 12:* buscar en el contenido de los cambios (`-S`/`-G`),
+      filtros combinados (autor y fechas a la vez), blame del archivo sin
+      confirmar y búsqueda en el stash.
 - [ ] **13. Rebase interactivo visual:** reordenar, squash, editar mensaje y
       descartar.
       *Tests:* cada acción, conflicto a mitad (usa la 9), abortar restaura la
