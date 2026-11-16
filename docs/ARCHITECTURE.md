@@ -656,6 +656,61 @@ Núcleo en `gitcraft-core/src/ops/journal.rs`.
   archivo sin seguimiento. Los tests de integración (`journal.rs`,
   `undo.rs` y `reflog.rs`) crean los suyos con `TestRepo`.
 
+## 5k. Búsqueda, historial de un archivo y blame (tarea 12)
+
+Las tres leen mucho en repos grandes, así que comparten un esquema: todo
+lo lento va en Rust como lectura (en paralelo, sin la cola de escrituras y
+con `GIT_OPTIONAL_LOCKS=0`); los resultados llegan por un `Channel` en
+lotes (cada 100 resultados, o 200 grupos en el blame, o cada 50 ms) y se
+pueden usar desde el primero; cada sesión guarda un `CancellationToken`
+por tipo, de modo que una búsqueda nueva, abrir otro historial u otro
+blame, el comando `cancel_*` o cerrar el repo cancelan lo anterior (y
+matan el grupo de procesos de git).
+
+- **Búsqueda (`ops/search.rs`, 12.1–12.2):** sobre las mismas refs que el
+  grafo. Mensaje, autor y hash en texto literal se filtran en Rust sobre un
+  único `git log -z --format=%H%x1f…`, así se sabe cuántos commits se han
+  revisado (porcentaje real); sin distinguir mayúsculas con
+  `to_lowercase` (Unicode). Una expresión regular se le pasa a git
+  (`--extended-regexp --grep=`/`--author=`, `-i`), sin porcentaje; si git
+  no la entiende, el error es `invalidPattern`. Por archivo, pathspec
+  `:(top,icase)*texto*` con los comodines escapados y `--full-history`. Un
+  hash sin resultados se busca con `rev-parse` fuera de las ramas
+  (`outside`).
+  La barra (`src/features/search/`) va encima del grafo; cada pestaña
+  guarda su búsqueda (`useSearchStore`), que se cancela al salir y se
+  repite al volver o al recargar el historial. Los resultados son un
+  `Set` que crece en su sitio (con un contador de versión); el grafo
+  atenúa el texto (`--text-dimmed`) y los puntos (30 % de opacidad) de lo
+  que no coincide, y la navegación sigue el orden del grafo
+  (`navigate.ts`), esperando a los resultados que aún no ha cargado.
+- **Historial de un archivo (`ops/file_history.rs`, 12.3–12.4):**
+  `git log --follow -z --name-status` desde `HEAD` o un hash completo, con
+  una cabecera que empieza con U+001E; el parser va token a token. Cada
+  entrada lleva la ruta que tenía el archivo y cómo cambió. La vista
+  (`openFile.kind = "history"`) va sobre el grafo como la de conflictos,
+  con la lista y el diff (`DiffContent`, separado de `DiffView`); el panel
+  de detalle muestra el commit elegido (`chosen`) sin tocar la selección
+  del grafo. Si empieza en el commit actual y el archivo tiene cambios sin
+  confirmar, una fila «Sin confirmar» los muestra (lo preparado y lo no
+  preparado).
+- **Blame (`ops/blame.rs`, 12.5–12.6):** primero el texto del archivo en
+  ese commit (`git cat-file`, entero y una vez), después los grupos de
+  `git blame --incremental` según git los atribuye, con las líneas
+  atribuidas hasta entonces. Se niega con binarios y archivos de más de
+  16 MB, y con más de 20.000 líneas espera a que el usuario acepte
+  (`force`). Respeta `blame.ignoreRevsFile`. La vista
+  (`openFile.kind = "blame"`) guarda un camino de vuelta (`back`) para
+  «Blame antes de este commit», que usa el `previous` de cada grupo.
+- **Rendimiento:** `npm run bench:search` mide las tres con un repo
+  sintético y, con `GITCRAFT_BENCH_REPO`/`GITCRAFT_BENCH_FILE`, con uno
+  real; resultados en `docs/benchmarks.md`.
+- **Pruebas:** `scripts/make-search-examples.sh` crea un repo desechable
+  con 3.000 commits de relleno, un archivo renombrado, borrado y vuelto a
+  crear con cambios sin confirmar, mensajes con caracteres de expresión
+  regular y con cuerpo, un archivo de 25.000 líneas, uno binario y un
+  commit que solo queda en el historial de la rama.
+
 ## 5f. Crear repositorios
 
 - **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama

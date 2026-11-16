@@ -2874,6 +2874,26 @@ principio y toda operación destructiva pasa por confirmación.
         `scripts/make-search-examples.sh` con un repo desechable (renombrados,
         archivos grandes, nombres con espacios y acentos).
         *Verificable:* el usuario lo prueba y lo confirma.
+        *Hecho (falta la prueba del usuario):*
+        - **Banco:** `npm run bench:search`
+          (`crates/gitcraft-core/tests/bench_search.rs`). Con un sintético
+          de 50.000 commits y con git/git (83.007 commits, clonado con
+          permiso en `~/gitcraft-bench/git`, fuera del proyecto) se cumplen
+          todos los objetivos, con y sin `commit-graph`; resultados en
+          `docs/benchmarks.md`. La búsqueda por archivo es lo más lento
+          (8–9 s en git/git), pero llega por partes y se cancela.
+        - **Documentación:** sección 5k de ARCHITECTURE.md.
+        - **Script:** `scripts/make-search-examples.sh` crea
+          `~/gitcraft-busqueda`: 3.000 commits de relleno de cuatro autores,
+          `notas.txt` creado, cambiado, renombrado con cambios a
+          `docs/guía de uso.txt`, cambiado en una rama fusionada, borrado y
+          vuelto a crear, con un cambio preparado y otro sin preparar;
+          mensajes con caracteres de expresión regular y con cuerpo; un
+          archivo de 25.000 líneas y uno binario; y un commit que solo queda
+          en el historial de la rama.
+        - **Pendiente del plan:** la 12.1 decía usar la ruta exacta cuando
+          existe; solo está la búsqueda «contiene el texto». Queda como
+          mejora (ver `docs/benchmarks.md`).
       *Mejora futura (decisión del usuario):* buscar en el contenido de los
       cambios (`git log -S`/`-G`, qué commit añadió o quitó un texto).
       *Mejora futura (decisión del usuario):* una opción para colorear el

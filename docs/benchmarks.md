@@ -53,3 +53,60 @@ ni la fecha del committer: el detalle del commit se carga al seleccionarlo.
 Es un 47 % menos de datos para el WebView (~226 bytes por commit). Los tiempos
 de carga no cambian porque los domina `git log`. En repos anchos el ahorro es
 mayor, porque cada fila repite sus carriles que pasan.
+
+## Búsqueda, historial de un archivo y blame (ROADMAP 12.7)
+
+Mide desde que se lanza git hasta el primer lote y hasta el final, sin la
+UI. Comando: `npm run bench:search` (release; mediana de 3 ejecuciones).
+Opciones: `GITCRAFT_BENCH_COMMITS=<n>` (50.000 por defecto) y, para un repo
+real, `GITCRAFT_BENCH_REPO=<ruta>` con `GITCRAFT_BENCH_FILE=<archivo>`.
+
+Objetivos (tarea 12): búsqueda en mensajes, primer resultado < 300 ms y
+completa < 3 s; historial de un archivo, primera página < 500 ms con
+`commit-graph`; blame, primeras líneas < 1 s.
+
+### 2026-11-16 — Apple M4, git 2.55.0
+
+**Sintético, 50.000 commits** (cada uno cambia uno de 200 archivos; uno de
+cada diez añade una línea a `src/grande.txt`, que acaba con 5.000 líneas y
+5.000 commits). Generarlo con `git fast-import` tarda 5,3 s.
+
+| Medida | Sin `commit-graph` (primero / todo) | Con `commit-graph --changed-paths` |
+| --- | --- | --- |
+| Mensaje «change 4», literal (11.111) | 6 / 240 ms ✅ | 6 / 231 ms ✅ |
+| Mensaje que no aparece, literal (todo el historial) | — / 236 ms ✅ | — / 229 ms ✅ |
+| Mensaje «^change 4», expresión regular | 5 / 187 ms ✅ | 5 / 180 ms ✅ |
+| Autor «a», literal (50.000) | 5 / 246 ms | 5 / 233 ms |
+| Archivo «src/grande.txt» (5.000) | 31 / 1.269 ms | 28 / 1.140 ms |
+| Historial de `src/grande.txt` (5.000) | 25 / 741 ms | 22 / 644 ms ✅ |
+| Blame de `src/grande.txt` (5.000 líneas) | 65 / 1.179 ms ✅ | 52 / 554 ms ✅ |
+
+**git/git** (clon completo, 83.007 commits, `eacee88cf8`; `diff.c`: 7.846
+líneas y 1.201 commits en su historial). Medido tal como se clona y tras
+`git commit-graph write --reachable --changed-paths` (4,1 s).
+
+| Medida | Sin `commit-graph` (primero / todo) | Con `commit-graph --changed-paths` |
+| --- | --- | --- |
+| Mensaje «fix», literal (21.144) | 19 / 623 ms ✅ | 21 / 615 ms ✅ |
+| Mensaje que no aparece, literal (todo el historial) | — / 610 ms ✅ | — / 613 ms ✅ |
+| Mensaje «^fix», expresión regular (3.076) | 36 / 647 ms ✅ | 37 / 629 ms ✅ |
+| Autor «a», literal (77.886) | 17 / 582 ms | 17 / 582 ms |
+| Archivo «diff.c» (20.196: toda ruta que lo contiene) | 50 / 9.018 ms | 50 / 8.381 ms |
+| Historial de `diff.c` (1.201) | 57 / 975 ms ✅ | 58 / 626 ms ✅ |
+| Blame de `diff.c` (7.846 líneas) | 67 / 612 ms ✅ | 58 / 346 ms ✅ |
+
+Conclusiones:
+
+- **Todos los objetivos se cumplen**, también sin `commit-graph`: el primer
+  resultado llega en decenas de milisegundos y la búsqueda completa de
+  git/git en ~0,6 s.
+- **El `commit-graph` con `--changed-paths`** ayuda donde git mira rutas:
+  el historial de un archivo (−36 % en git/git) y el blame (−43 %). A los
+  mensajes casi no les afecta.
+- **La búsqueda por archivo es la más lenta** (8–9 s en git/git): el
+  pathspec «contiene el texto» (`*diff.c*`, que también encuentra
+  `builtin/diff.c`, `xdiff/xdiff.c`…) obliga a git a comparar los árboles de
+  cada commit y no puede usar los filtros de Bloom. Llega por partes desde
+  los 50 ms y se puede cancelar, así que no bloquea nada. Mejora posible:
+  cuando el texto es una ruta exacta que existe, buscar solo esa ruta
+  (git sí usa entonces los filtros de Bloom).

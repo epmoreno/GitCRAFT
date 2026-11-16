@@ -19,7 +19,8 @@
     "check:rust": "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace --no-fail-fast",
     "check": "npm run check:web && npm run check:rust",
     "bindings": "node scripts/bindings.mjs",
-    "bench:graph": "cargo test -p gitcraft-core --release --test bench_graph -- --ignored --nocapture"
+    "bench:graph": "cargo test -p gitcraft-core --release --test bench_graph -- --ignored --nocapture",
+    "bench:search": "cargo test -p gitcraft-core --release --test bench_search -- --ignored --nocapture"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.23",
