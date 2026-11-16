@@ -1,10 +1,12 @@
 import {
   cloneElement,
+  useEffect,
   useId,
   useRef,
   useState,
   type ReactElement,
 } from "react";
+import { createPortal } from "react-dom";
 import styles from "./Tooltip.module.css";
 
 type Props = {
@@ -25,6 +27,9 @@ export type TooltipPlacement = {
   side: "below" | "above";
   /** Horizontal shift from centred on the host, to stay inside the window. */
   shift: number;
+  /** Where it goes in the window (it is `position: fixed`). */
+  left: number;
+  top: number;
 };
 
 /** Where a tooltip of `tip` size goes so it stays inside `viewport`. */
@@ -43,22 +48,34 @@ export function placeTooltip(
   const maxLeft = viewport.width - TOOLTIP_MARGIN - tip.width;
   // Wider than the window: pin to the left margin.
   const clamped = Math.max(TOOLTIP_MARGIN, Math.min(left, maxLeft));
-  return { side, shift: Math.round(clamped - left) };
+  return {
+    side,
+    shift: Math.round(clamped - left),
+    left: Math.round(clamped),
+    top: Math.round(
+      side === "below" ? host.bottom + GAP : host.top - GAP - tip.height,
+    ),
+  };
 }
 
 /**
  * Hover/focus tooltip. Wraps the child in a span so it also works for
- * disabled buttons, which do not receive pointer events themselves. It is
- * placed each time it is about to show, so it never leaves the window.
+ * disabled buttons, which do not receive pointer events themselves.
+ *
+ * The tooltip itself lives in its own layer at the end of the page, so no
+ * panel that clips its content (`overflow`) can cut it. It is placed each
+ * time it is about to show, so it never leaves the window, and hides when
+ * anything scrolls (it would no longer be next to its host).
  */
 export function Tooltip({ label, children }: Props) {
   const id = useId();
   const hostRef = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLSpanElement>(null);
-  const [placement, setPlacement] = useState<TooltipPlacement>({
-    side: "below",
-    shift: 0,
-  });
+  const [placement, setPlacement] = useState<TooltipPlacement | null>(null);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const shown = hovered || focused;
+
   const place = () => {
     const host = hostRef.current;
     const tip = tipRef.current;
@@ -71,27 +88,55 @@ export function Tooltip({ label, children }: Props) {
       ),
     );
   };
+
+  useEffect(() => {
+    if (!shown) return;
+    const hide = () => {
+      setHovered(false);
+      setFocused(false);
+    };
+    window.addEventListener("scroll", hide, true);
+    window.addEventListener("resize", hide);
+    return () => {
+      window.removeEventListener("scroll", hide, true);
+      window.removeEventListener("resize", hide);
+    };
+  }, [shown]);
+
   return (
     <span
       ref={hostRef}
       className={styles.host}
-      onPointerEnter={place}
-      onFocus={place}
+      onPointerEnter={() => {
+        place();
+        setHovered(true);
+      }}
+      onPointerLeave={() => setHovered(false)}
+      onFocus={() => {
+        place();
+        setFocused(true);
+      }}
+      onBlur={() => setFocused(false)}
     >
       {cloneElement(children, { "aria-describedby": id })}
-      <span
-        ref={tipRef}
-        role="tooltip"
-        id={id}
-        className={
-          placement.side === "above"
-            ? `${styles.tip} ${styles.above}`
-            : styles.tip
-        }
-        style={{ "--tip-shift": `${placement.shift}px` } as React.CSSProperties}
-      >
-        {label}
-      </span>
+      {createPortal(
+        <span
+          ref={tipRef}
+          role="tooltip"
+          id={id}
+          className={
+            shown && placement ? `${styles.tip} ${styles.shown}` : styles.tip
+          }
+          style={
+            placement
+              ? { left: `${placement.left}px`, top: `${placement.top}px` }
+              : undefined
+          }
+        >
+          {label}
+        </span>,
+        document.body,
+      )}
     </span>
   );
 }

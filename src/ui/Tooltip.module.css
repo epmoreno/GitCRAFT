@@ -1,15 +1,14 @@
 .host {
-  position: relative;
   display: inline-flex;
 }
 
+/* In its own layer at the end of the page, above every panel and dialog;
+   Tooltip.tsx places it in the window. */
 .tip {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  /* --tip-shift keeps it inside the window (set by Tooltip.tsx). */
-  transform: translateX(calc(-50% + var(--tip-shift, 0px)));
-  z-index: 100;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1100;
   padding: 4px 8px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
@@ -25,13 +24,7 @@
     visibility 0s linear 120ms;
 }
 
-.above {
-  top: auto;
-  bottom: calc(100% + 6px);
-}
-
-.host:hover .tip,
-.host:focus-within .tip {
+.shown {
   opacity: 1;
   visibility: visible;
   transition-delay: 350ms, 350ms;

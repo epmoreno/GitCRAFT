@@ -5,7 +5,8 @@
   "zones": {
     "sidebar": "Barra lateral",
     "graph": "Historial",
-    "detail": "Detalle"
+    "detail": "Detalle",
+    "notices": "Avisos"
   },
   "toolbar": {
     "pull": "Pull",

@@ -151,13 +151,20 @@ export function App() {
           ) : restored ? (
             <StartPage />
           ) : null}
-          <UndoToast />
-          <BranchToast />
-          <StashToast />
-          <RemoteToast />
-          <RemoteProgress />
-          <HistoryToast repoId={active?.id ?? null} />
-          <TagToast repoId={active?.id ?? null} />
+          {/* One column for every notice, so they never overlap. */}
+          <div
+            className={styles.notices}
+            role="region"
+            aria-label={t("zones.notices")}
+          >
+            <RemoteProgress />
+            <RemoteToast />
+            <BranchToast />
+            <StashToast />
+            <HistoryToast repoId={active?.id ?? null} />
+            <TagToast repoId={active?.id ?? null} />
+            <UndoToast />
+          </div>
         </main>
         <DetailPanel repoId={active?.id ?? null} />
         <DiscardDialog />

@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import i18n from "../i18n";
 import type { RepoChanged } from "../ipc";
 import { commandError, ipc, opened, sampleRefs } from "../test/ipc";
+import { useBranchStore } from "../features/branches/store";
+import { useRemoteStore } from "../features/remote/store";
 import { App } from "./App";
 import { setPlatformForTests } from "./platform";
 
@@ -32,6 +34,37 @@ describe("App", () => {
     const { container } = render(<App />);
     const header = container.querySelector("header");
     expect(header?.hasAttribute("data-tauri-drag-region")).toBe(drags);
+  });
+
+  it("stacks every notice in one column instead of overlapping them", () => {
+    useRemoteStore.setState({
+      notice: {
+        kind: "pushed",
+        repoId: 1,
+        upstream: "origin/main",
+        commits: 2,
+        setUpstream: false,
+        forced: false,
+      },
+    });
+    useBranchStore.setState({
+      notice: { kind: "deleted", repoId: 1, name: "vieja", tip: "abc1234" },
+    });
+    render(<App />);
+    const notices = screen.getByRole("region", { name: "Avisos" });
+    // Positioned once, as a column (App.module.css); the notices inside
+    // are not positioned on their own.
+    expect(notices).toHaveClass("notices");
+    expect(notices.parentElement).toBe(
+      screen.getByRole("main", { name: "Historial" }),
+    );
+    const shown = within(notices).getAllByRole("status");
+    expect(shown).toHaveLength(2);
+    expect(shown[0]).toHaveTextContent(
+      "Push completado: 2 commits subidos a «origin/main».",
+    );
+    expect(shown[1]).toHaveTextContent("vieja");
+    for (const notice of shown) expect(notice.parentElement).toBe(notices);
   });
 
   it("explains why repository actions are disabled", () => {

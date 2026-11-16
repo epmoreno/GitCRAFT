@@ -92,6 +92,36 @@
   min-width: 0;
 }
 
+/* Notices (results, "Undo", progress), stacked one under another at the
+   bottom of the history, above its status bar. They never reach the top
+   half, where the column headers and "Uncommitted changes" are; more than
+   fit scroll. The gaps between them let clicks through to the graph. */
+.notices {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(600px, 100% - 32px);
+  max-height: calc(50% - 36px);
+  overflow-y: auto;
+  padding: var(--space-2);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.notices:empty {
+  display: none;
+}
+
+.notices > * {
+  flex: none;
+  pointer-events: auto;
+}
+
 .toolButton[aria-pressed="true"] {
   background-color: var(--surface-3);
 }

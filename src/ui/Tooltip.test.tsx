@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { placeTooltip, Tooltip, TOOLTIP_MARGIN } from "./Tooltip";
 
 const viewport = { width: 1000, height: 600 };
@@ -15,6 +15,8 @@ describe("tooltip placement", () => {
     expect(placeTooltip(box(400, 10), tip, viewport)).toEqual({
       side: "below",
       shift: 0,
+      left: 340,
+      top: 44,
     });
   });
 
@@ -34,7 +36,10 @@ describe("tooltip placement", () => {
   });
 
   it("goes above when there is no room below", () => {
-    expect(placeTooltip(box(400, 570), tip, viewport).side).toBe("above");
+    expect(placeTooltip(box(400, 570), tip, viewport)).toMatchObject({
+      side: "above",
+      top: 570 - 6 - 24,
+    });
   });
 
   it("stays below when neither side has room but below has more", () => {
@@ -42,7 +47,7 @@ describe("tooltip placement", () => {
     expect(placeTooltip(box(400, 100), tall, viewport).side).toBe("below");
   });
 
-  it("is placed when it is about to show", () => {
+  it("is placed in the window when it is about to show", () => {
     Object.defineProperty(window, "innerWidth", {
       configurable: true,
       value: 1000,
@@ -61,8 +66,45 @@ describe("tooltip placement", () => {
     Object.defineProperty(tooltip, "offsetWidth", { value: 200 });
     Object.defineProperty(tooltip, "offsetHeight", { value: 24 });
 
+    expect(tooltip).not.toHaveClass("shown");
     fireEvent.pointerEnter(host);
-    expect(tooltip.style.getPropertyValue("--tip-shift")).toBe("-68px");
+    expect(tooltip).toHaveClass("shown");
+    expect(tooltip.style.left).toBe(`${1000 - TOOLTIP_MARGIN - 200}px`);
+    expect(tooltip.style.top).toBe("44px");
     expect(button).toHaveAccessibleDescription("Ver las operaciones");
+    fireEvent.pointerLeave(host);
+    expect(tooltip).not.toHaveClass("shown");
+  });
+
+  it("is not cut by a panel that clips its content", () => {
+    render(
+      <div data-testid="panel" style={{ overflow: "hidden", width: 120 }}>
+        <Tooltip label="«main» ya está en este commit">
+          <button type="button" disabled>
+            Restablecer…
+          </button>
+        </Tooltip>
+      </div>,
+    );
+    const tooltip = screen.getByRole("tooltip", { hidden: true });
+    // Its own layer, outside the panel.
+    expect(screen.getByTestId("panel")).not.toContainElement(tooltip);
+    expect(tooltip.parentElement).toBe(document.body);
+    expect(
+      screen.getByRole("button", { name: "Restablecer…" }),
+    ).toHaveAccessibleDescription("«main» ya está en este commit");
+  });
+
+  it("shows on focus and hides when anything scrolls", () => {
+    render(
+      <Tooltip label="Deshacer">
+        <button type="button">↶</button>
+      </Tooltip>,
+    );
+    const tooltip = screen.getByRole("tooltip", { hidden: true });
+    act(() => screen.getByRole("button").focus());
+    expect(tooltip).toHaveClass("shown");
+    fireEvent.scroll(window);
+    expect(tooltip).not.toHaveClass("shown");
   });
 });
