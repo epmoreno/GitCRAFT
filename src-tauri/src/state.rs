@@ -41,6 +41,7 @@ use gitcraft_core::ops::remote::{
 use gitcraft_core::ops::repo::{self, RepoInfo};
 use gitcraft_core::ops::reset::{self as reset_ops, ResetMode, ResetPreview};
 use gitcraft_core::ops::resolve::{self, MarkOutcome, ResolvedFile, Side};
+use gitcraft_core::ops::search::{self, SearchBatch, SearchQuery, SearchSummary};
 use gitcraft_core::ops::stage;
 use gitcraft_core::ops::stash::{self, ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::status::working_status;
@@ -148,6 +149,8 @@ struct RepoSession {
     graph_load: Option<CancellationToken>,
     /// Cancels the user-started operation in progress, if any.
     operation: Option<CancellationToken>,
+    /// Cancels the history search in progress, if any (task 12.1).
+    search: Option<CancellationToken>,
     /// Reports external ref changes; `None` if watching failed.
     watcher: Option<RepoWatcher>,
     /// Recent discards that can be undone, by id.
@@ -309,6 +312,7 @@ impl AppState {
             info: info.clone(),
             graph_load: None,
             operation: None,
+            search: None,
             watcher: self.watch(id, &info),
             write_lock: Arc::default(),
             discards: Vec::new(),
@@ -342,7 +346,7 @@ impl AppState {
             return false;
         };
         let session = inner.sessions.remove(index);
-        for token in [session.graph_load, session.operation]
+        for token in [session.graph_load, session.operation, session.search]
             .into_iter()
             .flatten()
         {
@@ -1948,6 +1952,54 @@ impl AppState {
         Ok(MoveResult { outcome, undo_id })
     }
 
+    /// Searches session `id`'s history (task 12.1), handing over the
+    /// results in batches. A new search cancels the one in progress; so do
+    /// [`Self::cancel_search`] and closing the repository.
+    pub async fn search_commits(
+        &self,
+        id: RepoId,
+        query: &SearchQuery,
+        on_batch: impl FnMut(SearchBatch),
+    ) -> Result<SearchSummary, IpcError> {
+        let git = self.git()?;
+        let (path, cancel) = {
+            let mut inner = self.lock();
+            let session = inner
+                .sessions
+                .iter_mut()
+                .find(|s| s.id == id)
+                .ok_or(GitError::Cancelled)?;
+            if let Some(previous) = session.search.take() {
+                previous.cancel();
+            }
+            let cancel = CancellationToken::new();
+            session.search = Some(cancel.clone());
+            (PathBuf::from(&session.info.path), cancel)
+        };
+        let refs = read_refs(git, &path, &cancel).await?;
+        let result = search::search(
+            git,
+            &path,
+            query,
+            refs.head_is_detached(),
+            &cancel,
+            on_batch,
+        )
+        .await;
+        // A finished search leaves its token: cancelling it then does nothing.
+        Ok(result?)
+    }
+
+    /// Cancels session `id`'s history search, if one is running.
+    pub fn cancel_search(&self, id: RepoId) {
+        let mut inner = self.lock();
+        if let Some(session) = inner.sessions.iter_mut().find(|s| s.id == id)
+            && let Some(token) = session.search.take()
+        {
+            token.cancel();
+        }
+    }
+
     /// Where branch `refname` (or `HEAD`) has been: its reflog (task 11.5).
     pub async fn branch_reflog(&self, id: RepoId, refname: &str) -> Result<Reflog, IpcError> {
         let git = self.git()?;
@@ -2685,6 +2737,74 @@ mod tests {
                 suggest_optimize: false
             }
         );
+    }
+
+    fn search_for(field: search::SearchField, text: &str) -> SearchQuery {
+        SearchQuery {
+            text: text.into(),
+            field,
+            regex: false,
+            match_case: false,
+        }
+    }
+
+    #[tokio::test]
+    async fn a_new_search_or_cancel_stops_the_one_running() {
+        let f = fixture();
+        let repo = TestRepo::synthetic(50_000).await;
+        let opened = f.state.open_repository(repo.path()).await.expect("open");
+        let everything = search_for(search::SearchField::Message, "change");
+        let started = tokio::sync::Notify::new();
+
+        // A second search, once the first has sent something.
+        let first = f
+            .state
+            .search_commits(opened.id, &everything, |_| started.notify_one());
+        let second = async {
+            started.notified().await;
+            f.state
+                .search_commits(
+                    opened.id,
+                    &search_for(search::SearchField::Message, "change 7"),
+                    |_| {},
+                )
+                .await
+        };
+        let (first, second) = tokio::join!(first, second);
+        assert_eq!(first.expect_err("replaced").kind, ErrorKind::Cancelled);
+        assert!(second.expect("second").found > 0);
+
+        // "Cancel".
+        let first = f
+            .state
+            .search_commits(opened.id, &everything, |_| started.notify_one());
+        let cancel = async {
+            started.notified().await;
+            f.state.cancel_search(opened.id);
+        };
+        let (first, ()) = tokio::join!(first, cancel);
+        assert_eq!(first.expect_err("cancelled").kind, ErrorKind::Cancelled);
+    }
+
+    #[tokio::test]
+    async fn searches_a_detached_head_too() {
+        let f = fixture();
+        let (repo, _) = TestRepo::sample_history().await;
+        repo.run(&["switch", "--quiet", "--detach"]).await;
+        let loose = repo.commit_all("Suelto").await;
+        let opened = f.state.open_repository(repo.path()).await.expect("open");
+        let mut oids = Vec::new();
+        let summary = f
+            .state
+            .search_commits(
+                opened.id,
+                &search_for(search::SearchField::Message, "suelto"),
+                |batch| oids.extend(batch.oids),
+            )
+            .await
+            .expect("search");
+        assert_eq!(oids, [loose]);
+        assert_eq!(summary.examined, 8, "the 7 of the graph and HEAD");
     }
 
     #[tokio::test]

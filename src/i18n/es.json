@@ -102,6 +102,7 @@
     "invalidBranchName": "Ese nombre no es válido para una rama.",
     "branchExists": "Ya existe una rama con ese nombre.",
     "invalidTagName": "Ese no es un nombre de tag válido.",
+    "invalidPattern": "Git no entiende esa expresión regular. Revísala, o desmarca «Expresión regular» para buscar el texto tal cual.",
     "tagExists": "Ya existe un tag con ese nombre. GitCRAFT nunca mueve un tag: bórralo antes si quieres crearlo en otro commit.",
     "branchChanged": "La rama ha cambiado desde que se mostró (alguien la movió, la renombró o la borró). No se ha hecho nada; revisa la barra lateral y vuelve a intentarlo.",
     "branchInWorktree": "Esa rama está en uso en otro worktree de este repositorio.",

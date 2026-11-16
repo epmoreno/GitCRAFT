@@ -22,6 +22,7 @@ pub mod remote;
 pub mod repo;
 pub mod reset;
 pub mod resolve;
+pub mod search;
 pub mod stage;
 pub mod stash;
 pub mod status;

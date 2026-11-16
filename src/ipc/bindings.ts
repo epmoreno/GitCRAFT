@@ -187,6 +187,13 @@ export const commands = {
 	/**  Where a branch (or HEAD) has been, from git's reflog (task 11.5). */
 	branchReflog: (id: number, refname: string) => typedError<Reflog, IpcError_Serialize>(__TAURI_INVOKE("branch_reflog", { id, refname })),
 	/**
+	 *  Searches the history (task 12.1): the results arrive in batches on
+	 *  `on_batch`; the summary when it ends. A new search cancels the previous.
+	 */
+	searchCommits: (id: number, query: SearchQuery, onBatch: Channel<SearchBatch>) => typedError<SearchSummary_Serialize, IpcError_Serialize>(__TAURI_INVOKE("search_commits", { id, query, onBatch })),
+	/**  Cancels the history search in progress, if any. */
+	cancelSearch: (id: number) => typedError<null, IpcError_Serialize>(__TAURI_INVOKE("cancel_search", { id })),
+	/**
 	 *  Merges as the user accepted it in the dialog (task 8.2): checks
 	 *  everything again and does nothing the user did not accept.
 	 */
@@ -951,7 +958,9 @@ export type EntryKind = "file" | "executable" | "symlink" | "submodule";
  */
 export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bareRepository" | "dubiousOwnership" | 
 /**  No user.name / user.email configured. */
-"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "undoUnsupported" | "trashFailed" | "invalidBranchName" | "branchExists" | "invalidTagName" | "tagExists" | "branchChanged" | 
+"identityUnknown" | "nothingToCommit" | "emptyMessage" | "staleDiff" | "undoConflict" | "undoUnsupported" | "trashFailed" | "invalidBranchName" | "branchExists" | "invalidTagName" | "tagExists" | 
+/**  A search's regular expression git cannot read. */
+"invalidPattern" | "branchChanged" | 
 /**  The branch is checked out in another worktree. */
 "branchInWorktree" | "stashChanged" | "nothingToStash" | 
 /**  The file is no longer in conflict; nothing was done. */
@@ -2439,6 +2448,63 @@ export type RestoredSession_Serialize = {
 	active: number | null,
 	/**  Saved tabs that could not be opened (and were forgotten). */
 	failed: FailedRestore_Serialize[],
+};
+
+/**  Results found since the previous batch. */
+export type SearchBatch = {
+	/**  In the order git walks the history (newest first, roughly). */
+	oids: string[],
+	/**  Results so far, these included. */
+	found: number,
+	/**
+	 *  Commits examined so far; 0 when git filters
+	 *  ([`SearchQuery::tracks_progress`]).
+	 */
+	examined: number,
+};
+
+/**  Where to look. */
+export type SearchField = 
+/**  The whole message, subject and body. */
+"message" | 
+/**  The author's name and email. */
+"author" | 
+/**  The commit id, by prefix. */
+"hash" | 
+/**  The commits that changed a file whose path contains the text. */
+"path";
+
+export type SearchQuery = {
+	text: string,
+	field: SearchField,
+	/**
+	 *  A regular expression (git's extended syntax) instead of literal
+	 *  text. Only for the message and the author; ignored otherwise.
+	 */
+	regex: boolean,
+	matchCase: boolean,
+};
+
+export type SearchSummary = SearchSummary_Serialize | SearchSummary_Deserialize;
+
+export type SearchSummary_Deserialize = {
+	found: number,
+	examined: number,
+	/**
+	 *  Searching an id that no branch, tag or remote branch has: the
+	 *  commit it names, if it still exists (only in the branch history).
+	 */
+	outside?: string | null,
+};
+
+export type SearchSummary_Serialize = {
+	found: number,
+	examined: number,
+	/**
+	 *  Searching an id that no branch, tag or remote branch has: the
+	 *  commit it names, if it still exists (only in the branch history).
+	 */
+	outside: string | null,
 };
 
 export type Segment = Segment_Serialize | Segment_Deserialize;

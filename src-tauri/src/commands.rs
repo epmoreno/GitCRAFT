@@ -25,6 +25,7 @@ use gitcraft_core::ops::refs::RepoRefs;
 use gitcraft_core::ops::remote::{ForcePushPreview, LastFetch, PullMode, PullOutcome, PushOutcome};
 use gitcraft_core::ops::reset::{ResetMode, ResetPreview};
 use gitcraft_core::ops::resolve::{MarkOutcome, ResolvedFile, Side};
+use gitcraft_core::ops::search::{SearchBatch, SearchQuery, SearchSummary};
 use gitcraft_core::ops::stash::{ApplyOutcome, RecoverPreview};
 use gitcraft_core::ops::tag::{RemoteTag, TagInfo, TagNameCheck, TagPushOutcome};
 use gitcraft_core::ops::undo::{Direction, UndoPreview, UndoRequest};
@@ -1103,6 +1104,32 @@ pub async fn undo_operation(
     undo_id: u32,
 ) -> Result<(), IpcError> {
     state.undo_operation(id, undo_id).await
+}
+
+/// Searches the history (task 12.1): the results arrive in batches on
+/// `on_batch`; the summary when it ends. A new search cancels the previous.
+#[tauri::command]
+#[specta::specta]
+pub async fn search_commits(
+    state: State<'_, AppState>,
+    id: RepoId,
+    query: SearchQuery,
+    on_batch: Channel<SearchBatch>,
+) -> Result<SearchSummary, IpcError> {
+    state
+        .search_commits(id, &query, |batch| {
+            // The window may be gone; there is nobody left to tell.
+            let _ = on_batch.send(batch);
+        })
+        .await
+}
+
+/// Cancels the history search in progress, if any.
+#[tauri::command]
+#[specta::specta]
+pub async fn cancel_search(state: State<'_, AppState>, id: RepoId) -> Result<(), IpcError> {
+    state.cancel_search(id);
+    Ok(())
 }
 
 /// Where a branch (or HEAD) has been, from git's reflog (task 11.5).

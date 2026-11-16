@@ -7,5 +7,6 @@ pub mod diff_tree;
 pub mod log;
 pub mod reflog;
 pub mod refs;
+pub mod search;
 pub mod stash;
 pub mod status;

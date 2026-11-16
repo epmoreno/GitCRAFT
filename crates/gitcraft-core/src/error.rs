@@ -175,6 +175,8 @@ pub enum ErrorKind {
     BranchExists,
     InvalidTagName,
     TagExists,
+    /// A search's regular expression git cannot read.
+    InvalidPattern,
     BranchChanged,
     /// The branch is checked out in another worktree.
     BranchInWorktree,
@@ -387,6 +389,9 @@ pub fn classify_output(stderr: &str, stdout: &str) -> ErrorKind {
             ErrorKind::IdentityUnknown,
         ),
         ("empty commit message", ErrorKind::EmptyMessage),
+        // A bad --grep / --author regular expression.
+        ("fatal: command line, '", ErrorKind::InvalidPattern),
+        ("fatal: header, '", ErrorKind::InvalidPattern),
         ("nothing to commit", ErrorKind::NothingToCommit),
         ("nothing added to commit", ErrorKind::NothingToCommit),
         ("no changes added to commit", ErrorKind::NothingToCommit),
@@ -448,6 +453,14 @@ mod tests {
             (
                 "fatal: this operation must be run in a work tree\n",
                 ErrorKind::BareRepository,
+            ),
+            (
+                "fatal: command line, 'a(': parentheses not balanced\n",
+                ErrorKind::InvalidPattern,
+            ),
+            (
+                "fatal: header, '[': brackets ([ ]) not balanced\n",
+                ErrorKind::InvalidPattern,
             ),
             (
                 "fatal: detected dubious ownership in repository at '/Volumes/usb/repo'\n\

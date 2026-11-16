@@ -143,6 +143,8 @@ vi.mock("../ipc", () => ({
     undoRedoPreview: vi.fn(),
     undoRedo: vi.fn(),
     branchReflog: vi.fn(),
+    searchCommits: vi.fn(),
+    cancelSearch: vi.fn(),
     mergePreview: vi.fn(),
     rebasePreview: vi.fn(),
     mergeBranch: vi.fn(),

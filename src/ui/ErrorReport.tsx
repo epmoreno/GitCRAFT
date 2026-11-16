@@ -26,6 +26,7 @@ const KINDS = {
   branchExists: true,
   invalidTagName: true,
   tagExists: true,
+  invalidPattern: true,
   branchChanged: true,
   branchInWorktree: true,
   stashChanged: true,

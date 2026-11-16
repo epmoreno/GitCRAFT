@@ -102,6 +102,7 @@
     "invalidBranchName": "That is not a valid branch name.",
     "branchExists": "A branch with that name already exists.",
     "invalidTagName": "That is not a valid tag name.",
+    "invalidPattern": "Git cannot read that regular expression. Check it, or untick “Regular expression” to search for the text as it is.",
     "tagExists": "A tag with that name already exists. GitCRAFT never moves a tag: delete it first to create it on another commit.",
     "branchChanged": "The branch changed since it was shown (it was moved, renamed or deleted). Nothing was done; check the sidebar and try again.",
     "branchInWorktree": "That branch is in use in another worktree of this repository.",

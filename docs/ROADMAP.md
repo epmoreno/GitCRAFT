@@ -2550,7 +2550,7 @@ principio y toda operación destructiva pasa por confirmación.
       de un archivo.
       *Tests:* parsers con fixtures, renombrados, y la búsqueda en un repo grande
       no bloquea la UI y se puede cancelar.
-      *Plan (pendiente de aprobación).*
+      *Plan aprobado por el usuario.*
       *Ya existe:* el grafo carga todo el historial alcanzable (100k commits
       en ~0,5 s, `docs/benchmarks.md`) con el asunto, el autor y el hash de
       cada commit. El cuerpo del mensaje se pide aparte (detalle). Está la
@@ -2583,12 +2583,14 @@ principio y toda operación destructiva pasa por confirmación.
         como argumentos separados (`--grep=…`, `--author=…`, `--` antes de
         las rutas) y como texto literal, salvo que se pida una expresión
         regular (`--fixed-strings` por defecto). Ninguna dependencia nueva.
-      *Decisiones que propongo (pendientes del usuario):*
+      *Decisiones del usuario* (las propuestas, aprobadas, con dos
+      añadidos en la 1):
       1. **Cómo se ven los resultados:** se resaltan en el grafo, el resto
          se atenúa y se salta entre ellos con «Siguiente» y «Anterior» (⌘G
          / ⇧⌘G) y un contador «3 de 120». El grafo no pierde su forma.
-         Alternativa: filtrar el grafo y mostrar solo los que coinciden
-         (las líneas entre ellos dejarían de tener sentido).
+         Añadidos: si un resultado está en un commit que el grafo aún no ha
+         cargado, al saltar a él el grafo carga hasta ahí y lo selecciona;
+         y mientras la búsqueda sigue, el contador lo indica («3 de 120+»).
       2. **Dónde se abren el historial y el blame de un archivo:** en una
          vista que ocupa la zona del historial, como la de conflictos, con
          «Volver al grafo» y Esc; el panel de detalle sigue mostrando el
@@ -2601,10 +2603,10 @@ principio y toda operación destructiva pasa por confirmación.
          commit añadió o quitó este texto») queda como mejora futura: es
          lo más lento con diferencia y no lo pide la tarea.
       5. **Medir con git/git:** la 12.7 necesita un clon de git/git
-         (~300 MB de descarga) fuera del repo de GitCRAFT. Se pedirá
-         permiso antes de clonarlo; los tests automáticos usan repos
-         sintéticos.
-      - [ ] **12.1 Búsqueda (core y Tauri).** `ops::search(query, sink,
+         (~300 MB de descarga) fuera del repo de GitCRAFT. Aprobado; se
+         pregunta antes de clonarlo y se dice dónde queda para poder
+         borrarlo. Los tests automáticos usan repos sintéticos.
+      - [x] **12.1 Búsqueda (core y Tauri).** `ops::search(query, sink,
         cancel)`, con `SearchQuery { text, field, regex, match_case }` y
         `field` Message / Author / Hash / Path.
         - **Mensaje:** como texto literal, `git log --format=%H%x1f%B -z`
@@ -2627,6 +2629,32 @@ principio y toda operación destructiva pasa por confirmación.
         caracteres no ASCII), un fixture de la salida real y un test que
         cancela a mitad en un repo sintético de 50k commits y comprueba que
         no queda ningún git vivo y que el primer lote llega antes del final.
+        *Hecho:* `ops/search.rs` y `parse/search.rs` en el núcleo, y los
+        comandos `search_commits` (lotes por `Channel`) y `cancel_search`.
+        - **Literal, filtrado en Rust y con progreso:** el mensaje completo,
+          el autor (`Nombre <email>`) y el hash. Sin distinguir mayúsculas,
+          también con acentos («guía» encuentra «GUÍA»).
+        - **Expresión regular, filtrada por git:** `--extended-regexp` con
+          `--grep=` o `--author=`, sin porcentaje. Si git no la entiende,
+          el error es `invalidPattern`, con su explicación.
+        - **Cambio sobre el plan:** la expresión regular solo vale para el
+          mensaje y el autor (git no la admite en rutas, y en un hash no
+          tiene sentido); en el hash y en el archivo se ignora, y la 12.2
+          desactivará la casilla.
+        - **Hash:** prefijo de al menos 4 caracteres hexadecimales; si no lo
+          tiene ninguna rama, `outside` dice qué commit es, si existe.
+        - **Archivo:** pathspec `:(top,icase)*texto*` con los comodines
+          escapados y `--full-history`, para incluir los commits de ramas
+          ya fusionadas.
+        - **Sesión:** una búsqueda nueva cancela la anterior, igual que
+          `cancel_search` y cerrar el repositorio. Incluye un HEAD separado,
+          como el grafo.
+        Tests: 13 de integración en el núcleo, con un fixture real del
+        mensaje; en un repo sintético de 50.000 commits, el primer lote
+        llega antes del final y cancelar a mitad no deja ningún git
+        trabajando en el repo (se comprueba con `lsof`). Además, 2 en Tauri
+        (una búsqueda nueva o «Cancelar» paran la anterior; HEAD separado) y
+        2 casos más del clasificador de errores.
       - [ ] **12.2 Búsqueda (UI).** Se para antes para enseñar el diseño.
         Barra de búsqueda encima del grafo con ⌘F (Ctrl+F) por el registro
         de atajos: campo, selector Mensaje / Autor / Hash / Archivo, las
@@ -2684,8 +2712,9 @@ principio y toda operación destructiva pasa por confirmación.
         `scripts/make-search-examples.sh` con un repo desechable (renombrados,
         archivos grandes, nombres con espacios y acentos).
         *Verificable:* el usuario lo prueba y lo confirma.
-      *Fuera de la 12:* buscar en el contenido de los cambios (`-S`/`-G`),
-      filtros combinados (autor y fechas a la vez), blame del archivo sin
+      *Mejora futura (decisión del usuario):* buscar en el contenido de los
+      cambios (`git log -S`/`-G`, qué commit añadió o quitó un texto).
+      *Fuera de la 12:* filtros combinados (autor y fechas a la vez), blame del archivo sin
       confirmar y búsqueda en el stash.
 - [ ] **13. Rebase interactivo visual:** reordenar, squash, editar mensaje y
       descartar.
