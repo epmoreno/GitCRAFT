@@ -2256,7 +2256,7 @@ principio y toda operación destructiva pasa por confirmación.
         capturas y los enlaces;
       - VirusTotal: 0/60 detecciones, con el mismo SHA-256.
       Las notas de la Release las revisó en el borrador antes de publicarla.
-- [ ] **11. Deshacer/rehacer** de la última operación cuando sea seguro, basado
+- [x] **11. Deshacer/rehacer** de la última operación cuando sea seguro, basado
       en el reflog. Antes de ejecutarlo se muestra qué se va a restaurar.
       *Tests:* deshacer commit, merge, rebase y reset, y se niega con cambios
       sin commitear que se perderían o tras un push.
@@ -2481,14 +2481,14 @@ principio y toda operación destructiva pasa por confirmación.
         commit perdido tras un reset hard se encuentra y se rescata con una
         rama; HEAD; una rama borrada y vuelta a crear; los plazos
         configurados) y 11 de interfaz.
-      - [ ] **11.6 Documentación y prueba a mano.** Quitar del núcleo
+      - [x] **11.6 Documentación y prueba a mano.** Quitar del núcleo
         `undo_reset` y `undo_move` con sus tests (ya no los usa la app).
         Sección en ARCHITECTURE.md y `scripts/make-undo-examples.sh`, un repo
         desechable con un remoto bare local para probar cada operación de
         la lista, una rama ya publicada (para la negativa), y un cambio sin
         confirmar que estorba.
         *Verificable:* el usuario lo prueba y lo confirma.
-        *Hecho (falta la prueba del usuario):*
+        *Hecho:*
         - **Una sola forma de deshacer:** `undo_reset` y `undo_move` ya no
           existen, y `merge` y `rebase` ya no devuelven `MoveRecord`. El
           «Deshacer» de los avisos es `undo_exactly` en el núcleo. Sus
@@ -2502,6 +2502,23 @@ principio y toda operación destructiva pasa por confirmación.
         - **Documentación y script:** sección 5j en ARCHITECTURE.md y
           `scripts/make-undo-examples.sh`, que crea `~/gitcraft-deshacer` y
           `~/gitcraft-deshacer-remoto.git`.
+        *Verificado manualmente en macOS por el usuario (tarea 11 completa)*
+        con `~/gitcraft-deshacer`, sección por sección:
+        - **A.** Deshacer y rehacer un commit con ⌘Z / ⇧⌘Z fuera del texto;
+          dentro de un campo, ⌘Z deshace el texto.
+        - **B.** Varios niveles (tag, rama, commit), y «Rehacer» se vacía
+          tras una operación nueva.
+        - **C.** Merge, «Deshacer» y «Rehacer» del aviso, y cambios que
+          estorban con «Recuperar mis cambios».
+        - **D.** Recuperar una rama borrada.
+        - **E.** Lo publicado no se deshace y se ofrece «Revertir» (con el
+          remoto local).
+        - **F.** Deshacer el reset mixed (el fallo corregido).
+        - **G.** Un cambio desde la terminal: el tooltip correcto y el botón
+          desactivado.
+        - **H.** El historial de una rama: el texto de 30/90 días, la marca,
+          el rescate con una rama, «Ver el commit», «Restablecer» solo en la
+          actual, HEAD, el teclado y la configuración del repo.
       *Mejora futura:* revertir varios commits a la vez (por ejemplo, los
       publicados que impiden deshacer una operación).
       *Fuera de la 11:* deshacer operaciones en un remoto, deshacer
