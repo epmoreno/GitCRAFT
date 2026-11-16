@@ -1417,8 +1417,8 @@
       },
       "inProgress": "Hay una operación a medias: termínala o abórtala antes",
       "changed": {
-        "undo": "Ya no se puede deshacer {{what}}: algo ha cambiado desde entonces (quizá fuera de GitCRAFT)",
-        "redo": "Ya no se puede rehacer {{what}}: algo ha cambiado desde que se deshizo"
+        "undo": "Ya no se puede deshacer {{what}}: algo ha cambiado desde entonces (quizá fuera de GitCRAFT). Ábrelo para ver por qué y el historial de la rama ({{shortcut}})",
+        "redo": "Ya no se puede rehacer {{what}}: algo ha cambiado desde que se deshizo. Ábrelo para ver por qué y el historial de la rama ({{shortcut}})"
       }
     },
     "branch": {
@@ -1459,7 +1459,7 @@
       "inProgress": "Hay un merge, rebase, cherry-pick o revert a medias: termínalo o abórtalo antes.",
       "changed": {
         "undo": "No se puede deshacer: las ramas, los tags o la rama actual ya no están donde los dejó la operación (algo ha cambiado desde entonces, quizá fuera de GitCRAFT). Para volver atrás igualmente, usa el historial de la rama.",
-        "redo": "No se puede rehacer: algo ha cambiado desde que se deshizo."
+        "redo": "No se puede rehacer: las ramas, los tags o la rama actual ya no están donde quedaron al deshacer (algo ha cambiado desde entonces, quizá fuera de GitCRAFT). Para rehacerlo igualmente, usa el historial de la rama."
       },
       "checkedOutElsewhere": "La rama «{{branch}}» está abierta en otro worktree: no se mueve desde aquí.",
       "publishedOne": "No se puede {{action}}: el commit {{short}} «{{subject}}» ya está en {{remotes}}. Quitarlo de «{{branch}}» obligaría a un push forzado, que afecta a otras personas. En su lugar puedes revertirlo: un commit nuevo que deshace sus cambios.",

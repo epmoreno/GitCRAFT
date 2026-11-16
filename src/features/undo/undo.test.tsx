@@ -127,13 +127,44 @@ describe("the toolbar buttons", () => {
     renderAll();
     await vi.waitFor(() =>
       expect(undoButton()).toHaveAccessibleDescription(
-        /Ya no se puede deshacer el commit «Añade la guía»/,
+        "Ya no se puede deshacer el commit «Añade la guía»: algo ha cambiado desde entonces (quizá fuera de GitCRAFT). Ábrelo para ver por qué y el historial de la rama (⌘Z)",
       ),
     );
-    expect(undoButton()).toBeDisabled();
+    // Something changed: still enabled, so the dialog can explain it.
+    expect(undoButton()).toBeEnabled();
+    // An operation waiting: nothing to open.
+    expect(redoButton()).toBeDisabled();
     expect(redoButton()).toHaveAccessibleDescription(
       "Hay una operación a medias: termínala o abórtala antes",
     );
+  });
+
+  it("open the dialog with the reason when something changed, both ways", async () => {
+    state(
+      { ...commitTop, refused: { type: "changed" } },
+      { ...commitTop, id: 9, refused: { type: "changed" } },
+    );
+    ipc.undoRedoPreview.mockResolvedValue({
+      status: "ok",
+      data: preview({ direction: "redo", refused: { type: "changed" } }),
+    });
+    renderAll();
+    await vi.waitFor(() => expect(redoButton()).toBeEnabled());
+    expect(redoButton()).toHaveAccessibleDescription(
+      /^Ya no se puede rehacer el commit «Añade la guía»: algo ha cambiado desde que se deshizo\. .*\(⇧⌘Z\)$/,
+    );
+    const user = userEvent.setup();
+    await user.click(redoButton());
+    expect(ipc.undoRedoPreview).toHaveBeenCalledWith(1, 9, "redo");
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent(
+      "Para rehacerlo igualmente, usa el historial de la rama.",
+    );
+    expect(
+      within(dialog).getByRole("button", {
+        name: "Ver el historial de «main»",
+      }),
+    ).toBeEnabled();
   });
 });
 

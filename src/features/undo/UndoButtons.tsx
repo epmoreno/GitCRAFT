@@ -23,7 +23,9 @@ function editable(target: EventTarget | null): boolean {
 
 /**
  * "Undo" and "Redo" in the toolbar (task 11.4), and their shortcuts. Each
- * opens the dialog with the preview; the tooltip says what, or why not.
+ * opens the dialog with the preview, also when something changed and it
+ * can no longer be done (the dialog explains it); the tooltip says what,
+ * or why not.
  */
 export function UndoButtons({
   repoId,
@@ -74,18 +76,21 @@ export function UndoButtons({
     if (top.refused?.type === "inProgress") {
       return t("undo.toolbar.inProgress");
     }
-    if (top.refused) return t(`undo.toolbar.changed.${direction}`, { what });
-    return t(`undo.toolbar.hint.${direction}`, {
-      what,
-      shortcut: label(direction),
-    });
+    const shortcut = label(direction);
+    if (top.refused) {
+      return t(`undo.toolbar.changed.${direction}`, { what, shortcut });
+    }
+    return t(`undo.toolbar.hint.${direction}`, { what, shortcut });
   };
 
   return (
     <>
       {DIRECTIONS.map((direction) => {
         const top = tops?.[direction];
-        const enabled = repoId !== null && !!top && !top.refused;
+        // Something changed: still enabled, so the dialog says why and
+        // offers the branch history. Only an operation waiting disables it.
+        const enabled =
+          repoId !== null && !!top && top.refused?.type !== "inProgress";
         return (
           <Tooltip key={direction} label={hint(direction, top)}>
             <button

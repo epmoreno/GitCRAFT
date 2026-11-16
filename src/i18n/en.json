@@ -1417,8 +1417,8 @@
       },
       "inProgress": "An operation is in progress: finish or abort it first",
       "changed": {
-        "undo": "Can no longer undo {{what}}: something changed since (maybe outside GitCRAFT)",
-        "redo": "Can no longer redo {{what}}: something changed since it was undone"
+        "undo": "Can no longer undo {{what}}: something changed since (maybe outside GitCRAFT). Open it to see why and the branch history ({{shortcut}})",
+        "redo": "Can no longer redo {{what}}: something changed since it was undone. Open it to see why and the branch history ({{shortcut}})"
       }
     },
     "branch": {
@@ -1459,7 +1459,7 @@
       "inProgress": "A merge, rebase, cherry-pick or revert is in progress: finish or abort it first.",
       "changed": {
         "undo": "It cannot be undone: the branches, tags or current branch are no longer where the operation left them (something changed since, maybe outside GitCRAFT). To go back anyway, use the branch history.",
-        "redo": "It cannot be redone: something changed since it was undone."
+        "redo": "It cannot be redone: the branches, tags or current branch are no longer where undoing left them (something changed since, maybe outside GitCRAFT). To redo it anyway, use the branch history."
       },
       "checkedOutElsewhere": "Branch “{{branch}}” is checked out in another worktree: it is not moved from here.",
       "publishedOne": "Cannot {{action}}: commit {{short}} “{{subject}}” is already on {{remotes}}. Taking it out of “{{branch}}” would need a forced push, which affects other people. You can revert it instead: a new commit that undoes its changes.",

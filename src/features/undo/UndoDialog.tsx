@@ -207,9 +207,9 @@ export function UndoDialog() {
     refused?.type === "published" && refused.commits.length === 1
       ? refused.commits[0]
       : undefined;
-  // Something changed: the branch history is the way back (task 11.5).
+  // Something changed: the branch history is the way (task 11.5).
   const history =
-    refused?.type === "changed" && direction === "undo"
+    refused?.type === "changed"
       ? preview.headFrom.type === "branch"
         ? preview.headFrom.name
         : "HEAD"

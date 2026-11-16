@@ -2447,6 +2447,11 @@ principio y toda operación destructiva pasa por confirmación.
           (`madeCopies`), para el aviso de rehacer.
         Tests: 15 de interfaz y uno más del núcleo (rehacer un reset hard
         no descarta los cambios).
+        *Cambio posterior (decisión del usuario, tras probar la 11):* si
+        algo ha cambiado desde la operación (por ejemplo, fuera de
+        GitCRAFT), «Deshacer» y «Rehacer» siguen activos: el diálogo explica
+        el motivo y ofrece «Ver el historial de «x»», también al rehacer.
+        Solo los desactiva una operación a medias.
       - [x] **11.5 Historial de una rama (reflog) (core y UI).** En el menú
         de una rama y de HEAD, «Historial de la rama…»: sus entradas del
         reflog (fecha, commit y lo que git anotó), leídas con
