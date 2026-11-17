@@ -3096,7 +3096,7 @@ principio y toda operación destructiva pasa por confirmación.
         *Para la 13.4:* el progreso del aviso de la 9 («paso n de m») cuenta
         también las líneas `fixup -C`; la vista tendrá que contar solo los
         commits.
-      - [ ] **13.3 El editor auxiliar y los comandos (Tauri).** El modo
+      - [x] **13.3 El editor auxiliar y los comandos (Tauri).** El modo
         `--rebase-todo` del ejecutable (antes de arrancar la ventana, sin
         tocar la configuración), comprobado en macOS, Windows y Linux en la
         CI con rutas con espacios y comillas; los comandos
@@ -3104,6 +3104,25 @@ principio y toda operación destructiva pasa por confirmación.
         `interactive_rebase`, y los tipos generados.
         *Verificable:* tests del modo auxiliar (lista que coincide, lista
         distinta y git no empieza, archivo que falta) y de los comandos.
+        *Hecho:*
+        - **El ejecutable:** `main.rs` atiende `--rebase-todo` antes de
+          arrancar nada (sin ventana ni configuración) y sale con el
+          código del modo auxiliar; si no, arranca la app como siempre.
+        - **Comandos:** `interactive_rebase_preview`,
+          `simulate_rebase_plan` e `interactive_rebase` (con el ejecutable
+          de la app como editor). El último entra en el diario con un tipo
+          propio, `OpKind::InteractiveRebase { branch }`, que «Deshacer»
+          describe como «el rebase interactivo de «main»» (es/en).
+        - Tipos de TypeScript generados.
+        Tests: el ejecutable de la app sin el token, con otro token y sin
+        argumentos sale con error, sin ventana y sin tocar nada; con el
+        rebase que lanza GitCRAFT, reordena y cambia un mensaje
+        (`tests/rebase_editor.rs`, en la CI de los tres sistemas). En la
+        sesión: vista previa, simulación, nada si el repo cambió, y que se
+        registra y se deshace (con un editor de prueba, solo en Unix: el
+        de verdad ya se prueba aparte). El texto de «Deshacer» en es/en.
+        La ruta con espacios, paréntesis, comillas y acentos ya la prueba
+        el núcleo en los tres sistemas.
       - [ ] **13.4 La vista (UI).** Se para antes para enseñar el diseño.
         Entrada en el menú de un commit de la rama actual. La vista ocupa
         la zona del historial, como la de conflictos y el blame: la lista

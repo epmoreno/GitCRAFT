@@ -65,6 +65,7 @@ pub struct RangeCommit {
     pub message: String,
     pub author: String,
     /// Seconds since the epoch.
+    #[cfg_attr(feature = "specta", specta(type = i32))]
     pub author_time: i64,
     /// A remote branch has it: rewriting it needs a forced push.
     pub published: bool,

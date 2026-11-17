@@ -762,8 +762,8 @@ async fn is_undone_exactly() {
     )
     .await;
     let after = state(&repo).await;
-    let kind = OpKind::Rebase {
-        onto: "main".into(),
+    let kind = OpKind::InteractiveRebase {
+        branch: "main".into(),
     };
     let rec = record(
         repo.git(),

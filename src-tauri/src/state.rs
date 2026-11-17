@@ -26,6 +26,9 @@ use gitcraft_core::ops::discard::{
 use gitcraft_core::ops::file_history::{self, FileHistorySummary};
 use gitcraft_core::ops::in_progress::{self, ConflictSides, ContinueOutcome, commit_ref};
 use gitcraft_core::ops::init::{self, InitCheck};
+use gitcraft_core::ops::interactive_rebase::{
+    self, InteractiveOutcome, InteractivePreview, InteractiveRequest, PlanPreview, RebasePlan,
+};
 use gitcraft_core::ops::journal::{OpKind, OpRecord};
 use gitcraft_core::ops::maintenance::{
     COMMIT_GRAPH_SUGGESTION_THRESHOLD, has_commit_graph, write_commit_graph,
@@ -224,7 +227,18 @@ pub struct AppState {
     notify_change: ChangeNotifier,
     /// Where discarded untracked files go (the system Trash).
     trash: Arc<dyn Trash>,
+    /// The program git runs as the interactive rebase's sequence editor:
+    /// this app's own executable, in its todo helper mode (task 13).
+    rebase_editor: Option<PathBuf>,
     inner: Mutex<Inner>,
+}
+
+/// The outcome of an interactive rebase, with the id to undo it once done.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct InteractiveResult {
+    pub outcome: InteractiveOutcome,
+    pub undo_id: Option<u32>,
 }
 
 /// The outcome of a merge or rebase, with the id to undo it once done.
@@ -272,6 +286,7 @@ impl AppState {
             settings_file,
             notify_change,
             trash: Arc::new(SystemTrash),
+            rebase_editor: std::env::current_exe().ok(),
             inner: Mutex::new(Inner {
                 settings,
                 ..Inner::default()
@@ -1155,6 +1170,12 @@ impl AppState {
         self
     }
 
+    #[cfg(test)]
+    fn with_rebase_editor(mut self, editor: PathBuf) -> Self {
+        self.rebase_editor = Some(editor);
+        self
+    }
+
     /// Working directory and index status of session `id`.
     pub async fn working_status(&self, id: RepoId) -> Result<WorkingStatus, IpcError> {
         let git = self.git.as_ref().ok_or(GitError::GitNotFound)?;
@@ -1965,6 +1986,82 @@ impl AppState {
             )
             .await?;
         Ok(MoveResult { outcome, undo_id })
+    }
+
+    /// What an interactive rebase from `from` (a commit of the current
+    /// branch) up to HEAD would take (task 13.1). Read-only.
+    pub async fn interactive_rebase_preview(
+        &self,
+        id: RepoId,
+        from: &str,
+    ) -> Result<InteractivePreview, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(interactive_rebase::interactive_rebase_preview(
+            git,
+            &repo,
+            from,
+            &CancellationToken::new(),
+        )
+        .await?)
+    }
+
+    /// What a plan would do (task 13.1): read-only, apart from loose
+    /// objects.
+    pub async fn simulate_rebase_plan(
+        &self,
+        id: RepoId,
+        plan: &RebasePlan,
+    ) -> Result<PlanPreview, IpcError> {
+        let git = self.git()?;
+        let repo = self.session_path(id)?;
+        Ok(interactive_rebase::simulate_plan(git, &repo, plan, &CancellationToken::new()).await?)
+    }
+
+    /// Applies the plan the user accepted (task 13.2), with "Undo" once
+    /// done, like the rebase.
+    pub async fn interactive_rebase(
+        &self,
+        id: RepoId,
+        request: InteractiveRequest,
+    ) -> Result<InteractiveResult, IpcError> {
+        let git = self.git()?;
+        let editor = self.rebase_editor.clone().ok_or_else(|| {
+            GitError::Io(std::io::Error::other(
+                "GitCRAFT could not find its own executable",
+            ))
+        })?;
+        let cancel = CancellationToken::new();
+        let ((outcome, _), undo_id) = self
+            .recorded(
+                id,
+                |repo| async move {
+                    let branch = git
+                        .read(&repo)
+                        .args(["symbolic-ref", "-q", "--short", "HEAD"])
+                        .accept_exit_code(1)
+                        .output(&cancel)
+                        .await?
+                        .stdout_lossy()
+                        .trim()
+                        .to_owned();
+                    let outcome = interactive_rebase::interactive_rebase(
+                        git, &repo, &request, &editor, &cancel,
+                    )
+                    .await?;
+                    Ok((outcome, branch))
+                },
+                |(outcome, branch): &(InteractiveOutcome, String)| match outcome {
+                    InteractiveOutcome::Done { .. } | InteractiveOutcome::Conflicted { .. } => {
+                        Described::kind(OpKind::InteractiveRebase {
+                            branch: branch.clone(),
+                        })
+                    }
+                    InteractiveOutcome::NotDone { .. } => None,
+                },
+            )
+            .await?;
+        Ok(InteractiveResult { outcome, undo_id })
     }
 
     /// Searches session `id`'s history (task 12.1), handing over the
@@ -3211,6 +3308,114 @@ mod tests {
             OpKind::CreateTag { name } => format!("tag {name}"),
             other => format!("{other:?}"),
         }
+    }
+
+    /// A session with base, A, B and C (each its own file).
+    async fn interactive_sample(f: &Fixture) -> (TestRepo, RepoId, [String; 3]) {
+        let repo = TestRepo::new().await;
+        repo.commit_file("base.txt", "base\n", "Base").await;
+        let a = repo.commit_file("a.txt", "a\n", "A").await;
+        let b = repo.commit_file("b.txt", "b\n", "B").await;
+        let c = repo.commit_file("c.txt", "c\n", "C").await;
+        let id = f.state.open_repository(repo.path()).await.expect("open").id;
+        (repo, id, [a, b, c])
+    }
+
+    fn reorder(preview: &InteractivePreview, [a, b, c]: &[String; 3]) -> InteractiveRequest {
+        use interactive_rebase::{PlanStep, StepAction};
+        let step = |oid: &String| PlanStep {
+            oid: oid.clone(),
+            action: StepAction::Pick,
+            message: None,
+        };
+        InteractiveRequest {
+            plan: RebasePlan {
+                from: preview.from.clone(),
+                steps: vec![step(a), step(c), step(b)],
+                expected: preview.fingerprint.clone(),
+            },
+            save_changes: false,
+            allow_conflicts: false,
+        }
+    }
+
+    #[tokio::test]
+    async fn interactive_rebase_previews_and_does_nothing_if_the_repo_changed() {
+        let f = fixture();
+        let (repo, id, commits) = interactive_sample(&f).await;
+        let preview = f
+            .state
+            .interactive_rebase_preview(id, &commits[0])
+            .await
+            .expect("preview");
+        assert_eq!(preview.commits.len(), 3);
+        let request = reorder(&preview, &commits);
+        let plan = f
+            .state
+            .simulate_rebase_plan(id, &request.plan)
+            .await
+            .expect("simulate");
+        assert_eq!(plan.problem, None);
+        assert_eq!(plan.rewritten, 2);
+
+        repo.commit_file("d.txt", "d\n", "D").await;
+        let result = f
+            .state
+            .interactive_rebase(id, request)
+            .await
+            .expect("interactive rebase");
+        assert!(matches!(
+            result.outcome,
+            InteractiveOutcome::NotDone { changed: true, .. }
+        ));
+        assert_eq!(result.undo_id, None);
+        assert_eq!(top(&f, id).await.undo.map(|e| e.kind), None);
+    }
+
+    /// The real helper is tested in gitcraft-core and, as this app's own
+    /// executable, in tests/rebase_editor.rs; here a stand-in (a shell
+    /// script that puts the plan in place) checks the session's part.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn interactive_rebase_is_recorded_and_undone() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().expect("tempdir");
+        let editor = dir.path().join("editor");
+        std::fs::write(&editor, "#!/bin/sh\ntail -n +4 \"$2\" > \"$3\"\n").expect("write");
+        std::fs::set_permissions(&editor, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+        let f = fixture();
+        let f = Fixture {
+            state: f.state.with_rebase_editor(editor),
+            ..f
+        };
+        let (repo, id, commits) = interactive_sample(&f).await;
+        let before = repo.head().await;
+        let preview = f
+            .state
+            .interactive_rebase_preview(id, &commits[0])
+            .await
+            .expect("preview");
+        let result = f
+            .state
+            .interactive_rebase(id, reorder(&preview, &commits))
+            .await
+            .expect("interactive rebase");
+        assert!(
+            matches!(result.outcome, InteractiveOutcome::Done { .. }),
+            "{result:?}"
+        );
+        assert!(result.undo_id.is_some());
+        let subjects = repo.run(&["log", "--format=%s", "-2"]).await;
+        assert_eq!(subjects.lines().collect::<Vec<_>>(), ["B", "C"]);
+        let undo = top(&f, id).await.undo.expect("undo");
+        assert_eq!(
+            undo.kind,
+            OpKind::InteractiveRebase {
+                branch: "main".into()
+            }
+        );
+        from_dialog(&f, id, Direction::Undo).await;
+        assert_eq!(repo.head().await, before);
     }
 
     #[tokio::test]

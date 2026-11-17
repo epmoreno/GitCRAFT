@@ -20,6 +20,9 @@ use gitcraft_core::ops::discard::{DiscardTarget, DiscardedFile};
 use gitcraft_core::ops::file_history::FileHistorySummary;
 use gitcraft_core::ops::in_progress::{ConflictSides, ContinueOutcome};
 use gitcraft_core::ops::init::InitCheck;
+use gitcraft_core::ops::interactive_rebase::{
+    InteractivePreview, InteractiveRequest, PlanPreview, RebasePlan,
+};
 use gitcraft_core::ops::merge_rebase::{MergeRequest, MovePreview, RebaseRequest};
 use gitcraft_core::ops::pick::{PickOutcome, PickPreview};
 use gitcraft_core::ops::reflog::Reflog;
@@ -43,8 +46,8 @@ use crate::error::IpcError;
 use crate::history::{CommandHistory, CommandRecord};
 use crate::settings::{GeneralSettings, RecentRepository};
 use crate::state::{
-    AppState, DiscardResult, GhStatus, GraphEvent, MoveResult, OpenedRepository, PublishInfo,
-    PullModeInfo, RepoId, ResetResult, RestoredSession,
+    AppState, DiscardResult, GhStatus, GraphEvent, InteractiveResult, MoveResult, OpenedRepository,
+    PublishInfo, PullModeInfo, RepoId, ResetResult, RestoredSession,
 };
 use crate::undo::{UndoResult, UndoState};
 use gitcraft_core::gh::LoginEvent;
@@ -1254,6 +1257,42 @@ pub async fn rebase_branch(
     request: RebaseRequest,
 ) -> Result<MoveResult, IpcError> {
     state.rebase(id, request).await
+}
+
+/// What an interactive rebase from `from` (a commit of the current branch)
+/// up to HEAD would take (task 13). Read-only.
+#[tauri::command]
+#[specta::specta]
+pub async fn interactive_rebase_preview(
+    state: State<'_, AppState>,
+    id: RepoId,
+    from: String,
+) -> Result<InteractivePreview, IpcError> {
+    state.interactive_rebase_preview(id, &from).await
+}
+
+/// What a plan of the interactive rebase would do: read-only, apart from
+/// loose objects to predict conflicts (task 13).
+#[tauri::command]
+#[specta::specta]
+pub async fn simulate_rebase_plan(
+    state: State<'_, AppState>,
+    id: RepoId,
+    plan: RebasePlan,
+) -> Result<PlanPreview, IpcError> {
+    state.simulate_rebase_plan(id, &plan).await
+}
+
+/// Applies the interactive rebase the user accepted (task 13): checks
+/// everything again and does nothing the user did not accept.
+#[tauri::command]
+#[specta::specta]
+pub async fn interactive_rebase(
+    state: State<'_, AppState>,
+    id: RepoId,
+    request: InteractiveRequest,
+) -> Result<InteractiveResult, IpcError> {
+    state.interactive_rebase(id, request).await
 }
 
 /// When `remote` was last fetched, as far as git can tell.

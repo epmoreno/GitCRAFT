@@ -98,6 +98,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::cancel_blame,
             commands::merge_branch,
             commands::rebase_branch,
+            commands::interactive_rebase_preview,
+            commands::simulate_rebase_plan,
+            commands::interactive_rebase,
             commands::last_fetch,
             commands::check_tag_name,
             commands::tag_info,
@@ -143,6 +146,16 @@ fn specta_builder() -> Builder<tauri::Wry> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// The interactive rebase's todo helper (task 13): git runs this
+/// executable as its sequence editor, `--rebase-todo <plan> <todo>`. It only
+/// does anything with the one-time token of the rebase GitCRAFT started;
+/// see `gitcraft_core::ops::interactive_rebase::apply_todo`. `None`: a
+/// normal start.
+pub fn rebase_todo_helper() -> Option<i32> {
+    let args: Vec<_> = std::env::args_os().skip(1).collect();
+    gitcraft_core::ops::interactive_rebase::todo_helper_main(&args)
+}
+
 pub fn run() {
     let builder = specta_builder();
     tauri::Builder::default()

@@ -744,6 +744,14 @@ combinar con el anterior, descartar y reordenar.
   `git rebase --interactive --empty=drop` con `-c` que fijan el formato de
   la lista, `GIT_EDITOR=true` y el token en el entorno. El archivo del plan
   se borra siempre al volver git.
+- **La app (13.3):** `main.rs` mira primero si la han lanzado como editor
+  auxiliar (`--rebase-todo`): entonces solo hace eso y sale, sin ventana
+  ni configuración. `AppState` guarda su propio ejecutable
+  (`current_exe`) para pasárselo al rebase. Comandos
+  `interactive_rebase_preview`, `simulate_rebase_plan` e
+  `interactive_rebase`; el último entra en el diario como
+  `OpKind::InteractiveRebase { branch }` («el rebase interactivo de
+  «main»») y se deshace como cualquier otra operación.
 - **Cómo se le da el plan a git (13.2 y 13.3):** `git rebase -i` con
   GitCRAFT como `GIT_SEQUENCE_EDITOR` en un modo auxiliar que solo
   funciona con un token de un solo uso que pone GitCRAFT en el entorno;
@@ -1068,6 +1076,7 @@ específica de un sistema se apunta en esta tabla.
 | Abrir el navegador | `src-tauri/src/state.rs`, `platform.rs` (`Os::open_url_command`) | `/usr/bin/open <url>` | `explorer.exe <url>` | `xdg-open <url>` | Hecho en P.6 |
 | Atajos de teclado | `src/app/shortcuts.ts` (modificador `primary` y combinaciones con `os`), `src/app/platform.ts` (`navigator.platform`), `useShortcutLabel` | ⌘ como modificador principal; textos con símbolos (`⌘W`, `⌃⇧⇥`) | Ctrl; descartar con Ctrl+Supr; textos como `Ctrl+Mayús+Tab` | Igual que Windows | Hecho en P.4 |
 | Barra de menús | `src/app/menu.ts` (`macMenu`, `windowsAndLinuxMenu`) | Menú de la app con elementos de macOS (Servicios, Ocultar…) | Barra dentro de la ventana: Archivo, Edición, Ayuda, con los aceleradores del registro; «Salir» cierra la ventana | Igual que Windows | Hecho en P.9 |
+| Editor auxiliar del rebase interactivo | `ops/interactive_rebase.rs` (`sequence_editor`, `todo_helper_main`), `src-tauri/src/main.rs` | git lanza el propio ejecutable de la app con su `sh`; la ruta va entre comillas simples escapadas | La misma, con `/` en vez de `\` (el `sh` de Git for Windows lee los dos) | Igual que macOS | Hecho en la 13.3; la CI lo prueba en los tres con una ruta con espacios, paréntesis, comillas y acentos |
 | Barra de título | `tauri.conf.json` (`titleBarStyle: Overlay`, `hiddenTitle`: solo macOS, los demás sistemas los ignoran), `App.module.css` (hueco de 84 px, solo con `html[data-os="mac"]`), zona de arrastre (`Toolbar.tsx`, solo en macOS) | Barra de herramientas dentro de la barra de título | Decoraciones del sistema, sin hueco ni zona de arrastre | Igual que Windows | Hecho en P.10 |
 | Textos que nombran macOS | `src/i18n/*.json`: variantes `_windows`/`_linux` de los textos que dependen del sistema (instalar git y gh, Papelera, `~/.gitconfig`, dónde guarda gh la sesión, credential helper); `osKey` y `useOsText` eligen la del sistema | Los de siempre (texto base, sin sufijo) | Papelera de reciclaje, `%USERPROFILE%\.gitconfig`, Administrador de credenciales de Windows, Git Credential Manager, `winget` | Papelera, `~/.gitconfig`, almacén de claves del sistema, libsecret, gestor de paquetes | Hecho en P.6 y P.9 |
 | Motor web | CSS: `color-mix()`, `user-select`, `-webkit-font-smoothing`, fuentes | WKWebView | WebView2 (Chromium) | WebKitGTK 2.40+ | Revisado en P.10: ver «Motores web» más abajo |

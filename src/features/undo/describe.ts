@@ -16,6 +16,8 @@ export function describeOp(t: TFunction, kind: OpKind): string {
       });
     case "rebase":
       return t("undo.what.rebase", { onto: kind.onto });
+    case "interactiveRebase":
+      return t("undo.what.interactiveRebase", { branch: kind.branch });
     case "reset":
       return t("undo.what.reset", { target: kind.target.slice(0, 7) });
     case "pull":

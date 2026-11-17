@@ -1399,6 +1399,7 @@
       "merge": "el merge de «{{source}}»",
       "fastForward": "el fast-forward de «{{source}}»",
       "rebase": "el rebase sobre «{{onto}}»",
+      "interactiveRebase": "el rebase interactivo de «{{branch}}»",
       "reset": "el reset a {{target}}",
       "cherryPick": "el cherry-pick de «{{summary}}»",
       "revert": "el revert de «{{summary}}»",

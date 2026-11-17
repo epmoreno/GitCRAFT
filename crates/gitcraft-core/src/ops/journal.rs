@@ -43,6 +43,10 @@ pub enum OpKind {
     Rebase {
         onto: String,
     },
+    /// A visual interactive rebase of the current branch (task 13).
+    InteractiveRebase {
+        branch: String,
+    },
     Reset {
         mode: ResetMode,
         target: String,

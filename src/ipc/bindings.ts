@@ -217,6 +217,21 @@ export const commands = {
 	 *  everything again and does nothing the user did not accept.
 	 */
 	rebaseBranch: (id: number, request: RebaseRequest) => typedError<MoveResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("rebase_branch", { id, request })),
+	/**
+	 *  What an interactive rebase from `from` (a commit of the current branch)
+	 *  up to HEAD would take (task 13). Read-only.
+	 */
+	interactiveRebasePreview: (id: number, from: string) => typedError<InteractivePreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("interactive_rebase_preview", { id, from })),
+	/**
+	 *  What a plan of the interactive rebase would do: read-only, apart from
+	 *  loose objects to predict conflicts (task 13).
+	 */
+	simulateRebasePlan: (id: number, plan: RebasePlan_Deserialize) => typedError<PlanPreview_Serialize, IpcError_Serialize>(__TAURI_INVOKE("simulate_rebase_plan", { id, plan })),
+	/**
+	 *  Applies the interactive rebase the user accepted (task 13): checks
+	 *  everything again and does nothing the user did not accept.
+	 */
+	interactiveRebase: (id: number, request: InteractiveRequest_Deserialize) => typedError<InteractiveResult_Serialize, IpcError_Serialize>(__TAURI_INVOKE("interactive_rebase", { id, request })),
 	/**  When `remote` was last fetched, as far as git can tell. */
 	lastFetch: (id: number, remote: string) => typedError<LastFetch_Serialize, IpcError_Serialize>(__TAURI_INVOKE("last_fetch", { id, remote })),
 	checkTagName: (id: number, name: string) => typedError<TagNameCheck, IpcError_Serialize>(__TAURI_INVOKE("check_tag_name", { id, name })),
@@ -1612,6 +1627,139 @@ export type InitCheck_Serialize = {
 	empty: boolean,
 };
 
+export type InteractiveOutcome = InteractiveOutcome_Serialize | InteractiveOutcome_Deserialize;
+
+export type InteractiveOutcome_Deserialize = 
+/**  Done: the branch is at `head`. */
+{ kind: "done"; head: string; saved?: string | null } | 
+/**
+ *  Stopped on conflicts in these files: a rebase is waiting (task 9's
+ *  banner and view).
+ */
+{ kind: "conflicted"; files: string[]; saved?: string | null } | 
+/**
+ *  Nothing was done; the previews say why. `changed`: the repository
+ *  is no longer as the preview the user accepted saw it.
+ */
+{ kind: "notDone"; preview: InteractivePreview_Deserialize; plan: PlanPreview_Deserialize; changed: boolean; saved?: string | null };
+
+export type InteractiveOutcome_Serialize = 
+/**  Done: the branch is at `head`. */
+{ kind: "done"; head: string; saved: string | null } | 
+/**
+ *  Stopped on conflicts in these files: a rebase is waiting (task 9's
+ *  banner and view).
+ */
+{ kind: "conflicted"; files: string[]; saved: string | null } | 
+/**
+ *  Nothing was done; the previews say why. `changed`: the repository
+ *  is no longer as the preview the user accepted saw it.
+ */
+{ kind: "notDone"; preview: InteractivePreview_Serialize; plan: PlanPreview_Serialize; changed: boolean; saved: string | null };
+
+export type InteractivePreview = InteractivePreview_Serialize | InteractivePreview_Deserialize;
+
+export type InteractivePreview_Deserialize = {
+	/**  The current branch (`None`: detached HEAD or no commits). */
+	branch?: string | null,
+	/**  The commit chosen: the oldest one of the range. */
+	from: string,
+	/**
+	 *  Its parent, which the range is replayed onto (`None`: it is the root
+	 *  commit, and the whole branch is replayed).
+	 */
+	base?: string | null,
+	refused?: InteractiveRefusal | null,
+	/**  Oldest first, as git applies them; empty when refused. */
+	commits: RangeCommit[],
+	/**  Remote branches with some commit of the range. */
+	publishedIn: string[],
+	/**  Uncommitted changes in the way, and which files. */
+	blocked?: MoveBlock | null,
+	blocking: BlockingFile[],
+	/**  New messages (reword and squash) are possible (git ≥ 2.32). */
+	messages: boolean,
+	/**  Conflicts can be predicted exactly (git ≥ 2.40). */
+	exact: boolean,
+	/**  The repository as the preview saw it: nothing is done if it changed. */
+	fingerprint: string,
+};
+
+export type InteractivePreview_Serialize = {
+	/**  The current branch (`None`: detached HEAD or no commits). */
+	branch: string | null,
+	/**  The commit chosen: the oldest one of the range. */
+	from: string,
+	/**
+	 *  Its parent, which the range is replayed onto (`None`: it is the root
+	 *  commit, and the whole branch is replayed).
+	 */
+	base: string | null,
+	refused: InteractiveRefusal | null,
+	/**  Oldest first, as git applies them; empty when refused. */
+	commits: RangeCommit[],
+	/**  Remote branches with some commit of the range. */
+	publishedIn: string[],
+	/**  Uncommitted changes in the way, and which files. */
+	blocked: MoveBlock | null,
+	blocking: BlockingFile[],
+	/**  New messages (reword and squash) are possible (git ≥ 2.32). */
+	messages: boolean,
+	/**  Conflicts can be predicted exactly (git ≥ 2.40). */
+	exact: boolean,
+	/**  The repository as the preview saw it: nothing is done if it changed. */
+	fingerprint: string,
+};
+
+/**  Why it cannot be done at all. */
+export type InteractiveRefusal = 
+/**  A merge, rebase… is waiting for the user. */
+"inProgress" | 
+/**  HEAD is not on a branch (or there are no commits yet). */
+"detached" | 
+/**  The commit is not in the current branch. */
+"notInBranch" | 
+/**  The range has merges, which would have to be redone. */
+"mergesInRange" | 
+/**  More than [`MAX_COMMITS`] commits. */
+"tooMany";
+
+/**  What the user accepted. */
+export type InteractiveRequest = InteractiveRequest_Serialize | InteractiveRequest_Deserialize;
+
+/**  What the user accepted. */
+export type InteractiveRequest_Deserialize = {
+	plan: RebasePlan_Deserialize,
+	/**  Stash the changes in the way first. */
+	saveChanges: boolean,
+	/**  Start even if it is predicted to stop with conflicts. */
+	allowConflicts: boolean,
+};
+
+/**  What the user accepted. */
+export type InteractiveRequest_Serialize = {
+	plan: RebasePlan_Serialize,
+	/**  Stash the changes in the way first. */
+	saveChanges: boolean,
+	/**  Start even if it is predicted to stop with conflicts. */
+	allowConflicts: boolean,
+};
+
+/**  The outcome of an interactive rebase, with the id to undo it once done. */
+export type InteractiveResult = InteractiveResult_Serialize | InteractiveResult_Deserialize;
+
+/**  The outcome of an interactive rebase, with the id to undo it once done. */
+export type InteractiveResult_Deserialize = {
+	outcome: InteractiveOutcome_Deserialize,
+	undoId?: number | null,
+};
+
+/**  The outcome of an interactive rebase, with the id to undo it once done. */
+export type InteractiveResult_Serialize = {
+	outcome: InteractiveOutcome_Serialize,
+	undoId: number | null,
+};
+
 /**
  *  Error returned by every command. The UI shows a translated message for
  *  `kind` and offers `details` (git's original output) on demand.
@@ -1993,7 +2141,9 @@ export type NamedCommit = {
 /**  What the operation was, for its texts ("Undo commit «x»"). */
 export type OpKind = { type: "commit"; summary: string } | { type: "amend"; summary: string } | 
 /**  A merge into the current branch, or the fast-forward of a branch. */
-{ type: "merge"; source: string; fastForward: boolean } | { type: "rebase"; onto: string } | { type: "reset"; mode: ResetMode; target: string } | { type: "cherryPick"; summary: string } | { type: "revert"; summary: string } | 
+{ type: "merge"; source: string; fastForward: boolean } | { type: "rebase"; onto: string } | 
+/**  A visual interactive rebase of the current branch (task 13). */
+{ type: "interactiveRebase"; branch: string } | { type: "reset"; mode: ResetMode; target: string } | { type: "cherryPick"; summary: string } | { type: "revert"; summary: string } | 
 /**  The local part of a pull (its merge or rebase). */
 { type: "pull"; branch: string } | { type: "checkout"; branch: string } | { type: "createBranch"; name: string } | { type: "renameBranch"; old: string; new: string } | { type: "deleteBranch"; name: string } | { type: "createTag"; name: string } | { type: "deleteTag"; name: string };
 
@@ -2117,6 +2267,101 @@ export type PickRefusal =
 "alreadyInBranch" | 
 /**  Revert: the commit is not in the current branch. */
 "notInBranch";
+
+/**  What a plan would do. */
+export type PlanPreview = PlanPreview_Serialize | PlanPreview_Deserialize;
+
+/**  What a plan would do. */
+export type PlanPreview_Deserialize = {
+	problem?: PlanProblem | null,
+	/**  Commits the plan drops. */
+	dropped: CommitRef[],
+	/**
+	 *  Commits whose change is already there once reordered: git leaves
+	 *  them out.
+	 */
+	empty: CommitRef[],
+	stopsAt?: PlanStop | null,
+	/**  `false`: this git cannot predict conflicts, so `stops_at` is unknown. */
+	predicted: boolean,
+	/**
+	 *  Commits the branch ends with, from the chosen one (if it does not
+	 *  stop).
+	 */
+	commitsAfter: number,
+	/**  Commits that get new ids or are dropped. */
+	rewritten: number,
+	/**  Remote branches with some of the rewritten or dropped commits. */
+	publishedIn: string[],
+};
+
+/**  What a plan would do. */
+export type PlanPreview_Serialize = {
+	problem: PlanProblem | null,
+	/**  Commits the plan drops. */
+	dropped: CommitRef[],
+	/**
+	 *  Commits whose change is already there once reordered: git leaves
+	 *  them out.
+	 */
+	empty: CommitRef[],
+	stopsAt: PlanStop | null,
+	/**  `false`: this git cannot predict conflicts, so `stops_at` is unknown. */
+	predicted: boolean,
+	/**
+	 *  Commits the branch ends with, from the chosen one (if it does not
+	 *  stop).
+	 */
+	commitsAfter: number,
+	/**  Commits that get new ids or are dropped. */
+	rewritten: number,
+	/**  Remote branches with some of the rewritten or dropped commits. */
+	publishedIn: string[],
+};
+
+/**  Why a plan cannot be applied as it is. */
+export type PlanProblem = 
+/**  The repository changed since the preview: make a new one. */
+{ kind: "changed" } | 
+/**  The preview refuses it (see [`InteractivePreview::refused`]). */
+{ kind: "refused" } | 
+/**  The plan does not have every commit of the range exactly once. */
+{ kind: "mismatch" } | 
+/**  The first commit kept is combined with nothing below it. */
+{ kind: "squashFirst" } | 
+/**  Every commit is dropped. */
+{ kind: "allDropped" } | 
+/**  A reword or squash without a message. */
+{ kind: "emptyMessage"; oid: string } | 
+/**  Reword and squash need git ≥ 2.32. */
+{ kind: "messagesNeedNewerGit" } | 
+/**  The plan leaves everything as it is. */
+{ kind: "unchanged" };
+
+export type PlanStep = PlanStep_Serialize | PlanStep_Deserialize;
+
+export type PlanStep_Deserialize = {
+	oid: string,
+	action: StepAction,
+	/**  Reword and squash: the new message. */
+	message?: string | null,
+};
+
+export type PlanStep_Serialize = {
+	oid: string,
+	action: StepAction,
+	/**  Reword and squash: the new message. */
+	message: string | null,
+};
+
+/**  Where the plan would stop with conflicts. */
+export type PlanStop = {
+	/**  1-based, among the commits kept (`of` of them). */
+	step: number,
+	of: number,
+	commit: CommitRef,
+	files: string[],
+};
 
 /**  Everything the "Publish on GitHub" dialog shows before publishing. */
 export type PublishInfo = PublishInfo_Serialize | PublishInfo_Deserialize;
@@ -2264,6 +2509,46 @@ export type PushReject =
 "stale" | 
 /**  Refused by the remote itself (hooks, protected branch…). */
 "remote" | "other";
+
+/**  One commit of the range. */
+export type RangeCommit = {
+	commit: CommitRef,
+	/**  The whole message, without the trailing newline. */
+	message: string,
+	author: string,
+	/**  Seconds since the epoch. */
+	authorTime: number,
+	/**  A remote branch has it: rewriting it needs a forced push. */
+	published: boolean,
+};
+
+/**
+ *  The user's plan: every commit of the range once, in the order git will
+ *  apply them (oldest first).
+ */
+export type RebasePlan = RebasePlan_Serialize | RebasePlan_Deserialize;
+
+/**
+ *  The user's plan: every commit of the range once, in the order git will
+ *  apply them (oldest first).
+ */
+export type RebasePlan_Deserialize = {
+	from: string,
+	steps: PlanStep_Deserialize[],
+	/**  The preview's fingerprint. */
+	expected: string,
+};
+
+/**
+ *  The user's plan: every commit of the range once, in the order git will
+ *  apply them (oldest first).
+ */
+export type RebasePlan_Serialize = {
+	from: string,
+	steps: PlanStep_Serialize[],
+	/**  The preview's fingerprint. */
+	expected: string,
+};
 
 /**  Position in a rebase: replaying commit `current` of `total` (1-based). */
 export type RebaseProgress = {
@@ -2788,6 +3073,20 @@ export type StatusEntry_Serialize = {
 	oldPath: string | null,
 	status: FileStatus,
 };
+
+/**  What to do with one commit. */
+export type StepAction = 
+/**  Keep it as it is. */
+"pick" | 
+/**  Keep it with a new message. */
+"reword" | 
+/**
+ *  Combine it with the commit before it (below in the list); `message`
+ *  is the message of the combined commit.
+ */
+"squash" | 
+/**  Leave it out. */
+"drop";
 
 /**  A tag as the user sees it. */
 export type TagInfo = {
