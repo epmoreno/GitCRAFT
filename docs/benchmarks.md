@@ -109,4 +109,25 @@ Conclusiones:
   cada commit y no puede usar los filtros de Bloom. Llega por partes desde
   los 50 ms y se puede cancelar, así que no bloquea nada. Mejora posible:
   cuando el texto es una ruta exacta que existe, buscar solo esa ruta
-  (git sí usa entonces los filtros de Bloom).
+  (git sí usa entonces los filtros de Bloom). Hecha el 2026-11-17 (abajo).
+
+### 2026-11-17 — Búsqueda por la ruta exacta (Apple M4, git 2.55.0)
+
+Si el texto es un archivo o una carpeta del índice, la búsqueda por
+archivo busca solo esa ruta (`:(literal)diff.c`) en vez de toda ruta que
+contenga el texto (`*diff.c*`). Mismo banco y mismo clon de git/git; «sin
+`commit-graph`» se mide desactivándolo con `core.commitGraph=false`.
+
+| Archivo «diff.c» en git/git | Sin `commit-graph` (primero / todo) | Con `commit-graph --changed-paths` |
+| --- | --- | --- |
+| Antes: toda ruta que lo contiene (20.196) | 50 / 9.018 ms | 50 / 8.381 ms |
+| Ahora: la ruta exacta (18.200) | 26 / 1.376 ms | 24 / 427 ms |
+
+En el sintético de 50.000 commits («src/grande.txt», 5.000 resultados)
+apenas cambia: 35 / 1.268 ms y 32 / 1.153 ms. Allí cada commit toca un
+solo archivo y comparar los árboles ya era barato.
+
+Los 18.200 resultados de «diff.c» son casi todos merges: con
+`--full-history`, git lista cada merge en el que el archivo difiere de
+alguno de sus padres (aunque el merge no lo cambie). Sin merges son 1.201,
+los mismos que su historial.

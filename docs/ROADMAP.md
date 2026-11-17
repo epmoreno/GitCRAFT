@@ -2891,9 +2891,13 @@ principio y toda operación destructiva pasa por confirmación.
           mensajes con caracteres de expresión regular y con cuerpo; un
           archivo de 25.000 líneas y uno binario; y un commit que solo queda
           en el historial de la rama.
-        - **Pendiente del plan:** la 12.1 decía usar la ruta exacta cuando
-          existe; solo está la búsqueda «contiene el texto». Queda como
-          mejora (ver `docs/benchmarks.md`).
+        - **Pendiente del plan, hecho después:** la 12.1 decía usar la ruta
+          exacta cuando existe. Ahora, si el texto es un archivo o una
+          carpeta del índice, se busca solo esa ruta (`:(literal)`), y si
+          no, toda ruta que lo contiene. «diff.c» en git/git pasa de 8,4 s
+          a 0,43 s con `commit-graph` y de 9,0 s a 1,4 s sin él
+          (`docs/benchmarks.md`). Hay un test de integración nuevo.
+          *Falta la prueba del usuario.*
         *Verificado manualmente en macOS por el usuario (tarea 12 completa)*
         con `~/gitcraft-busqueda`, sección por sección:
         - **A. Búsqueda:** mensaje con contador, navegación con Intro y ⌘G,

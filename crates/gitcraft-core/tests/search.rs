@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use gitcraft_core::ops::search::{
-    BATCH_RESULTS, SearchBatch, SearchField, SearchQuery, SearchSummary, path_pathspec, search,
+    BATCH_RESULTS, SearchBatch, SearchField, SearchQuery, SearchSummary, exact_path, path_pathspec,
+    search,
 };
 use gitcraft_core::parse::search::{MESSAGE_FORMAT, parse_search_record};
 use gitcraft_core::testing::TestRepo;
@@ -240,6 +241,82 @@ async fn by_file_finds_every_commit_that_changed_it() {
         ..query(SearchField::Path, "src/UI")
     };
     assert!(found(&s.repo, &exact).await.is_empty());
+}
+
+#[tokio::test]
+async fn by_file_an_exact_path_is_only_that_one() {
+    let repo = TestRepo::new().await;
+    let root = repo.commit_file("diff.c", "a\n", "Root diff").await;
+    let builtin = repo
+        .commit_file("builtin/diff.c", "b\n", "Builtin diff")
+        .await;
+    let guide = repo.commit_file("Docs/Guía [x].md", "g\n", "Guide").await;
+    let dashes = repo.commit_file("-rf.txt", "d\n", "Dashes").await;
+    let sorted = |mut v: Vec<String>| {
+        v.sort();
+        v
+    };
+
+    // A tracked file: only it, not every path containing the text.
+    assert_eq!(
+        found(&repo, &query(SearchField::Path, "diff.c")).await,
+        std::slice::from_ref(&root)
+    );
+    // Spelled as in the index without "match case"; with it, no such path
+    // (and none contains it).
+    assert_eq!(
+        found(&repo, &query(SearchField::Path, "DIFF.C")).await,
+        std::slice::from_ref(&root)
+    );
+    let cased = SearchQuery {
+        match_case: true,
+        ..query(SearchField::Path, "DIFF.C")
+    };
+    assert!(found(&repo, &cased).await.is_empty());
+    // A folder, with or without the slash.
+    for text in ["builtin", "builtin/", "BUILTIN"] {
+        assert_eq!(
+            found(&repo, &query(SearchField::Path, text)).await,
+            std::slice::from_ref(&builtin),
+            "{text}"
+        );
+    }
+    // Not a path: every path containing it.
+    assert_eq!(
+        sorted(found(&repo, &query(SearchField::Path, "iff.c")).await),
+        sorted(vec![root.clone(), builtin.clone()])
+    );
+    // Brackets, accents and a leading dash are literal.
+    assert_eq!(
+        found(&repo, &query(SearchField::Path, "docs/guía [x].md")).await,
+        std::slice::from_ref(&guide)
+    );
+    assert_eq!(
+        exact_path(repo.git(), repo.path(), "docs/guía [x].md", false, &c())
+            .await
+            .expect("exact path")
+            .as_deref(),
+        Some("Docs/Guía [x].md")
+    );
+    assert_eq!(
+        found(&repo, &query(SearchField::Path, "-rf.txt")).await,
+        std::slice::from_ref(&dashes)
+    );
+    // "diff" is a prefix of "diff.c", not a path.
+    assert_eq!(
+        exact_path(repo.git(), repo.path(), "diff", false, &c())
+            .await
+            .expect("exact path"),
+        None
+    );
+
+    // Deleted: no longer tracked, so its whole history by "contains".
+    repo.run(&["rm", "--quiet", "diff.c"]).await;
+    let removed = repo.commit_with(&["-m", "Remove diff.c"]).await;
+    assert_eq!(
+        sorted(found(&repo, &query(SearchField::Path, "diff.c")).await),
+        sorted(vec![root, builtin, removed])
+    );
 }
 
 #[test]

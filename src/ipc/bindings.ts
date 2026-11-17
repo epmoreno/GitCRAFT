@@ -2630,7 +2630,10 @@ export type SearchField =
 "author" | 
 /**  The commit id, by prefix. */
 "hash" | 
-/**  The commits that changed a file whose path contains the text. */
+/**
+ *  The commits that changed a file whose path contains the text; when
+ *  the text is a tracked file or folder, only that one.
+ */
 "path";
 
 export type SearchQuery = {

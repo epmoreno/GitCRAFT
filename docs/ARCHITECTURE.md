@@ -673,8 +673,12 @@ matan el grupo de procesos de git).
   revisado (porcentaje real); sin distinguir mayúsculas con
   `to_lowercase` (Unicode). Una expresión regular se le pasa a git
   (`--extended-regexp --grep=`/`--author=`, `-i`), sin porcentaje; si git
-  no la entiende, el error es `invalidPattern`. Por archivo, pathspec
-  `:(top,icase)*texto*` con los comodines escapados y `--full-history`. Un
+  no la entiende, el error es `invalidPattern`. Por archivo: si el texto
+  es un archivo o una carpeta del índice (`git ls-files` con
+  `:(top,icase)`, escrito como en el índice), solo esa ruta con
+  `:(literal)`, que deja a git usar los filtros de Bloom del
+  `commit-graph`; si no, pathspec `:(top,icase)*texto*` con los comodines
+  escapados. En los dos casos, `--full-history`. Un
   hash sin resultados se busca con `rev-parse` fuera de las ramas
   (`outside`).
   La barra (`src/features/search/`) va encima del grafo; cada pestaña

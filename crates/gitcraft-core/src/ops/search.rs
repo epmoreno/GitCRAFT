@@ -32,7 +32,8 @@ pub enum SearchField {
     Author,
     /// The commit id, by prefix.
     Hash,
-    /// The commits that changed a file whose path contains the text.
+    /// The commits that changed a file whose path contains the text; when
+    /// the text is a tracked file or folder, only that one.
     Path,
 }
 
@@ -165,6 +166,12 @@ impl Needle {
 /// magic), git's wildcards in the text are escaped, and it is relative to
 /// the top of the repository.
 pub fn path_pathspec(text: &str, match_case: bool) -> String {
+    let magic = if match_case { "top" } else { "top,icase" };
+    format!(":({magic})*{}*", escape_wildcards(text))
+}
+
+/// `text` with git's pathspec wildcards escaped.
+fn escape_wildcards(text: &str) -> String {
     let mut escaped = String::with_capacity(text.len() + 4);
     for c in text.chars() {
         if matches!(c, '*' | '?' | '[' | ']' | '\\') {
@@ -172,8 +179,46 @@ pub fn path_pathspec(text: &str, match_case: bool) -> String {
         }
         escaped.push(c);
     }
-    let magic = if match_case { "top" } else { "top,icase" };
-    format!(":({magic})*{escaped}*")
+    escaped
+}
+
+/// The tracked file or folder `text` names (spelled as in the index, which
+/// matters without `match_case`), if any. A trailing `/` is ignored.
+pub async fn exact_path(
+    git: &Git,
+    repo: &Path,
+    text: &str,
+    match_case: bool,
+    cancel: &CancellationToken,
+) -> Result<Option<String>> {
+    let text = text.trim().trim_end_matches('/');
+    if text.is_empty() || text.starts_with('/') {
+        return Ok(None);
+    }
+    let spec = if match_case {
+        format!(":(top,literal){text}")
+    } else {
+        format!(":(top,icase){}", escape_wildcards(text))
+    };
+    // The index lists the file itself, or the files in the folder.
+    let out = git
+        .read(repo)
+        .args(["ls-files", "-z", "--"])
+        .arg(spec)
+        .output(cancel)
+        .await?;
+    let listing = out.stdout_lossy();
+    let wanted = text.chars().count();
+    Ok(listing.split('\0').find_map(|entry| {
+        let name: String = entry.chars().take(wanted).collect();
+        let rest = &entry[name.len()..];
+        let same = if match_case {
+            name == text
+        } else {
+            name.to_lowercase() == text.to_lowercase()
+        };
+        (same && (rest.is_empty() || rest.starts_with('/'))).then_some(name)
+    }))
 }
 
 /// A valid id prefix: hex digits, at least [`MIN_HASH_LEN`], lowercased.
@@ -261,7 +306,13 @@ pub async fn search(
     args.extend(graph_revisions(include_head).into_iter().map(String::from));
     args.push("--".into());
     if query.field == SearchField::Path {
-        args.push(path_pathspec(text, query.match_case));
+        // An exact path is much faster: git can use the commit-graph's
+        // Bloom filters, which a wildcard pathspec rules out.
+        let spec = match exact_path(git, repo, text, query.match_case, cancel).await? {
+            Some(path) => format!(":(literal){path}"),
+            None => path_pathspec(text, query.match_case),
+        };
+        args.push(spec);
     }
 
     let counts = query.tracks_progress();
