@@ -678,7 +678,10 @@ matan el grupo de procesos de git).
   `:(top,icase)`, escrito como en el índice), solo esa ruta con
   `:(literal)`, que deja a git usar los filtros de Bloom del
   `commit-graph`; si no, pathspec `:(top,icase)*texto*` con los comodines
-  escapados. En los dos casos, `--full-history`. Un
+  escapados. En los dos casos, `--full-history` con `-c --name-only`:
+  un merge solo cuenta si el archivo difiere de todos sus padres (no los
+  que solo traen el cambio de un lado, como en el historial de un
+  archivo). Un
   hash sin resultados se busca con `rev-parse` fuera de las ramas
   (`outside`).
   La barra (`src/features/search/`) va encima del grafo; cada pestaña

@@ -8,7 +8,7 @@ use gitcraft_core::ops::search::{
     BATCH_RESULTS, SearchBatch, SearchField, SearchQuery, SearchSummary, exact_path, path_pathspec,
     search,
 };
-use gitcraft_core::parse::search::{MESSAGE_FORMAT, parse_search_record};
+use gitcraft_core::parse::search::{MESSAGE_FORMAT, PATH_FORMAT, PathRecords, parse_search_record};
 use gitcraft_core::testing::TestRepo;
 use gitcraft_core::{CancellationToken, ErrorKind, GitError};
 
@@ -319,6 +319,56 @@ async fn by_file_an_exact_path_is_only_that_one() {
     );
 }
 
+/// A file changed on a branch merged twice: the first merge only brings
+/// the branch's change (the same file as on the branch); the second one
+/// joins changes from both sides (a file neither side had).
+struct Merges {
+    repo: TestRepo,
+    /// In the order the search lists them (newest first).
+    changed: Vec<String>,
+    brings_one_side: String,
+}
+
+async fn merges_sample() -> Merges {
+    let repo = TestRepo::new().await;
+    let base = repo.commit_file("f.txt", "1\n2\n3\n4\n5\n", "Base").await;
+    repo.run(&["switch", "--quiet", "-c", "side"]).await;
+    let side_one = repo
+        .commit_file("f.txt", "UNO\n2\n3\n4\n5\n", "Side: one")
+        .await;
+    repo.checkout("main").await;
+    repo.commit_file("other.txt", "o\n", "Main: other file")
+        .await;
+    let brings_one_side = repo.merge("side", "Merge: brings side").await;
+    repo.run(&["switch", "--quiet", "side"]).await;
+    let side_five = repo
+        .commit_file("f.txt", "UNO\n2\n3\n4\nCINCO\n", "Side: five")
+        .await;
+    repo.checkout("main").await;
+    let main_three = repo
+        .commit_file("f.txt", "UNO\n2\nTRES\n4\n5\n", "Main: three")
+        .await;
+    let joins_both = repo.merge("side", "Merge: joins both").await;
+    Merges {
+        repo,
+        changed: vec![joins_both, main_three, side_five, side_one, base],
+        brings_one_side,
+    }
+}
+
+#[tokio::test]
+async fn by_file_leaves_out_merges_that_only_bring_one_side() {
+    let m = merges_sample().await;
+    for text in ["f.txt", "f.t"] {
+        let mut oids = found(&m.repo, &query(SearchField::Path, text)).await;
+        assert!(!oids.contains(&m.brings_one_side), "{text}");
+        oids.sort();
+        let mut expected = m.changed.clone();
+        expected.sort();
+        assert_eq!(oids, expected, "{text}");
+    }
+}
+
 #[test]
 fn pathspec_escapes_wildcards() {
     assert_eq!(
@@ -385,6 +435,60 @@ fn parses_the_fixture() {
     assert!(records[0].text.contains("con \u{1f} raro"));
     assert!(records[1].text.starts_with("Uno"));
     assert!(records.iter().all(|r| r.oid.len() == 40));
+}
+
+fn path_fixture() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/search-path.z")
+}
+
+/// Regenerate with `UPDATE_FIXTURES=1 cargo test -p gitcraft-core --test search`.
+#[tokio::test]
+async fn path_fixture_matches_current_git_output() {
+    let m = merges_sample().await;
+    let fresh = m
+        .repo
+        .read()
+        .args([
+            "log",
+            "-z",
+            PATH_FORMAT,
+            "--full-history",
+            "-c",
+            "--name-only",
+        ])
+        .args(["--branches", "--", "f.txt"])
+        .output(&c())
+        .await
+        .expect("log")
+        .stdout_lossy();
+    if std::env::var_os("UPDATE_FIXTURES").is_some() {
+        std::fs::write(path_fixture(), &fresh).expect("write fixture");
+    }
+    let fixture = std::fs::read_to_string(path_fixture()).expect("read fixture");
+    assert!(fixture == fresh, "log output changed; see UPDATE_FIXTURES");
+    let mut records = PathRecords::default();
+    let mut oids: Vec<String> = fresh
+        .split('\0')
+        .filter_map(|t| records.push(t).expect("parse"))
+        .collect();
+    oids.extend(records.finish());
+    assert_eq!(oids, m.changed);
+}
+
+#[test]
+fn parses_the_path_fixture() {
+    let raw = std::fs::read_to_string(path_fixture()).expect("read fixture");
+    let mut records = PathRecords::default();
+    let mut oids: Vec<String> = raw
+        .split('\0')
+        .filter_map(|t| records.push(t).expect("parse"))
+        .collect();
+    oids.extend(records.finish());
+    // Six commits touch it; the merge that only brings one side is left out.
+    assert_eq!(raw.matches('\u{1e}').count(), 6);
+    assert_eq!(oids.len(), 5);
+    assert!(oids.iter().all(|oid| oid.len() == 40));
+    assert!(records.push("\u{1e}not an id").is_err());
 }
 
 // --- a large history -----------------------------------------------------------

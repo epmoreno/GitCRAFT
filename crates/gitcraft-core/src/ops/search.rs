@@ -11,7 +11,9 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use crate::parse::search::{AUTHOR_FORMAT, MESSAGE_FORMAT, OID_FORMAT, parse_search_record};
+use crate::parse::search::{
+    AUTHOR_FORMAT, MESSAGE_FORMAT, OID_FORMAT, PATH_FORMAT, PathRecords, parse_search_record,
+};
 use crate::{CancellationToken, Git, Result};
 
 /// A batch is sent once it has this many results…
@@ -297,9 +299,13 @@ pub async fn search(
             None
         }
         (SearchField::Path, _) => {
-            args.push(OID_FORMAT.into());
-            // Every commit that changed it, also on merged side branches.
-            args.push("--full-history".into());
+            args.push(PATH_FORMAT.into());
+            // Every commit that changed it, also on merged side branches;
+            // with the files each one changes (`-c`: for a merge, only
+            // those that differ from every parent), so that a merge that
+            // only brings a change from one side is left out, as in the
+            // history of a file.
+            args.extend(["--full-history", "-c", "--name-only"].map(String::from));
             None
         }
     };
@@ -318,11 +324,20 @@ pub async fn search(
     let counts = query.tracks_progress();
     let mut batcher = Batcher::new(on_batch);
     let mut parse_error = None;
+    let mut by_path = (query.field == SearchField::Path).then(PathRecords::default);
     let sink = |record: &[u8]| {
         if parse_error.is_some() || record.is_empty() {
             return;
         }
         let record = String::from_utf8_lossy(record);
+        if let Some(paths) = by_path.as_mut() {
+            match paths.push(&record) {
+                Ok(Some(oid)) => batcher.examined(Some(&oid), counts),
+                Ok(None) => {}
+                Err(err) => parse_error = Some(err),
+            }
+            return;
+        }
         let parsed = match parse_search_record(&record) {
             Ok(parsed) => parsed,
             Err(err) => {
@@ -343,6 +358,9 @@ pub async fn search(
         .await?;
     if let Some(err) = parse_error {
         return Err(err);
+    }
+    if let Some(oid) = by_path.as_mut().and_then(PathRecords::finish) {
+        batcher.examined(Some(&oid), counts);
     }
     batcher.flush();
     let mut summary = SearchSummary {

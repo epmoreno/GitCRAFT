@@ -32,3 +32,48 @@ pub fn parse_search_record(record: &str) -> Result<SearchRecord<'_>> {
     }
     Ok(SearchRecord { oid, text })
 }
+
+/// For the search by file: each commit starts with U+001E and its id, and
+/// is followed by the names of the matching files it changes (with `-c`, a
+/// merge lists only those that differ from every parent).
+pub const PATH_FORMAT: &str = "--format=%x1e%H";
+
+/// Reads [`PATH_FORMAT`] output with `-c --name-only -z`, one NUL-terminated
+/// token at a time, and keeps the commits that list at least one file: a
+/// merge that only brings a change from one of its parents lists none.
+#[derive(Debug, Default)]
+pub struct PathRecords {
+    pending: Option<String>,
+    changes: bool,
+}
+
+impl PathRecords {
+    /// Takes one token; returns the previous commit once it is known to
+    /// change a matching file.
+    pub fn push(&mut self, token: &str) -> Result<Option<String>> {
+        // git may print a newline before a file list or a commit.
+        let token = token.trim_start_matches('\n');
+        if token.is_empty() {
+            return Ok(None);
+        }
+        if let Some(oid) = token.strip_prefix('\u{1e}') {
+            if !is_object_id(oid) {
+                let preview: String = token.chars().take(80).collect();
+                return Err(GitError::Parse(format!(
+                    "unexpected search record: {preview:?}"
+                )));
+            }
+            let done = self.finish();
+            self.pending = Some(oid.to_owned());
+            return Ok(done);
+        }
+        self.changes = true;
+        Ok(None)
+    }
+
+    /// The last commit, if it changes a matching file.
+    pub fn finish(&mut self) -> Option<String> {
+        let changes = std::mem::take(&mut self.changes);
+        self.pending.take().filter(|_| changes)
+    }
+}

@@ -2899,6 +2899,14 @@ principio y toda operación destructiva pasa por confirmación.
           (`docs/benchmarks.md`). Hay un test de integración nuevo.
           *Verificado manualmente en macOS por el usuario:* la búsqueda por
           la ruta exacta.
+        - **Sin los merges que solo traen un lado (pedido por el usuario):**
+          la búsqueda por archivo ya no lista los merges en los que el
+          archivo es igual al de alguno de sus padres, como el historial de
+          un archivo; sí los que lo cambian respecto a todos (juntan cambios
+          de los dos lados o resuelven un conflicto). «diff.c» en git/git:
+          1.755 resultados en vez de 18.200. Tests: integración con los dos
+          tipos de merge y un fixture real.
+          *Falta la prueba del usuario.*
         *Verificado manualmente en macOS por el usuario (tarea 12 completa)*
         con `~/gitcraft-busqueda`, sección por sección:
         - **A. Búsqueda:** mensaje con contador, navegación con Intro y ⌘G,

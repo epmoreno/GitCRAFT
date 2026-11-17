@@ -131,3 +131,16 @@ Los 18.200 resultados de «diff.c» son casi todos merges: con
 `--full-history`, git lista cada merge en el que el archivo difiere de
 alguno de sus padres (aunque el merge no lo cambie). Sin merges son 1.201,
 los mismos que su historial.
+
+### 2026-11-17 — Sin los merges que solo traen un lado
+
+La búsqueda por archivo deja fuera los merges en los que el archivo es
+igual al de alguno de sus padres (`-c --name-only`: solo cuentan los que
+lo cambian respecto a todos). «diff.c» en git/git: 1.755 resultados
+(1.201 commits y unos 550 merges que juntan cambios de los dos lados) en
+vez de 18.200. El diff combinado de los merges cuesta algo de tiempo:
+
+| Archivo «diff.c» en git/git | Sin `commit-graph` (primero / todo) | Con `commit-graph --changed-paths` |
+| --- | --- | --- |
+| Con todos los merges (18.200) | 26 / 1.376 ms | 24 / 427 ms |
+| Sin los que solo traen un lado (1.755) | 60 / 1.834 ms | 55 / 942 ms |
