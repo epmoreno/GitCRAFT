@@ -2546,7 +2546,7 @@ principio y toda operación destructiva pasa por confirmación.
       *Fuera de la 11:* deshacer operaciones en un remoto, deshacer
       operaciones hechas fuera de GitCRAFT (para eso está el historial de la
       rama), el stash y los descartes, y conservar la pila al cerrar la app.
-- [ ] **12. Búsqueda** por mensaje, autor, hash y archivo; **historial y blame**
+- [x] **12. Búsqueda** por mensaje, autor, hash y archivo; **historial y blame**
       de un archivo.
       *Tests:* parsers con fixtures, renombrados, y la búsqueda en un repo grande
       no bloquea la UI y se puede cancelar.
@@ -2866,7 +2866,7 @@ principio y toda operación destructiva pasa por confirmación.
         primer commit, ver en el grafo, historial, archivo grande, binario,
         inexistente y enorme, Esc, la entrada desde el historial de un
         archivo, la anchura de la columna).
-      - [ ] **12.7 Rendimiento, documentación y prueba a mano.** Banco
+      - [x] **12.7 Rendimiento, documentación y prueba a mano.** Banco
         `npm run bench:search` (búsqueda en mensajes, por archivo,
         historial de un archivo y blame) con repo sintético y, con
         permiso, git/git; resultados en `docs/benchmarks.md` frente a los
@@ -2874,7 +2874,7 @@ principio y toda operación destructiva pasa por confirmación.
         `scripts/make-search-examples.sh` con un repo desechable (renombrados,
         archivos grandes, nombres con espacios y acentos).
         *Verificable:* el usuario lo prueba y lo confirma.
-        *Hecho (falta la prueba del usuario):*
+        *Hecho:*
         - **Banco:** `npm run bench:search`
           (`crates/gitcraft-core/tests/bench_search.rs`). Con un sintético
           de 50.000 commits y con git/git (83.007 commits, clonado con
@@ -2894,6 +2894,20 @@ principio y toda operación destructiva pasa por confirmación.
         - **Pendiente del plan:** la 12.1 decía usar la ruta exacta cuando
           existe; solo está la búsqueda «contiene el texto». Queda como
           mejora (ver `docs/benchmarks.md`).
+        *Verificado manualmente en macOS por el usuario (tarea 12 completa)*
+        con `~/gitcraft-busqueda`, sección por sección:
+        - **A. Búsqueda:** mensaje con contador, navegación con Intro y ⌘G,
+          texto literal y expresión regular con el error en rojo,
+          mayúsculas, autor, hash con el commit perdido, archivo, pestañas,
+          y ⌘F no se abre sobre el diff ni con un diálogo.
+        - **B. Historial de un archivo:** la fila «Sin confirmar», los
+          renombrados con su ruta, recorrerlo con las flechas, el
+          separador, Esc, abrirlo desde un commit y el menú de una fila.
+        - **C. Blame:** grupos con franjas, elegir un grupo, «Blame antes
+          de este commit» con «← Blame anterior» y ⌘[ / ⌥⌘[, el primer
+          commit desactivado, el archivo grande con aviso, progreso y
+          cancelar, el binario y el desplazamiento lateral.
+        - **D.** Los grupos de atajos en Ajustes.
       *Mejora futura (decisión del usuario):* buscar en el contenido de los
       cambios (`git log -S`/`-G`, qué commit añadió o quitó un texto).
       *Mejora futura (decisión del usuario):* una opción para colorear el
