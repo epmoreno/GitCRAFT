@@ -2932,6 +2932,137 @@ principio y toda operación destructiva pasa por confirmación.
       descartar.
       *Tests:* cada acción, conflicto a mitad (usa la 9), abortar restaura la
       rama, y aviso si los commits ya están publicados.
+      *Plan (pendiente de aprobación del usuario).*
+      *Ya existe:* la vista previa exacta de un rebase con
+      `merge-tree --merge-base` y `commit-tree` sin tocar ninguna ref (8.1);
+      lo publicado (`remote_branches_containing`); la huella; guardar lo que
+      estorba en el stash con «Recuperar mis cambios»; el aviso de rebase a
+      medias con continuar, saltar y abortar y la vista de conflictos (9);
+      y el diario de operaciones con «Deshacer» (11).
+      *Qué es:* desde el menú de un commit de la rama actual, «Rebase
+      interactivo desde aquí…» abre una vista con ese commit y los que
+      tiene encima, hasta HEAD. En cada uno se elige una acción:
+      **mantener**, **editar el mensaje**, **combinar con el anterior**
+      (squash, con el mensaje combinado editable) o **descartar**. El orden
+      se cambia arrastrando o con el teclado. Antes de tocar nada se ve
+      qué va a pasar; después, un solo botón «Aplicar».
+      *Criterios (los de siempre):*
+      - **Vista previa antes de tocar nada,** recalculada con cada cambio
+        del plan: los commits que quedan, los que se descartan y los
+        conflictos previstos (en qué paso se detendría y con qué
+        archivos), simulando el plan entero con `merge-tree` y
+        `commit-tree` como en la 8.1 (solo objetos sueltos, ninguna ref).
+        Con git < 2.40 la previsión es aproximada y se dice.
+      - **Confirmación** que resume el plan. Si se descarta algún commit,
+        es una operación destructiva: se dice qué commits se pierden y
+        que se pueden recuperar con «Deshacer» o desde el historial de la
+        rama (11.5).
+      - **Lo publicado:** si algún commit del tramo ya está en un remoto,
+        se avisa antes (en qué ramas remotas) de que hará falta un push
+        forzado (`--force-with-lease`, 6.3), que sigue siendo una acción
+        aparte. No se impide: es la rama del usuario.
+      - **Se niega sin tocar nada:** con una operación a medias, con HEAD
+        separado, si el tramo tiene merges (habría que rehacerlos; queda
+        fuera), si el commit no está en la rama actual, o si el plan no
+        cambia nada.
+      - **Huella:** si HEAD, la rama o los cambios sin confirmar cambian
+        entre la vista previa y «Aplicar», no se hace nada y se enseña la
+        vista previa nueva.
+      - **Cambios sin confirmar que estorban** (cualquier cambio en
+        archivos con seguimiento, como en el rebase de la 8): «Guardar mis
+        cambios y aplicar», con su entrada de stash y «Recuperar mis
+        cambios» al terminar.
+      - **Conflicto a mitad:** git se detiene, salen el aviso de la 9 con
+        el progreso («paso 3 de 7») y la vista de conflictos; continuar,
+        saltar y abortar funcionan igual. Abortar deja la rama, el índice
+        y los archivos exactamente como estaban.
+      - **Deshacer:** el rebase interactivo terminado entra en el diario
+        (11) y se deshace con ⌘Z / «Deshacer» mientras nada haya cambiado.
+      - **Nada bloquea la interfaz;** ninguna dependencia nueva; textos por
+        i18n; atajos por el registro y en Ajustes.
+      *Cómo se le da el plan a git (seguridad):* `git rebase -i` pide el
+      plan a un «editor» (`GIT_SEQUENCE_EDITOR`), que git lanza con su
+      propio shell. GitCRAFT no lanza ningún shell: el editor es el propio
+      ejecutable de GitCRAFT en un modo auxiliar (`--rebase-todo <archivo>`),
+      con la ruta entre comillas simples escapadas y con `/` también en
+      Windows. Ese modo comprueba que la lista que propone git es
+      exactamente la de la vista previa (si no, sale con error y git no
+      empieza) y la sustituye por el plan, que GitCRAFT escribe en
+      `.git/`. Los mensajes nuevos (editar y combinar) no usan ningún
+      editor: cada uno va en un commit auxiliar sin cambios creado con
+      `commit-tree` (sin ref), y el plan usa `fixup -C <auxiliar>` (git ≥
+      2.32), así que continuar tras un conflicto no necesita editor. Con
+      git 2.30–2.31 solo se puede reordenar y descartar, y se dice por qué.
+      - [ ] **13.1 Vista previa (core).** `interactive_rebase_preview(base)`:
+        los commits del tramo (más antiguo primero, con mensaje completo,
+        autor y si están publicados y en qué remotos), los motivos para
+        negarse, lo que estorba y la huella. `simulate_plan(plan)`: valida
+        el plan (cada commit una vez, el primero no se combina con nada, no
+        todo descartado) y dice el resultado previsto paso a paso
+        (conflicto en el paso n con sus archivos, commits que quedarían
+        vacíos y git saltaría).
+        *Verificable:* integración con repos temporales: cada motivo para
+        negarse, publicados, cambios que estorban, previsión exacta frente
+        a lo que hace `git rebase -i` de verdad (reordenar con y sin
+        conflicto, combinar, descartar), y que no cambia ninguna ref ni el
+        directorio de trabajo.
+      - [ ] **13.2 Aplicar (core).** `interactive_rebase(plan, huella,
+        guardar_cambios)`: los mensajes en commits auxiliares, el plan en
+        `.git/`, `git rebase -i` con el editor auxiliar y
+        `GIT_EDITOR=true`, y el registro en el diario para «Deshacer».
+        Resultado: hecho (commit nuevo de HEAD), detenido en conflicto
+        (sigue la 9) o no hecho (huella cambiada, algo estorba).
+        *Verificable:* integración: cada acción por separado y combinadas,
+        mensajes con acentos, varias líneas y líneas que empiezan por `#`,
+        conflicto a mitad que se resuelve y continúa (también con un
+        mensaje editado después del conflicto), saltar, abortar deja todo
+        idéntico (refs, índice y archivos), la huella cambiada no hace
+        nada, guardar y aplicar, «Deshacer» deja todo idéntico, y git <
+        2.32 niega editar y combinar.
+      - [ ] **13.3 El editor auxiliar y los comandos (Tauri).** El modo
+        `--rebase-todo` del ejecutable (antes de arrancar la ventana, sin
+        tocar la configuración), comprobado en macOS, Windows y Linux en la
+        CI con rutas con espacios y comillas; los comandos
+        `interactive_rebase_preview`, `simulate_rebase_plan` e
+        `interactive_rebase`, y los tipos generados.
+        *Verificable:* tests del modo auxiliar (lista que coincide, lista
+        distinta y git no empieza, archivo que falta) y de los comandos.
+      - [ ] **13.4 La vista (UI).** Se para antes para enseñar el diseño.
+        Entrada en el menú de un commit de la rama actual. La vista ocupa
+        la zona del historial, como la de conflictos y el blame: la lista
+        de commits con su acción, arrastrar para reordenar (eventos de
+        puntero, como en la 8) y teclado (mover arriba y abajo y cambiar
+        la acción por el registro de atajos), el editor del mensaje, la
+        previsión (conflictos, vacíos, publicados) y «Aplicar» con su
+        confirmación. Al terminar, aviso con «Deshacer» y el commit nuevo
+        seleccionado.
+        *Verificable:* tests de interfaz en es/en: cada acción, reordenar
+        con arrastre y con teclado, el mensaje combinado, la previsión que
+        se recalcula, los motivos para negarse, el aviso de publicados, la
+        confirmación al descartar, cancelar no toca nada, Esc, y el
+        resultado con «Deshacer».
+      - [ ] **13.5 Documentación y prueba a mano.** Sección en
+        ARCHITECTURE.md (y el inventario de la sección 8 si el modo
+        auxiliar tiene algo propio de un sistema) y
+        `scripts/make-rebase-examples.sh`, con un repo desechable (commits
+        para reordenar, combinar y descartar, uno que choca al reordenar,
+        uno publicado en un remoto local y cambios sin confirmar).
+        *Verificable:* el usuario lo prueba y lo confirma.
+      *Decisiones para el usuario:*
+      1. **Orden de la lista:** el más nuevo arriba, como el grafo
+         (propuesta), o el más antiguo arriba, como el plan de git.
+      2. **Combinar:** con el commit de debajo (el anterior) y el mensaje
+         combinado editable, relleno con los dos mensajes (propuesta).
+         Sin la acción aparte de «fixup» (combinar descartando el mensaje):
+         basta con borrar el texto que sobra.
+      3. **El editor auxiliar** tal como se describe arriba (propuesta).
+         Es la única forma de dar el plan a `git rebase -i` sin escribir en
+         su lugar, y git lo lanza con su shell; la ruta va escapada y la
+         lista se comprueba antes de sustituirla.
+      4. **Fuera de la 13** (mejoras futuras): parar en un commit para
+         modificarlo (`edit`), dividir un commit, rehacer merges
+         (`--rebase-merges`), `exec`, y el rebase interactivo sobre otra
+         rama (en la 13, la base es un commit de la propia rama).
 
 ## Fase 3
 
