@@ -2943,7 +2943,7 @@ principio y toda operación destructiva pasa por confirmación.
       descartar.
       *Tests:* cada acción, conflicto a mitad (usa la 9), abortar restaura la
       rama, y aviso si los commits ya están publicados.
-      *Plan (pendiente de aprobación del usuario).*
+      *Plan aprobado por el usuario.*
       *Ya existe:* la vista previa exacta de un rebase con
       `merge-tree --merge-base` y `commit-tree` sin tocar ninguna ref (8.1);
       lo publicado (`remote_branches_containing`); la huella; guardar lo que
@@ -2996,7 +2996,10 @@ principio y toda operación destructiva pasa por confirmación.
       propio shell. GitCRAFT no lanza ningún shell: el editor es el propio
       ejecutable de GitCRAFT en un modo auxiliar (`--rebase-todo <archivo>`),
       con la ruta entre comillas simples escapadas y con `/` también en
-      Windows. Ese modo comprueba que la lista que propone git es
+      Windows. Ese modo solo funciona cuando lo lanza GitCRAFT: el
+      rebase pone en el entorno un token de un solo uso, que el modo
+      comprueba y gasta; sin él, o con uno ya usado, sale con error sin
+      tocar nada. Ese modo comprueba que la lista que propone git es
       exactamente la de la vista previa (si no, sale con error y git no
       empieza) y la sustituye por el plan, que GitCRAFT escribe en
       `.git/`. Los mensajes nuevos (editar y combinar) no usan ningún
@@ -3004,7 +3007,7 @@ principio y toda operación destructiva pasa por confirmación.
       `commit-tree` (sin ref), y el plan usa `fixup -C <auxiliar>` (git ≥
       2.32), así que continuar tras un conflicto no necesita editor. Con
       git 2.30–2.31 solo se puede reordenar y descartar, y se dice por qué.
-      - [ ] **13.1 Vista previa (core).** `interactive_rebase_preview(base)`:
+      - [x] **13.1 Vista previa (core).** `interactive_rebase_preview(base)`:
         los commits del tramo (más antiguo primero, con mensaje completo,
         autor y si están publicados y en qué remotos), los motivos para
         negarse, lo que estorba y la huella. `simulate_plan(plan)`: valida
@@ -3017,6 +3020,27 @@ principio y toda operación destructiva pasa por confirmación.
         a lo que hace `git rebase -i` de verdad (reordenar con y sin
         conflicto, combinar, descartar), y que no cambia ninguna ref ni el
         directorio de trabajo.
+        *Hecho:* `ops::interactive_rebase` con
+        `interactive_rebase_preview`, `validate_plan` y `simulate_plan`
+        (ARCHITECTURE.md, 5l).
+        - **El tramo:** más antiguo primero, con el mensaje completo, el
+          autor, la fecha y si está publicado; desde el commit raíz, toda
+          la rama. Motivo nuevo para negarse: más de 500 commits.
+        - **La simulación:** dónde se detendría (paso n de m entre los
+          commits que quedan) y con qué archivos, los commits que quedarían
+          vacíos, cuántos commits quedan y cuántos se reescriben, y las
+          ramas remotas de los reescritos o descartados (no todo el tramo:
+          los primeros commits que no cambian se reutilizan, como hace git).
+        - **Comprobado antes con git 2.55:** `fixup -C` con un commit
+          auxiliar sin cambios cambia solo el mensaje, conserva el autor y
+          las líneas con `#`, y sigue funcionando al continuar tras un
+          conflicto con `GIT_EDITOR=true`.
+        Tests: 9 de integración. Comparan la previsión con `git rebase -i`
+        de verdad: reordenar, combinar, descartar, un reordenado que se
+        detiene (mismo commit y mismos archivos), un commit que queda
+        vacío y desde el commit raíz. También cada motivo para negarse,
+        lo publicado, lo que estorba, cada problema del plan (también git
+        < 2.32) y que no cambia ninguna ref, el índice ni los archivos.
       - [ ] **13.2 Aplicar (core).** `interactive_rebase(plan, huella,
         guardar_cambios)`: los mensajes en commits auxiliares, el plan en
         `.git/`, `git rebase -i` con el editor auxiliar y
@@ -3059,21 +3083,22 @@ principio y toda operación destructiva pasa por confirmación.
         para reordenar, combinar y descartar, uno que choca al reordenar,
         uno publicado en un remoto local y cambios sin confirmar).
         *Verificable:* el usuario lo prueba y lo confirma.
-      *Decisiones para el usuario:*
-      1. **Orden de la lista:** el más nuevo arriba, como el grafo
-         (propuesta), o el más antiguo arriba, como el plan de git.
-      2. **Combinar:** con el commit de debajo (el anterior) y el mensaje
-         combinado editable, relleno con los dos mensajes (propuesta).
-         Sin la acción aparte de «fixup» (combinar descartando el mensaje):
-         basta con borrar el texto que sobra.
-      3. **El editor auxiliar** tal como se describe arriba (propuesta).
-         Es la única forma de dar el plan a `git rebase -i` sin escribir en
-         su lugar, y git lo lanza con su shell; la ruta va escapada y la
-         lista se comprueba antes de sustituirla.
-      4. **Fuera de la 13** (mejoras futuras): parar en un commit para
-         modificarlo (`edit`), dividir un commit, rehacer merges
-         (`--rebase-merges`), `exec`, y el rebase interactivo sobre otra
-         rama (en la 13, la base es un commit de la propia rama).
+      *Decisiones del usuario:*
+      1. **Orden de la lista:** el más nuevo arriba, como el grafo. La vista
+         indica claramente que abajo está lo más antiguo y en qué orden se
+         aplicará.
+      2. **Combinar:** con el commit de debajo (el anterior), con el mensaje
+         combinado editable y relleno con los dos mensajes. Sin una acción
+         aparte de «fixup».
+      3. **GitCRAFT como editor auxiliar del rebase,** comprobando que la
+         lista de git coincide con la vista previa antes de sustituirla, y
+         solo cuando lo lanza GitCRAFT (token de un solo uso en el
+         entorno), nunca desde fuera. Con git 2.30 o 2.31 se explica qué no
+         está disponible (editar y combinar).
+      *Mejoras futuras (fuera de la 13):* parar en un commit para
+      modificarlo (`edit`), dividir un commit, rehacer merges
+      (`--rebase-merges`), `exec`, y el rebase interactivo sobre otra rama
+      (en la 13, la base es un commit de la propia rama).
 
 ## Fase 3
 

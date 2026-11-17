@@ -12,6 +12,7 @@ pub mod discard;
 pub mod file_history;
 pub mod in_progress;
 pub mod init;
+pub mod interactive_rebase;
 pub mod journal;
 pub mod log;
 pub mod maintenance;

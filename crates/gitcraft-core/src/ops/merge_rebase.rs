@@ -371,7 +371,7 @@ pub(crate) fn in_the_way(
 
 /// Runs `merge-tree --write-tree` with `extra` (and `-z`): `Ok(Ok(tree))`
 /// if clean, `Ok(Err(files))` with conflicts, `Err` if this git cannot.
-async fn merge_tree(
+pub(crate) async fn merge_tree(
     git: &Git,
     repo: &Path,
     extra: &[String],

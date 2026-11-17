@@ -718,6 +718,35 @@ matan el grupo de procesos de git).
   regular y con cuerpo, un archivo de 25.000 líneas, uno binario y un
   commit que solo queda en el historial de la rama.
 
+## 5l. Rebase interactivo visual (tarea 13)
+
+Desde un commit de la rama actual hasta HEAD: mantener, editar el mensaje,
+combinar con el anterior, descartar y reordenar.
+
+- **Vista previa (`ops::interactive_rebase`, 13.1):** solo lectura.
+  `interactive_rebase_preview(from)` da el tramo (más antiguo primero, con
+  el mensaje completo, el autor y si está publicado), los motivos para
+  negarse (operación a medias, HEAD separado, fuera de la rama, merges en
+  el tramo, más de 500 commits), lo que estorba (como el rebase de la 8) y
+  la huella. Desde el commit raíz, el tramo es toda la rama (`--root`).
+  `validate_plan` comprueba el plan sin git (cada commit una vez, no
+  combinar el primero, no descartarlo todo, mensajes no vacíos, git ≥ 2.32
+  para mensajes nuevos, que cambie algo). `simulate_plan` rehace el plan
+  con `merge-tree --merge-base` y `commit-tree` (solo objetos sueltos):
+  dónde se detendría y con qué archivos, qué commits quedarían vacíos
+  (git los deja fuera con `--empty=drop`), cuántos se reescriben y en qué
+  ramas remotas están. Los primeros commits que no cambian se reutilizan,
+  como hace git. Con git < 2.40 no se puede prever (`predicted: false`).
+- **Cómo se le dará el plan a git (13.2 y 13.3):** `git rebase -i` con
+  GitCRAFT como `GIT_SEQUENCE_EDITOR` en un modo auxiliar que solo
+  funciona con un token de un solo uso que pone GitCRAFT en el entorno;
+  comprueba que la lista de git es la de la vista previa antes de
+  sustituirla. Los mensajes nuevos van en commits auxiliares sin cambios
+  (`commit-tree`, sin ref) aplicados con `fixup -C`, así que nunca se abre
+  un editor, tampoco al continuar tras un conflicto. Comprobado con git
+  2.55: el autor del commit original se conserva y una línea del mensaje
+  que empieza por `#` también.
+
 ## 5f. Crear repositorios
 
 - **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama
