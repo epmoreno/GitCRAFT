@@ -737,7 +737,14 @@ combinar con el anterior, descartar y reordenar.
   (git los deja fuera con `--empty=drop`), cuántos se reescriben y en qué
   ramas remotas están. Los primeros commits que no cambian se reutilizan,
   como hace git. Con git < 2.40 no se puede prever (`predicted: false`).
-- **Cómo se le dará el plan a git (13.2 y 13.3):** `git rebase -i` con
+- **Aplicar (`interactive_rebase`, 13.2):** comprueba de nuevo la huella,
+  el plan, lo que estorba (o lo guarda en el stash) y los conflictos
+  previstos; crea los commits auxiliares de los mensajes, escribe el plan
+  en `.git/gitcraft-rebase-plan` con un token nuevo y lanza
+  `git rebase --interactive --empty=drop` con `-c` que fijan el formato de
+  la lista, `GIT_EDITOR=true` y el token en el entorno. El archivo del plan
+  se borra siempre al volver git.
+- **Cómo se le da el plan a git (13.2 y 13.3):** `git rebase -i` con
   GitCRAFT como `GIT_SEQUENCE_EDITOR` en un modo auxiliar que solo
   funciona con un token de un solo uso que pone GitCRAFT en el entorno;
   comprueba que la lista de git es la de la vista previa antes de

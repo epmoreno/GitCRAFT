@@ -1,12 +1,20 @@
 //! Interactive rebase, read-only part (task 13.1): the range, the refusals
 //! and the prediction of a plan, compared with what `git rebase -i` does.
 
+use std::path::Path;
+
 use gitcraft_core::CancellationToken;
+use gitcraft_core::ops::in_progress::{ContinueOutcome, continue_in_progress, skip_current};
 use gitcraft_core::ops::interactive_rebase::{
-    InteractivePreview, InteractiveRefusal, PlanPreview, PlanProblem, PlanStep, RebasePlan,
-    StepAction, interactive_rebase_preview, simulate_plan, validate_plan,
+    InteractiveOutcome, InteractivePreview, InteractiveRefusal, InteractiveRequest, PlanPreview,
+    PlanProblem, PlanStep, RebasePlan, StepAction, TOKEN_ENV, TodoHelperError, apply_todo,
+    interactive_rebase, interactive_rebase_preview, sequence_editor, simulate_plan,
+    todo_helper_main, todo_text, validate_plan,
 };
+use gitcraft_core::ops::journal::{OpKind, Saved, record, snapshot};
 use gitcraft_core::ops::merge_rebase::MoveBlock;
+use gitcraft_core::ops::remote::abort_in_progress;
+use gitcraft_core::ops::undo::{Direction, UndoOutcome, UndoRequest, undo, undo_preview};
 use gitcraft_core::testing::TestRepo;
 
 fn token() -> CancellationToken {
@@ -480,4 +488,469 @@ async fn a_plan_for_an_old_preview_does_nothing() {
     ];
     let predicted = simulate(&repo, &plan(&p, steps)).await;
     assert_eq!(predicted.problem, Some(PlanProblem::Changed));
+}
+
+// --- applying a plan (13.2) ---------------------------------------------------
+
+const HELPER: &str = env!("CARGO_BIN_EXE_rebase-todo");
+
+async fn apply(
+    repo: &TestRepo,
+    p: &InteractivePreview,
+    steps: Vec<PlanStep>,
+) -> InteractiveOutcome {
+    apply_with(repo, plan(p, steps), false, false).await
+}
+
+async fn apply_with(
+    repo: &TestRepo,
+    plan: RebasePlan,
+    save_changes: bool,
+    allow_conflicts: bool,
+) -> InteractiveOutcome {
+    let request = InteractiveRequest {
+        plan,
+        save_changes,
+        allow_conflicts,
+    };
+    interactive_rebase(
+        repo.git(),
+        repo.path(),
+        &request,
+        Path::new(HELPER),
+        &token(),
+    )
+    .await
+    .expect("interactive rebase")
+}
+
+/// `author | message` of each commit after `since`, newest first.
+async fn log_since(repo: &TestRepo, since: &str) -> Vec<String> {
+    repo.run(&["log", "--format=%an|%B%x00", &format!("{since}..HEAD")])
+        .await
+        .split('\0')
+        .map(|r| r.trim_matches('\n').to_owned())
+        .filter(|r| !r.is_empty())
+        .collect()
+}
+
+fn no_plan_file(repo: &TestRepo) {
+    assert!(!repo.path().join(".git/gitcraft-rebase-plan").exists());
+}
+
+#[tokio::test]
+async fn applies_reword_squash_drop_and_reorder() {
+    let repo = TestRepo::new().await;
+    let (base, a, b, c) = three(&repo).await;
+    let p = preview(&repo, &a).await;
+    let steps = vec![
+        // A gets a new message with accents, several lines and a "#".
+        with_message(
+            &a,
+            StepAction::Reword,
+            "Añade «a», bien\n\nPrimera línea.\n# No es un comentario.",
+        ),
+        // C goes before B, and B is combined into it.
+        step(&c, StepAction::Pick),
+        with_message(&b, StepAction::Squash, "C y B juntos\n\nCuerpo combinado."),
+    ];
+    let predicted = simulate(&repo, &plan(&p, steps.clone())).await;
+    let outcome = apply(&repo, &p, steps).await;
+    let InteractiveOutcome::Done { head, saved: None } = outcome else {
+        panic!("not done: {outcome:?}");
+    };
+    assert_eq!(head, repo.head().await);
+    assert_eq!(predicted.tree.as_deref(), Some(tree(&repo).await.as_str()));
+    assert_eq!(
+        log_since(&repo, &base).await,
+        [
+            "GitCRAFT Test|C y B juntos\n\nCuerpo combinado.",
+            "Ana Pérez|Añade «a», bien\n\nPrimera línea.\n# No es un comentario.",
+        ]
+    );
+    no_plan_file(&repo);
+
+    // Drop only.
+    let p = preview(&repo, &head).await;
+    let outcome = apply(&repo, &p, vec![step(&head, StepAction::Drop)]).await;
+    assert!(
+        matches!(outcome, InteractiveOutcome::NotDone { .. }),
+        "all dropped"
+    );
+    let reworded = repo.rev_parse("HEAD~1").await;
+    let p = preview(&repo, &reworded).await;
+    let outcome = apply(
+        &repo,
+        &p,
+        vec![
+            step(&reworded, StepAction::Drop),
+            step(&head, StepAction::Pick),
+        ],
+    )
+    .await;
+    assert!(matches!(outcome, InteractiveOutcome::Done { .. }));
+    assert_eq!(log_since(&repo, &base).await.len(), 1);
+    assert!(!repo.path().join("a.txt").exists());
+}
+
+#[tokio::test]
+async fn stops_on_conflicts_then_continues_skips_or_aborts() {
+    async fn sample() -> (TestRepo, String, String, String) {
+        let repo = TestRepo::new().await;
+        repo.commit_file("f.txt", "1\n2\n3\n", "Base").await;
+        let a = repo
+            .commit_file("f.txt", "1\nA\n3\n", "A cambia la dos")
+            .await;
+        let b = repo
+            .commit_file("f.txt", "1\nB\n3\n", "B la cambia otra vez")
+            .await;
+        let c = repo.commit_file("g.txt", "g\n", "C otro archivo").await;
+        (repo, a, b, c)
+    }
+    // B first: it stops at B; C has a new message after the conflict.
+    let steps = |a: &str, b: &str, c: &str| {
+        vec![
+            step(b, StepAction::Pick),
+            step(a, StepAction::Pick),
+            with_message(c, StepAction::Reword, "C renombrado"),
+        ]
+    };
+
+    // Not without asking.
+    let (repo, a, b, c) = sample().await;
+    let p = preview(&repo, &a).await;
+    let before = state(&repo).await;
+    let outcome = apply(&repo, &p, steps(&a, &b, &c)).await;
+    let InteractiveOutcome::NotDone {
+        plan,
+        changed: false,
+        ..
+    } = outcome
+    else {
+        panic!("{outcome:?}");
+    };
+    assert!(plan.stops_at.is_some());
+    assert_eq!(state(&repo).await, before);
+
+    // Resolved and continued: the new message still applies.
+    let outcome = apply_with(&repo, plan_for(&p, steps(&a, &b, &c)), false, true).await;
+    let InteractiveOutcome::Conflicted { files, .. } = outcome else {
+        panic!("{outcome:?}");
+    };
+    assert_eq!(files, ["f.txt"]);
+    no_plan_file(&repo);
+    repo.write_file("f.txt", "1\nB\n3\n");
+    repo.run(&["add", "f.txt"]).await;
+    let next = continue_in_progress(repo.git(), repo.path(), None, &token())
+        .await
+        .expect("continue");
+    assert!(
+        matches!(next, ContinueOutcome::StoppedAgain { .. }),
+        "{next:?}"
+    );
+    repo.write_file("f.txt", "1\nA\n3\n");
+    repo.run(&["add", "f.txt"]).await;
+    let done = continue_in_progress(repo.git(), repo.path(), None, &token())
+        .await
+        .expect("continue");
+    assert_eq!(done, ContinueOutcome::Done);
+    let subjects = repo.run(&["log", "--format=%s", "-3"]).await;
+    assert_eq!(
+        subjects.lines().collect::<Vec<_>>(),
+        ["C renombrado", "A cambia la dos", "B la cambia otra vez"]
+    );
+
+    // Skipped.
+    let (repo, a, b, c) = sample().await;
+    let p = preview(&repo, &a).await;
+    apply_with(&repo, plan_for(&p, steps(&a, &b, &c)), false, true).await;
+    let skipped = skip_current(repo.git(), repo.path(), &token())
+        .await
+        .expect("skip");
+    assert_eq!(skipped, ContinueOutcome::Done);
+    let subjects = repo.run(&["log", "--format=%s", "-2"]).await;
+    assert_eq!(
+        subjects.lines().collect::<Vec<_>>(),
+        ["C renombrado", "A cambia la dos"]
+    );
+
+    // Aborted: everything exactly as it was.
+    let (repo, a, b, c) = sample().await;
+    let p = preview(&repo, &a).await;
+    let before = state(&repo).await;
+    apply_with(&repo, plan_for(&p, steps(&a, &b, &c)), false, true).await;
+    abort_in_progress(repo.git(), repo.path(), &token())
+        .await
+        .expect("abort");
+    assert_eq!(state(&repo).await, before);
+}
+
+fn plan_for(p: &InteractivePreview, steps: Vec<PlanStep>) -> RebasePlan {
+    plan(p, steps)
+}
+
+#[tokio::test]
+async fn does_nothing_if_the_repository_changed_or_changes_are_in_the_way() {
+    let repo = TestRepo::new().await;
+    let (_, a, b, c) = three(&repo).await;
+    let reorder = || {
+        vec![
+            step(&a, StepAction::Pick),
+            step(&c, StepAction::Pick),
+            step(&b, StepAction::Pick),
+        ]
+    };
+    let p = preview(&repo, &a).await;
+    repo.write_file("base.txt", "cambiado\n");
+    let before = state(&repo).await;
+    let outcome = apply(&repo, &p, reorder()).await;
+    assert!(
+        matches!(outcome, InteractiveOutcome::NotDone { changed: true, .. }),
+        "{outcome:?}"
+    );
+    assert_eq!(state(&repo).await, before);
+
+    // In the way: not without saving them.
+    let p = preview(&repo, &a).await;
+    let outcome = apply(&repo, &p, reorder()).await;
+    let InteractiveOutcome::NotDone {
+        preview: seen,
+        changed: false,
+        saved: None,
+        ..
+    } = outcome
+    else {
+        panic!("{outcome:?}");
+    };
+    assert_eq!(seen.blocked, Some(MoveBlock::RebaseNeedsClean));
+    assert_eq!(state(&repo).await, before);
+
+    // Saved first, then applied; the change is in the stash.
+    let outcome = apply_with(&repo, plan(&p, reorder()), true, false).await;
+    let InteractiveOutcome::Done {
+        saved: Some(entry), ..
+    } = outcome
+    else {
+        panic!("{outcome:?}");
+    };
+    assert!(!entry.is_empty());
+    let stashes = repo.run(&["stash", "list", "--format=%s"]).await;
+    assert!(stashes.contains("GitCRAFT: antes del rebase interactivo de main"));
+    assert_eq!(
+        std::fs::read_to_string(repo.path().join("base.txt")).expect("file"),
+        "base\n"
+    );
+}
+
+#[tokio::test]
+async fn is_undone_exactly() {
+    let repo = TestRepo::new().await;
+    let (_, a, b, c) = three(&repo).await;
+    let p = preview(&repo, &a).await;
+    let before = state(&repo).await;
+    let snap = snapshot(repo.git(), repo.path(), &token())
+        .await
+        .expect("snapshot");
+    apply(
+        &repo,
+        &p,
+        vec![
+            step(&a, StepAction::Drop),
+            step(&c, StepAction::Pick),
+            with_message(&b, StepAction::Reword, "B nuevo"),
+        ],
+    )
+    .await;
+    let after = state(&repo).await;
+    let kind = OpKind::Rebase {
+        onto: "main".into(),
+    };
+    let rec = record(
+        repo.git(),
+        repo.path(),
+        snap,
+        kind,
+        Saved::default(),
+        &token(),
+    )
+    .await
+    .expect("record")
+    .expect("it moved the branch");
+    let undo_preview = undo_preview(repo.git(), repo.path(), &rec, Direction::Undo, &token())
+        .await
+        .expect("undo preview");
+    let request = UndoRequest {
+        direction: Direction::Undo,
+        expected: undo_preview.fingerprint,
+        save_changes: false,
+    };
+    let outcome = undo(repo.git(), repo.path(), &rec, &request, &token())
+        .await
+        .expect("undo");
+    assert!(matches!(outcome, UndoOutcome::Done { .. }), "{outcome:?}");
+    assert_eq!(state(&repo).await, before);
+    assert_ne!(before, after);
+}
+
+// --- the todo helper ------------------------------------------------------------
+
+#[test]
+fn the_helper_only_works_with_its_token_and_once() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let plan_file = dir.path().join("plan");
+    let todo_file = dir.path().join("todo");
+    let full = "a".repeat(40);
+    let plan_text = format!("gitcraft-rebase-plan 1\nsecret\n{full}\ndrop {full}\n");
+    std::fs::write(&plan_file, &plan_text).expect("file");
+    std::fs::write(&todo_file, "pick aaaaaaa Uno\n# comment\n").expect("file");
+
+    // No token, or another one: nothing is touched.
+    for token in [None, Some(""), Some("other")] {
+        assert_eq!(
+            apply_todo(&plan_file, &todo_file, token),
+            Err(TodoHelperError::NotOurs)
+        );
+        assert_eq!(
+            std::fs::read_to_string(&plan_file).expect("file"),
+            plan_text
+        );
+        assert_eq!(
+            std::fs::read_to_string(&todo_file).expect("file"),
+            "pick aaaaaaa Uno\n# comment\n"
+        );
+    }
+    // With it: the plan replaces git's todo, and the plan file is gone.
+    assert_eq!(apply_todo(&plan_file, &todo_file, Some("secret")), Ok(()));
+    assert_eq!(
+        std::fs::read_to_string(&todo_file).expect("file"),
+        format!("drop {full}\n")
+    );
+    assert!(!plan_file.exists());
+    // A second time: no plan any more.
+    assert_eq!(
+        apply_todo(&plan_file, &todo_file, Some("secret")),
+        Err(TodoHelperError::NotOurs)
+    );
+
+    // git proposing other commits: refused, git's todo left alone.
+    std::fs::write(&plan_file, &plan_text).expect("file");
+    for proposed in [
+        "pick bbbbbbb Otro\n",
+        "pick aaaaaaa Uno\npick bbbbbbb Dos\n",
+        "exec x\n",
+    ] {
+        std::fs::write(&plan_file, &plan_text).expect("file");
+        std::fs::write(&todo_file, proposed).expect("file");
+        assert_eq!(
+            apply_todo(&plan_file, &todo_file, Some("secret")),
+            Err(TodoHelperError::Mismatch),
+            "{proposed}"
+        );
+        assert_eq!(std::fs::read_to_string(&todo_file).expect("file"), proposed);
+    }
+
+    // The command line: not its arguments, so the program goes on.
+    assert_eq!(todo_helper_main(&["--other".into()]), None);
+    assert_eq!(todo_helper_main(&[]), None);
+}
+
+#[tokio::test]
+async fn git_does_not_start_if_its_list_is_not_the_preview() {
+    let repo = TestRepo::new().await;
+    let (base, a, _, _) = three(&repo).await;
+    let before = state(&repo).await;
+    let plan_file = repo.path().join(".git/gitcraft-rebase-plan");
+    // A plan that expects other commits.
+    let other = "b".repeat(40);
+    std::fs::write(
+        &plan_file,
+        format!("gitcraft-rebase-plan 1\nsecret\n{other}\ndrop {a}\n"),
+    )
+    .expect("file");
+    let out = repo
+        .write()
+        .args(["rebase", "-i", &base])
+        .env(
+            "GIT_SEQUENCE_EDITOR",
+            sequence_editor(Path::new(HELPER), &plan_file),
+        )
+        .env(TOKEN_ENV, "secret")
+        .accept_exit_code(1)
+        .output(&token())
+        .await
+        .expect("rebase -i");
+    assert_ne!(out.exit_code, Some(0));
+    assert!(
+        out.stderr.contains("other commits than GitCRAFT's preview"),
+        "{}",
+        out.stderr
+    );
+    assert_eq!(state(&repo).await, before);
+    assert!(!repo.path().join(".git/rebase-merge").exists());
+}
+
+#[tokio::test]
+async fn the_helper_runs_from_a_path_with_spaces_and_quotes() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let folder = dir.path().join("Mis programas (x86) 'GitCRAFT' año");
+    std::fs::create_dir_all(&folder).expect("file");
+    let name = if cfg!(windows) {
+        "rebase todo.exe"
+    } else {
+        "rebase todo"
+    };
+    let program = folder.join(name);
+    std::fs::copy(HELPER, &program).expect("file");
+
+    let repo = TestRepo::new().await;
+    let (_, a, b, c) = three(&repo).await;
+    let p = preview(&repo, &a).await;
+    let request = InteractiveRequest {
+        plan: plan(
+            &p,
+            vec![
+                step(&a, StepAction::Pick),
+                step(&c, StepAction::Pick),
+                step(&b, StepAction::Pick),
+            ],
+        ),
+        save_changes: false,
+        allow_conflicts: false,
+    };
+    let outcome = interactive_rebase(repo.git(), repo.path(), &request, &program, &token())
+        .await
+        .expect("interactive rebase");
+    assert!(
+        matches!(outcome, InteractiveOutcome::Done { .. }),
+        "{outcome:?}"
+    );
+    let subjects = repo.run(&["log", "--format=%s", "-2"]).await;
+    assert_eq!(subjects.lines().collect::<Vec<_>>(), ["Añade b", "Añade c"]);
+}
+
+#[test]
+fn the_todo_carries_new_messages_in_fixup_c() {
+    let oid = |n: char| n.to_string().repeat(40);
+    let (a, b, c, d) = (oid('a'), oid('b'), oid('c'), oid('d'));
+    let p = RebasePlan {
+        from: a.clone(),
+        expected: String::new(),
+        steps: vec![
+            with_message(&a, StepAction::Reword, "A nuevo"),
+            step(&b, StepAction::Drop),
+            step(&c, StepAction::Pick),
+            with_message(&d, StepAction::Squash, "C y D"),
+        ],
+    };
+    let messages = [(a.clone(), "1".repeat(40)), (d.clone(), "2".repeat(40))]
+        .into_iter()
+        .collect();
+    assert_eq!(
+        todo_text(&p, &messages),
+        format!(
+            "pick {a}\nfixup -C {}\npick {c}\nfixup {d}\nfixup -C {}\ndrop {b}\n",
+            "1".repeat(40),
+            "2".repeat(40)
+        )
+    );
 }

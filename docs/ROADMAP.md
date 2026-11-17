@@ -3041,7 +3041,7 @@ principio y toda operación destructiva pasa por confirmación.
         vacío y desde el commit raíz. También cada motivo para negarse,
         lo publicado, lo que estorba, cada problema del plan (también git
         < 2.32) y que no cambia ninguna ref, el índice ni los archivos.
-      - [ ] **13.2 Aplicar (core).** `interactive_rebase(plan, huella,
+      - [x] **13.2 Aplicar (core).** `interactive_rebase(plan, huella,
         guardar_cambios)`: los mensajes en commits auxiliares, el plan en
         `.git/`, `git rebase -i` con el editor auxiliar y
         `GIT_EDITOR=true`, y el registro en el diario para «Deshacer».
@@ -3054,6 +3054,48 @@ principio y toda operación destructiva pasa por confirmación.
         idéntico (refs, índice y archivos), la huella cambiada no hace
         nada, guardar y aplicar, «Deshacer» deja todo idéntico, y git <
         2.32 niega editar y combinar.
+        *Hecho:* `interactive_rebase(request, editor)` en
+        `ops::interactive_rebase`, donde `editor` es el programa que hace
+        de editor auxiliar (la app pasará su propio ejecutable en la 13.3).
+        - **El plan para git:** `pick`, `fixup` para lo combinado y
+          `fixup -C <auxiliar>` al final de cada cadena con mensaje nuevo;
+          los descartados, con `drop` al final. Se escribe en
+          `.git/gitcraft-rebase-plan` (con el token y la lista que se
+          espera) y se borra siempre al volver git.
+        - **`git rebase --interactive --empty=drop`** con `-c` para que la
+          configuración del usuario no cambie la lista
+          (`rebase.autoSquash`, `rebase.updateRefs`,
+          `rebase.rebaseMerges`, `rebase.abbreviateCommands`,
+          `core.commentChar`), `--no-autostash`, `GIT_EDITOR=true` y el
+          token en `GITCRAFT_REBASE_TOKEN`. Desde el commit raíz,
+          `--root`.
+        - **El modo auxiliar** (`apply_todo`, `todo_helper_main`): sin el
+          token, o con otro, sale con error sin tocar nada; con él, borra
+          el archivo del plan antes de nada (un solo uso), comprueba que la
+          lista de git solo tiene `pick` de los commits de la vista previa
+          y en su orden, y pone el plan en su lugar. Si no coincide, git no
+          empieza.
+        - **Resultado:** hecho (HEAD nuevo), detenido en conflicto (sigue la
+          9) o no hecho (huella cambiada, plan incorrecto, algo estorba sin
+          «guardar», o conflicto previsto sin aceptarlo). La entrada de
+          stash es «GitCRAFT: antes del rebase interactivo de <rama>».
+        - El diario: en el núcleo, el rebase interactivo se deshace con el
+          mecanismo general (test); su tipo propio de operación para el
+          aviso y el menú llega con la 13.3.
+        Tests: 8 de integración más (17 en total) y un programa auxiliar
+        solo para los tests (`rebase-todo`, como `fake-gh`). Editar,
+        combinar, descartar y reordenar a la vez, con mensajes con acentos,
+        varias líneas y una línea que empieza por `#`, conservando el autor.
+        Conflicto a mitad: continuar con la 9 (el mensaje nuevo de después
+        se aplica igual), saltar y abortar (todo idéntico). La huella
+        cambiada y lo que estorba no hacen nada; guardar y aplicar.
+        «Deshacer» deja todo idéntico. El modo auxiliar sin token, con otro
+        token, por segunda vez y con otra lista; git no empieza si la lista
+        no es la de la vista previa; y el programa en una ruta con
+        espacios, paréntesis, comillas y acentos.
+        *Para la 13.4:* el progreso del aviso de la 9 («paso n de m») cuenta
+        también las líneas `fixup -C`; la vista tendrá que contar solo los
+        commits.
       - [ ] **13.3 El editor auxiliar y los comandos (Tauri).** El modo
         `--rebase-todo` del ejecutable (antes de arrancar la ventana, sin
         tocar la configuración), comprobado en macOS, Windows y Linux en la

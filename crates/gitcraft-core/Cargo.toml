@@ -20,6 +20,15 @@ required-features = ["testing"]
 test = false
 doctest = false
 
+# The todo helper of the interactive rebase as a program of its own, for the
+# tests (the app uses its own executable); never built for the app.
+[[bin]]
+name = "rebase-todo"
+path = "src/bin/rebase_todo.rs"
+required-features = ["testing"]
+test = false
+doctest = false
+
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true

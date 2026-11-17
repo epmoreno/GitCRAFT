@@ -7,14 +7,15 @@
 //! task 8): loose objects are written, never refs, and git's gc removes them.
 
 use std::collections::{BTreeSet, HashMap};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 use crate::ops::branch::BlockingFile;
 use crate::ops::in_progress::CommitRef;
-use crate::ops::merge_rebase::{MoveBlock, in_the_way, merge_tree};
+use crate::ops::merge_rebase::{MoveBlock, in_the_way, merge_tree, stopped_or_failed};
 use crate::ops::reset::{remote_branches_containing, state_fingerprint};
+use crate::ops::stash::create_stash;
 use crate::ops::status::{in_progress, working_status};
 use crate::parse::diff::fingerprint;
 use crate::runner::GitVersion;
@@ -725,4 +726,443 @@ pub async fn simulate_plan(
         result.published_in = remote_branches_containing(git, repo, &oldest, cancel).await?;
     }
     Ok(result)
+}
+
+// --- applying a plan (13.2) ---------------------------------------------------
+
+/// The flag that starts the todo helper (the app's own executable as git's
+/// sequence editor): `<program> --rebase-todo <plan file> <git's todo>`.
+pub const TODO_HELPER_FLAG: &str = "--rebase-todo";
+/// The one-time token the helper needs, set only for the `git rebase -i`
+/// that GitCRAFT starts.
+pub const TOKEN_ENV: &str = "GITCRAFT_REBASE_TOKEN";
+/// First line of a plan file.
+const PLAN_HEADER: &str = "gitcraft-rebase-plan 1";
+/// The plan file, in the repository's git directory while the rebase
+/// starts.
+const PLAN_FILE: &str = "gitcraft-rebase-plan";
+
+/// What the user accepted.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub struct InteractiveRequest {
+    pub plan: RebasePlan,
+    /// Stash the changes in the way first.
+    pub save_changes: bool,
+    /// Start even if it is predicted to stop with conflicts.
+    pub allow_conflicts: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum InteractiveOutcome {
+    /// Done: the branch is at `head`.
+    Done { head: String, saved: Option<String> },
+    /// Stopped on conflicts in these files: a rebase is waiting (task 9's
+    /// banner and view).
+    Conflicted {
+        files: Vec<String>,
+        saved: Option<String>,
+    },
+    /// Nothing was done; the previews say why. `changed`: the repository
+    /// is no longer as the preview the user accepted saw it.
+    NotDone {
+        preview: Box<InteractivePreview>,
+        plan: Box<PlanPreview>,
+        changed: bool,
+        saved: Option<String>,
+    },
+}
+
+/// Message of the stash made by "save my changes, then apply".
+pub fn interactive_stash_message(branch: &str) -> String {
+    format!("GitCRAFT: antes del rebase interactivo de {branch}")
+}
+
+/// A token nobody outside this process can guess: std's `RandomState` is
+/// seeded from the system's randomness. Not for cryptography; it only
+/// makes sure the todo helper runs for the rebase GitCRAFT started.
+pub fn new_token() -> String {
+    use std::hash::BuildHasher;
+    let now = std::time::SystemTime::now();
+    (0..2)
+        .map(|i| {
+            let hash = std::collections::hash_map::RandomState::new().hash_one((
+                i,
+                std::process::id(),
+                now,
+            ));
+            format!("{hash:016x}")
+        })
+        .collect()
+}
+
+/// `path` for git's shell: in single quotes (a `'` inside closes, escapes
+/// and reopens), with `/` also on Windows (git's sh there reads both).
+fn shell_quoted(path: &Path) -> String {
+    let text = path.to_string_lossy().replace('\\', "/");
+    format!("'{}'", text.replace('\'', "'\\''"))
+}
+
+/// The `GIT_SEQUENCE_EDITOR` value: git runs it with its own shell and
+/// appends the todo's path.
+pub fn sequence_editor(program: &Path, plan_file: &Path) -> String {
+    format!(
+        "{} {TODO_HELPER_FLAG} {}",
+        shell_quoted(program),
+        shell_quoted(plan_file)
+    )
+}
+
+/// The todo git runs for `plan`: new messages go in throwaway commits
+/// (`messages`, by the oid of the last commit of their chain) applied with
+/// `fixup -C`; dropped commits are listed last.
+pub fn todo_text(plan: &RebasePlan, messages: &HashMap<String, String>) -> String {
+    let mut lines = Vec::new();
+    let mut drops = Vec::new();
+    let mut chain_last: Option<&str> = None;
+    let close = |lines: &mut Vec<String>, last: Option<&str>| {
+        if let Some(message) = last.and_then(|oid| messages.get(oid)) {
+            lines.push(format!("fixup -C {message}"));
+        }
+    };
+    for step in &plan.steps {
+        match step.action {
+            StepAction::Drop => drops.push(format!("drop {}", step.oid)),
+            StepAction::Pick | StepAction::Reword => {
+                close(&mut lines, chain_last);
+                lines.push(format!("pick {}", step.oid));
+                chain_last = Some(&step.oid);
+            }
+            StepAction::Squash => {
+                lines.push(format!("fixup {}", step.oid));
+                chain_last = Some(&step.oid);
+            }
+        }
+    }
+    close(&mut lines, chain_last);
+    lines.extend(drops);
+    lines.push(String::new());
+    lines.join("\n")
+}
+
+/// For each chain (a kept commit and the ones combined into it) that ends
+/// with a new message: the oid of its last commit and that message.
+fn new_messages(preview: &InteractivePreview, plan: &RebasePlan) -> Vec<(String, String)> {
+    let by_oid: HashMap<&str, &RangeCommit> = preview
+        .commits
+        .iter()
+        .map(|c| (c.commit.oid.as_str(), c))
+        .collect();
+    let mut chains: Vec<(String, Option<String>)> = Vec::new();
+    for step in &plan.steps {
+        match step.action {
+            StepAction::Drop => {}
+            StepAction::Pick => chains.push((step.oid.clone(), None)),
+            StepAction::Reword => {
+                let message = is_rewording(step, by_oid[step.oid.as_str()])
+                    .then(|| step.message.clone())
+                    .flatten();
+                chains.push((step.oid.clone(), message));
+            }
+            StepAction::Squash => {
+                if let Some(chain) = chains.last_mut() {
+                    *chain = (step.oid.clone(), step.message.clone());
+                }
+            }
+        }
+    }
+    chains
+        .into_iter()
+        .filter_map(|(oid, message)| message.map(|m| (oid, m)))
+        .collect()
+}
+
+/// A commit with `message` and no change of its own on top of `oid`: with
+/// `fixup -C`, git takes only its message. No ref points at it.
+async fn message_commit(
+    git: &Git,
+    repo: &Path,
+    oid: &str,
+    message: &str,
+    cancel: &CancellationToken,
+) -> Result<String> {
+    let tree = tree_of(git, repo, oid, cancel).await?;
+    let mut text = message.trim_end().to_owned();
+    text.push('\n');
+    Ok(git
+        .read(repo)
+        .args(["commit-tree", "--no-gpg-sign", &tree, "-p", oid, "-F", "-"])
+        .stdin(text.into_bytes())
+        .env("GIT_AUTHOR_NAME", "GitCRAFT")
+        .env("GIT_AUTHOR_EMAIL", "rebase@gitcraft.invalid")
+        .env("GIT_COMMITTER_NAME", "GitCRAFT")
+        .env("GIT_COMMITTER_EMAIL", "rebase@gitcraft.invalid")
+        .output(cancel)
+        .await?
+        .stdout_lossy()
+        .trim()
+        .to_owned())
+}
+
+/// Applies the plan the user accepted with `git rebase -i`, with `editor`
+/// (the app's executable) as the sequence editor. It checks everything
+/// again and does nothing if the repository changed since the preview, if
+/// it is refused or the plan is wrong, if changes are in the way (unless
+/// `save_changes`: they are stashed first) or if it would stop with
+/// conflicts (unless `allow_conflicts`).
+pub async fn interactive_rebase(
+    git: &Git,
+    repo: &Path,
+    request: &InteractiveRequest,
+    editor: &Path,
+    cancel: &CancellationToken,
+) -> Result<InteractiveOutcome> {
+    let not_done = |preview: InteractivePreview, plan: PlanPreview, changed, saved| {
+        Ok(InteractiveOutcome::NotDone {
+            preview: Box::new(preview),
+            plan: Box::new(plan),
+            changed,
+            saved,
+        })
+    };
+    let plan = &request.plan;
+    let mut preview = interactive_rebase_preview(git, repo, &plan.from, cancel).await?;
+    if preview.fingerprint != plan.expected {
+        return not_done(
+            preview,
+            PlanPreview::problem(PlanProblem::Changed),
+            true,
+            None,
+        );
+    }
+    if let Some(problem) = validate_plan(&preview, plan) {
+        return not_done(preview, PlanPreview::problem(problem), false, None);
+    }
+    let mut saved = None;
+    if preview.blocked.is_some() {
+        // Nothing wrong with the plan: the preview says what is in the way.
+        let mut in_the_way = PlanPreview::problem(PlanProblem::Refused);
+        in_the_way.problem = None;
+        if !request.save_changes {
+            return not_done(preview, in_the_way, false, None);
+        }
+        let branch = preview.branch.clone().unwrap_or_default();
+        let message = interactive_stash_message(&branch);
+        saved = Some(create_stash(git, repo, &message, true, cancel).await?);
+        preview = interactive_rebase_preview(git, repo, &plan.from, cancel).await?;
+        if preview.refused.is_some() || preview.blocked.is_some() {
+            return not_done(preview, in_the_way, false, saved);
+        }
+    }
+    // The stash changed the fingerprint: the plan is checked against the
+    // preview made now.
+    let current = RebasePlan {
+        expected: preview.fingerprint.clone(),
+        ..plan.clone()
+    };
+    let predicted = simulate_plan(git, repo, &current, cancel).await?;
+    if predicted.problem.is_some() || (predicted.stops_at.is_some() && !request.allow_conflicts) {
+        return not_done(preview, predicted, false, saved);
+    }
+
+    let mut messages = HashMap::new();
+    for (oid, message) in new_messages(&preview, &current) {
+        let commit = message_commit(git, repo, &oid, &message, cancel).await?;
+        messages.insert(oid, commit);
+    }
+    let todo = todo_text(&current, &messages);
+    let git_dir = PathBuf::from(
+        git.read(repo)
+            .args(["rev-parse", "--absolute-git-dir"])
+            .output(cancel)
+            .await?
+            .stdout_lossy()
+            .trim(),
+    );
+    let plan_file = git_dir.join(PLAN_FILE);
+    let token = new_token();
+    let expected: Vec<&str> = preview
+        .commits
+        .iter()
+        .map(|c| c.commit.oid.as_str())
+        .collect();
+    let contents = format!("{PLAN_HEADER}\n{token}\n{}\n{todo}", expected.join(" "));
+    // A plan file left by a rebase that never started is stale.
+    let _ = std::fs::remove_file(&plan_file);
+    write_new(&plan_file, &contents)?;
+
+    let mut cmd = git
+        .write(repo)
+        .args([
+            // `-c`, not options: older git ignores unknown settings.
+            "-c",
+            "rebase.updateRefs=false",
+            "-c",
+            "rebase.autoSquash=false",
+            "-c",
+            "rebase.rebaseMerges=false",
+            "-c",
+            "rebase.abbreviateCommands=false",
+            "-c",
+            "rebase.missingCommitsCheck=ignore",
+            "-c",
+            "core.commentChar=#",
+            "rebase",
+            "--interactive",
+            "--no-autostash",
+            "--empty=drop",
+        ])
+        .env("GIT_SEQUENCE_EDITOR", sequence_editor(editor, &plan_file))
+        .env("GIT_EDITOR", "true")
+        .env(TOKEN_ENV, &token);
+    cmd = match &preview.base {
+        Some(base) => cmd.args(["--end-of-options", base]),
+        None => cmd.arg("--root"),
+    };
+    let out = cmd.accept_exit_code(1).output(cancel).await;
+    let _ = std::fs::remove_file(&plan_file);
+    let out = out?;
+    let status = working_status(git, repo, cancel).await?;
+    stopped_or_failed(&out, &status, "rebase")?;
+    if out.exit_code == Some(1) || !status.conflicted.is_empty() || status.in_progress.is_some() {
+        return Ok(InteractiveOutcome::Conflicted {
+            files: status.conflicted.into_iter().map(|c| c.path).collect(),
+            saved,
+        });
+    }
+    let head = git
+        .read(repo)
+        .args(["rev-parse", "HEAD"])
+        .output(cancel)
+        .await?
+        .stdout_lossy()
+        .trim()
+        .to_owned();
+    Ok(InteractiveOutcome::Done { head, saved })
+}
+
+/// Writes a file that must not exist yet.
+fn write_new(path: &Path, contents: &str) -> Result<()> {
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    file.write_all(contents.as_bytes()).map_err(GitError::from)
+}
+
+/// Why the todo helper did nothing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TodoHelperError {
+    /// Not started by GitCRAFT's rebase: no token, or not this one.
+    NotOurs,
+    /// The arguments or a file could not be read.
+    Unreadable(String),
+    /// git proposed other commits than the preview showed.
+    Mismatch,
+}
+
+impl std::fmt::Display for TodoHelperError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotOurs => write!(f, "only GitCRAFT's own interactive rebase can use this"),
+            Self::Unreadable(why) => write!(f, "could not read the rebase plan: {why}"),
+            Self::Mismatch => write!(
+                f,
+                "git proposed other commits than GitCRAFT's preview; nothing was changed"
+            ),
+        }
+    }
+}
+
+/// The commit ids of git's todo, if it only picks (in order).
+fn picked(todo: &str) -> Option<Vec<&str>> {
+    let mut oids = Vec::new();
+    for line in todo.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut words = line.split_whitespace();
+        if words.next()? != "pick" {
+            return None;
+        }
+        let oid = words.next()?;
+        if oid.len() < 4 || !oid.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return None;
+        }
+        oids.push(oid);
+    }
+    Some(oids)
+}
+
+/// The todo helper: checks the token and that git's todo lists exactly the
+/// commits of the preview, then puts the plan in its place. The plan file
+/// is used once: it is removed before anything else is written.
+pub fn apply_todo(
+    plan_file: &Path,
+    todo_file: &Path,
+    token: Option<&str>,
+) -> std::result::Result<(), TodoHelperError> {
+    let unreadable = |e: std::io::Error| TodoHelperError::Unreadable(e.to_string());
+    let token = token
+        .filter(|t| !t.is_empty())
+        .ok_or(TodoHelperError::NotOurs)?;
+    let contents = std::fs::read_to_string(plan_file).map_err(|e| match e.kind() {
+        std::io::ErrorKind::NotFound => TodoHelperError::NotOurs,
+        _ => unreadable(e),
+    })?;
+    let mut parts = contents.splitn(4, '\n');
+    let (Some(PLAN_HEADER), Some(expected_token), Some(expected), Some(todo)) =
+        (parts.next(), parts.next(), parts.next(), parts.next())
+    else {
+        return Err(TodoHelperError::NotOurs);
+    };
+    if expected_token != token {
+        return Err(TodoHelperError::NotOurs);
+    }
+    std::fs::remove_file(plan_file).map_err(unreadable)?;
+    let proposed = std::fs::read_to_string(todo_file).map_err(unreadable)?;
+    let expected: Vec<&str> = expected.split(' ').filter(|s| !s.is_empty()).collect();
+    let matches = picked(&proposed).is_some_and(|oids| {
+        oids.len() == expected.len()
+            && oids
+                .iter()
+                .zip(&expected)
+                .all(|(short, full)| full.starts_with(short))
+    });
+    if !matches {
+        return Err(TodoHelperError::Mismatch);
+    }
+    std::fs::write(todo_file, todo).map_err(unreadable)
+}
+
+/// The helper's command line (`--rebase-todo <plan file> <todo>`, after the
+/// program's name). `None`: these are not its arguments, the program goes
+/// on as usual. Otherwise the exit code: 0 if the plan is in place.
+pub fn todo_helper_main(args: &[std::ffi::OsString]) -> Option<i32> {
+    if args.first().and_then(|a| a.to_str()) != Some(TODO_HELPER_FLAG) {
+        return None;
+    }
+    let token = std::env::var(TOKEN_ENV).ok();
+    let result = match args {
+        [_, plan, todo] => apply_todo(Path::new(plan), Path::new(todo), token.as_deref()),
+        _ => Err(TodoHelperError::Unreadable(
+            "expected a plan and a todo".into(),
+        )),
+    };
+    Some(match result {
+        Ok(()) => 0,
+        Err(err) => {
+            eprintln!("GitCRAFT: {err}");
+            1
+        }
+    })
 }

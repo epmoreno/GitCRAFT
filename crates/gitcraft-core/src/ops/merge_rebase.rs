@@ -860,7 +860,11 @@ async fn ref_value(
 
 /// Exit code 1 means "stopped on conflicts" only if something is waiting;
 /// otherwise git refused (a hook, for instance): that is an error.
-fn stopped_or_failed(out: &crate::GitOutput, status: &WorkingStatus, command: &str) -> Result<()> {
+pub(crate) fn stopped_or_failed(
+    out: &crate::GitOutput,
+    status: &WorkingStatus,
+    command: &str,
+) -> Result<()> {
     if out.exit_code == Some(1) && status.in_progress.is_none() && status.conflicted.is_empty() {
         return Err(GitError::Failed {
             args: vec![command.to_owned()],
