@@ -2897,7 +2897,8 @@ principio y toda operación destructiva pasa por confirmación.
           no, toda ruta que lo contiene. «diff.c» en git/git pasa de 8,4 s
           a 0,43 s con `commit-graph` y de 9,0 s a 1,4 s sin él
           (`docs/benchmarks.md`). Hay un test de integración nuevo.
-          *Falta la prueba del usuario.*
+          *Verificado manualmente en macOS por el usuario:* la búsqueda por
+          la ruta exacta.
         *Verificado manualmente en macOS por el usuario (tarea 12 completa)*
         con `~/gitcraft-busqueda`, sección por sección:
         - **A. Búsqueda:** mensaje con contador, navegación con Intro y ⌘G,
@@ -2921,7 +2922,9 @@ principio y toda operación destructiva pasa por confirmación.
       cabecera no tapa el contenido, el tamaño de la ✕ y los títulos
       fijos). Revisados los demás diálogos con desplazamiento (historial de
       una rama, publicar): no tenían el problema.
-      *Falta la prueba del usuario.*
+      *Verificado manualmente en macOS por el usuario:* nada pasa por
+      detrás de la ✕, los títulos de grupo se quedan fijos, la primera fila
+      no sale cortada y la ✕ tiene hover y se alcanza con Tab.
       *Mejora futura (decisión del usuario):* buscar en el contenido de los
       cambios (`git log -S`/`-G`, qué commit añadió o quitó un texto).
       *Mejora futura (decisión del usuario):* una opción para colorear el
