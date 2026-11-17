@@ -49,7 +49,6 @@ export function IdentitySection() {
 
   return (
     <section aria-label={t("settings.section.identity")}>
-      <h3 className={styles.sectionTitle}>{t("settings.section.identity")}</h3>
       <p className={styles.hint}>{t("settings.identity.intro")}</p>
       {error && <ErrorReport error={error} lead={t("settings.git.failed")} />}
       {info && (

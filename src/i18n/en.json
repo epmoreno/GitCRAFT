@@ -729,6 +729,7 @@
     "openHint": "Settings ({{shortcut}})",
     "sections": "Settings sections",
     "close": "Close settings",
+    "closeHint": "Close ({{shortcut}})",
     "failed": "Could not read or save the settings.",
     "section": {
       "general": "General",

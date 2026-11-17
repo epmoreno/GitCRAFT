@@ -86,7 +86,6 @@ export function GithubSection() {
 
   return (
     <section aria-label={t("settings.section.github")}>
-      <h3 className={styles.sectionTitle}>{t("settings.section.github")}</h3>
       <p className={styles.hint}>{osT("settings.github.intro")}</p>
       {error && (
         <ErrorReport error={error} lead={t("settings.github.failed")} />

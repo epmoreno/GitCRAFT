@@ -38,6 +38,36 @@ describe("settings", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("keeps the section title and the close button in a fixed header", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    act(() => useSettingsStore.getState().openSettings("shortcuts"));
+    const header = within(dialog()).getByRole("banner");
+    expect(
+      within(header).getByRole("heading", { name: "Atajos" }),
+    ).toBeInTheDocument();
+    // The title is in the header only, not again in the scrolling content.
+    expect(
+      within(dialog()).getAllByRole("heading", { name: "Atajos" }),
+    ).toHaveLength(1);
+    // Each group of shortcuts is a table named by its (sticky) title.
+    expect(
+      within(dialog()).getByRole("table", { name: "Blame" }),
+    ).toBeInTheDocument();
+    await user.click(
+      within(dialog()).getByRole("button", { name: "Generales" }),
+    );
+    expect(
+      within(header).getByRole("heading", { name: "Generales" }),
+    ).toBeInTheDocument();
+    const close = within(header).getByRole("button", {
+      name: "Cerrar los ajustes",
+    });
+    expect(close).toHaveAccessibleDescription("Cerrar (Esc)");
+    await user.click(close);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("applies the saved language and text size at start", async () => {
     ipc.generalSettings.mockResolvedValue({
       status: "ok",

@@ -2908,6 +2908,16 @@ principio y toda operación destructiva pasa por confirmación.
           commit desactivado, el archivo grande con aviso, progreso y
           cancelar, el binario y el desplazamiento lateral.
         - **D.** Los grupos de atajos en Ajustes.
+      *Arreglo visual tras la 12 (pedido por el usuario):* en Ajustes, una
+      cabecera fija en el panel derecho con el título de la sección y la ✕
+      (28×28, con hover, foco de teclado y el tooltip «Cerrar (Esc)») y un
+      separador debajo; solo se desplaza el contenido, con margen arriba y
+      abajo. En «Atajos», el título de cada grupo se queda arriba mientras
+      pasan sus filas. El modo de humo lo mide en el motor web real (la
+      cabecera no tapa el contenido, el tamaño de la ✕ y los títulos
+      fijos). Revisados los demás diálogos con desplazamiento (historial de
+      una rama, publicar): no tenían el problema.
+      *Falta la prueba del usuario.*
       *Mejora futura (decisión del usuario):* buscar en el contenido de los
       cambios (`git log -S`/`-G`, qué commit añadió o quitó un texto).
       *Mejora futura (decisión del usuario):* una opción para colorear el

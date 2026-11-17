@@ -729,6 +729,7 @@
     "openHint": "Ajustes ({{shortcut}})",
     "sections": "Secciones de los ajustes",
     "close": "Cerrar los ajustes",
+    "closeHint": "Cerrar ({{shortcut}})",
     "failed": "No se pudieron leer o guardar los ajustes.",
     "section": {
       "general": "Generales",

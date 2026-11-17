@@ -51,30 +51,61 @@
   color: var(--text);
 }
 
-.content {
+/* The right side: a fixed header and the content that scrolls below it. */
+.panel {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: var(--space-3);
+  min-height: 0;
   overflow-y: auto;
-  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-4);
+  /* Room above the first row and below the last, so none is cut. */
+  padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
 .close {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  width: 24px;
-  height: 24px;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   border: 0;
   border-radius: var(--radius);
-  background: transparent;
+  background-color: transparent;
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
 }
 
+.close:hover {
+  background-color: var(--surface-3);
+  color: var(--text);
+}
+
+.close:focus-visible {
+  color: var(--text);
+}
+
 .sectionTitle {
-  margin: 0 0 var(--space-3);
+  margin: 0;
   font-size: 14px;
   font-weight: 600;
 }
@@ -201,20 +232,30 @@
   color: var(--warning);
 }
 
-.shortcuts {
-  width: 100%;
+.shortcutGroup {
   margin-bottom: var(--space-4);
-  border-collapse: collapse;
 }
 
-.shortcuts caption {
-  padding-bottom: var(--space-1);
+/* Stays at the top of the scrolling content while its rows go by. The
+   engines stick it at the content's padding edge: the negative offset
+   takes it up to the header, so no row shows above it. */
+.groupTitle {
+  position: sticky;
+  top: calc(-1 * var(--space-3));
+  z-index: 1;
+  margin: 0;
+  padding: var(--space-1) 0;
+  background-color: var(--surface-1);
   color: var(--text-muted);
   font-size: var(--font-size-small);
   font-weight: 600;
   letter-spacing: 0.06em;
-  text-align: left;
   text-transform: uppercase;
+}
+
+.shortcuts {
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .shortcuts th,

@@ -2,7 +2,9 @@ import { isShortcut } from "../../app/shortcuts";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { pickFolder, type SettingsLanguage, type TextSize } from "../../ipc";
+import { useShortcutLabel } from "../../app/useShortcutLabel";
 import { ErrorReport } from "../../ui/ErrorReport";
+import { Tooltip } from "../../ui/Tooltip";
 import { GitDefaults } from "./GitDefaults";
 import { GithubSection } from "./GithubSection";
 import { IdentitySection } from "./IdentitySection";
@@ -27,6 +29,7 @@ export function SettingsDialog() {
   const close = useSettingsStore((s) => s.close);
   const error = useSettingsStore((s) => s.error);
   const titleId = useId();
+  const label = useShortcutLabel();
   const dialog = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,21 +73,33 @@ export function SettingsDialog() {
             </button>
           ))}
         </nav>
-        <div className={styles.content}>
-          {error && <ErrorReport error={error} lead={t("settings.failed")} />}
-          {section === "general" && <GeneralSection />}
-          {section === "identity" && <IdentitySection />}
-          {section === "github" && <GithubSection />}
-          {section === "shortcuts" && <ShortcutsSection />}
+        <div className={styles.panel}>
+          {/* Fixed: only the content below scrolls, never behind it. */}
+          <header className={styles.header}>
+            <h3 className={styles.sectionTitle}>
+              {t(`settings.section.${section}`)}
+            </h3>
+            <Tooltip
+              label={t("settings.closeHint", { shortcut: label("escape") })}
+            >
+              <button
+                type="button"
+                className={styles.close}
+                aria-label={t("settings.close")}
+                onClick={close}
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </Tooltip>
+          </header>
+          <div className={styles.content}>
+            {error && <ErrorReport error={error} lead={t("settings.failed")} />}
+            {section === "general" && <GeneralSection />}
+            {section === "identity" && <IdentitySection />}
+            {section === "github" && <GithubSection />}
+            {section === "shortcuts" && <ShortcutsSection />}
+          </div>
         </div>
-        <button
-          type="button"
-          className={styles.close}
-          aria-label={t("settings.close")}
-          onClick={close}
-        >
-          ×
-        </button>
       </div>
     </div>
   );
@@ -120,7 +135,6 @@ function GeneralSection() {
   const update = useSettingsStore((s) => s.updateGeneral);
   return (
     <section aria-label={t("settings.section.general")}>
-      <h3 className={styles.sectionTitle}>{t("settings.section.general")}</h3>
       <Field label={t("settings.language.label")}>
         <select
           className={styles.select}
