@@ -73,10 +73,17 @@ async fn expiry(
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let days = now.saturating_sub(cutoff).div_ceil(86_400);
     Ok(Expiry::Days {
-        days: u32::try_from(days).unwrap_or(u32::MAX),
+        days: days_between(cutoff, now),
     })
+}
+
+/// Whole days from `cutoff` to `now`, to the nearest: git works the cut-off
+/// out a moment before `now` is read, so "2.weeks.ago" can be 14 days and
+/// a second, which is still 14.
+fn days_between(cutoff: u64, now: u64) -> u32 {
+    let days = (now.saturating_sub(cutoff) + 43_200) / 86_400;
+    u32::try_from(days).unwrap_or(u32::MAX)
 }
 
 /// The repository's reflog expiry settings.
@@ -167,4 +174,19 @@ pub async fn reflog(
         more,
         ..empty
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::days_between;
+
+    #[test]
+    fn a_second_late_is_still_the_same_day_count() {
+        let two_weeks = 14 * 86_400;
+        assert_eq!(days_between(1_000, 1_000 + two_weeks), 14);
+        assert_eq!(days_between(1_000, 1_000 + two_weeks + 2), 14);
+        assert_eq!(days_between(1_000, 1_000 + two_weeks - 2), 14);
+        assert_eq!(days_between(1_000, 1_000 + 3 * 86_400 / 2), 2);
+        assert_eq!(days_between(5_000, 1_000), 0);
+    }
 }
