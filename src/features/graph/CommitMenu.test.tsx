@@ -57,6 +57,7 @@ describe("the menu of a commit", () => {
     ).toEqual([
       "Cherry-pick en «main»…",
       "Revertir en «main»…",
+      "Rebase interactivo desde aquí…",
       "Crear tag aquí…",
       "Restablecer «main» a este commit…",
       // The branches on this commit (not the current one), so the keyboard

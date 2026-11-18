@@ -1,0 +1,315 @@
+/* The interactive rebase (task 13.4): over the history, like the blame.
+   The list of commits (newest at the top), the message editor, the
+   prediction and the buttons, one under the other. */
+.view {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--surface-0);
+}
+
+.header {
+  display: flex;
+  flex: none;
+  gap: var(--space-3);
+  align-items: center;
+  height: 34px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background-color: var(--surface-1);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.button,
+.primary {
+  height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius);
+  background-color: transparent;
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}
+
+.primary {
+  border-color: var(--accent);
+  background-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.button:disabled,
+.primary:disabled {
+  opacity: var(--disabled-opacity);
+}
+
+.notice {
+  margin: var(--space-4);
+  color: var(--text-muted);
+}
+
+.notice p {
+  margin: 0 0 var(--space-3);
+}
+
+.order {
+  flex: none;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.order p {
+  margin: 0;
+}
+
+.warning {
+  color: var(--warning);
+}
+
+.list {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  height: 34px;
+  padding-right: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.selected {
+  background-color: var(--selected-bg);
+  box-shadow: var(--selected-marker);
+}
+
+.list:not(:focus-within) .selected {
+  background-color: var(--selected-inactive-bg);
+}
+
+.dragging {
+  opacity: 0.5;
+}
+
+/* Where the dragged row would land. */
+.dropAbove {
+  box-shadow: inset 0 2px 0 var(--drag);
+}
+
+.dropBelow {
+  box-shadow: inset 0 -2px 0 var(--drag);
+}
+
+.grip {
+  flex: none;
+  width: 20px;
+  height: 100%;
+  color: var(--text-faint);
+  line-height: 34px;
+  text-align: center;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.step {
+  flex: none;
+  width: 3ch;
+  color: var(--text-faint);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The subtle line joining the commits of a combination with the one that
+   receives them. */
+.chain {
+  position: relative;
+  flex: none;
+  align-self: stretch;
+  width: 10px;
+}
+
+.chainStart::before,
+.chainMiddle::before,
+.chainEnd::before {
+  position: absolute;
+  left: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background-color: var(--border-strong);
+  content: "";
+}
+
+.chainStart::before {
+  top: 50%;
+  bottom: -1px;
+}
+
+.chainMiddle::before {
+  top: -1px;
+  bottom: -1px;
+}
+
+.chainEnd::before {
+  top: -1px;
+  height: calc(50% + 1px);
+}
+
+.action {
+  flex: none;
+  width: 190px;
+  height: 24px;
+  font-size: var(--font-size-small);
+}
+
+.marker {
+  flex: none;
+  width: 1ch;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.sha {
+  flex: none;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+}
+
+.subject {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropped .subject,
+.dropped .sha {
+  color: var(--text-dimmed);
+  text-decoration: line-through;
+}
+
+.badge,
+.badgeWarning,
+.badgePublished {
+  flex: none;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.badgeWarning {
+  border-color: var(--warning-border);
+  background-color: var(--warning-bg);
+  color: var(--text);
+}
+
+.badgePublished {
+  color: var(--info);
+}
+
+.meta {
+  flex: none;
+  max-width: 220px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  text-overflow: ellipsis;
+}
+
+.editor {
+  flex: none;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.editorLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-small);
+}
+
+.message {
+  width: 100%;
+  min-height: 72px;
+  max-height: 30vh;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.prediction {
+  flex: none;
+  max-height: 25vh;
+  overflow: auto;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+  background-color: var(--surface-1);
+  font-size: var(--font-size-small);
+}
+
+.prediction p {
+  margin: 0 0 var(--space-1);
+}
+
+.problem {
+  color: var(--warning);
+}
+
+.stop {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius);
+  margin-bottom: var(--space-2);
+  background-color: var(--warning-bg);
+}
+
+.files {
+  margin: 0 0 var(--space-2);
+  padding-left: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+}
+
+.footer {
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+}

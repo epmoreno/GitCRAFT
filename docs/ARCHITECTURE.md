@@ -761,6 +761,29 @@ combinar con el anterior, descartar y reordenar.
   un editor, tampoco al continuar tras un conflicto. Comprobado con git
   2.55: el autor del commit original se conserva y una línea del mensaje
   que empieza por `#` también.
+- **La vista (13.4, `src/features/interactiveRebase/`):** ocupa la zona
+  del historial, como el blame, y se abre con «Rebase interactivo desde
+  aquí…» en el menú de un commit de la rama actual (y su botón en el panel
+  de detalle). `plan.ts` es el modelo puro: las filas (la más nueva
+  arriba), qué commit recibe a los combinados (el siguiente que se
+  mantiene por debajo, aunque haya descartados en medio), el mensaje
+  combinado (relleno con los de todos, del más antiguo al más nuevo; lo
+  editado se conserva mientras se combinen los mismos commits) y el plan
+  para git (del más antiguo al más nuevo, con el mismo mensaje en todos
+  los combinados de un grupo). El store pide la previsión 250 ms después
+  del último cambio, ignora las respuestas viejas y vuelve a hacer la
+  vista previa cuando cambia el repo, conservando el plan si los commits
+  son los mismos. Reordenar con arrastre (eventos de puntero, con la
+  altura fija de las filas) o con ⌥↑ / ⌥↓, y la acción con 1–4: todo en
+  el registro de atajos, sin chocar con los activos a la vez (test). El
+  aviso del resultado es el de la 8 (`op: "interactiveRebase"`), con
+  «Deshacer».
+- **El progreso de la 9 cuenta commits (13.4):** el modo auxiliar deja
+  una marca vacía (`gitcraft-messages`) en el directorio `rebase-merge`
+  de git, que git borra al terminar o abortar. Con ella, «paso n de m»
+  sale de contar en `done` y `git-rebase-todo` solo las líneas de commits:
+  sin los `fixup -C` de los mensajes ni los `drop`. Sin la marca (otros
+  rebases), sigue con `msgnum` y `end` de git.
 
 ## 5f. Crear repositorios
 

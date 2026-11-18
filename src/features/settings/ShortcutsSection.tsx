@@ -21,6 +21,7 @@ const GROUPS: ShortcutGroup[] = [
   "search",
   "fileHistory",
   "blame",
+  "interactiveRebase",
   "general",
 ];
 

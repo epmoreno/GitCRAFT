@@ -855,6 +855,7 @@
         "tabs": "Pestañas",
         "changes": "Panel de cambios (lista y árbol)",
         "commit": "Caja de commit",
+        "interactiveRebase": "Rebase interactivo",
         "general": "Diálogos y menús",
         "diff": "Diff",
         "conflicts": "Vista de conflictos",
@@ -922,7 +923,15 @@
         "paneReset": "Separador vertical: anchura inicial (también con doble clic)",
         "blameBack": "Blame: volver al blame anterior",
         "blameNext": "Blame: grupo de líneas siguiente",
-        "blamePrevious": "Blame: grupo de líneas anterior"
+        "blamePrevious": "Blame: grupo de líneas anterior",
+        "rebaseNext": "Rebase interactivo: commit siguiente (más antiguo)",
+        "rebasePrevious": "Rebase interactivo: commit anterior (más nuevo)",
+        "rebaseMoveUp": "Rebase interactivo: subir el commit (se aplica después)",
+        "rebaseMoveDown": "Rebase interactivo: bajar el commit (se aplica antes)",
+        "rebasePick": "Rebase interactivo: Mantener",
+        "rebaseReword": "Rebase interactivo: Editar mensaje",
+        "rebaseSquash": "Rebase interactivo: Combinar con el de abajo",
+        "rebaseDrop": "Rebase interactivo: Descartar"
       }
     }
   },
@@ -1112,17 +1121,20 @@
       "merge": "Es un merge: habría que elegir cuál de sus padres es la línea principal; todavía no se puede desde GitCRAFT.",
       "alreadyInBranch": "Ya está en «{{branch}}».",
       "notInBranch": "No está en «{{branch}}»: solo se revierten commits de la rama actual.",
-      "isHead": "«{{branch}}» ya está en este commit."
+      "isHead": "«{{branch}}» ya está en este commit.",
+      "notInBranchRebase": "No está en «{{branch}}»: el rebase interactivo es de commits de la rama actual."
     },
     "action": {
       "cherryPick": "Cherry-pick en «{{branch}}»…",
       "revert": "Revertir en «{{branch}}»…",
+      "interactiveRebase": "Rebase interactivo desde aquí…",
       "reset": "Restablecer «{{branch}}» a este commit…",
       "createTag": "Crear tag aquí…"
     },
     "button": {
       "cherryPick": "Cherry-pick…",
       "revert": "Revertir…",
+      "interactiveRebase": "Rebase interactivo…",
       "reset": "Restablecer…",
       "createTag": "Crear tag…"
     }
@@ -1142,7 +1154,8 @@
       "merge": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del merge de {{short}}»).",
       "rebase": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del rebase de {{short}}»).",
       "undo": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de deshacer»).",
-      "redo": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de rehacer»)."
+      "redo": "Tus cambios siguen guardados en el stash («GitCRAFT: antes de rehacer»).",
+      "interactiveRebase": "Tus cambios siguen guardados en el stash («GitCRAFT: antes del rebase interactivo de {{short}}»)."
     },
     "abortKeepsSaved": "Los cambios que guardaste antes de empezar siguen en el stash: no vuelven solos al abortar. Recupéralos después con «Recuperar mis cambios».",
     "abortKeepsSavedHere": "Si lo abortas, tus cambios guardados seguirán en el stash: no vuelven solos al abortar. Recupéralos con «Recuperar mis cambios».",
@@ -1378,6 +1391,96 @@
     "undoRefused": "Algo ha cambiado desde el rebase, así que no se ha tocado nada.",
     "undoRefusedStashed": "Algo ha cambiado desde el rebase, así que no se ha tocado nada. Tus cambios siguen en el stash («GitCRAFT: antes del rebase de {{source}}»).",
     "menu": "Hacer rebase de «{{source}}» sobre «{{target}}»…"
+  },
+  "interactiveRebase": {
+    "title": "Rebase interactivo de «{{branch}}»",
+    "back": "Volver al grafo",
+    "backHint": "Volver al grafo sin cambiar nada ({{shortcut}})",
+    "order": "↑ Más nuevo arriba · git aplica de abajo arriba (1 → {{count}})",
+    "keysHint": "Arrastra ⠿ o usa {{up}} / {{down}} para reordenar · {{first}}–{{last}} cambian la acción",
+    "loading": "Cargando los commits…",
+    "failed": "No se pudo hacer el rebase interactivo.",
+    "listLabel": "Commits de «{{branch}}», el más nuevo arriba",
+    "rowLabel": "Paso {{step}}: {{short}} {{subject}} ({{action}})",
+    "actionLabel": "Acción para {{short}}",
+    "action": {
+      "pick": "Mantener",
+      "reword": "Editar mensaje",
+      "squash": "Combinar con el de abajo",
+      "drop": "Descartar"
+    },
+    "grip": "Arrastrar {{short}} para reordenarlo",
+    "step": "Se aplica en el paso {{step}}",
+    "receives_one": "recibe 1 commit",
+    "receives_other": "recibe {{count}} commits",
+    "combinedInto": "Se combina con {{short}}, debajo",
+    "orphan": "Debajo no hay ningún commit con el que combinarlo",
+    "published": "publicado",
+    "publishedHint": "Ya está en un remoto: reescribirlo obliga a un push forzado",
+    "stopsHere": "se detiene aquí con conflictos",
+    "emptyHere": "quedará vacío: git lo omitirá",
+    "messageReword": "Mensaje de {{short}} (Editar mensaje)",
+    "messageCombined_one": "Mensaje del commit combinado ({{count}} commit: {{shorts}})",
+    "messageCombined_other": "Mensaje del commit combinado ({{count}} commits: {{shorts}})",
+    "messageRefill": "Viene relleno con los mensajes de los commits combinados, del más antiguo al más nuevo. Si cambias qué se combina, se vuelve a rellenar.",
+    "messageHint": "Elige «Editar mensaje» o «Combinar con el de abajo» en un commit para cambiar su mensaje.",
+    "oldGit": "«Editar mensaje» y «Combinar» necesitan git 2.32 o posterior (tienes {{version}}).",
+    "notPredicted": "Con esta versión de git (tienes {{version}}) no se puede prever si habrá conflictos: hace falta git 2.40 o posterior.",
+    "predicting": "Calculando…",
+    "predictionLabel": "Previsión",
+    "stops": "Se detendrá en el paso {{step}} de {{of}} ({{short}}) con conflictos en:",
+    "after_one": "Quedará 1 commit desde el elegido",
+    "after_other": "Quedarán {{count}} commits desde el elegido",
+    "droppedCount_one": "1 descartado",
+    "droppedCount_other": "{{count}} descartados",
+    "emptyCount_one": "1 quedará vacío y git lo omitirá",
+    "emptyCount_other": "{{count}} quedarán vacíos y git los omitirá",
+    "publishedRewritten": "Se reescriben commits publicados en {{remotes}}: para subirlos hará falta un push forzado.",
+    "problem": {
+      "changed": "El repositorio ha cambiado desde que se abrió la vista.",
+      "refused": "Este rebase interactivo no se puede hacer.",
+      "mismatch": "El plan ya no coincide con los commits de la rama: vuelve al plan original.",
+      "squashFirst": "El commit más antiguo que se mantiene no puede combinarse: no tiene ningún commit debajo.",
+      "allDropped": "No se pueden descartar todos los commits. Para quitarlos todos, usa «Restablecer» en el commit de debajo.",
+      "emptyMessage": "El mensaje de {{short}} está vacío.",
+      "messagesNeedNewerGit": "Editar mensajes y combinar necesitan git 2.32 o posterior (tienes {{version}}).",
+      "unchanged": "El plan deja la rama como está: elige qué cambiar."
+    },
+    "reload": "Volver a cargar",
+    "changedKept": "El repositorio ha cambiado: la previsión se ha calculado de nuevo con tu plan.",
+    "changedReset": "La rama ha cambiado y tiene otros commits: el plan ha vuelto a empezar.",
+    "refused": {
+      "inProgress": "Hay una operación a medias (aviso de arriba): termínala o abórtala antes.",
+      "detached": "HEAD está separado: no hay rama actual. Cambia antes a una rama.",
+      "notInBranch": "Este commit no está en la rama actual.",
+      "mergesInRange": "Entre este commit y el último de «{{branch}}» hay merges. Rehacerlos todavía no se puede desde GitCRAFT, así que no se ofrece el rebase interactivo.",
+      "tooMany": "Son más de {{max}} commits: elige un commit más reciente."
+    },
+    "resetPlan": "Volver al plan original",
+    "cancel": "Cancelar",
+    "apply": "Aplicar…",
+    "applying": "Aplicando…",
+    "confirm": {
+      "title": "¿Aplicar el rebase interactivo de «{{branch}}»?",
+      "rewritten_one": "1 commit cambia de hash o se descarta. Quedarán {{after}} desde el elegido.",
+      "rewritten_other": "{{count}} commits cambian de hash o se descartan. Quedarán {{after}} desde el elegido.",
+      "dropped_one": "Se descarta 1 commit:",
+      "dropped_other": "Se descartan {{count}} commits:",
+      "recover": "Puedes recuperarlos con «Deshacer» justo después, o más tarde desde el historial de «{{branch}}».",
+      "published": "Algunos de estos commits ya están publicados ({{remotes}}). Después, «{{branch}}» y su copia en el remoto habrán divergido: para subirla hará falta un push forzado, que reescribe la rama en el remoto y afecta a quien ya tenga esos commits. GitCRAFT no lo hace solo: es una acción aparte, con su propia confirmación.",
+      "stops": "Se detendrá en el paso {{step}} de {{of}} ({{short}} «{{subject}}») con conflictos en:",
+      "stopsThen": "Podrás resolverlos, saltar ese commit o abortar el rebase, que lo deja todo como estaba.",
+      "save": "«Guardar mis cambios…» los guarda en el stash como «GitCRAFT: antes del rebase interactivo de {{branch}}», que nunca se borra solo, y al terminar podrás recuperarlos con «Recuperar mis cambios».",
+      "act": "Aplicar",
+      "actWithConflicts": "Aplicar con conflictos",
+      "saveAndAct": "Guardar mis cambios y aplicar",
+      "saveAndActWithConflicts": "Guardar mis cambios y aplicar con conflictos"
+    },
+    "done_one": "Rebase interactivo de «{{source}}» hecho: 1 commit reescrito o descartado.",
+    "done_other": "Rebase interactivo de «{{source}}» hecho: {{count}} commits reescritos o descartados.",
+    "undone": "Rebase interactivo deshecho: «{{branch}}» está exactamente como antes.",
+    "undoRefused": "Algo ha cambiado desde el rebase interactivo, así que no se ha tocado nada.",
+    "undoRefusedStashed": "Algo ha cambiado desde el rebase interactivo, así que no se ha tocado nada. Tus cambios siguen en el stash («GitCRAFT: antes del rebase interactivo de {{source}}»)."
   },
   "drop": {
     "legend": "¿Qué quieres hacer?",

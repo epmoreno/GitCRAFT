@@ -16,6 +16,7 @@ import { refreshAfterRemote } from "../remote/store";
 import { useStashStore } from "../stash/store";
 import { useWorkdirStore } from "../workdir/store";
 import { useTagStore } from "./tags";
+import { useInteractiveRebaseStore } from "../interactiveRebase/store";
 
 /**
  * Operations on one commit of the graph (task 10): their dialogs, their
@@ -36,6 +37,9 @@ export type HistoryDialog =
       /** The repository changed since the preview the user saw. */
       changed: boolean;
     };
+
+/** Operations that move a branch with "Undo" in their notice. */
+export type MoveOp = "merge" | "rebase" | "interactiveRebase";
 
 export type HistoryNotice =
   | {
@@ -58,8 +62,9 @@ export type HistoryNotice =
   | { kind: "resetUndone"; repoId: number; branch: string }
   | {
       kind: "merged";
-      /** A merge, or a rebase (task 8.3). */
-      op: "merge" | "rebase";
+      /** A merge, a rebase (task 8.3) or an interactive rebase (task 13),
+       * whose source and target are both its branch. */
+      op: MoveOp;
       repoId: number;
       undoId: number | null;
       source: string;
@@ -75,7 +80,7 @@ export type HistoryNotice =
     }
   | {
       kind: "mergeUndone";
-      op: "merge" | "rebase";
+      op: MoveOp;
       repoId: number;
       /** The branch that moved back. */
       branch: string;
@@ -84,7 +89,7 @@ export type HistoryNotice =
       kind: "undoRefused";
       repoId: number;
       /** What could not be undone. */
-      op: "reset" | "merge" | "rebase";
+      op: "reset" | MoveOp;
       short: string;
       stashed: boolean;
     }
@@ -103,7 +108,7 @@ export type HistoryNotice =
  * operation, and the short id of the commit it was about (in its message). */
 export type SavedChanges = {
   oid: string;
-  pick: PickKind | "reset" | "merge" | "rebase" | Direction;
+  pick: PickKind | "reset" | MoveOp | Direction;
   /** The commit's short id, or the merged branch's name. */
   short: string;
 };
@@ -442,6 +447,9 @@ export function runCommitAction(
       return;
     case "createTag":
       void useTagStore.getState().requestCreate(repoId, oid);
+      return;
+    case "interactiveRebase":
+      void useInteractiveRebaseStore.getState().open(repoId, oid);
       return;
     default:
       return;

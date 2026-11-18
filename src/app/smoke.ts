@@ -1,6 +1,6 @@
 import { useConflictStore } from "../features/conflicts/store";
 import { commands } from "../ipc";
-import { settingsLayoutProblems } from "./smokeLayout";
+import { rebaseLayoutProblems, settingsLayoutProblems } from "./smokeLayout";
 import { confirmClosing, installWindowCloseGuard, requestQuit } from "./quit";
 
 /**
@@ -44,7 +44,11 @@ export async function reportIfSmokeRun(): Promise<void> {
   if (!(await commands.smokeMode())) return;
   // After the first paint, so the rendered interface is there to check.
   await new Promise((resolve) => requestAnimationFrame(resolve));
-  const problems = [...engineProblems(), ...(await settingsLayoutProblems())];
+  const problems = [
+    ...engineProblems(),
+    ...(await settingsLayoutProblems()),
+    ...(await rebaseLayoutProblems()),
+  ];
   await commands.smokeReport(problems);
   if (problems.length > 0) return;
   try {

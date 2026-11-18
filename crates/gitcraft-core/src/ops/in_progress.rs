@@ -11,6 +11,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
+use crate::ops::interactive_rebase::MESSAGES_MARK;
 use crate::ops::status::in_progress;
 use crate::parse::status::InProgress;
 use crate::{CancellationToken, Git, GitError, Result};
@@ -204,11 +205,43 @@ async fn state_file(
         .map(|s| s.trim().to_owned()))
 }
 
+/// The commits in a todo (or done) list of GitCRAFT's interactive rebase:
+/// its `fixup -C` lines only carry a message, and `drop` adds nothing.
+pub fn commit_steps(list: &str) -> u32 {
+    let count = list
+        .lines()
+        .filter(|line| {
+            let mut words = line.split_whitespace();
+            match words.next() {
+                Some(
+                    "pick" | "p" | "reword" | "r" | "edit" | "e" | "squash" | "s" | "merge" | "m",
+                ) => true,
+                Some("fixup" | "f") => !matches!(words.next(), Some("-C" | "-c")),
+                _ => false,
+            }
+        })
+        .count();
+    u32::try_from(count).unwrap_or(u32::MAX)
+}
+
 async fn rebase_progress(
     git: &Git,
     repo: &Path,
     cancel: &CancellationToken,
 ) -> Result<Option<RebaseProgress>> {
+    // GitCRAFT's interactive rebase: commits, not todo lines.
+    if state_file(git, repo, &format!("rebase-merge/{MESSAGES_MARK}"), cancel)
+        .await?
+        .is_some()
+    {
+        let done = state_file(git, repo, "rebase-merge/done", cancel).await?;
+        let todo = state_file(git, repo, "rebase-merge/git-rebase-todo", cancel).await?;
+        let current = commit_steps(done.as_deref().unwrap_or(""));
+        let total = current + commit_steps(todo.as_deref().unwrap_or(""));
+        if current > 0 {
+            return Ok(Some(RebaseProgress { current, total }));
+        }
+    }
     // `rebase-merge` (the default backend) or `rebase-apply` (`--apply`).
     for (current, total) in [
         ("rebase-merge/msgnum", "rebase-merge/end"),

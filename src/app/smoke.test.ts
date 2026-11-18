@@ -37,7 +37,10 @@ describe("smoke run checks", () => {
 });
 
 // The layout checks need a real engine; jsdom lays nothing out.
-vi.mock("./smokeLayout", () => ({ settingsLayoutProblems: async () => [] }));
+vi.mock("./smokeLayout", () => ({
+  settingsLayoutProblems: async () => [],
+  rebaseLayoutProblems: async () => [],
+}));
 
 describe("smoke run, quitting", () => {
   it("reports, then quits through the warning and closes the window", async () => {

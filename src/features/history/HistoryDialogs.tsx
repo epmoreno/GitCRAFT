@@ -185,7 +185,7 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
                 count: notice.count,
               },
             )}
-            {notice.op === "rebase" &&
+            {notice.op !== "merge" &&
               notice.published &&
               ` ${t("rebase.forcePushNeeded", { source: notice.source })}`}
             {notice.undoGone && ` ${t("history.reset.undoGone")}`}

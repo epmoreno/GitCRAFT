@@ -196,6 +196,65 @@ describe("shortcut registry", () => {
   });
 });
 
+describe("the interactive rebase view's keys", () => {
+  const VIEW: ShortcutId[] = [
+    "rebaseNext",
+    "rebasePrevious",
+    "rebaseMoveUp",
+    "rebaseMoveDown",
+    "rebasePick",
+    "rebaseReword",
+    "rebaseSquash",
+    "rebaseDrop",
+  ];
+  /** What else listens while the view is on screen: the window's own
+   * keys. The conflict view's ⌥↑ / ⌥↓ are not here: it never shows at the
+   * same time (the view refuses while an operation is in progress). */
+  const ALSO_ACTIVE: ShortcutId[] = [
+    "quit",
+    "settings",
+    "newTab",
+    "closeTab",
+    "tabByNumber",
+    "nextTab",
+    "previousTab",
+    "undo",
+    "redo",
+    "commitMenu",
+    "find",
+    "findNext",
+    "findPrevious",
+    "escape",
+  ];
+
+  afterEach(() => setPlatformForTests(null));
+
+  it.each(["mac", "windows", "linux"] as const)(
+    "clash with nothing active in the view (%s)",
+    (os) => {
+      setPlatformForTests(os);
+      const named = (k: string) => k;
+      const labels = (ids: ShortcutId[]) =>
+        ids.flatMap((id) =>
+          chordsOf(id).map((chord) => ({
+            id,
+            label: chordLabel(chord, named),
+          })),
+        );
+      const mine = labels(VIEW);
+      expect(new Set(mine.map((c) => c.label)).size).toBe(mine.length);
+      const others = new Set(labels(ALSO_ACTIVE).map((c) => c.label));
+      for (const { id, label } of mine)
+        expect(others.has(label), id).toBe(false);
+      // ⌘1 / Ctrl+1 is still a tab, plain 1 the action.
+      expect(isShortcut("rebasePick", key("1"))).toBe(true);
+      expect(
+        isShortcut("rebasePick", key("1", { metaKey: true, ctrlKey: true })),
+      ).toBe(false);
+    },
+  );
+});
+
 /*
  * The registry is the only place that knows keys: a handler comparing keys
  * or modifiers on its own would add a shortcut the list does not show, and

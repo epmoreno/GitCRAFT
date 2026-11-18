@@ -1,5 +1,9 @@
 import { initialTagState, useTagStore } from "../features/history/tags";
 import { initialMergeState, useMergeStore } from "../features/merge/store";
+import {
+  initialRebaseState,
+  useInteractiveRebaseStore,
+} from "../features/interactiveRebase/store";
 import { initialUndoState, useUndoStore } from "../features/undo/store";
 import { initialReflogState, useReflogStore } from "../features/reflog/store";
 import { initialSearchState, useSearchStore } from "../features/search/store";
@@ -152,6 +156,9 @@ vi.mock("../ipc", () => ({
     cancelBlame: vi.fn(),
     mergePreview: vi.fn(),
     rebasePreview: vi.fn(),
+    interactiveRebasePreview: vi.fn(),
+    simulateRebasePlan: vi.fn(),
+    interactiveRebase: vi.fn(),
     mergeBranch: vi.fn(),
     rebaseBranch: vi.fn(),
     lastFetch: vi.fn(),
@@ -206,6 +213,8 @@ beforeEach(() => {
   useHistoryStore.setState(initialHistoryState);
   useTagStore.setState(initialTagState);
   useMergeStore.setState(initialMergeState);
+  useInteractiveRebaseStore.getState().close();
+  useInteractiveRebaseStore.setState(initialRebaseState);
   useUndoStore.setState(initialUndoState);
   useReflogStore.setState(initialReflogState);
   useSearchStore.setState(initialSearchState);

@@ -8,13 +8,15 @@
 
 import type { CommitActions } from "../../ipc";
 
-export type CommitAction = "cherryPick" | "revert" | "reset" | "createTag";
+export type CommitAction =
+  "cherryPick" | "revert" | "interactiveRebase" | "reset" | "createTag";
 
 /** The actions that already work, in menu order. Each task of phase 2
  * (10.2 cherry-pick, 10.3 revert, 10.4 reset, 10.5 tags) adds its own. */
 export const READY_ACTIONS: readonly CommitAction[] = [
   "cherryPick",
   "revert",
+  "interactiveRebase",
   "createTag",
   "reset",
 ];
@@ -33,6 +35,7 @@ export type Availability =
         | "merge"
         | "alreadyInBranch"
         | "notInBranch"
+        | "notInBranchRebase"
         | "isHead";
     };
 
@@ -56,6 +59,9 @@ export function availability(
     case "revert":
       if (facts.isMerge) return no("merge");
       return facts.inBranch ? ok : no("notInBranch");
+    case "interactiveRebase":
+      // Merges in the range are explained by the view itself.
+      return facts.inBranch ? ok : no("notInBranchRebase");
     case "reset":
       return facts.isHead ? no("isHead") : ok;
   }

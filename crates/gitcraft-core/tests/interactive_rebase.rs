@@ -4,7 +4,10 @@
 use std::path::Path;
 
 use gitcraft_core::CancellationToken;
-use gitcraft_core::ops::in_progress::{ContinueOutcome, continue_in_progress, skip_current};
+use gitcraft_core::ops::in_progress::{
+    ConflictSides, ContinueOutcome, RebaseProgress, commit_steps, conflict_sides,
+    continue_in_progress, skip_current,
+};
 use gitcraft_core::ops::interactive_rebase::{
     InteractiveOutcome, InteractivePreview, InteractiveRefusal, InteractiveRequest, PlanPreview,
     PlanProblem, PlanStep, RebasePlan, StepAction, TOKEN_ENV, TodoHelperError, apply_todo,
@@ -639,6 +642,15 @@ async fn stops_on_conflicts_then_continues_skips_or_aborts() {
     };
     assert_eq!(files, ["f.txt"]);
     no_plan_file(&repo);
+    // Task 9's notice counts commits (3), not todo lines (4 with the
+    // `fixup -C` of the new message).
+    assert_eq!(
+        progress(&repo).await,
+        Some(RebaseProgress {
+            current: 1,
+            total: 3
+        })
+    );
     repo.write_file("f.txt", "1\nB\n3\n");
     repo.run(&["add", "f.txt"]).await;
     let next = continue_in_progress(repo.git(), repo.path(), None, &token())
@@ -647,6 +659,13 @@ async fn stops_on_conflicts_then_continues_skips_or_aborts() {
     assert!(
         matches!(next, ContinueOutcome::StoppedAgain { .. }),
         "{next:?}"
+    );
+    assert_eq!(
+        progress(&repo).await,
+        Some(RebaseProgress {
+            current: 2,
+            total: 3
+        })
     );
     repo.write_file("f.txt", "1\nA\n3\n");
     repo.run(&["add", "f.txt"]).await;
@@ -683,6 +702,20 @@ async fn stops_on_conflicts_then_continues_skips_or_aborts() {
         .await
         .expect("abort");
     assert_eq!(state(&repo).await, before);
+}
+
+async fn progress(repo: &TestRepo) -> Option<RebaseProgress> {
+    match conflict_sides(repo.git(), repo.path(), &token()).await {
+        Ok(Some(ConflictSides::Rebase { progress, .. })) => progress,
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
+fn counts_commits_not_todo_lines() {
+    let list =
+        "pick 1a\nfixup 2b\nfixup -C 3c\n# comment\nexec make\ndrop 4d\nreword 5e\nf -c 6f\n";
+    assert_eq!(commit_steps(list), 3);
 }
 
 fn plan_for(p: &InteractivePreview, steps: Vec<PlanStep>) -> RebasePlan {

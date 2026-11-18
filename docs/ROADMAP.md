@@ -3093,9 +3093,8 @@ principio y toda operación destructiva pasa por confirmación.
         token, por segunda vez y con otra lista; git no empieza si la lista
         no es la de la vista previa; y el programa en una ruta con
         espacios, paréntesis, comillas y acentos.
-        *Para la 13.4:* el progreso del aviso de la 9 («paso n de m») cuenta
-        también las líneas `fixup -C`; la vista tendrá que contar solo los
-        commits.
+        *Para la 13.4 (hecho allí):* el progreso del aviso de la 9 («paso n
+        de m») contaba también las líneas `fixup -C`.
       - [x] **13.3 El editor auxiliar y los comandos (Tauri).** El modo
         `--rebase-todo` del ejecutable (antes de arrancar la ventana, sin
         tocar la configuración), comprobado en macOS, Windows y Linux en la
@@ -3123,7 +3122,7 @@ principio y toda operación destructiva pasa por confirmación.
         de verdad ya se prueba aparte). El texto de «Deshacer» en es/en.
         La ruta con espacios, paréntesis, comillas y acentos ya la prueba
         el núcleo en los tres sistemas.
-      - [ ] **13.4 La vista (UI).** Se para antes para enseñar el diseño.
+      - [x] **13.4 La vista (UI).** Se para antes para enseñar el diseño.
         Entrada en el menú de un commit de la rama actual. La vista ocupa
         la zona del historial, como la de conflictos y el blame: la lista
         de commits con su acción, arrastrar para reordenar (eventos de
@@ -3137,6 +3136,53 @@ principio y toda operación destructiva pasa por confirmación.
         se recalcula, los motivos para negarse, el aviso de publicados, la
         confirmación al descartar, cancelar no toca nada, Esc, y el
         resultado con «Deshacer».
+        *Diseño aprobado por el usuario,* con «Volver al plan original» en
+        vez de «Restablecer el plan», teclas 1–4 y ⌥↑ / ⌥↓ (Alt fuera de
+        macOS), el editor del mensaje debajo de la lista y «Combinar» con la
+        flecha ↓, «recibe N commits» y una línea vertical que une el grupo.
+        *Hecho:*
+        - **Entrada:** «Rebase interactivo desde aquí…» en el menú del
+          commit y «Rebase interactivo…» en el panel de detalle;
+          desactivada con el motivo si hay una operación a medias, HEAD
+          separado o el commit no está en la rama actual.
+        - **La vista:** sobre el historial (la búsqueda espera a que se
+          cierre). El más nuevo arriba, con el número de paso (1 abajo) y
+          la explicación del orden; por fila, la acción, el hash, el
+          asunto, «publicado», «recibe N commits», la flecha ↓ y la línea
+          del grupo, ⚠ donde se detendría y «quedará vacío». Lo descartado,
+          tachado.
+        - **Mensajes:** el editor, debajo de la lista, es el del commit
+          seleccionado: el suyo con «Editar mensaje», o el del commit
+          combinado, relleno con los mensajes del grupo (del más antiguo al
+          más nuevo) y que se vuelve a rellenar si cambia qué se combina.
+          Esc en el editor vuelve a la lista; otra vez Esc, al grafo.
+        - **Previsión:** se recalcula 250 ms después de cada cambio
+          («Calculando…»): dónde se detendría y con qué archivos, cuántos
+          quedan, descartados, vacíos, commits publicados que se reescriben
+          y los motivos por los que el plan no vale (el mismo plan, el
+          primero combinado, todo descartado, mensaje vacío, git antiguo,
+          el repo cambió con «Volver a cargar»).
+        - **Aplicar…:** confirmación con lo que se reescribe, la lista de
+          lo descartado y cómo recuperarlo, el aviso de publicados, la
+          parada prevista y guardar los cambios que estorban; el botón dice
+          lo que hará («Aplicar con conflictos», «Guardar mis cambios y
+          aplicar»…). Hecho: vuelve al grafo con el commit nuevo
+          seleccionado y el aviso con «Deshacer». Conflicto: sigue la 9.
+        - **git 2.30 y 2.31:** «Editar mensaje» y «Combinar» desactivados
+          (también sus teclas) y la nota con la versión instalada. Con git
+          < 2.40 la previsión dice que no puede prever conflictos.
+        - **El aviso de la 9 cuenta commits:** «paso n de m» ya no cuenta
+          los `fixup -C` de los mensajes ni los `drop` (marca del modo
+          auxiliar en el directorio del rebase de git; test en el núcleo
+          con un conflicto: 1 de 3 y 2 de 3, no de 4).
+        Tests: modelo del plan (4), vista en es/en (12: orden, cada acción,
+        mensaje combinado, teclado, arrastre, previsión, publicados,
+        confirmación al descartar, cancelar y Esc sin tocar nada, Esc en el
+        editor, resultado con «Deshacer», negativas y git antiguo, entrada
+        en el menú), los atajos sin choques en macOS, Windows y Linux, y en
+        la app compilada, la maqueta de la vista en el motor real (filas de
+        una línea y altura fija, la línea del grupo y los botones dentro).
+        Falta la prueba del usuario (13.5).
       - [ ] **13.5 Documentación y prueba a mano.** Sección en
         ARCHITECTURE.md (y el inventario de la sección 8 si el modo
         auxiliar tiene algo propio de un sistema) y

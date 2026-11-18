@@ -21,6 +21,10 @@ use crate::parse::diff::fingerprint;
 use crate::runner::GitVersion;
 use crate::{CancellationToken, Git, GitError, Result};
 
+/// File the helper leaves in git's `rebase-merge` directory: the `fixup -C`
+/// lines of this rebase only carry new messages, so they are not commits.
+pub const MESSAGES_MARK: &str = "gitcraft-messages";
+
 /// Most commits one interactive rebase takes.
 pub const MAX_COMMITS: usize = 500;
 
@@ -97,6 +101,8 @@ pub struct InteractivePreview {
     pub messages: bool,
     /// Conflicts can be predicted exactly (git ≥ 2.40).
     pub exact: bool,
+    /// The git in use (`2.31.1`), to say why something is not available.
+    pub git_version: String,
     /// The repository as the preview saw it: nothing is done if it changed.
     pub fingerprint: String,
 }
@@ -356,6 +362,7 @@ pub async fn interactive_rebase_preview(
         blocking: Vec::new(),
         messages: version >= MESSAGES_SINCE,
         exact: version >= EXACT_SINCE,
+        git_version: version.to_string(),
     };
     let refuse = |mut p: InteractivePreview, why| {
         p.refused = Some(why);
@@ -1142,7 +1149,14 @@ pub fn apply_todo(
     if !matches {
         return Err(TodoHelperError::Mismatch);
     }
-    std::fs::write(todo_file, todo).map_err(unreadable)
+    std::fs::write(todo_file, todo).map_err(unreadable)?;
+    // Tells the progress (task 9's notice) that the `fixup -C` lines only
+    // carry messages. git removes the whole directory when the rebase ends;
+    // without the mark the progress counts todo lines, as before.
+    if let Some(dir) = todo_file.parent() {
+        let _ = std::fs::write(dir.join(MESSAGES_MARK), "");
+    }
+    Ok(())
 }
 
 /// The helper's command line (`--rebase-todo <plan file> <todo>`, after the

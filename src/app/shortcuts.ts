@@ -37,6 +37,7 @@ export type ShortcutGroup =
   | "search"
   | "fileHistory"
   | "blame"
+  | "interactiveRebase"
   | "general";
 
 export type Shortcut = {
@@ -150,6 +151,23 @@ export const SHORTCUTS = {
   },
   blameNext: { group: "blame", chords: [{ key: "ArrowDown" }] },
   blamePrevious: { group: "blame", chords: [{ key: "ArrowUp" }] },
+  /** The interactive rebase view (task 13.4), on its list of commits.
+   * ⌥↑ / ⌥↓ are also the conflict view's, which is never on screen at the
+   * same time (the view refuses while an operation is in progress). */
+  rebaseNext: { group: "interactiveRebase", chords: [{ key: "ArrowDown" }] },
+  rebasePrevious: { group: "interactiveRebase", chords: [{ key: "ArrowUp" }] },
+  rebaseMoveUp: {
+    group: "interactiveRebase",
+    chords: [{ key: "ArrowUp", alt: true }],
+  },
+  rebaseMoveDown: {
+    group: "interactiveRebase",
+    chords: [{ key: "ArrowDown", alt: true }],
+  },
+  rebasePick: { group: "interactiveRebase", chords: [{ key: "1" }] },
+  rebaseReword: { group: "interactiveRebase", chords: [{ key: "2" }] },
+  rebaseSquash: { group: "interactiveRebase", chords: [{ key: "3" }] },
+  rebaseDrop: { group: "interactiveRebase", chords: [{ key: "4" }] },
   /** The history of a file (task 12.4); the pane* keys work on any
    * vertical divider (its list, the blame's column). */
   fileHistoryNext: { group: "fileHistory", chords: [{ key: "ArrowDown" }] },

@@ -1681,6 +1681,8 @@ export type InteractivePreview_Deserialize = {
 	messages: boolean,
 	/**  Conflicts can be predicted exactly (git ≥ 2.40). */
 	exact: boolean,
+	/**  The git in use (`2.31.1`), to say why something is not available. */
+	gitVersion: string,
 	/**  The repository as the preview saw it: nothing is done if it changed. */
 	fingerprint: string,
 };
@@ -1707,6 +1709,8 @@ export type InteractivePreview_Serialize = {
 	messages: boolean,
 	/**  Conflicts can be predicted exactly (git ≥ 2.40). */
 	exact: boolean,
+	/**  The git in use (`2.31.1`), to say why something is not available. */
+	gitVersion: string,
 	/**  The repository as the preview saw it: nothing is done if it changed. */
 	fingerprint: string,
 };

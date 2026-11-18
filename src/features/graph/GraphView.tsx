@@ -20,6 +20,8 @@ import { useGraphStore } from "./store";
 import { SearchBar } from "../search/SearchBar";
 import { FileHistoryView } from "../fileHistory/FileHistoryView";
 import { BlameView } from "../blame/BlameView";
+import { InteractiveRebaseView } from "../interactiveRebase/InteractiveRebaseView";
+import { useInteractiveRebaseStore } from "../interactiveRebase/store";
 import { searchOf, useSearchStore } from "../search/store";
 import styles from "./graph.module.css";
 import { ErrorReport } from "../../ui/ErrorReport";
@@ -161,6 +163,8 @@ export function GraphView({
 
   const status = graph?.status ?? "loading";
   const language = i18n.language;
+  // The interactive rebase (task 13.4) takes the history's place.
+  const rebasing = useInteractiveRebaseStore((s) => s.view?.repoId === repoId);
 
   return (
     <div className={styles.view}>
@@ -170,7 +174,7 @@ export function GraphView({
         graphDone={status === "done"}
         loadId={graph?.loadId ?? 0}
         selectedOid={selectedOid}
-        available={!graph?.openFile}
+        available={!graph?.openFile && !rebasing}
       />
       <div className={styles.header} style={{ paddingLeft: width }}>
         <span>{t("graph.columnDescription")}</span>
@@ -332,7 +336,9 @@ export function GraphView({
           onClose={() => setMenu(null)}
         />
       )}
-      {graph?.openFile?.kind === "blame" ? (
+      {rebasing ? (
+        <InteractiveRebaseView repoId={repoId} />
+      ) : graph?.openFile?.kind === "blame" ? (
         <BlameView
           key={`${graph.openFile.rev}:${graph.openFile.path}`}
           repoId={repoId}
