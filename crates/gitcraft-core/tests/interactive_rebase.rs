@@ -6,7 +6,7 @@ use std::path::Path;
 use gitcraft_core::CancellationToken;
 use gitcraft_core::ops::in_progress::{
     ConflictSides, ContinueOutcome, RebaseProgress, commit_steps, conflict_sides,
-    continue_in_progress, skip_current,
+    continue_in_progress, skip_current, todo_after_skip,
 };
 use gitcraft_core::ops::interactive_rebase::{
     InteractiveOutcome, InteractivePreview, InteractiveRefusal, InteractiveRequest, PlanPreview,
@@ -706,9 +706,35 @@ async fn stops_on_conflicts_then_continues_skips_or_aborts() {
 
 async fn progress(repo: &TestRepo) -> Option<RebaseProgress> {
     match conflict_sides(repo.git(), repo.path(), &token()).await {
-        Ok(Some(ConflictSides::Rebase { progress, .. })) => progress,
+        Ok(Some(ConflictSides::Rebase {
+            progress,
+            interactive,
+            ..
+        })) => {
+            assert!(interactive, "GitCRAFT's interactive rebase");
+            progress
+        }
         other => panic!("{other:?}"),
     }
+}
+
+#[test]
+fn skipping_rewrites_only_what_depends_on_the_skipped_commit() {
+    let todo = "fixup -C h1\npick a\nfixup b\nfixup c\nfixup -C h2\n";
+    // Its own new message goes away with it.
+    assert_eq!(
+        todo_after_skip("pick x", todo),
+        "pick a\nfixup b\nfixup c\nfixup -C h2\n"
+    );
+    // A combination passes to the first combined commit.
+    let todo = "fixup b\nfixup c\nfixup -C h2\npick d\n";
+    assert_eq!(
+        todo_after_skip("pick a", todo),
+        "pick b\nfixup c\nfixup -C h2\npick d\n"
+    );
+    // Nothing depends on it, or it was itself combined: as it is.
+    assert_eq!(todo_after_skip("pick a", "pick d\n"), "pick d\n");
+    assert_eq!(todo_after_skip("fixup b", todo), todo);
 }
 
 #[test]
@@ -959,6 +985,77 @@ async fn the_helper_runs_from_a_path_with_spaces_and_quotes() {
     );
     let subjects = repo.run(&["log", "--format=%s", "-2"]).await;
     assert_eq!(subjects.lines().collect::<Vec<_>>(), ["Añade b", "Añade c"]);
+}
+
+/// Skipping a commit that had a new message, or that others were combined
+/// into, never gives its message to the commit before it.
+#[tokio::test]
+async fn skipping_a_commit_takes_its_new_message_with_it() {
+    async fn sample() -> (TestRepo, String, String, String) {
+        let repo = TestRepo::new().await;
+        repo.commit_file("f.txt", "1\n2\n3\n", "Base").await;
+        let a = repo
+            .commit_file("f.txt", "1\nA\n3\n", "A cambia la dos")
+            .await;
+        let b = repo
+            .commit_file("f.txt", "1\nB\n3\n", "B la cambia otra vez")
+            .await;
+        let c = repo.commit_file("g.txt", "g\n", "C otro archivo").await;
+        (repo, a, b, c)
+    }
+
+    // B first, with a new message: it stops at B, and B is skipped.
+    let (repo, a, b, c) = sample().await;
+    let p = preview(&repo, &a).await;
+    let steps = vec![
+        with_message(&b, StepAction::Reword, "B renombrado"),
+        step(&a, StepAction::Pick),
+        step(&c, StepAction::Pick),
+    ];
+    let outcome = apply_with(&repo, plan_for(&p, steps), false, true).await;
+    assert!(
+        matches!(outcome, InteractiveOutcome::Conflicted { .. }),
+        "{outcome:?}"
+    );
+    let skipped = skip_current(repo.git(), repo.path(), &token())
+        .await
+        .expect("skip");
+    assert_eq!(skipped, ContinueOutcome::Done);
+    let subjects = repo.run(&["log", "--format=%s"]).await;
+    assert_eq!(
+        subjects.lines().collect::<Vec<_>>(),
+        ["C otro archivo", "A cambia la dos", "Base"]
+    );
+
+    // B receives C, with a combined message: skipping B keeps C as a
+    // commit of its own, with that message.
+    let (repo, a, b, c) = sample().await;
+    let p = preview(&repo, &a).await;
+    let steps = vec![
+        step(&b, StepAction::Pick),
+        with_message(&c, StepAction::Squash, "B y C juntos"),
+        step(&a, StepAction::Pick),
+    ];
+    let outcome = apply_with(&repo, plan_for(&p, steps), false, true).await;
+    assert!(
+        matches!(outcome, InteractiveOutcome::Conflicted { .. }),
+        "{outcome:?}"
+    );
+    let skipped = skip_current(repo.git(), repo.path(), &token())
+        .await
+        .expect("skip");
+    assert_eq!(skipped, ContinueOutcome::Done);
+    let subjects = repo.run(&["log", "--format=%s"]).await;
+    assert_eq!(
+        subjects.lines().collect::<Vec<_>>(),
+        ["A cambia la dos", "B y C juntos", "Base"]
+    );
+    assert_eq!(
+        repo.run(&["show", "--format=", "--name-only", "HEAD~1"])
+            .await
+            .trim(),
+        "g.txt"
+    );
 }
 
 #[test]

@@ -5,6 +5,7 @@ import type { RepoChanged } from "../ipc";
 import { commandError, ipc, opened, sampleRefs } from "../test/ipc";
 import { useBranchStore } from "../features/branches/store";
 import { useRemoteStore } from "../features/remote/store";
+import { useRepoStore } from "../features/repo/store";
 import { App } from "./App";
 import { setPlatformForTests } from "./platform";
 
@@ -50,6 +51,8 @@ describe("App", () => {
     useBranchStore.setState({
       notice: { kind: "deleted", repoId: 1, name: "vieja", tip: "abc1234" },
     });
+    // Notices show in the tab of their repository.
+    useRepoStore.setState({ tabs: [opened(1, "/r/demo")], activeId: 1 });
     render(<App />);
     const notices = screen.getByRole("region", { name: "Avisos" });
     // Positioned once, as a column (App.module.css); the notices inside

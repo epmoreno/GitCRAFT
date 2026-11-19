@@ -16,6 +16,7 @@ import { refreshAfterRemote } from "../remote/store";
 import { useStashStore } from "../stash/store";
 import { useWorkdirStore } from "../workdir/store";
 import { useTagStore } from "./tags";
+import { rememberOrigin } from "../conflicts/origin";
 import { useInteractiveRebaseStore } from "../interactiveRebase/store";
 
 /**
@@ -197,6 +198,7 @@ export const useHistoryStore = create<HistoryState>()((set, get) => {
         return;
       case "conflicted":
         // The banner and the conflict view (task 9) take over.
+        rememberOrigin(repoId, preview.kind);
         return;
       case "notDone":
         // Something changed since the preview: show it again.

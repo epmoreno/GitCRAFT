@@ -1,14 +1,15 @@
 import { useOsText } from "../../app/useOsText";
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { DiscardedFile } from "../../ipc";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { useWorkdirStore } from "./store";
 import styles from "./workdir.module.css";
 import { ErrorReport } from "../../ui/ErrorReport";
+import { NOTICE_SECONDS, useAutoDismiss } from "../../ui/useAutoDismiss";
 
 /** How long "Undo" stays on screen after a discard. */
-export const UNDO_SECONDS = 10;
+/** "Undo" lasts as long as the notice (it closes by itself). */
+export const UNDO_SECONDS = NOTICE_SECONDS;
 
 const MAX_LISTED = 8;
 
@@ -94,23 +95,22 @@ export function DiscardDialog() {
 }
 
 /** "Changes discarded — Undo", for a few seconds after each discard. */
-export function UndoToast() {
+export function UndoToast({ repoId }: { repoId: number | null }) {
   const { t } = useTranslation();
-  const last = useWorkdirStore((s) => s.lastDiscard);
+  const last = useWorkdirStore((s) =>
+    s.lastDiscard?.repoId === repoId ? s.lastDiscard : null,
+  );
   const undo = useWorkdirStore((s) => s.undoLastDiscard);
   const dismiss = useWorkdirStore((s) => s.dismissLastDiscard);
-  const undoId = last?.undoId;
-  const failed = last?.error !== null && last?.error !== undefined;
-
-  useEffect(() => {
-    if (undoId === undefined || failed) return;
-    const timer = window.setTimeout(dismiss, UNDO_SECONDS * 1000);
-    return () => window.clearTimeout(timer);
-  }, [undoId, failed, dismiss]);
+  const timer = useAutoDismiss(last, dismiss);
 
   if (!last) return null;
   return (
-    <div className={styles.toast} role={last.error ? undefined : "status"}>
+    <div
+      className={styles.toast}
+      role={last.error ? undefined : "status"}
+      {...timer}
+    >
       {last.error ? (
         <ErrorReport error={last.error} lead={t("discard.undoFailed")} />
       ) : (

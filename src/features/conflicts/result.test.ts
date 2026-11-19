@@ -100,6 +100,7 @@ describe("names of the sides", () => {
       head: commit("ccccccc"),
       applying: commit("ddddddd", "topic one"),
       progress: { current: 1, total: 3 },
+      interactive: false,
     };
     expect(sideNames(rebase, revert)).toEqual({
       ours: "main",

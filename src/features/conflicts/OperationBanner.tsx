@@ -11,6 +11,7 @@ import { ErrorReport } from "../../ui/ErrorReport";
 import { Tooltip } from "../../ui/Tooltip";
 import { refreshAfterRemote, useRemoteStore } from "../remote/store";
 import { useWorkdirStore } from "../workdir/store";
+import { originOf } from "./origin";
 import { sideNames } from "./result";
 import { unsavedPaths, useConflictStore } from "./store";
 import styles from "./banner.module.css";
@@ -73,6 +74,8 @@ export function InProgressBanner({ repoId }: { repoId: number | null }) {
     t("conflicts.revertOf", { short }),
   );
   const canSkip = operation !== "merge";
+  // Which of the app's operations it is, for texts that say so.
+  const origin = originOf(id, operation, current);
 
   async function handle(
     result:
@@ -145,12 +148,19 @@ export function InProgressBanner({ repoId }: { repoId: number | null }) {
   const title = !current
     ? t(`pull.inProgress.${operation}`)
     : current.type === "merge"
-      ? t("operation.title.merge", { ours: names.ours, theirs: names.theirs })
+      ? t(`operation.title.${origin === "pullMerge" ? "pullMerge" : "merge"}`, {
+          ours: names.ours,
+          theirs: names.theirs,
+        })
       : current.type === "rebase"
-        ? t("operation.title.rebase", {
-            branch: names.theirs,
-            onto: names.ours,
-          })
+        ? t(
+            `operation.title.${
+              origin === "interactiveRebase" || origin === "pullRebase"
+                ? origin
+                : "rebase"
+            }`,
+            { branch: names.theirs, onto: names.ours },
+          )
         : t(`operation.title.${current.type}`, {
             ours: names.ours,
             short: applying?.short ?? "",
@@ -186,7 +196,11 @@ export function InProgressBanner({ repoId }: { repoId: number | null }) {
         <p>
           {conflicts > 0
             ? t("operation.conflicts", { count: conflicts })
-            : t(`operation.ready.${operation}`)}
+            : t(
+                `operation.ready.${
+                  origin === "interactiveRebase" ? origin : operation
+                }`,
+              )}
         </p>
         {error && <ErrorReport error={error} lead={t("operation.failed")} />}
       </div>
@@ -204,7 +218,7 @@ export function InProgressBanner({ repoId }: { repoId: number | null }) {
         type="button"
         className={styles.danger}
         disabled={busy}
-        onClick={() => requestAbort(id, operation)}
+        onClick={() => requestAbort(id, operation, origin)}
       >
         {t("pull.abortButton")}
       </button>
@@ -223,10 +237,17 @@ export function InProgressBanner({ repoId }: { repoId: number | null }) {
           onCancel={() => setConfirm(null)}
         >
           <p>
-            {t(`operation.confirm.${confirm.kind}.body`, {
-              short: applying?.short ?? "",
-              subject: applying?.subject ?? "",
-            })}
+            {t(
+              `operation.confirm.${confirm.kind}.${
+                confirm.kind === "skip" && origin === "interactiveRebase"
+                  ? "bodyInteractive"
+                  : "body"
+              }`,
+              {
+                short: applying?.short ?? "",
+                subject: applying?.subject ?? "",
+              },
+            )}
           </p>
           {confirm.kind === "unsaved" && (
             <ul>

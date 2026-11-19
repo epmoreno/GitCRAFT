@@ -5,7 +5,10 @@ import type { ConflictSides, InProgress, WorkingStatus } from "../../ipc";
 import { cleanStatus, commandError, ipc } from "../../test/ipc";
 import { WorkingDirPanel } from "../workdir/WorkingDirPanel";
 import { useWorkdirStore } from "../workdir/store";
+import { AbortDialog } from "../remote/RemoteDialogs";
+import { RemoteToast } from "../remote/RemoteStatus";
 import { InProgressBanner } from "./OperationBanner";
+import { originOf, rememberOrigin } from "./origin";
 import { useConflictStore } from "./store";
 
 const commit = (short: string, subject: string) => ({
@@ -21,6 +24,7 @@ const rebase: ConflictSides = {
   head: commit("ccccccc", "main change"),
   applying: commit("ddddddd", "topic two"),
   progress: { current: 2, total: 3 },
+  interactive: false,
 };
 
 const merge: ConflictSides = {
@@ -202,5 +206,95 @@ describe("the commit box during a merge", () => {
     expect(
       await screen.findByDisplayValue("Merge branch 'feature'"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("each operation with its own texts", () => {
+  /** The banner, the abort dialog and the notice after aborting. */
+  async function abortIt(name: RegExp, title: string) {
+    const user = userEvent.setup();
+    ipc.abortInProgress.mockResolvedValue({ status: "ok", data: null });
+    render(
+      <>
+        <AbortDialog />
+        <RemoteToast repoId={1} />
+      </>,
+    );
+    await screen.findByText(name);
+    await user.click(screen.getByRole("button", { name: "Abortar…" }));
+    const dialog = screen.getByRole("alertdialog", { name: title });
+    await user.click(within(dialog).getByRole("button", { name: "Abortar" }));
+    expect(ipc.abortInProgress).toHaveBeenCalledWith(1);
+  }
+
+  it("GitCRAFT's interactive rebase: title, Continue, Skip and Abort", async () => {
+    const user = userEvent.setup();
+    show("rebase", { ...rebase, interactive: true }, 0);
+    const banner = screen.getByRole("status");
+    expect(
+      await within(banner).findByText(/Rebase interactivo de «topic»/),
+    ).toBeInTheDocument();
+    expect(banner).toHaveTextContent(
+      "«Continuar» aplica este commit, con su mensaje nuevo si se lo diste, y sigue con el resto del rebase interactivo.",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Saltar este commit…" }),
+    );
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      "ni el mensaje nuevo que le hubieras dado. Si le combinabas otros commits, siguen en el rebase",
+    );
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await abortIt(
+      /Rebase interactivo de «topic»/,
+      "¿Abortar el rebase interactivo?",
+    );
+    expect(
+      await screen.findByText(
+        "Rebase interactivo abortado: todo está como antes del rebase interactivo.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("a pull with rebase that GitCRAFT started", async () => {
+    rememberOrigin(1, "pullRebase");
+    show("rebase", rebase, 1);
+    expect(
+      await screen.findByText(/Pull de «main» en «topic», con rebase/),
+    ).toBeInTheDocument();
+    await abortIt(/Pull de «main»/, "¿Abortar el pull?");
+    expect(
+      await screen.findByText(
+        "Pull abortado: el rebase se ha deshecho y todo está como antes del pull.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("a rebase GitCRAFT did not start never mentions a pull", async () => {
+    show("rebase", rebase, 1);
+    await abortIt(/Rebase de «topic» sobre «main»/, "¿Abortar el rebase?");
+    expect(
+      await screen.findByText(
+        "Rebase abortado: todo está como antes del rebase.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("forgets the origin once nothing is in progress", () => {
+    rememberOrigin(1, "pullMerge");
+    const status = (inProgress: InProgress | null) =>
+      useWorkdirStore.setState({
+        statuses: {
+          1: { status: { ...cleanStatus(), inProgress }, error: null },
+        },
+      });
+    // A status read before the pull stopped does not count.
+    status(null);
+    expect(originOf(1, "merge", merge)).toBe("pullMerge");
+    status("merge");
+    expect(originOf(1, "merge", merge)).toBe("pullMerge");
+    // Another kind of operation is not the pull.
+    expect(originOf(1, "rebase", rebase)).toBeNull();
+    status(null);
+    expect(originOf(1, "merge", merge)).toBeNull();
   });
 });

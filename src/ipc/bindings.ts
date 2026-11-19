@@ -889,7 +889,9 @@ branch?: string | null; onto: NamedCommit; head: CommitRef;
  *  `None` when git stopped without a commit being replayed (for
  *  example after an `exec` step).
  */
-applying?: CommitRef | null; progress?: RebaseProgress | null } | 
+applying?: CommitRef | null; progress?: RebaseProgress | null; 
+/**  GitCRAFT's interactive rebase (task 13), which has its own texts. */
+interactive: boolean } | 
 /**  Left: the current branch. Right: the commit being copied onto it. */
 { type: "cherryPick"; branch?: string | null; head: CommitRef; picking: CommitRef } | 
 /**  Left: the current branch. Right: the changes that undo `reverting`. */
@@ -909,7 +911,9 @@ branch: string | null; onto: NamedCommit; head: CommitRef;
  *  `None` when git stopped without a commit being replayed (for
  *  example after an `exec` step).
  */
-applying: CommitRef | null; progress: RebaseProgress | null } | 
+applying: CommitRef | null; progress: RebaseProgress | null; 
+/**  GitCRAFT's interactive rebase (task 13), which has its own texts. */
+interactive: boolean } | 
 /**  Left: the current branch. Right: the commit being copied onto it. */
 { type: "cherryPick"; branch: string | null; head: CommitRef; picking: CommitRef } | 
 /**  Left: the current branch. Right: the changes that undo `reverting`. */

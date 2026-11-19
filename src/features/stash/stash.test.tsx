@@ -78,7 +78,7 @@ function renderSidebar() {
     <>
       <Sidebar repoId={1} />
       <StashDialogs />
-      <StashToast />
+      <StashToast repoId={1} />
     </>,
   );
 }
@@ -277,7 +277,7 @@ describe("stash", () => {
       <>
         <Toolbar />
         <StashDialogs />
-        <StashToast />
+        <StashToast repoId={1} />
       </>,
     );
     act(() =>

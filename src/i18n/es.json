@@ -568,7 +568,10 @@
       "merge": "¿Abortar el merge?",
       "rebase": "¿Abortar el rebase?",
       "cherryPick": "¿Abortar el cherry-pick?",
-      "revert": "¿Abortar el revert?"
+      "revert": "¿Abortar el revert?",
+      "pullMerge": "¿Abortar el pull?",
+      "pullRebase": "¿Abortar el pull?",
+      "interactiveRebase": "¿Abortar el rebase interactivo?"
     },
     "abortExplained": "La rama vuelve al estado de antes de empezar y se pierden las resoluciones de conflictos que hayas hecho desde entonces. Los cambios sin confirmar que tenías antes en otros archivos se mantienen.",
     "abort": "Abortar",
@@ -596,10 +599,13 @@
       "rebase_other": "El rebase se ha detenido con conflictos en {{count}} archivos:"
     },
     "aborted": {
-      "merge": "Merge abortado: todo está como antes del pull.",
-      "rebase": "Rebase abortado: todo está como antes del pull.",
-      "cherryPick": "Cherry-pick abortado.",
-      "revert": "Revert abortado."
+      "merge": "Merge abortado: todo está como antes del merge.",
+      "rebase": "Rebase abortado: todo está como antes del rebase.",
+      "cherryPick": "Cherry-pick abortado: todo está como antes del cherry-pick.",
+      "revert": "Revert abortado: todo está como antes del revert.",
+      "pullMerge": "Pull abortado: el merge se ha deshecho y todo está como antes del pull.",
+      "pullRebase": "Pull abortado: el rebase se ha deshecho y todo está como antes del pull.",
+      "interactiveRebase": "Rebase interactivo abortado: todo está como antes del rebase interactivo."
     },
     "savedLocal": "Tus cambios anteriores están en el stash como «GitCRAFT: antes de hacer pull»; aplícalos desde la barra lateral cuando quieras."
   },
@@ -1079,16 +1085,20 @@
       "merge": "Merge de «{{theirs}}» en «{{ours}}»",
       "rebase": "Rebase de «{{branch}}» sobre «{{onto}}»",
       "cherryPick": "Cherry-pick de {{short}} «{{subject}}» en «{{ours}}»",
-      "revert": "Revert de {{short}} «{{subject}}» en «{{ours}}»"
+      "revert": "Revert de {{short}} «{{subject}}» en «{{ours}}»",
+      "interactiveRebase": "Rebase interactivo de «{{branch}}»",
+      "pullMerge": "Pull de «{{theirs}}» en «{{ours}}», con merge",
+      "pullRebase": "Pull de «{{onto}}» en «{{branch}}», con rebase"
     },
     "progress": "commit {{current}} de {{total}}: «{{subject}}»",
     "conflicts_one": "Queda 1 archivo con conflictos.",
     "conflicts_other": "Quedan {{count}} archivos con conflictos.",
     "ready": {
       "merge": "Ya no quedan conflictos: «Continuar» hace el commit del merge con el mensaje del cuadro de commit.",
-      "rebase": "Ya no quedan conflictos: «Continuar» aplica este commit y sigue con el siguiente.",
+      "rebase": "Ya no quedan conflictos: «Continuar» aplica este commit y sigue con el resto del rebase.",
       "cherryPick": "Ya no quedan conflictos: «Continuar» hace el commit.",
-      "revert": "Ya no quedan conflictos: «Continuar» hace el commit."
+      "revert": "Ya no quedan conflictos: «Continuar» hace el commit.",
+      "interactiveRebase": "Ya no quedan conflictos: «Continuar» aplica este commit, con su mensaje nuevo si se lo diste, y sigue con el resto del rebase interactivo."
     },
     "continue": "Continuar",
     "resolveFirst": "Resuelve primero los conflictos.",
@@ -1098,7 +1108,8 @@
       "skip": {
         "title": "¿Saltar este commit?",
         "body": "Se salta {{short}} «{{subject}}»: sus cambios no se aplicarán. Lo que hayas resuelto para él en los archivos con seguimiento se descarta; los archivos sin seguimiento se quedan.",
-        "confirm": "Saltar este commit"
+        "confirm": "Saltar este commit",
+        "bodyInteractive": "Se salta {{short}} «{{subject}}»: sus cambios no se aplicarán, ni el mensaje nuevo que le hubieras dado. Si le combinabas otros commits, siguen en el rebase, juntos y con el mensaje que les diste. Lo que hayas resuelto para él en los archivos con seguimiento se descarta; los archivos sin seguimiento se quedan."
       },
       "nothingToCommit": {
         "title": "Este commit ya no cambia nada",

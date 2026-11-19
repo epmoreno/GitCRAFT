@@ -217,7 +217,7 @@ botón pulsado, para que los atajos (Espacio, Intro, ⌘⌫) funcionen.
 3. **Descarte:** `git restore --worktree` para archivos completos y
    `git apply -R` con el mismo generador de parches que el stage parcial para
    hunks y líneas (con la misma comprobación de huella del diff).
-4. **Deshacer** (aviso de 10 s): restaura los blobs y devuelve los archivos de
+4. **Deshacer** (mientras dura el aviso, 25 s; ver «Avisos»): restaura los blobs y devuelve los archivos de
    la Papelera, pero solo si ninguno cambió desde el descarte; si no, no toca
    nada (`UndoConflict`). Tras deshacer se elimina la entrada de stash, que ya
    es redundante. Si el sistema no puede volver a crear algo (hoy, un enlace
@@ -784,6 +784,14 @@ combinar con el anterior, descartar y reordenar.
   sale de contar en `done` y `git-rebase-todo` solo las líneas de commits:
   sin los `fixup -C` de los mensajes ni los `drop`. Sin la marca (otros
   rebases), sigue con `msgnum` y `end` de git.
+- **Saltar un commit en el rebase interactivo:** el mensaje nuevo de un
+  commit va en un `fixup -C` detrás de él, y los combinados con él en
+  `fixup`. Si se salta ese commit tal cual, git le daría el mensaje (y los
+  combinados) al commit anterior, aunque esté fuera del rebase. Por eso,
+  antes de `git rebase --skip`, `in_progress::skip_current` corrige la
+  lista pendiente (`todo_after_skip`): sin combinados, quita el `fixup -C`;
+  con combinados, el primero pasa a `pick` y se queda el mensaje del grupo.
+  Solo en el rebase interactivo de GitCRAFT (la marca `gitcraft-messages`).
 - **Pruebas (13.5):** `scripts/make-rebase-examples.sh` crea un repo
   desechable con su remoto local y una rama para cada caso: `main` con cinco
   commits independientes (reordenar, editar, combinar y descartar sin
@@ -944,6 +952,28 @@ Dónde se muestra:
 | Cambios locales (`WorkingDirPanel`, `CommitBox`, `Discard`) | Leer el estado, stage/unstage/commit, activar amend, deshacer descarte |
 | Avisos de ramas, stash y remotos (`BranchToast`, `StashToast`, `RemoteToast`) | Toda operación de ramas, stash, fetch/pull/push, guardar el modo de pull |
 | Diálogos de crear (`CreateDialogs`) | Inicializar, comprobar el destino del clon, clonar |
+
+**Avisos** (la columna de abajo a la derecha del historial: `RemoteToast`,
+`BranchToast`, `StashToast`, `HistoryToast`, `TagToast` y el «Deshacer» del
+descarte): cada uno lleva el repositorio al que se refiere y solo se ve en
+la pestaña de ese repositorio. Todos se cierran solos a los 25 s
+(`NOTICE_SECONDS`, `src/ui/useAutoDismiss.ts`), también los que tienen
+«Deshacer» y los de error; el tiempo se para mientras el puntero está
+encima o el foco del teclado dentro, y sigue desde donde iba al salir. Un
+aviso oculto (otra pestaña) no gasta su tiempo: al volver a su pestaña
+cuenta otra vez desde 25 s. El progreso de un fetch, pull o push
+(`RemoteProgress`) y el aviso de una operación a medias
+(`InProgressBanner`) no son avisos: duran lo que la operación. Cerrar el
+aviso de «Recuperar mis cambios» no toca el stash: la entrada sigue en la
+barra lateral.
+
+Al abortar una operación a medias, el aviso dice cuál era: el núcleo marca
+el rebase interactivo de GitCRAFT (`ConflictSides::Rebase { interactive }`)
+y la interfaz recuerda qué operación suya se detuvo con conflictos (pull
+con merge o con rebase, merge, rebase, cherry-pick o revert;
+`src/features/conflicts/origin.ts`) hasta que no queda nada a medias. Sin
+saberlo (una operación empezada en la terminal), el texto solo nombra lo
+que hace git.
 
 Solo se ignoran sin aviso fallos que no impiden nada y se reintentan solos
 (cargar la lista de recientes, recordar «no mostrar más» el aviso de

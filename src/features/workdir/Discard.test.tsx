@@ -10,6 +10,7 @@ import {
   sampleRefs,
   streamEvents,
   textDiff,
+  opened,
 } from "../../test/ipc";
 import { App } from "../../app/App";
 import { setPlatformForTests } from "../../app/platform";
@@ -18,6 +19,7 @@ import { GraphView } from "../graph/GraphView";
 import { useGraphStore, WORKTREE } from "../graph/store";
 import { DiscardDialog, UndoToast, UNDO_SECONDS } from "./Discard";
 import { useWorkdirStore } from "./store";
+import { useRepoStore } from "../repo/store";
 
 const info = {
   path: "/src/sample",
@@ -80,7 +82,7 @@ function renderWorkspace() {
       <GraphView repoId={1} info={info} />
       <DetailPanel repoId={1} />
       <DiscardDialog />
-      <UndoToast />
+      <UndoToast repoId={1} />
     </>,
   );
 }
@@ -367,7 +369,7 @@ describe("undo toast", () => {
           error: null,
         },
       });
-      render(<UndoToast />);
+      render(<UndoToast repoId={1} />);
       expect(screen.getByRole("status")).toBeVisible();
       act(() => vi.advanceTimersByTime((UNDO_SECONDS - 1) * 1000));
       expect(screen.getByRole("status")).toBeVisible();
@@ -388,6 +390,7 @@ describe("undo toast", () => {
         error: null,
       },
     });
+    useRepoStore.setState({ tabs: [opened(1, "/r/demo")], activeId: 1 });
     render(<App />);
     const toast = screen.getByRole("status");
     expect(

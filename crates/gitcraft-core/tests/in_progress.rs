@@ -111,10 +111,13 @@ async fn check_rebase(backend: &[&str]) {
         head,
         applying,
         progress,
+        interactive,
     }) = sides(&repo).await
     else {
         panic!("expected a rebase ({backend:?})");
     };
+    // Not GitCRAFT's interactive rebase, even with `rebase -i`.
+    assert!(!interactive, "{backend:?}");
     assert_eq!(branch.as_deref(), Some("topic"));
     assert_eq!(onto.commit.oid, main);
     assert_eq!(onto.branches, vec!["main".to_owned()]);

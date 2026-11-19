@@ -3182,15 +3182,16 @@ principio y toda operación destructiva pasa por confirmación.
         en el menú), los atajos sin choques en macOS, Windows y Linux, y en
         la app compilada, la maqueta de la vista en el motor real (filas de
         una línea y altura fija, la línea del grupo y los botones dentro).
-        Falta la prueba del usuario (13.5).
-      - [ ] **13.5 Documentación y prueba a mano.** Sección en
+        Verificado por el usuario en macOS con la guía de la 13.5 (ver
+        allí).
+      - [x] **13.5 Documentación y prueba a mano.** Sección en
         ARCHITECTURE.md (y el inventario de la sección 8 si el modo
         auxiliar tiene algo propio de un sistema) y
         `scripts/make-rebase-examples.sh`, con un repo desechable (commits
         para reordenar, combinar y descartar, uno que choca al reordenar,
         uno publicado en un remoto local y cambios sin confirmar).
         *Verificable:* el usuario lo prueba y lo confirma.
-        *Hecho (falta la prueba del usuario):*
+        *Hecho:*
         - **Script:** `scripts/make-rebase-examples.sh` (con `--replace`,
           que lleva lo anterior a la Papelera) crea `~/gitcraft-rebase`,
           su remoto `~/gitcraft-rebase-remoto.git` y
@@ -3205,6 +3206,48 @@ principio y toda operación destructiva pasa por confirmación.
         - ARCHITECTURE.md (sección 5l): la vista, el progreso y las
           pruebas. El inventario de la sección 8 ya tiene la fila del
           modo auxiliar; no hace falta otra.
+        *Verificado manualmente por el usuario en macOS* (guía de la 13.5,
+        pasos 0–16):
+        - la vista: abrir, moverse, descartar, editar el mensaje (1–4 no
+          actúan dentro del editor y el mensaje se conserva), combinar con
+          su flecha, «recibe 1 commit» y la línea vertical, reordenar con
+          ⌥↑ / ⌥↓ y arrastrando, «Volver al plan original», «Cancelar» y
+          Esc;
+        - aplicar con descarte, edición y combinación, la confirmación,
+          «Deshacer» y «Rehacer», y recuperar lo descartado desde el
+          historial de la rama con una rama «rescate»;
+        - el conflicto al reordenar (previsión, confirmación, «commit 2 de
+          3» y abortar con la rama intacta), el commit que queda vacío y
+          el aviso de commits publicados;
+        - lo que no se ofrece (merges, otra rama y operación a medias): las
+          entradas salen desactivadas y muestran el motivo al pasar el
+          ratón, en el panel de detalle y en el menú del clic derecho;
+        - Ajustes → Atajos y el `--replace` del script.
+      - [ ] **13.6 Arreglos tras la prueba del usuario.**
+        *Hecho (falta la prueba del usuario):*
+        - **Cada operación con su texto al abortar:** decía «Rebase
+          abortado: todo está como antes del pull» sin haber pull. El
+          núcleo marca el rebase interactivo de GitCRAFT y la interfaz
+          recuerda qué operación suya se detuvo (pull con merge o con
+          rebase, merge, rebase, cherry-pick, revert) hasta que no queda
+          nada a medias. El título del aviso de la 9, el texto de
+          «Continuar», la confirmación de «Saltar este commit» y la del
+          aborto dicen cuál es; una operación de la terminal solo nombra lo
+          que hace git. Tests de interfaz (rebase interactivo, pull con
+          rebase, rebase ajeno, olvidar el origen) y del núcleo.
+        - **Saltar un commit del rebase interactivo** (encontrado al revisar
+          esos textos): si tenía un mensaje nuevo, git se lo daba al commit
+          anterior, aunque estuviera fuera del rebase. Ahora se corrige la
+          lista pendiente antes de saltar; test de integración con los dos
+          casos (mensaje nuevo, y commit que recibía a otro).
+        - **Avisos:** todos se cierran solos a los 25 s (antes solo el del
+          descarte, a los 10 s), también los que tienen «Deshacer» y los
+          de error; el tiempo se para con el puntero encima o el foco
+          dentro y sigue al salir; cada aviso solo se ve en la pestaña de
+          su repositorio. Tests con el reloj simulado.
+        - La guía corregida: con conflictos, la vista de tres paneles no se
+          abre sola; los archivos salen en el panel de la derecha y se abre
+          al hacer clic en uno (como en la 9).
       *Decisiones del usuario:*
       1. **Orden de la lista:** el más nuevo arriba, como el grafo. La vista
          indica claramente que abajo está lo más antiguo y en qué orden se

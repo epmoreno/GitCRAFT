@@ -134,7 +134,7 @@ export function AbortDialog() {
   const unsaved = Object.keys(drafts ?? {}).sort();
   return (
     <ConfirmDialog
-      title={t(`pull.abortTitle.${dialog.operation}`)}
+      title={t(`pull.abortTitle.${dialog.origin ?? dialog.operation}`)}
       confirmLabel={t("pull.abort")}
       cancelLabel={t("pull.cancel")}
       danger

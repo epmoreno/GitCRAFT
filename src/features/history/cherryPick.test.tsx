@@ -215,7 +215,12 @@ describe("cherry-pick", () => {
 
     // The abort confirmation says it too.
     useRemoteStore.setState({
-      dialog: { kind: "abort", repoId: 1, operation: "cherryPick" },
+      dialog: {
+        kind: "abort",
+        repoId: 1,
+        operation: "cherryPick",
+        origin: null,
+      },
     });
     render(<AbortDialog />);
     expect(

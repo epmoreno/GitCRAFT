@@ -5,6 +5,7 @@ import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { ErrorReport } from "../../ui/ErrorReport";
 import { useGraphStore } from "../graph/store";
 import { useTagStore } from "./tags";
+import { useAutoDismiss } from "../../ui/useAutoDismiss";
 import styles from "./history.module.css";
 
 /** How long to wait after typing before checking the name. */
@@ -250,6 +251,7 @@ export function TagToast({ repoId }: { repoId: number | null }) {
   );
   const dismiss = useTagStore((s) => s.dismissNotice);
   const requestDeleteRemote = useTagStore((s) => s.requestDeleteRemote);
+  const timer = useAutoDismiss(notice, dismiss);
   if (!notice || repoId === null) return null;
   const offer =
     notice.kind === "deleted" ? notice.stillOn.filter((r) => r.same) : [];
@@ -257,6 +259,7 @@ export function TagToast({ repoId }: { repoId: number | null }) {
     <div
       className={styles.toast}
       role={notice.kind === "error" ? undefined : "status"}
+      {...timer}
     >
       <div className={styles.toastBody}>
         {notice.kind === "error" && (

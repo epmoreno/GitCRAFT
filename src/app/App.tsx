@@ -158,12 +158,12 @@ export function App() {
             aria-label={t("zones.notices")}
           >
             <RemoteProgress />
-            <RemoteToast />
-            <BranchToast />
-            <StashToast />
+            <RemoteToast repoId={active?.id ?? null} />
+            <BranchToast repoId={active?.id ?? null} />
+            <StashToast repoId={active?.id ?? null} />
             <HistoryToast repoId={active?.id ?? null} />
             <TagToast repoId={active?.id ?? null} />
-            <UndoToast />
+            <UndoToast repoId={active?.id ?? null} />
           </div>
         </main>
         <DetailPanel repoId={active?.id ?? null} />

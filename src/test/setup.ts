@@ -1,6 +1,10 @@
 import { initialTagState, useTagStore } from "../features/history/tags";
 import { initialMergeState, useMergeStore } from "../features/merge/store";
 import {
+  initialOriginState,
+  useOriginStore,
+} from "../features/conflicts/origin";
+import {
   initialRebaseState,
   useInteractiveRebaseStore,
 } from "../features/interactiveRebase/store";
@@ -213,6 +217,7 @@ beforeEach(() => {
   useHistoryStore.setState(initialHistoryState);
   useTagStore.setState(initialTagState);
   useMergeStore.setState(initialMergeState);
+  useOriginStore.setState(initialOriginState);
   useInteractiveRebaseStore.getState().close();
   useInteractiveRebaseStore.setState(initialRebaseState);
   useUndoStore.setState(initialUndoState);

@@ -568,7 +568,10 @@
       "merge": "Abort the merge?",
       "rebase": "Abort the rebase?",
       "cherryPick": "Abort the cherry-pick?",
-      "revert": "Abort the revert?"
+      "revert": "Abort the revert?",
+      "pullMerge": "Abort the pull?",
+      "pullRebase": "Abort the pull?",
+      "interactiveRebase": "Abort the interactive rebase?"
     },
     "abortExplained": "The branch goes back to how it was before it started, and any conflict resolutions made since are lost. Uncommitted changes you had before in other files are kept.",
     "abort": "Abort",
@@ -596,10 +599,13 @@
       "rebase_other": "The rebase stopped with conflicts in {{count}} files:"
     },
     "aborted": {
-      "merge": "Merge aborted: everything is as before the pull.",
-      "rebase": "Rebase aborted: everything is as before the pull.",
-      "cherryPick": "Cherry-pick aborted.",
-      "revert": "Revert aborted."
+      "merge": "Merge aborted: everything is as before the merge.",
+      "rebase": "Rebase aborted: everything is as before the rebase.",
+      "cherryPick": "Cherry-pick aborted: everything is as before the cherry-pick.",
+      "revert": "Revert aborted: everything is as before the revert.",
+      "pullMerge": "Pull aborted: the merge was undone and everything is as before the pull.",
+      "pullRebase": "Pull aborted: the rebase was undone and everything is as before the pull.",
+      "interactiveRebase": "Interactive rebase aborted: everything is as before the interactive rebase."
     },
     "savedLocal": "Your previous changes are in the stash as “GitCRAFT: antes de hacer pull”; apply them from the sidebar whenever you want."
   },
@@ -1079,16 +1085,20 @@
       "merge": "Merge of “{{theirs}}” into “{{ours}}”",
       "rebase": "Rebase of “{{branch}}” onto “{{onto}}”",
       "cherryPick": "Cherry-pick of {{short}} “{{subject}}” into “{{ours}}”",
-      "revert": "Revert of {{short}} “{{subject}}” in “{{ours}}”"
+      "revert": "Revert of {{short}} “{{subject}}” in “{{ours}}”",
+      "interactiveRebase": "Interactive rebase of “{{branch}}”",
+      "pullMerge": "Pull of “{{theirs}}” into “{{ours}}”, with a merge",
+      "pullRebase": "Pull of “{{onto}}” into “{{branch}}”, with a rebase"
     },
     "progress": "commit {{current}} of {{total}}: “{{subject}}”",
     "conflicts_one": "1 file is still in conflict.",
     "conflicts_other": "{{count}} files are still in conflict.",
     "ready": {
       "merge": "No conflicts left: “Continue” makes the merge commit with the message in the commit box.",
-      "rebase": "No conflicts left: “Continue” applies this commit and goes on with the next one.",
+      "rebase": "No conflicts left: “Continue” applies this commit and goes on with the rest of the rebase.",
       "cherryPick": "No conflicts left: “Continue” makes the commit.",
-      "revert": "No conflicts left: “Continue” makes the commit."
+      "revert": "No conflicts left: “Continue” makes the commit.",
+      "interactiveRebase": "No conflicts left: “Continue” applies this commit, with the new message you gave it if any, and goes on with the rest of the interactive rebase."
     },
     "continue": "Continue",
     "resolveFirst": "Resolve the conflicts first.",
@@ -1098,7 +1108,8 @@
       "skip": {
         "title": "Skip this commit?",
         "body": "{{short}} “{{subject}}” is skipped: its changes will not be applied. Whatever you resolved for it in tracked files is discarded; untracked files stay.",
-        "confirm": "Skip this commit"
+        "confirm": "Skip this commit",
+        "bodyInteractive": "{{short}} “{{subject}}” is skipped: neither its changes nor any new message you gave it will be applied. If you were combining other commits into it, they stay in the rebase, together and with the message you gave them. Whatever you resolved for it in tracked files is discarded; untracked files stay."
       },
       "nothingToCommit": {
         "title": "This commit no longer changes anything",

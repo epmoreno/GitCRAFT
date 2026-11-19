@@ -8,6 +8,7 @@ import { requestOpposite } from "../undo/store";
 import { useWorkdirStore } from "../workdir/store";
 import { ResetDialog } from "./ResetDialog";
 import { useHistoryStore } from "./store";
+import { useAutoDismiss } from "../../ui/useAutoDismiss";
 import styles from "./history.module.css";
 
 /** At most this many files are listed in a dialog. */
@@ -143,11 +144,20 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
         : null;
   // While "Undo" is there it is the way back; the saved copy comes after.
   const offer = saved && !waiting && !undoable ? saved : null;
+  const close = () => {
+    dismiss();
+    if (offer && repoId !== null) forget(repoId);
+  };
+  const timer = useAutoDismiss(
+    repoId === null ? null : (notice ?? offer),
+    close,
+  );
   if (repoId === null || (!notice && !offer)) return null;
   return (
     <div
       className={styles.toast}
       role={notice?.kind === "error" ? undefined : "status"}
+      {...timer}
     >
       <div className={styles.toastBody}>
         {notice?.kind === "error" && (
@@ -252,10 +262,7 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
         type="button"
         className={styles.toastClose}
         aria-label={t("errors.dismiss")}
-        onClick={() => {
-          dismiss();
-          if (offer) forget(repoId);
-        }}
+        onClick={close}
       >
         ×
       </button>

@@ -7,6 +7,7 @@ import dialog from "../../ui/ConfirmDialog.module.css";
 import branches from "../branches/branches.module.css";
 import { useWorkdirStore } from "../workdir/store";
 import { storeCommand, useStashStore } from "./store";
+import { useAutoDismiss } from "../../ui/useAutoDismiss";
 import { ErrorReport } from "../../ui/ErrorReport";
 
 const MAX_LISTED = 12;
@@ -290,15 +291,19 @@ function DroppedNotice({ entry }: { entry: StashEntry }) {
 }
 
 /** Result of the last stash operation. */
-export function StashToast() {
+export function StashToast({ repoId }: { repoId: number | null }) {
   const { t } = useTranslation();
-  const notice = useStashStore((s) => s.notice);
+  const notice = useStashStore((s) =>
+    s.notice?.repoId === repoId ? s.notice : null,
+  );
   const dismiss = useStashStore((s) => s.dismissNotice);
+  const timer = useAutoDismiss(notice, dismiss);
   if (!notice) return null;
   return (
     <div
       className={branches.toast}
       role={notice.kind === "error" ? undefined : "status"}
+      {...timer}
     >
       <div className={branches.toastBody}>
         {notice.kind === "error" ? (

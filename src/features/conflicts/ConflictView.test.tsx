@@ -249,6 +249,7 @@ describe("the conflict view", () => {
       head: commit("ccccccc"),
       applying: commit("ddddddd", "topic one"),
       progress: { current: 1, total: 3 },
+      interactive: false,
     });
     await open();
     expect(screen.getByRole("note")).toHaveTextContent(
@@ -359,7 +360,7 @@ describe("unsaved choices outside the view", () => {
   it("lists them when aborting", () => {
     withDraft();
     useRemoteStore.setState({
-      dialog: { kind: "abort", repoId: 1, operation: "merge" },
+      dialog: { kind: "abort", repoId: 1, operation: "merge", origin: null },
     });
     render(<AbortDialog />);
     expect(screen.getByRole("alertdialog")).toHaveTextContent(

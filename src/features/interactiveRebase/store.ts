@@ -9,6 +9,7 @@ import {
 import { useGraphStore } from "../graph/store";
 import { useHistoryStore } from "../history/store";
 import { refreshAfterRemote } from "../remote/store";
+import { rememberOrigin } from "../conflicts/origin";
 import {
   buildPlan,
   editCombined,
@@ -311,6 +312,7 @@ export const useInteractiveRebaseStore = create<State>()((set, get) => {
           return;
         case "conflicted":
           // The banner and the conflict view (task 9) take over.
+          rememberOrigin(repoId, "interactiveRebase");
           get().close();
           return;
         case "notDone":

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { rememberOrigin } from "../conflicts/origin";
 import {
   commands,
   type CommandError,
@@ -257,6 +258,7 @@ export const useMergeStore = create<MergeState>()((set, get) => {
           return;
         case "conflicted":
           // The banner and the conflict view (task 9) take over.
+          rememberOrigin(repoId, dialog.kind);
           set({ dialog: null });
           return;
         case "notDone":

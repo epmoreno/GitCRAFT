@@ -6,6 +6,7 @@ import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import dialog from "../../ui/ConfirmDialog.module.css";
 import { useBranchStore } from "./store";
 import styles from "./branches.module.css";
+import { useAutoDismiss } from "../../ui/useAutoDismiss";
 import { ErrorReport } from "../../ui/ErrorReport";
 
 /** How long typing pauses before the name is checked. */
@@ -280,16 +281,20 @@ function BlockedDialog() {
 }
 
 /** Result of the last branch operation that needs explaining. */
-export function BranchToast() {
+export function BranchToast({ repoId }: { repoId: number | null }) {
   const { t } = useTranslation();
-  const notice = useBranchStore((s) => s.notice);
+  const notice = useBranchStore((s) =>
+    s.notice?.repoId === repoId ? s.notice : null,
+  );
   const dismiss = useBranchStore((s) => s.dismissNotice);
+  const timer = useAutoDismiss(notice, dismiss);
   if (!notice) return null;
 
   return (
     <div
       className={styles.toast}
       role={notice.kind === "error" ? undefined : "status"}
+      {...timer}
     >
       <div className={styles.toastBody}>
         {notice.kind === "error" ? (

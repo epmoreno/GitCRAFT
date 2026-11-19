@@ -17,6 +17,7 @@ import {
 import { progressPercent } from "../graph/OptimizeNotice";
 import { useGraphStore } from "../graph/store";
 import { useWorkdirStore } from "../workdir/store";
+import { rememberOrigin, type Origin } from "../conflicts/origin";
 
 export type RemoteKind = "fetch" | "autoFetch" | "pull" | "push" | "check";
 
@@ -62,7 +63,13 @@ export type RemoteNotice =
       mode: PullMode;
       savedLocal: boolean;
     }
-  | { kind: "aborted"; repoId: number; operation: InProgress }
+  | {
+      kind: "aborted";
+      repoId: number;
+      operation: InProgress;
+      /** Which operation of the app it was, if known. */
+      origin: Origin | null;
+    }
   | {
       kind: "pushed";
       repoId: number;
@@ -89,7 +96,12 @@ export type RemoteDialog =
       files: string[];
       exact: boolean;
     }
-  | { kind: "abort"; repoId: number; operation: InProgress }
+  | {
+      kind: "abort";
+      repoId: number;
+      operation: InProgress;
+      origin: Origin | null;
+    }
   | { kind: "publish"; repoId: number; branch: string; remotes: string[] }
   | {
       kind: "pushRejected";
@@ -141,7 +153,11 @@ type RemoteState = {
   confirmForcePush: () => Promise<void>;
   /** From the "rejected" dialog: pull first. */
   pullAfterRejection: () => Promise<void>;
-  requestAbort: (repoId: number, operation: InProgress) => void;
+  requestAbort: (
+    repoId: number,
+    operation: InProgress,
+    origin?: Origin | null,
+  ) => void;
   confirmAbort: () => Promise<void>;
   closeDialog: () => void;
   cancel: () => Promise<void>;
@@ -333,6 +349,10 @@ export const useRemoteStore = create<RemoteState>()((set, get) => {
           });
           break;
         case "conflicted":
+          rememberOrigin(
+            repoId,
+            outcome.mode === "rebase" ? "pullRebase" : "pullMerge",
+          );
           notify({
             kind: "pullConflicted",
             repoId,
@@ -454,19 +474,19 @@ export const useRemoteStore = create<RemoteState>()((set, get) => {
       await get().pull(dialog.repoId);
     },
 
-    requestAbort: (repoId, operation) =>
-      set({ dialog: { kind: "abort", repoId, operation } }),
+    requestAbort: (repoId, operation, origin = null) =>
+      set({ dialog: { kind: "abort", repoId, operation, origin } }),
 
     confirmAbort: async () => {
       const dialog = get().dialog;
       if (dialog?.kind !== "abort") return;
-      const { repoId, operation } = dialog;
+      const { repoId, operation, origin } = dialog;
       set({ dialog: null, notice: null });
       const result = await commands.abortInProgress(repoId);
       refreshAfterRemote(repoId);
       notify(
         result.status === "ok"
-          ? { kind: "aborted", repoId, operation }
+          ? { kind: "aborted", repoId, operation, origin }
           : { kind: "error", repoId, operation: "pull", error: result.error },
       );
     },

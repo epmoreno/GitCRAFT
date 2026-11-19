@@ -69,6 +69,8 @@ pub enum ConflictSides {
         /// example after an `exec` step).
         applying: Option<CommitRef>,
         progress: Option<RebaseProgress>,
+        /// GitCRAFT's interactive rebase (task 13), which has its own texts.
+        interactive: bool,
     },
     /// Left: the current branch. Right: the commit being copied onto it.
     CherryPick {
@@ -189,20 +191,105 @@ async fn state_file(
     name: &str,
     cancel: &CancellationToken,
 ) -> Result<Option<String>> {
+    let path = state_path(git, repo, name, cancel).await?;
+    Ok(std::fs::read_to_string(path)
+        .ok()
+        .map(|s| s.trim().to_owned()))
+}
+
+/// Where git keeps `name` (e.g. `rebase-merge/done`).
+async fn state_path(
+    git: &Git,
+    repo: &Path,
+    name: &str,
+    cancel: &CancellationToken,
+) -> Result<std::path::PathBuf> {
     let out = git
         .read(repo)
         .args(["rev-parse", "--git-path", name])
         .output(cancel)
         .await?;
     let path = Path::new(out.stdout_lossy().trim()).to_path_buf();
-    let path = if path.is_absolute() {
+    Ok(if path.is_absolute() {
         path
     } else {
         repo.join(path)
+    })
+}
+
+/// GitCRAFT's interactive rebase: before skipping the commit it stopped
+/// at, the rest of the list stops depending on it (see
+/// [`todo_after_skip`]). Other rebases are left to git as they are.
+async fn prepare_skip(git: &Git, repo: &Path, cancel: &CancellationToken) -> Result<()> {
+    if state_file(git, repo, &format!("rebase-merge/{MESSAGES_MARK}"), cancel)
+        .await?
+        .is_none()
+    {
+        return Ok(());
+    }
+    let done = state_file(git, repo, "rebase-merge/done", cancel).await?;
+    let todo_path = state_path(git, repo, "rebase-merge/git-rebase-todo", cancel).await?;
+    let Ok(todo) = std::fs::read_to_string(&todo_path) else {
+        return Ok(());
     };
-    Ok(std::fs::read_to_string(path)
-        .ok()
-        .map(|s| s.trim().to_owned()))
+    let stopped = done.as_deref().and_then(|d| d.lines().last()).unwrap_or("");
+    let next = todo_after_skip(stopped, &todo);
+    if next != todo {
+        std::fs::write(&todo_path, next)?;
+    }
+    Ok(())
+}
+
+/// The rest of GitCRAFT's interactive rebase once the commit of `stopped`
+/// (the last line done) is skipped. Its new message travels in a `fixup
+/// -C` line after it, and the commits combined into it in `fixup` lines:
+/// left as they are, git would give that message and those changes to the
+/// commit before it. So a commit skipped with only a new message loses that
+/// line, and one that received others hands the combination to the first of
+/// them, which becomes a `pick`. A combined commit (`fixup`) skipped changes
+/// nothing: the rest of its combination goes on.
+pub fn todo_after_skip(stopped: &str, todo: &str) -> String {
+    let mut words = stopped.split_whitespace();
+    if !matches!(words.next(), Some("pick" | "p")) {
+        return todo.to_owned();
+    }
+    let mut lines: Vec<String> = todo.lines().map(str::to_owned).collect();
+    // The skipped commit's combination: the lines before the next commit
+    // that is not combined into it.
+    let mut first_combined = None;
+    let mut message = None;
+    for (i, line) in lines.iter().enumerate() {
+        let mut words = line.split_whitespace();
+        match (words.next(), words.next()) {
+            (None, _) | (Some("#"), _) => continue,
+            (Some("fixup" | "f"), Some("-C" | "-c")) => {
+                message = Some(i);
+                break;
+            }
+            (Some("fixup" | "f" | "squash" | "s"), _) => {
+                first_combined.get_or_insert(i);
+            }
+            _ => break,
+        }
+    }
+    match (first_combined, message) {
+        (Some(i), _) => {
+            let rest = lines[i]
+                .split_once(char::is_whitespace)
+                .map_or("", |(_, rest)| rest)
+                .to_owned();
+            lines[i] = format!("pick {rest}");
+        }
+        (None, Some(i)) => {
+            lines.remove(i);
+        }
+        (None, None) => return todo.to_owned(),
+    }
+    let mut out = lines.join("\n");
+    if todo.ends_with('\n') {
+        out.push('\n');
+    }
+    out
 }
 
 /// The commits in a todo (or done) list of GitCRAFT's interactive rebase:
@@ -316,6 +403,14 @@ pub async fn conflict_sides(
                 head,
                 applying,
                 progress: rebase_progress(git, repo, cancel).await?,
+                interactive: state_file(
+                    git,
+                    repo,
+                    &format!("rebase-merge/{MESSAGES_MARK}"),
+                    cancel,
+                )
+                .await?
+                .is_some(),
             }
         }
         InProgress::CherryPick => {
@@ -567,5 +662,8 @@ pub async fn skip_current(
             return Err(GitError::Parse("a merge has nothing to skip".into()));
         }
     };
+    if command == "rebase" {
+        prepare_skip(git, repo, cancel).await?;
+    }
     run_step(git, repo, &[command, "--skip"], cancel).await
 }

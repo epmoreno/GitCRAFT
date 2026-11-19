@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import branches from "../branches/branches.module.css";
 import { useRemoteStore } from "./store";
 import styles from "./remote.module.css";
+import { useAutoDismiss } from "../../ui/useAutoDismiss";
 import { ErrorReport } from "../../ui/ErrorReport";
 
 /** Progress of the running fetch/pull/push, with "Cancel". */
@@ -42,15 +43,19 @@ export function RemoteProgress() {
 }
 
 /** Result of the last remote operation that needs explaining. */
-export function RemoteToast() {
+export function RemoteToast({ repoId }: { repoId: number | null }) {
   const { t } = useTranslation();
-  const notice = useRemoteStore((s) => s.notice);
+  const notice = useRemoteStore((s) =>
+    s.notice?.repoId === repoId ? s.notice : null,
+  );
   const dismiss = useRemoteStore((s) => s.dismissNotice);
+  const timer = useAutoDismiss(notice, dismiss);
   if (!notice) return null;
   return (
     <div
       className={branches.toast}
       role={notice.kind === "error" ? undefined : "status"}
+      {...timer}
     >
       <div className={branches.toastBody}>
         {notice.kind === "error" ? (
@@ -133,7 +138,7 @@ function NoticeText() {
         </>
       );
     case "aborted":
-      return <p>{t(`pull.aborted.${notice.operation}`)}</p>;
+      return <p>{t(`pull.aborted.${notice.origin ?? notice.operation}`)}</p>;
     case "pushed":
       return (
         <p>

@@ -28,7 +28,7 @@ function renderSidebar(refs: RepoRefs = sampleRefs()) {
     <>
       <Sidebar repoId={1} />
       <BranchDialogs />
-      <BranchToast />
+      <BranchToast repoId={1} />
     </>,
   );
 }
