@@ -784,6 +784,18 @@ combinar con el anterior, descartar y reordenar.
   sale de contar en `done` y `git-rebase-todo` solo las líneas de commits:
   sin los `fixup -C` de los mensajes ni los `drop`. Sin la marca (otros
   rebases), sigue con `msgnum` y `end` de git.
+- **Pruebas (13.5):** `scripts/make-rebase-examples.sh` crea un repo
+  desechable con su remoto local y una rama para cada caso: `main` con cinco
+  commits independientes (reordenar, editar, combinar y descartar sin
+  conflictos), `choca-al-reordenar` (se detiene en el paso 2 de 3),
+  `queda-vacio` (al descartar «Sube la versión a 2», git deja fuera su
+  reversión), `publicada` (tres commits en `origin` y uno sin subir) y
+  `con-merge` (la vista explica que no se ofrece). Un segundo repo,
+  `gitcraft-rebase-a-medias`, tiene un merge detenido en un conflicto: la
+  entrada del menú sale desactivada. Los tests de integración
+  (`interactive_rebase.rs`) crean los suyos con `TestRepo`. El modo
+  auxiliar no tiene nada propio de un sistema más allá de lo que ya
+  recoge el inventario de la sección 8.
 
 ## 5f. Crear repositorios
 

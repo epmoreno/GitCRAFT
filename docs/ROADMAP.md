@@ -3190,6 +3190,21 @@ principio y toda operación destructiva pasa por confirmación.
         para reordenar, combinar y descartar, uno que choca al reordenar,
         uno publicado en un remoto local y cambios sin confirmar).
         *Verificable:* el usuario lo prueba y lo confirma.
+        *Hecho (falta la prueba del usuario):*
+        - **Script:** `scripts/make-rebase-examples.sh` (con `--replace`,
+          que lleva lo anterior a la Papelera) crea `~/gitcraft-rebase`,
+          su remoto `~/gitcraft-rebase-remoto.git` y
+          `~/gitcraft-rebase-a-medias`. Ramas: `main` (cinco commits
+          independientes), `choca-al-reordenar`, `queda-vacio`,
+          `publicada` y `con-merge`; el segundo repo tiene un merge
+          detenido en un conflicto (entrada desactivada).
+        - Comprobado con `git rebase -i` en clones desechables: reordenar
+          `choca-al-reordenar` se detiene en el paso 2 de 3 con conflicto
+          en `lista.txt`, y descartar «Sube la versión a 2» deja fuera
+          «Revierte «Sube la versión a 2»» por vacío.
+        - ARCHITECTURE.md (sección 5l): la vista, el progreso y las
+          pruebas. El inventario de la sección 8 ya tiene la fila del
+          modo auxiliar; no hace falta otra.
       *Decisiones del usuario:*
       1. **Orden de la lista:** el más nuevo arriba, como el grafo. La vista
          indica claramente que abajo está lo más antiguo y en qué orden se
