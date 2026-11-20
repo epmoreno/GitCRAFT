@@ -1306,6 +1306,10 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 
 ## Fase 2
 
+**Terminada y verificada por el usuario en macOS** (tareas 8 a 13; versión
+v0.4.0). Solo falta la prueba del usuario de un detalle de la 12: la
+búsqueda por archivo sin los merges que solo traen un lado.
+
 Orden acordado: 9 → 10 → 8 → 11 → 12 → 13. Todo es multiplataforma desde el
 principio y toda operación destructiva pasa por confirmación.
 
@@ -2939,7 +2943,7 @@ principio y toda operación destructiva pasa por confirmación.
       blame según la antigüedad de cada commit, además de las franjas.
       *Fuera de la 12:* filtros combinados (autor y fechas a la vez), blame del archivo sin
       confirmar y búsqueda en el stash.
-- [ ] **13. Rebase interactivo visual:** reordenar, squash, editar mensaje y
+- [x] **13. Rebase interactivo visual:** reordenar, squash, editar mensaje y
       descartar.
       *Tests:* cada acción, conflicto a mitad (usa la 9), abortar restaura la
       rama, y aviso si los commits ya están publicados.
@@ -3258,9 +3262,9 @@ principio y toda operación destructiva pasa por confirmación.
         - los avisos: se van solos a los 25 s, se paran con el ratón encima
           y solo se ven en la pestaña de su repo (al volver, reaparecen);
         - la guía corregida del paso 11.
-      - [ ] **13.7 Decisiones del usuario sobre los avisos y fechas del
+      - [x] **13.7 Decisiones del usuario sobre los avisos y fechas del
         historial de una rama.**
-        *Hecho (falta la prueba del usuario):*
+        *Hecho:*
         - **Errores:** no se cierran solos; se quedan hasta pulsar la ×. El
           resto, a los 25 s.
         - **«Recuperar mis cambios»:** se cierra a los 25 s y dice que
@@ -3279,6 +3283,15 @@ principio y toda operación destructiva pasa por confirmación.
         punto en la pestaña, el historial abierto un día después de
         arrancar la app (falla sin el arreglo) y el panel de detalle con
         dos commits a un día de distancia.
+        *Verificado manualmente por el usuario en macOS* (pruebas A, B, C
+        y D):
+        - las fechas del historial de una rama, con la app abierta mucho
+          rato;
+        - los errores que se quedan hasta pulsar la ×;
+        - «Recuperar mis cambios», con la frase de Stashes, que se cierra a
+          los 25 s mientras la entrada sigue en Stashes;
+        - el progreso de fetch solo en la pestaña de su repo, con el punto
+          en esa pestaña desde las demás.
       *Decisiones del usuario:*
       1. **Orden de la lista:** el más nuevo arriba, como el grafo. La vista
          indica claramente que abajo está lo más antiguo y en qué orden se
