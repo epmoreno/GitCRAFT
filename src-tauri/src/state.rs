@@ -1170,7 +1170,8 @@ impl AppState {
         self
     }
 
-    #[cfg(test)]
+    /// Only the Unix test uses it (its stand-in editor is a shell script).
+    #[cfg(all(test, unix))]
     fn with_rebase_editor(mut self, editor: PathBuf) -> Self {
         self.rebase_editor = Some(editor);
         self
