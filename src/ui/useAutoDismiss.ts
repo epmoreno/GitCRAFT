@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type FocusEvent } from "react";
 export const NOTICE_SECONDS = 25;
 
 /**
- * Closes `notice` after {@link NOTICE_SECONDS} on screen. The time stops
+ * Closes `notice` after {@link NOTICE_SECONDS} on screen (`null`: it stays;
+ * errors are passed as `null`, they stay until closed by hand). The time stops
  * while the pointer is over it or the keyboard focus is inside it, and
  * goes on from where it was when they leave. A new notice (another
  * object) starts again; so does one that comes back on screen (the tab of

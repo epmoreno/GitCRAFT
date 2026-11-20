@@ -102,7 +102,8 @@ export function UndoToast({ repoId }: { repoId: number | null }) {
   );
   const undo = useWorkdirStore((s) => s.undoLastDiscard);
   const dismiss = useWorkdirStore((s) => s.dismissLastDiscard);
-  const timer = useAutoDismiss(last, dismiss);
+  // An error stays until it is closed.
+  const timer = useAutoDismiss(last?.error ? null : last, dismiss);
 
   if (!last) return null;
   return (

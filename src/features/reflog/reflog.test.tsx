@@ -255,3 +255,36 @@ describe("an entry's menu", () => {
     expect(screen.getByRole("menu", { name: "Entrada 2222222" })).toBeVisible();
   });
 });
+
+describe("its dates", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("are counted from when it opens, not from when the app started", async () => {
+    // The app starts on 19 November at 19:26; the history opens the next
+    // day at 22:09 (what the user saw: "tomorrow", "8 minutes ago").
+    const started = Date.UTC(2026, 10, 19, 18, 26);
+    const opened = Date.UTC(2026, 10, 20, 21, 9, 30);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(started);
+    ipc.branchReflog.mockResolvedValue({
+      status: "ok",
+      data: reflog({
+        entries: [
+          entry(0, {
+            time: opened / 1000 - 30,
+            message: "rebase (finish): refs/heads/main",
+          }),
+          entry(1, { time: started / 1000 - 8 * 60 }),
+        ],
+      }),
+    });
+    render(<ReflogDialog />);
+    vi.setSystemTime(opened);
+    await act(() => useReflogStore.getState().open(1, "refs/heads/main"));
+    const items = within(screen.getByRole("dialog")).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("ahora");
+    expect(items[0]).not.toHaveTextContent("mañana");
+    expect(items[1]).toHaveTextContent("ayer");
+    expect(items[1]).not.toHaveTextContent("minutos");
+  });
+});

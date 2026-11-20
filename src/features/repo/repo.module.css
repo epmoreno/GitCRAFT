@@ -44,6 +44,18 @@
   white-space: nowrap;
 }
 
+/* A fetch, pull or push running in this tab's repository, seen from
+   another tab (its progress shows in its own tab). */
+.busy {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: var(--space-1);
+  border-radius: 50%;
+  background-color: var(--accent);
+  vertical-align: middle;
+}
+
 .tabDragging {
   opacity: 0.7;
   outline: 1px dashed var(--accent);

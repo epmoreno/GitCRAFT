@@ -148,8 +148,9 @@ export function HistoryToast({ repoId }: { repoId: number | null }) {
     dismiss();
     if (offer && repoId !== null) forget(repoId);
   };
+  // An error stays until it is closed.
   const timer = useAutoDismiss(
-    repoId === null ? null : (notice ?? offer),
+    repoId === null || notice?.kind === "error" ? null : (notice ?? offer),
     close,
   );
   if (repoId === null || (!notice && !offer)) return null;

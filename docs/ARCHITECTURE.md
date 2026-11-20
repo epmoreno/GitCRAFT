@@ -956,16 +956,24 @@ Dónde se muestra:
 **Avisos** (la columna de abajo a la derecha del historial: `RemoteToast`,
 `BranchToast`, `StashToast`, `HistoryToast`, `TagToast` y el «Deshacer» del
 descarte): cada uno lleva el repositorio al que se refiere y solo se ve en
-la pestaña de ese repositorio. Todos se cierran solos a los 25 s
+la pestaña de ese repositorio. Se cierran solos a los 25 s
 (`NOTICE_SECONDS`, `src/ui/useAutoDismiss.ts`), también los que tienen
-«Deshacer» y los de error; el tiempo se para mientras el puntero está
-encima o el foco del teclado dentro, y sigue desde donde iba al salir. Un
-aviso oculto (otra pestaña) no gasta su tiempo: al volver a su pestaña
-cuenta otra vez desde 25 s. El progreso de un fetch, pull o push
-(`RemoteProgress`) y el aviso de una operación a medias
-(`InProgressBanner`) no son avisos: duran lo que la operación. Cerrar el
-aviso de «Recuperar mis cambios» no toca el stash: la entrada sigue en la
-barra lateral.
+«Deshacer» y el de «Recuperar mis cambios» (que dice que también se
+recuperan desde Stashes, en la barra lateral; cerrarlo no toca el stash).
+Los de error no: se quedan hasta pulsar la ×. El tiempo se para mientras
+el puntero está encima o el foco del teclado dentro, y sigue desde donde
+iba al salir. Un aviso oculto (otra pestaña) no gasta su tiempo: al volver
+a su pestaña cuenta otra vez desde 25 s. El aviso de una operación a
+medias (`InProgressBanner`) no es un aviso de estos: dura lo que la
+operación. El progreso de un fetch, pull o push (`RemoteProgress`) tampoco
+se cierra solo y solo se ve en la pestaña de su repositorio; desde las
+demás, esa pestaña lleva un punto (`TabBar`, con el texto del progreso
+como nombre accesible).
+
+**Fechas relativas** («hace 8 minutos»): cada vista toma «ahora» al
+mostrarse. Un componente que sigue montado mientras está cerrado (el
+historial de una rama) no puede guardar su propia hora: la toma su store
+al abrirse (`openedAt`); si no, se queda con la de cuando arrancó la app.
 
 Al abortar una operación a medias, el aviso dice cuál era: el núcleo marca
 el rebase interactivo de GitCRAFT (`ConflictSides::Rebase { interactive }`)

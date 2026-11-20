@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ContextMenu, type MenuItem } from "../../ui/ContextMenu";
 import { Tooltip } from "../../ui/Tooltip";
 import { useRepoStore } from "./store";
+import { useRemoteStore } from "../remote/store";
 import styles from "./repo.module.css";
 import { useShortcutLabel } from "../../app/useShortcutLabel";
 
@@ -26,6 +27,9 @@ export function TabBar() {
   const newTab = useRepoStore((s) => s.newTab);
   const activateBlank = useRepoStore((s) => s.activateBlank);
   const closeBlankTab = useRepoStore((s) => s.closeBlankTab);
+  // A fetch, pull or push shows its progress in its own tab only; the
+  // others see a dot on that tab.
+  const running = useRemoteStore((s) => s.running);
   const elements = useRef(new Map<number, HTMLElement>());
   const drag = useRef<Drag | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
@@ -142,6 +146,15 @@ export function TabBar() {
               }}
             >
               {info.name}
+              {running?.repoId === id && !selected && (
+                <span
+                  className={styles.busy}
+                  role="img"
+                  aria-label={t(`remote.running.${running.kind}`, {
+                    remote: running.remote ?? t("remote.allRemotes"),
+                  })}
+                />
+              )}
             </button>
             <button
               type="button"

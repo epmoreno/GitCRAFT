@@ -297,7 +297,11 @@ export function StashToast({ repoId }: { repoId: number | null }) {
     s.notice?.repoId === repoId ? s.notice : null,
   );
   const dismiss = useStashStore((s) => s.dismissNotice);
-  const timer = useAutoDismiss(notice, dismiss);
+  // An error stays until it is closed.
+  const timer = useAutoDismiss(
+    notice?.kind === "error" ? null : notice,
+    dismiss,
+  );
   if (!notice) return null;
   return (
     <div

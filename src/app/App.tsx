@@ -157,7 +157,7 @@ export function App() {
             role="region"
             aria-label={t("zones.notices")}
           >
-            <RemoteProgress />
+            <RemoteProgress repoId={active?.id ?? null} />
             <RemoteToast repoId={active?.id ?? null} />
             <BranchToast repoId={active?.id ?? null} />
             <StashToast repoId={active?.id ?? null} />

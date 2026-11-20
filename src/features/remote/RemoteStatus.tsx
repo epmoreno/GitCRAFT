@@ -6,9 +6,12 @@ import { useAutoDismiss } from "../../ui/useAutoDismiss";
 import { ErrorReport } from "../../ui/ErrorReport";
 
 /** Progress of the running fetch/pull/push, with "Cancel". */
-export function RemoteProgress() {
+export function RemoteProgress({ repoId }: { repoId: number | null }) {
   const { t } = useTranslation();
-  const running = useRemoteStore((s) => s.running);
+  // Only in the tab of its repository (the others mark that tab).
+  const running = useRemoteStore((s) =>
+    s.running?.repoId === repoId ? s.running : null,
+  );
   const cancel = useRemoteStore((s) => s.cancel);
   if (!running) return null;
   return (
@@ -49,7 +52,11 @@ export function RemoteToast({ repoId }: { repoId: number | null }) {
     s.notice?.repoId === repoId ? s.notice : null,
   );
   const dismiss = useRemoteStore((s) => s.dismissNotice);
-  const timer = useAutoDismiss(notice, dismiss);
+  // An error stays until it is closed.
+  const timer = useAutoDismiss(
+    notice?.kind === "error" ? null : notice,
+    dismiss,
+  );
   if (!notice) return null;
   return (
     <div

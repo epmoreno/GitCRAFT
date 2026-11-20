@@ -251,7 +251,11 @@ export function TagToast({ repoId }: { repoId: number | null }) {
   );
   const dismiss = useTagStore((s) => s.dismissNotice);
   const requestDeleteRemote = useTagStore((s) => s.requestDeleteRemote);
-  const timer = useAutoDismiss(notice, dismiss);
+  // An error stays until it is closed.
+  const timer = useAutoDismiss(
+    notice?.kind === "error" ? null : notice,
+    dismiss,
+  );
   if (!notice || repoId === null) return null;
   const offer =
     notice.kind === "deleted" ? notice.stillOn.filter((r) => r.same) : [];

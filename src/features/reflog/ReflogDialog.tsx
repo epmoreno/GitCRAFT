@@ -49,7 +49,6 @@ export function ReflogDialog() {
     x: number;
     y: number;
   } | null>(null);
-  const [now] = useState(() => Date.now());
 
   const open = !!dialog;
   useEffect(() => {
@@ -183,7 +182,11 @@ export function ReflogDialog() {
                           className={styles.when}
                           title={absoluteTime(entry.time, i18n.language)}
                         >
-                          {relativeTime(entry.time, now, i18n.language)}
+                          {relativeTime(
+                            entry.time,
+                            dialog.openedAt,
+                            i18n.language,
+                          )}
                         </span>
                         <code className={styles.oid}>{entry.short}</code>
                         <span className={styles.subject}>

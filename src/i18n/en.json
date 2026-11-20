@@ -1159,14 +1159,14 @@
     "actions": "Commit actions",
     "recover": "Recover my changes",
     "savedNotice": {
-      "cherryPick": "Your changes are still saved in the stash (“GitCRAFT: antes del cherry-pick de {{short}}”).",
-      "revert": "Your changes are still saved in the stash (“GitCRAFT: antes de revertir {{short}}”).",
-      "reset": "Your changes are still saved in the stash (“GitCRAFT: antes de reset a {{short}}”).",
-      "merge": "Your changes are still saved in the stash (“GitCRAFT: antes del merge de {{short}}”).",
-      "rebase": "Your changes are still saved in the stash (“GitCRAFT: antes del rebase de {{short}}”).",
-      "undo": "Your changes are still saved in the stash (“GitCRAFT: antes de deshacer”).",
-      "redo": "Your changes are still saved in the stash (“GitCRAFT: antes de rehacer”).",
-      "interactiveRebase": "Your changes are still saved in the stash (“GitCRAFT: antes del rebase interactivo de {{short}}”)."
+      "cherryPick": "Your changes are still saved in the stash (“GitCRAFT: antes del cherry-pick de {{short}}”). You can also get them back from Stashes, in the sidebar.",
+      "revert": "Your changes are still saved in the stash (“GitCRAFT: antes de revertir {{short}}”). You can also get them back from Stashes, in the sidebar.",
+      "reset": "Your changes are still saved in the stash (“GitCRAFT: antes de reset a {{short}}”). You can also get them back from Stashes, in the sidebar.",
+      "merge": "Your changes are still saved in the stash (“GitCRAFT: antes del merge de {{short}}”). You can also get them back from Stashes, in the sidebar.",
+      "rebase": "Your changes are still saved in the stash (“GitCRAFT: antes del rebase de {{short}}”). You can also get them back from Stashes, in the sidebar.",
+      "undo": "Your changes are still saved in the stash (“GitCRAFT: antes de deshacer”). You can also get them back from Stashes, in the sidebar.",
+      "redo": "Your changes are still saved in the stash (“GitCRAFT: antes de rehacer”). You can also get them back from Stashes, in the sidebar.",
+      "interactiveRebase": "Your changes are still saved in the stash (“GitCRAFT: antes del rebase interactivo de {{short}}”). You can also get them back from Stashes, in the sidebar."
     },
     "abortKeepsSaved": "The changes you saved before starting are still in the stash: aborting does not bring them back. Recover them afterwards with “Recover my changes”.",
     "abortKeepsSavedHere": "If you abort it, your saved changes stay in the stash: aborting does not bring them back. Recover them with “Recover my changes”.",

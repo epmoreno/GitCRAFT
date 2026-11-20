@@ -118,7 +118,7 @@ describe("revert", () => {
     expect(ipc.revert).toHaveBeenCalledWith(1, OID, true, true);
     expect(
       await screen.findByText(
-        "Tus cambios siguen guardados en el stash («GitCRAFT: antes de revertir f00dcaf»).",
+        "Tus cambios siguen guardados en el stash («GitCRAFT: antes de revertir f00dcaf»). También puedes recuperarlos desde Stashes, en la barra lateral.",
       ),
     ).toBeInTheDocument();
     expect(

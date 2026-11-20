@@ -14,6 +14,9 @@ export type ReflogDialog = {
   /** `null` while it loads. */
   reflog: Reflog | null;
   error: CommandError | null;
+  /** When it was opened (ms): "now" for "8 minutes ago". The dialog stays
+   * mounted while closed, so it cannot keep its own. */
+  openedAt: number;
 };
 
 type ReflogState = {
@@ -28,7 +31,15 @@ export const useReflogStore = create<ReflogState>()((set, get) => ({
   ...initialReflogState,
 
   open: async (repoId, refname) => {
-    set({ dialog: { repoId, refname, reflog: null, error: null } });
+    set({
+      dialog: {
+        repoId,
+        refname,
+        reflog: null,
+        error: null,
+        openedAt: Date.now(),
+      },
+    });
     const result = await commands.branchReflog(repoId, refname);
     const now = get().dialog;
     if (now?.repoId !== repoId || now.refname !== refname) return;

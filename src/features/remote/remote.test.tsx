@@ -41,7 +41,7 @@ function renderToolbar(refs: RepoRefs = sampleRefs()) {
       <Toolbar />
       <Sidebar repoId={1} />
       <InProgressBanner repoId={1} />
-      <RemoteProgress />
+      <RemoteProgress repoId={1} />
       <RemoteToast repoId={1} />
       <RemoteDialogs />
     </>,

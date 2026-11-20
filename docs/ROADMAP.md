@@ -3223,8 +3223,8 @@ principio y toda operación destructiva pasa por confirmación.
           entradas salen desactivadas y muestran el motivo al pasar el
           ratón, en el panel de detalle y en el menú del clic derecho;
         - Ajustes → Atajos y el `--replace` del script.
-      - [ ] **13.6 Arreglos tras la prueba del usuario.**
-        *Hecho (falta la prueba del usuario):*
+      - [x] **13.6 Arreglos tras la prueba del usuario.**
+        *Hecho:*
         - **Cada operación con su texto al abortar:** decía «Rebase
           abortado: todo está como antes del pull» sin haber pull. El
           núcleo marca el rebase interactivo de GitCRAFT y la interfaz
@@ -3248,6 +3248,37 @@ principio y toda operación destructiva pasa por confirmación.
         - La guía corregida: con conflictos, la vista de tres paneles no se
           abre sola; los archivos salen en el panel de la derecha y se abre
           al hacer clic en uno (como en la 9).
+        *Verificado manualmente por el usuario en macOS* (pruebas A, B, C
+        y D):
+        - los textos del rebase interactivo al abortar, en el aviso y en el
+          diálogo;
+        - «Saltar este commit» con un mensaje nuevo: la confirmación lo
+          explica y, al saltar, ningún commit se queda con ese mensaje
+          («Base» tampoco cambia);
+        - los avisos: se van solos a los 25 s, se paran con el ratón encima
+          y solo se ven en la pestaña de su repo (al volver, reaparecen);
+        - la guía corregida del paso 11.
+      - [ ] **13.7 Decisiones del usuario sobre los avisos y fechas del
+        historial de una rama.**
+        *Hecho (falta la prueba del usuario):*
+        - **Errores:** no se cierran solos; se quedan hasta pulsar la ×. El
+          resto, a los 25 s.
+        - **«Recuperar mis cambios»:** se cierra a los 25 s y dice que
+          también se recuperan desde Stashes, en la barra lateral.
+        - **Progreso de fetch, pull y push:** solo en la pestaña de su
+          repositorio; desde las demás, esa pestaña lleva un punto.
+        - **Fechas en «Historial de «rama»…»:** decía «mañana» en una
+          entrada de hacía un momento y «hace 8 minutos» en entradas del
+          día anterior. Causa: el diálogo está siempre montado y tomaba
+          «ahora» una sola vez, al arrancar la app; git y el núcleo daban
+          bien las fechas (ni zona horaria, ni fechas fijadas por el script
+          o por GitCRAFT, ni el redondeo de días de `15296e9`). Ahora la
+          hora se toma al abrirlo. Revisados los demás usos de fechas
+          relativas: los demás toman la hora al mostrarse.
+        Tests: el error que se queda, el texto de Stashes, el progreso y el
+        punto en la pestaña, el historial abierto un día después de
+        arrancar la app (falla sin el arreglo) y el panel de detalle con
+        dos commits a un día de distancia.
       *Decisiones del usuario:*
       1. **Orden de la lista:** el más nuevo arriba, como el grafo. La vista
          indica claramente que abajo está lo más antiguo y en qué orden se

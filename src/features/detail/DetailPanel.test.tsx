@@ -50,6 +50,43 @@ describe("DetailPanel", () => {
     await i18n.changeLanguage("es");
   });
 
+  it("dates each commit from when it is shown", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const start = Date.UTC(2026, 10, 19, 18, 26);
+      vi.setSystemTime(start);
+      const at = (t: number) => ({
+        name: "Ana",
+        email: "ana@example.com",
+        time: t,
+      });
+      ipc.commitDetails.mockImplementation((_id, commit) =>
+        Promise.resolve({
+          status: "ok",
+          data: details({
+            oid: commit,
+            summary: `Commit ${commit.slice(0, 1)}`,
+            author: at(start / 1000 - 600),
+            committer: at(start / 1000 - 600),
+          }),
+        }),
+      );
+      withSelection(oid("f"));
+      render(<DetailPanel repoId={1} />);
+      const panel = screen.getByRole("complementary", { name: "Detalle" });
+      await within(panel).findByRole("heading", { name: "Commit f" });
+      expect(within(panel).getAllByText(/hace 10 minutos/)).not.toHaveLength(0);
+      // A day later, another commit with the same date: a day ago.
+      vi.setSystemTime(start + 24 * 3600 * 1000);
+      act(() => useGraphStore.getState().select(1, oid("b")));
+      await within(panel).findByRole("heading", { name: "Commit b" });
+      expect(within(panel).queryByText(/hace 10 minutos/)).toBeNull();
+      expect(within(panel).getAllByText(/ayer/)).not.toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("asks to select a commit when nothing is selected", () => {
     withSelection(null);
     render(<DetailPanel repoId={1} />);

@@ -287,7 +287,11 @@ export function BranchToast({ repoId }: { repoId: number | null }) {
     s.notice?.repoId === repoId ? s.notice : null,
   );
   const dismiss = useBranchStore((s) => s.dismissNotice);
-  const timer = useAutoDismiss(notice, dismiss);
+  // An error stays until it is closed.
+  const timer = useAutoDismiss(
+    notice?.kind === "error" ? null : notice,
+    dismiss,
+  );
   if (!notice) return null;
 
   return (
