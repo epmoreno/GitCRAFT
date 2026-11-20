@@ -15,7 +15,7 @@ GitCRAFT – cliente Git visual, rápido y de código abierto
 <li lang="pt">Português: GitCRAFT – um cliente Git visual, rápido e de código aberto</li>
 </ul>
 
-> **Versión temprana (v0.3.0).** GitCRAFT se puede usar a diario para las
+> **Versión temprana (v0.4.0).** GitCRAFT se puede usar a diario para las
 > funciones de abajo, pero es joven: puede tener asperezas y le faltan
 > funciones (ver [lo que aún no hay](#lo-que-aún-no-hay)). Tus repositorios
 > están a salvo: las operaciones destructivas siempre preguntan antes, y
@@ -75,6 +75,24 @@ vistazo y se ejecuten rápido, sin esconder lo que Git hace por debajo:
   momento.
 - **Tags**: crear tags ligeros y anotados, subirlos, y borrarlos en local o en
   el remoto (con su propia confirmación).
+- **Rebase interactivo**: desde un commit de la rama actual, reordenar sus
+  commits arrastrándolos o con el teclado, editar mensajes, combinar un commit
+  con el de debajo y descartar commits. Antes de aplicar, GitCRAFT enseña dónde
+  se detendría con conflictos, qué commits quedarían vacíos y cuáles ya están
+  publicados; lo descartado se puede recuperar.
+- **Deshacer y rehacer**: «Deshacer» y «Rehacer» de la barra de herramientas
+  (⌘Z y ⇧⌘Z) dan marcha atrás a las últimas operaciones —commits, merges,
+  rebases, resets, cambios de rama, ramas y tags…— tras enseñar exactamente
+  qué va a cambiar.
+- **Historial de una rama**: por dónde ha pasado una rama (o HEAD), tal como
+  lo anota Git, incluidos commits que ya no están en ninguna rama, con la
+  opción de crear una rama ahí para rescatarlos.
+- **Buscar en el historial** (⌘F) por mensaje, autor, hash o archivo, con
+  expresiones regulares y distinguiendo mayúsculas; los commits que no
+  coinciden se atenúan.
+- **Historial y blame de un archivo**: cada commit que cambió un archivo,
+  siguiendo los renombrados, y quién cambió por última vez cada línea, con la
+  opción de ir más atrás desde cualquier línea.
 - **Remotos**: fetch, pull (merge o rebase) y push con progreso y cancelación,
   indicadores de commits por delante y por detrás, push forzado solo con
   `--force-with-lease`; fetch automático opcional.
@@ -93,10 +111,9 @@ vistazo y se ejecuten rápido, sin esconder lo que Git hace por debajo:
 
 ### Lo que aún no hay
 
-Están previstos la búsqueda en el historial, el historial y blame de un
-archivo, el rebase interactivo, deshacer cualquier operación reciente,
-submódulos, worktrees, LFS y un tema claro. Las próximas fases
-están en [docs/ROADMAP.md](docs/ROADMAP.md).
+Están previstos los submódulos, los worktrees, LFS, mostrar las firmas, los
+perfiles de identidad, los atajos configurables y un tema claro. Las próximas
+fases están en [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Instalar
 

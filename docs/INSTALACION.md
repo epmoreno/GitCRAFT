@@ -15,6 +15,10 @@ pedirá confirmación. No hace falta desactivar Gatekeeper.
 - Git instalado: el de las Command Line Tools de Xcode
   (`xcode-select --install`) o el de Homebrew (`brew install git`). GitCRAFT
   no incluye su propio Git.
+- Git 2.30 o posterior. En el rebase interactivo, editar mensajes y combinar
+  commits necesitan Git 2.32 o posterior, y prever exactamente los conflictos,
+  2.40 o posterior; con un Git más antiguo, GitCRAFT explica qué no está
+  disponible. Las Command Line Tools de macOS 27 traen Git 2.54.
 - Para trabajar con remotos privados: un credential helper (en macOS,
   `osxkeychain`, que viene con Git) o una clave SSH en el agente. GitCRAFT
   nunca guarda ni pide contraseñas.

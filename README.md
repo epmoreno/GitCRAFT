@@ -15,7 +15,7 @@ GitCRAFT – a visual, fast, open-source Git client
 <li lang="pt">Português: GitCRAFT – um cliente Git visual, rápido e de código aberto</li>
 </ul>
 
-> **Early version (v0.3.0).** GitCRAFT is usable day to day for the features
+> **Early version (v0.4.0).** GitCRAFT is usable day to day for the features
 > listed below, but it is young: expect rough edges and missing features (see
 > [what is not there yet](#not-there-yet)). Your repositories are safe:
 > destructive operations always ask first, and GitCRAFT runs your own `git`.
@@ -71,6 +71,21 @@ _The interface is shown in Spanish; it is also available in English._
   keeps a recoverable copy first and can be undone right away.
 - **Tags**: create lightweight and annotated tags, push them, and delete them
   locally or on the remote (with its own confirmation).
+- **Interactive rebase**: from a commit of the current branch, reorder its
+  commits by dragging them or with the keyboard, edit messages, combine a
+  commit with the one below it and drop commits. Before applying, GitCRAFT
+  shows where it would stop with conflicts, which commits would end up empty
+  and which ones are already published; dropped commits can be got back.
+- **Undo and redo**: the toolbar's Undo and Redo (⌘Z and ⇧⌘Z) take back the
+  last operations — commits, merges, rebases, resets, checkouts, branch and
+  tag changes… — after showing exactly what will change.
+- **A branch's history**: where a branch (or HEAD) has been, as Git noted it,
+  including commits no branch has any more, with a way to create a branch
+  there to rescue them.
+- **Search the history** (⌘F) by message, author, hash or file, with regular
+  expressions and match case; the commits that do not match fade out.
+- **File history and blame**: every commit that changed a file, following
+  renames, and who last changed each line, going back further from any line.
 - **Remotes**: fetch, pull (merge or rebase) and push with progress and
   cancel, ahead/behind indicators, forced push only with
   `--force-with-lease`; optional automatic fetch.
@@ -87,8 +102,8 @@ _The interface is shown in Spanish; it is also available in English._
 
 ### Not there yet
 
-History search, file history and blame, interactive rebase, undoing any
-recent operation, submodules, worktrees, LFS and a light theme are planned. The next phases are in
+Submodules, worktrees, LFS, showing signatures, identity profiles,
+customizable shortcuts and a light theme are planned. The next phases are in
 [docs/ROADMAP.md](docs/ROADMAP.md) (in Spanish).
 
 ## Install
