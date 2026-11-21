@@ -39,11 +39,19 @@ without hiding what Git does underneath:
 
 _The interface is shown in Spanish; it is also available in English._
 
+![The interactive rebase of the main branch: five commits, newest at the top and oldest at the bottom, each with its action (keep, edit message, drop —struck through— and combine with the one below, which shows "receives 1 commit"); below them, the editable message of the combined commit, the summary "3 commits will be left from the chosen one · 1 dropped" and the Back to the original plan, Cancel and Apply buttons.](docs/screenshots/rebase-interactivo.png)
+
 ![The commit graph of a test repository: the branch sidebar on the left, the commits with coloured lanes per branch and their branch labels in the centre, and the details panel on the right.](docs/screenshots/grafo.png)
 
 ![A merge conflict being resolved: each conflicting block shows both sides with buttons to choose one or both, the result is shown below, and the uncommitted changes panel on the right lists the conflicted files.](docs/screenshots/conflictos.png)
 
 ![The merge dialog opened by dropping one branch onto another: a choice between merge and rebase, a sketch of the result, the commits that will come in and an editable merge commit message.](docs/screenshots/merge.png)
+
+![Searching the history: "notas" in the message search field, "3 of 3" with arrows to move between results, the matching commits highlighted and the rest faded out.](docs/screenshots/busqueda.png)
+
+![The blame of a file: next to each line, the commit, author and date of its last change; the chosen line is highlighted and the details panel on the right shows its commit.](docs/screenshots/blame.png)
+
+![Undoing a merge: the dialog says which commit the branch goes back to, which commits leave it, which of them is on no other branch, tag or remote, and that everything goes back exactly as it was.](docs/screenshots/deshacer.png)
 
 ## What works
 

@@ -145,3 +145,8 @@ usuario.
    paquetes del sistema), se le dice exactamente qué y para qué, y se espera
    su aprobación. Vale aunque ya esté en el `Cargo.lock` o sea del mismo
    proyecto que otra aprobada.
+
+9. **CI después de cada push:** tras cada push se comprueba el CI de los
+   tres sistemas (macOS, Ubuntu y Windows) con `gh run`, sin cambiar nada en
+   GitHub, y se le dice el resultado al usuario. Si falla, se le avisa antes
+   de seguir. Ninguna tarea se da por terminada con el CI en rojo.

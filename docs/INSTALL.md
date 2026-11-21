@@ -18,7 +18,7 @@ open it. You do not need to disable Gatekeeper.
 - Git 2.30 or later. In the interactive rebase, editing messages and
   combining commits need Git 2.32 or later, and predicting conflicts exactly
   needs 2.40 or later; with an older Git, GitCRAFT says what is not available.
-  The Command Line Tools for macOS 27 bring Git 2.54.
+  To see which version you have: `git --version` in Terminal.
 - To work with private remotes: a credential helper (on macOS, `osxkeychain`,
   which comes with Git) or an SSH key in the agent. GitCRAFT never stores or
   asks for passwords.

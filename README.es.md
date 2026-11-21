@@ -39,11 +39,19 @@ vistazo y se ejecuten rápido, sin esconder lo que Git hace por debajo:
 
 ## Capturas
 
+![El rebase interactivo de la rama main: cinco commits, del más nuevo arriba al más antiguo abajo, cada uno con su acción (mantener, editar mensaje, descartar —tachado— y combinar con el de abajo, que muestra «recibe 1 commit»); debajo, el mensaje del commit combinado, que se puede editar, el resumen «Quedarán 3 commits desde el elegido · 1 descartado» y los botones Volver al plan original, Cancelar y Aplicar.](docs/screenshots/rebase-interactivo.png)
+
 ![El grafo de commits de un repositorio de prueba: a la izquierda, la barra lateral con las ramas; en el centro, los commits con un carril de color por rama y las etiquetas de cada rama; a la derecha, el panel de detalles.](docs/screenshots/grafo.png)
 
 ![Resolución de un conflicto de merge: cada bloque en conflicto muestra los dos lados con botones para elegir uno o los dos, debajo aparece el resultado y, a la derecha, el panel de cambios sin confirmar con los archivos en conflicto.](docs/screenshots/conflictos.png)
 
 ![El diálogo que se abre al soltar una rama sobre otra: elegir entre merge y rebase, un esquema del resultado, los commits que entran y el mensaje del commit de merge, que se puede editar.](docs/screenshots/merge.png)
+
+![La búsqueda en el historial: «notas» en el campo de búsqueda por mensaje, «3 de 3» con flechas para ir de un resultado a otro, los commits que coinciden resaltados y el resto atenuados.](docs/screenshots/busqueda.png)
+
+![El blame de un archivo: a la izquierda de cada línea, el commit, el autor y la fecha del último cambio; la línea elegida está resaltada y, a la derecha, el panel de detalles muestra su commit.](docs/screenshots/blame.png)
+
+![Deshacer un merge: el diálogo dice a qué commit vuelve la rama, qué commits salen de ella, cuál de ellos no está en ninguna otra rama, tag ni remoto, y que todo vuelve exactamente como estaba antes.](docs/screenshots/deshacer.png)
 
 ## Qué funciona
 
