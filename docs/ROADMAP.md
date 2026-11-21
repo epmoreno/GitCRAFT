@@ -1307,8 +1307,7 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 ## Fase 2
 
 **Terminada y verificada por el usuario en macOS** (tareas 8 a 13; versión
-v0.4.0). Solo falta la prueba del usuario de un detalle de la 12: la
-búsqueda por archivo sin los merges que solo traen un lado.
+v0.4.0).
 
 Orden acordado: 9 → 10 → 8 → 11 → 12 → 13. Todo es multiplataforma desde el
 principio y toda operación destructiva pasa por confirmación.
@@ -2910,7 +2909,9 @@ principio y toda operación destructiva pasa por confirmación.
           de los dos lados o resuelven un conflicto). «diff.c» en git/git:
           1.755 resultados en vez de 18.200. Tests: integración con los dos
           tipos de merge y un fixture real.
-          *Falta la prueba del usuario.*
+          *Verificado manualmente en macOS por el usuario:* la búsqueda por
+          archivo de «docs/guía de uso.txt» en `~/gitcraft-busqueda` da 4
+          resultados y «Merge rama» queda atenuado.
         *Verificado manualmente en macOS por el usuario (tarea 12 completa)*
         con `~/gitcraft-busqueda`, sección por sección:
         - **A. Búsqueda:** mensaje con contador, navegación con Intro y ⌘G,
