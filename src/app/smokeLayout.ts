@@ -65,24 +65,24 @@ export async function settingsLayout(): Promise<LayoutReport> {
     // Into the middle of the second group: its title must stick at the top.
     const second = titles[1];
     if (second && content.scrollHeight > content.clientHeight) {
-      // Title positions are from the content's top before scrolling, which
-      // is what the check uses; "content top" says where it is by then.
+      // From the content's top as it is at each moment: the dialog is
+      // centred, so it moves if the window changes size meanwhile.
+      const fromTop = (title: Element) =>
+        title.getBoundingClientRect().top - content.getBoundingClientRect().top;
       const measure = () =>
-        `titles (${titles
-          .map((h) => Math.round(h.getBoundingClientRect().top - top))
-          .join(", ")}), content top ${content.getBoundingClientRect().top}, ` +
+        `titles (${titles.map((h) => Math.round(fromTop(h))).join(", ")}), ` +
+        `content top ${content.getBoundingClientRect().top}, ` +
         `header bottom ${header.getBoundingClientRect().bottom}, ` +
         `scrolled ${content.scrollTop} ` +
         `(max ${content.scrollHeight - content.clientHeight}), ` +
         `window ${window.innerWidth}×${window.innerHeight}`;
       const before = measure();
-      const asked =
-        content.scrollTop + second.getBoundingClientRect().top - top + 40;
+      const asked = content.scrollTop + fromTop(second) + 40;
       content.scrollTop = asked;
       const came = await frameOrTick();
       const firstFrame = measure();
       const stuck = await settles(() =>
-        titles.some((h) => Math.abs(h.getBoundingClientRect().top - top) < 1.5),
+        titles.some((h) => Math.abs(fromTop(h)) < 1.5),
       );
       const style = getComputedStyle(second);
       notes.push(

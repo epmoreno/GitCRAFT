@@ -1304,30 +1304,32 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 | Test | Archivo | Tarea | Qué falla en Windows |
 | --- | --- | --- | --- |
 
-### Fallo abierto en Windows: los títulos fijos de Ajustes (modo de humo)
+### Modo de humo: pendiente
 
-- [ ] **P.12 Los títulos de grupo de Ajustes → Atajos se quedan fijos en
-      Windows.** Fallo real, no intermitente: en el CI de `d38f5c4` (run
-      44910856846) el modo de humo de Windows falla en los dos intentos con
-      los mismos números, «settings: the group titles do not stick (-89,
-      -10, 139, 448, 667, 736, 835, 964, 1153, 1252, 1381, 1660)». macOS y
-      Ubuntu, en verde.
-      *Lo que se sabe:* el run de `ef93373` (44824931474), relanzado el 21
-      de noviembre de 2026, sigue en verde en Windows, con la misma imagen
-      del runner (`windows-2025-vs2026` 20261116.315.1). Entre los dos
-      commits solo cambian los números de versión (0.3.0 → 0.4.0), la
-      documentación, las capturas y CLAUDE.md. El frontend compilado es
-      idéntico en los dos (mismos hashes de `vite build`). Ni la app ni el CI
-      leen la versión. Diferencias en el CI: con el `package-lock.json`
-      nuevo, la caché de npm no se encuentra (`npm ci` instala lo mismo) y
-      la de Rust se restaura desde otra clave. Aún no hay explicación.
-      *Hecho para investigarlo (P.12 sigue abierta):* las esperas del modo de
-      humo tienen un tiempo máximo (`src/app/settle.ts`) en vez de contar
-      fotogramas, y la comprobación escribe siempre en el log, aunque pase,
-      lo que mide antes de desplazar, en el primer fotograma después y al
-      final de la espera (títulos, borde del contenido, desplazamiento,
-      ventana), con el `top` del título, el padding, la escala y la versión
-      del motor web.
+- [ ] **P.12 La comprobación de los títulos fijos de Ajustes falla a veces en
+      Windows.** Probablemente intermitente: el diálogo se desplazó 10 px
+      durante la medición. En el CI de `d38f5c4` (run 44910856846) falló en
+      los dos intentos con los mismos números, «the group titles do not
+      stick (-89, -10, 139, 448, …)»; el de `ef93373` (44824931474),
+      relanzado, pasó, y el de `415de27` (45208325945) también. Entre
+      `ef93373` y `d38f5c4` no cambia el frontend compilado. Que los números
+      se repitan no descarta que dependa del momento: un salto fijo da
+      siempre los mismos.
+      *Las mediciones:* `415de27` registra lo que mide aunque pase. En
+      Windows (WebView2 157, ventana de 1028×749, escala 1) los títulos dan
+      -79, 0, 149, 458, …: los 12 del fallo están exactamente 10 px más
+      arriba, también el fijo. Con más desplazamiento el fijo seguiría en 0,
+      así que estaba bien pegado y se movió el contenido entero; la prueba
+      comparaba con el borde medido antes de desplazar. El CSS no tiene
+      ningún fallo. Por qué se movió no está probado: el diálogo está
+      centrado, y una ventana 20 px más baja mientras termina de colocarse
+      lo sube 10.
+      *Arreglo:* cada medida se compara con el borde del contenido en ese
+      momento, y las esperas tienen un tiempo máximo (`src/app/settle.ts`).
+      El registro de las mediciones se mantiene. Comprobado en la app real
+      en macOS con cambios temporales: sin `position: sticky` el modo de
+      humo falla (sale con 1), y moviendo el diálogo 10 px a mitad de la
+      medición pasa. Falta confirmarlo en el CI de los tres sistemas.
 - [ ] **P.13 El límite de 120 s del modo de humo no cortó un cuelgue.** En
       macOS, con la pantalla en reposo, una prueba `--smoke` siguió casi 6
       minutos sin salida hasta pararla a mano: no la cortó
