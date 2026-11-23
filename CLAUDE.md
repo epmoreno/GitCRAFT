@@ -133,7 +133,10 @@ usuario.
 6. **Datos personales:** nunca se escriben en archivos del repo datos
    personales (emails reales, rutas del Mac del usuario, nombres de usuario
    del sistema), aunque aparezcan en los mensajes del usuario. El mailmap y
-   cualquier archivo con el email antiguo van fuera del repo.
+   cualquier archivo con el email antiguo van fuera del repo. La norma vale
+   también para los binarios e instaladores que se publican: se generan con
+   `npm run dist`, que comprueba que no llevan la carpeta personal ni el
+   nombre de usuario, y si la comprobación falla no se publican.
 7. **Autenticación y portapapeles:** nunca se lanzan flujos de autenticación
    (`gh auth login`, credenciales, llavero) ni se escribe en el portapapeles
    del sistema sin pedir permiso antes al usuario, aunque sea en un entorno
