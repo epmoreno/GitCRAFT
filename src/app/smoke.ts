@@ -1,6 +1,7 @@
 import { useConflictStore } from "../features/conflicts/store";
 import { commands } from "../ipc";
-import { rebaseLayoutProblems, settingsLayoutProblems } from "./smokeLayout";
+import { frameOrTick, settles } from "./settle";
+import { rebaseLayoutProblems, settingsLayout } from "./smokeLayout";
 import { confirmClosing, installWindowCloseGuard, requestQuit } from "./quit";
 
 /**
@@ -42,19 +43,21 @@ export function engineProblems(): string[] {
  * the app must end by itself (see src-tauri/src/smoke.rs). */
 export async function reportIfSmokeRun(): Promise<void> {
   if (!(await commands.smokeMode())) return;
-  // After the first paint, so the rendered interface is there to check.
-  await new Promise((resolve) => requestAnimationFrame(resolve));
+  // Once the interface has rendered, so it is there to check.
+  await frameOrTick();
+  await settles(() => !!document.querySelector("main"));
+  const settings = await settingsLayout();
   const problems = [
     ...engineProblems(),
-    ...(await settingsLayoutProblems()),
+    ...settings.problems,
     ...(await rebaseLayoutProblems()),
   ];
-  await commands.smokeReport(problems);
+  await commands.smokeReport(problems, settings.notes);
   if (problems.length > 0) return;
   try {
     await quitLikeTheUser();
   } catch (error) {
-    await commands.smokeReport([`quitting failed: ${String(error)}`]);
+    await commands.smokeReport([`quitting failed: ${String(error)}`], []);
   }
 }
 

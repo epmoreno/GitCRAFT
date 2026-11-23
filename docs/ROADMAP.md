@@ -1304,6 +1304,37 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 | Test | Archivo | Tarea | Qué falla en Windows |
 | --- | --- | --- | --- |
 
+### Fallo abierto en Windows: los títulos fijos de Ajustes (modo de humo)
+
+- [ ] **P.12 Los títulos de grupo de Ajustes → Atajos se quedan fijos en
+      Windows.** Fallo real, no intermitente: en el CI de `d38f5c4` (run
+      44910856846) el modo de humo de Windows falla en los dos intentos con
+      los mismos números, «settings: the group titles do not stick (-89,
+      -10, 139, 448, 667, 736, 835, 964, 1153, 1252, 1381, 1660)». macOS y
+      Ubuntu, en verde.
+      *Lo que se sabe:* el run de `ef93373` (44824931474), relanzado el 21
+      de noviembre de 2026, sigue en verde en Windows, con la misma imagen
+      del runner (`windows-2025-vs2026` 20261116.315.1). Entre los dos
+      commits solo cambian los números de versión (0.3.0 → 0.4.0), la
+      documentación, las capturas y CLAUDE.md. El frontend compilado es
+      idéntico en los dos (mismos hashes de `vite build`). Ni la app ni el CI
+      leen la versión. Diferencias en el CI: con el `package-lock.json`
+      nuevo, la caché de npm no se encuentra (`npm ci` instala lo mismo) y
+      la de Rust se restaura desde otra clave. Aún no hay explicación.
+      *Hecho para investigarlo (P.12 sigue abierta):* las esperas del modo de
+      humo tienen un tiempo máximo (`src/app/settle.ts`) en vez de contar
+      fotogramas, y la comprobación escribe siempre en el log, aunque pase,
+      lo que mide antes de desplazar, en el primer fotograma después y al
+      final de la espera (títulos, borde del contenido, desplazamiento,
+      ventana), con el `top` del título, el padding, la escala y la versión
+      del motor web.
+- [ ] **P.13 El límite de 120 s del modo de humo no cortó un cuelgue.** En
+      macOS, con la pantalla en reposo, una prueba `--smoke` siguió casi 6
+      minutos sin salida hasta pararla a mano: no la cortó
+      `Smoke::start_deadline` (120 s, en un hilo de Rust) ni el límite de
+      90 s con el que se había lanzado. Hay que averiguar por qué y
+      arreglarlo, para que un cuelgue en el CI no deje el job parado.
+
 ## Fase 2
 
 **Terminada y verificada por el usuario en macOS** (tareas 8 a 13; versión

@@ -38,7 +38,7 @@ describe("smoke run checks", () => {
 
 // The layout checks need a real engine; jsdom lays nothing out.
 vi.mock("./smokeLayout", () => ({
-  settingsLayoutProblems: async () => [],
+  settingsLayout: async () => ({ problems: [], notes: ["a measure"] }),
   rebaseLayoutProblems: async () => [],
 }));
 
@@ -66,7 +66,7 @@ describe("smoke run, quitting", () => {
 
     await reportIfSmokeRun();
 
-    expect(commands.smokeReport).toHaveBeenCalledWith([]);
+    expect(commands.smokeReport).toHaveBeenCalledWith([], ["a measure"]);
     expect(guardWindowClose).toHaveBeenCalled();
     expect(closeWindow).toHaveBeenCalled();
     expect(useConflictStore.getState().drafts).toEqual({});

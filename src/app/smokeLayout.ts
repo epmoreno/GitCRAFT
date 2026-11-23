@@ -4,28 +4,50 @@ import { InteractiveRebaseView } from "../features/interactiveRebase/Interactive
 import { useInteractiveRebaseStore } from "../features/interactiveRebase/store";
 import type { RangeCommit } from "../ipc";
 import { useSettingsStore } from "../features/settings/store";
+import { frameOrTick, settles } from "./settle";
 
 /* Layout checks for the smoke run (src/app/smoke.ts): they need the real
  * web engine's layout, which the unit tests (jsdom) do not have. */
 
-const nextFrame = () =>
-  new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+/** The web engine's version (WebView2 on Windows reports "Edg/…"), for the
+ * log: a layout that changes with the engine shows here. */
+function engineVersion(): string {
+  const ua = navigator.userAgent;
+  const found = ua.match(/(Edg|Chrome|Version|AppleWebKit|WebKitGTK)\/[\d.]+/g);
+  return found ? found.join(" ") : ua;
+}
+
+/** What a layout check found: `problems` fail the run; `notes` are measures
+ * the log keeps even when everything is fine. */
+export interface LayoutReport {
+  problems: string[];
+  notes: string[];
+}
 
 /** Settings → Shortcuts laid out by the real engine: the header stays above
  * the content (nothing scrolls behind it), the close button is a comfortable
  * target and a group title stays at the top while its rows scroll by. */
-export async function settingsLayoutProblems(): Promise<string[]> {
+export async function settingsLayout(): Promise<LayoutReport> {
   const problems: string[] = [];
+  const notes: string[] = [];
   useSettingsStore.getState().openSettings("shortcuts");
   try {
-    await nextFrame();
-    await nextFrame();
-    const dialog = document.querySelector('[role="dialog"]');
-    const header = dialog?.querySelector("header");
+    await frameOrTick();
+    await frameOrTick();
+    const findHeader = () =>
+      document.querySelector('[role="dialog"]')?.querySelector("header");
+    const opened = await settles(
+      () =>
+        !!findHeader()?.querySelector("button") &&
+        (findHeader()?.nextElementSibling?.querySelectorAll("h4").length ?? 0) >
+          1,
+    );
+    const header = findHeader();
     const content = header?.nextElementSibling;
     const close = header?.querySelector("button");
-    if (!header || !(content instanceof HTMLElement) || !close) {
-      return ["settings: the header or its content is missing"];
+    if (!opened.ok || !header || !(content instanceof HTMLElement) || !close) {
+      problems.push("settings: the header or its content is missing");
+      return { problems, notes };
     }
     const box = close.getBoundingClientRect();
     if (box.width < 28 || box.height < 28) {
@@ -43,24 +65,47 @@ export async function settingsLayoutProblems(): Promise<string[]> {
     // Into the middle of the second group: its title must stick at the top.
     const second = titles[1];
     if (second && content.scrollHeight > content.clientHeight) {
-      content.scrollTop += second.getBoundingClientRect().top - top + 40;
-      await nextFrame();
-      const stuck = titles.some(
-        (h) => Math.abs(h.getBoundingClientRect().top - top) < 1.5,
+      // Title positions are from the content's top before scrolling, which
+      // is what the check uses; "content top" says where it is by then.
+      const measure = () =>
+        `titles (${titles
+          .map((h) => Math.round(h.getBoundingClientRect().top - top))
+          .join(", ")}), content top ${content.getBoundingClientRect().top}, ` +
+        `header bottom ${header.getBoundingClientRect().bottom}, ` +
+        `scrolled ${content.scrollTop} ` +
+        `(max ${content.scrollHeight - content.clientHeight}), ` +
+        `window ${window.innerWidth}×${window.innerHeight}`;
+      const before = measure();
+      const asked =
+        content.scrollTop + second.getBoundingClientRect().top - top + 40;
+      content.scrollTop = asked;
+      const came = await frameOrTick();
+      const firstFrame = measure();
+      const stuck = await settles(() =>
+        titles.some((h) => Math.abs(h.getBoundingClientRect().top - top) < 1.5),
       );
-      if (!stuck) {
-        const at = titles.map((h) =>
-          Math.round(h.getBoundingClientRect().top - top),
-        );
+      const style = getComputedStyle(second);
+      notes.push(
+        `settings titles: asked to scroll to ${asked}, ` +
+          `title position ${style.position} top ${style.top}, ` +
+          `content padding-top ${getComputedStyle(content).paddingTop}, ` +
+          `device pixel ratio ${window.devicePixelRatio}, ` +
+          `engine ${engineVersion()}`,
+        `settings titles, before scrolling: ${before}`,
+        `settings titles, first ${came} after: ${firstFrame}`,
+        `settings titles, ${stuck.ok ? "stuck" : "not stuck"} ` +
+          `${stuck.ms} ms later: ${measure()}`,
+      );
+      if (!stuck.ok) {
         problems.push(
-          `settings: the group titles do not stick (${at.join(", ")})`,
+          "settings: the group titles do not stick (see the notes)",
         );
       }
     }
   } finally {
     useSettingsStore.getState().close();
   }
-  return problems;
+  return { problems, notes };
 }
 
 /** A made-up plan for the view's layout check: C combined into B, A kept.
@@ -133,8 +178,13 @@ export async function rebaseLayoutProblems(): Promise<string[]> {
   useInteractiveRebaseStore.setState({ view: sampleRebaseView(repoId) });
   try {
     root.render(createElement(InteractiveRebaseView, { repoId }));
-    await nextFrame();
-    await nextFrame();
+    await frameOrTick();
+    await frameOrTick();
+    await settles(
+      () =>
+        host.querySelectorAll("[data-rebase-row]").length === 3 &&
+        !!host.querySelector("footer"),
+    );
     const view = host.querySelector("section");
     const rows = [...host.querySelectorAll<HTMLElement>("[data-rebase-row]")];
     const footer = host.querySelector("footer");

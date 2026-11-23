@@ -86,12 +86,21 @@ pub fn smoke_mode(smoke: State<'_, Smoke>) -> bool {
 
 /// The interface's checks. Any problem ends the run with 1. With none, the
 /// interface goes on to quit, and the app has [`QUIT_LIMIT`] to end by
-/// itself (else 3). Ignored outside a smoke run.
+/// itself (else 3). `notes` are measures for the log, whatever the result.
+/// Ignored outside a smoke run.
 #[tauri::command]
 #[specta::specta]
-pub fn smoke_report(app: AppHandle, smoke: State<'_, Smoke>, problems: Vec<String>) {
+pub fn smoke_report(
+    app: AppHandle,
+    smoke: State<'_, Smoke>,
+    problems: Vec<String>,
+    notes: Vec<String>,
+) {
     if !smoke.enabled {
         return;
+    }
+    for note in &notes {
+        println!("smoke: note: {note}");
     }
     if problems.is_empty() {
         println!("smoke: the interface loaded and has what it needs; quitting");

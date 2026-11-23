@@ -343,9 +343,10 @@ export const commands = {
 	/**
 	 *  The interface's checks. Any problem ends the run with 1. With none, the
 	 *  interface goes on to quit, and the app has [`QUIT_LIMIT`] to end by
-	 *  itself (else 3). Ignored outside a smoke run.
+	 *  itself (else 3). `notes` are measures for the log, whatever the result.
+	 *  Ignored outside a smoke run.
 	 */
-	smokeReport: (problems: string[]) => __TAURI_INVOKE<void>("smoke_report", { problems }),
+	smokeReport: (problems: string[], notes: string[]) => __TAURI_INVOKE<void>("smoke_report", { problems, notes }),
 };
 
 /** Events */
