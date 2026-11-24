@@ -1306,7 +1306,7 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 
 ### Modo de humo: pendiente
 
-- [ ] **P.12 La comprobación de los títulos fijos de Ajustes falla a veces en
+- [x] **P.12 La comprobación de los títulos fijos de Ajustes falla a veces en
       Windows.** Probablemente intermitente: el diálogo se desplazó 10 px
       durante la medición. En el CI de `d38f5c4` (run 44910856846) falló en
       los dos intentos con los mismos números, «the group titles do not
@@ -1329,7 +1329,10 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
       El registro de las mediciones se mantiene. Comprobado en la app real
       en macOS con cambios temporales: sin `position: sticky` el modo de
       humo falla (sale con 1), y moviendo el diálogo 10 px a mitad de la
-      medición pasa. Falta confirmarlo en el CI de los tres sistemas.
+      medición pasa.
+      *Resuelta:* CI en verde en macOS, Ubuntu y Windows con el arreglo en los
+      runs 45212081471 (`2eb0d00`), 45216357806 (`c8b6c4b`) y 45247134848
+      (tag `v0.4.0`, `c8b6c4b`).
 - [ ] **P.13 El límite de 120 s del modo de humo no cortó un cuelgue.** En
       macOS, con la pantalla en reposo, una prueba `--smoke` siguió casi 6
       minutos sin salida hasta pararla a mano: no la cortó
@@ -1340,7 +1343,7 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 ## Fase 2
 
 **Terminada y verificada por el usuario en macOS** (tareas 8 a 13; versión
-v0.4.0).
+v0.4.0, publicada el 24 de noviembre de 2026).
 
 Orden acordado: 9 → 10 → 8 → 11 → 12 → 13. Todo es multiplataforma desde el
 principio y toda operación destructiva pasa por confirmación.
@@ -3342,6 +3345,17 @@ principio y toda operación destructiva pasa por confirmación.
       modificarlo (`edit`), dividir un commit, rehacer merges
       (`--rebase-merges`), `exec`, y el rebase interactivo sobre otra rama
       (en la 13, la base es un commit de la propia rama).
+- [x] **V.4 Versión 0.4.0 (pre-release)** con las tareas 11, 12 y 13,
+      publicada por el usuario el 24 de noviembre de 2026.
+      - Tag anotado `v0.4.0` sobre `c8b6c4b`, con el CI de los tres sistemas
+        en verde (run 45247134848).
+      - `GitCRAFT_0.4.0_aarch64.dmg` con `npm run dist` desde `c8b6c4b`, que
+        ya comprueba que no lleva datos personales.
+      - GitHub Release marcada como pre-release, con el `.dmg`, su SHA-256
+        (`b7325eb0…64dd4c`) y el enlace a VirusTotal en las notas (0/61
+        detecciones, subido por el usuario). GitHub da el mismo SHA-256, y
+        el archivo descargado del borrador también.
+        <https://github.com/epmoreno/GitCRAFT/releases/tag/v0.4.0>
 
 ## Fase 3
 
@@ -3369,6 +3383,12 @@ principio y toda operación destructiva pasa por confirmación.
 - [ ] Instaladores de Windows y Linux. **No se publica ningún instalador para
       Windows mientras quede algún test de la lista «Tests ignorados en
       Windows» de la Fase P.**
+  - [ ] **Probar `npm run dist` completo en Windows y en Linux**, incluida la
+        comprobación de datos personales del final. Hasta ahora solo se ha
+        ejecutado entero en macOS: en Windows y Linux el CI pasa los tests de
+        `scripts/personal-data.mjs`, pero no ejecuta `npm run dist`, que allí
+        genera el ejecutable sin instalador (`--no-bundle`). Al añadir los
+        instaladores, la comprobación tiene que revisarlos también.
 - [ ] **Pruebas a mano en Windows y Linux (requisito de los instaladores).**
       Antes de publicar los instaladores de Windows y Linux, el usuario prueba
       la app en máquinas virtuales en su Mac. Lo que no se ha probado a mano
