@@ -1,0 +1,139 @@
+# The installers of Windows and Linux: builds each one with `npm run dist`
+# (which checks that it has no personal data), installs it, starts the
+# installed app, uninstalls it and keeps the file for 7 days. Only started by
+# hand. It publishes nothing and has no secrets: nothing is signed.
+name: Installers
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: installers
+  cancel-in-progress: true
+
+jobs:
+  installer:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Windows x64, os: windows-latest, arch: x64 }
+          - { name: Windows ARM64, os: windows-11-arm, arch: arm64 }
+          # The oldest Ubuntu with WebKitGTK 4.1: what is built there works on
+          # it and on later ones.
+          - { name: Linux x64, os: ubuntu-22.04, arch: amd64 }
+          - { name: Linux ARM64, os: ubuntu-22.04-arm, arch: arm64 }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Linux libraries for Tauri
+        if: runner.os == 'Linux'
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev xvfb
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Tool versions
+        run: |
+          node --version
+          node -p 'process.arch'
+          rustc -vV
+
+      - run: npm ci
+        timeout-minutes: 10
+
+      # A build without the rustc flags of `npm run dist` has the home folder
+      # in it: the check must see it on this system, or a pass means nothing.
+      - name: The personal data check sees a build that has some
+        timeout-minutes: 25
+        run: |
+          npm run build
+          cargo build -p gitcraft --bin gitcraft
+          exe=target/debug/gitcraft
+          if [ "$RUNNER_OS" = "Windows" ]; then exe="$exe.exe"; fi
+          node scripts/dist.mjs --must-find "$exe"
+
+      - name: npm run dist
+        timeout-minutes: 40
+        run: npm run dist
+
+      - name: The installer and its SHA-256
+        id: file
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            name="GitCRAFT_${version}_${{ matrix.arch }}-setup.exe"
+            dir=target/release/bundle/nsis
+          else
+            name="GitCRAFT_${version}_${{ matrix.arch }}.deb"
+            dir=target/release/bundle/deb
+          fi
+          cd "$dir"
+          sha=$(sha256sum "$name" | cut -d' ' -f1)
+          echo "$sha  $name"
+          {
+            echo "version=$version"
+            echo "path=$dir/$name"
+          } >> "$GITHUB_OUTPUT"
+          echo "\`$sha\`  \`$name\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install, start and uninstall (Windows)
+        if: runner.os == 'Windows'
+        timeout-minutes: 15
+        shell: pwsh
+        run: >-
+          ./.github/scripts/try-installer.ps1
+          -Installer "${{ steps.file.outputs.path }}"
+          -Version "${{ steps.file.outputs.version }}"
+          -Arch "${{ matrix.arch }}"
+
+      - name: Install, start and uninstall (this Ubuntu)
+        if: runner.os == 'Linux'
+        timeout-minutes: 15
+        run: >-
+          ./.github/scripts/try-deb.sh
+          "${{ steps.file.outputs.path }}"
+          "${{ steps.file.outputs.version }}"
+          "${{ matrix.arch }}"
+
+      # The same file on the current LTS, in a clean system: its dependencies
+      # must be found there too.
+      - name: Install, start and uninstall (Ubuntu 26.04)
+        if: runner.os == 'Linux'
+        timeout-minutes: 20
+        run: >-
+          docker run --rm --shm-size=1g -v "$PWD:/work:ro" -w /work
+          -e GITHUB_ACTIONS ubuntu:26.04
+          bash ./.github/scripts/try-deb.sh
+          "${{ steps.file.outputs.path }}"
+          "${{ steps.file.outputs.version }}"
+          "${{ matrix.arch }}"
+
+      # As it is, not inside a .zip: the digest GitHub shows is its SHA-256.
+      # v7.0.2, by its commit: a tag can be moved.
+      - name: Keep the installer for 7 days
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          path: ${{ steps.file.outputs.path }}
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
