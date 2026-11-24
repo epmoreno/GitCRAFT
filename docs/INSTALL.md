@@ -1,6 +1,10 @@
-# Installing GitCRAFT on macOS (Apple Silicon)
+# Installing GitCRAFT
 
 🌐 **English** · [Español](INSTALACION.md)
+
+[macOS](#macos-apple-silicon) · [Windows](#windows) · [Linux](#linux)
+
+## macOS (Apple Silicon)
 
 GitCRAFT is distributed as a `.dmg` for Macs with Apple silicon (M1 or
 later). **Tested on macOS 27.0.1; earlier versions are not verified.** **It is
@@ -10,7 +14,7 @@ signature (local, with no identity), which Apple silicon needs before macOS
 will run the app. That is why macOS asks for confirmation the first time you
 open it. You do not need to disable Gatekeeper.
 
-## Requirements
+### Requirements
 
 - Git installed: the one from Xcode's Command Line Tools
   (`xcode-select --install`) or from Homebrew (`brew install git`). GitCRAFT
@@ -26,7 +30,7 @@ open it. You do not need to disable Gatekeeper.
   (`brew install gh`). GitCRAFT stores no tokens; gh keeps the session in the
   Keychain.
 
-## Building the `.dmg`
+### Building the `.dmg`
 
 ```sh
 npm install        # once
@@ -38,7 +42,7 @@ Run it on a Mac with Apple silicon: it builds for the machine's architecture
 `target/release/bundle/dmg/GitCRAFT_<version>_aarch64.dmg` (or under
 `$CARGO_TARGET_DIR` if it is set).
 
-## Installing
+### Installing
 
 1. Download the `.dmg` from
    [Releases](https://github.com/epmoreno/GitCRAFT/releases) or build it
@@ -47,7 +51,7 @@ Run it on a Mac with Apple silicon: it builds for the machine's architecture
 3. Drag **GitCRAFT** to the **Applications** folder.
 4. Eject the "GitCRAFT" disk (⏏ button in Finder's sidebar).
 
-## Opening it for the first time
+### Opening it for the first time
 
 **If you built the `.dmg` yourself on this Mac**, it usually opens without a
 warning: macOS only asks for confirmation for what arrives downloaded
@@ -74,7 +78,7 @@ Do not do any of this:
 - Removing attributes with `xattr` to skip the warning: the Settings step
   does the same for this app, visibly and reversibly.
 
-## Why isn't GitCRAFT signed?
+### Why isn't GitCRAFT signed?
 
 GitCRAFT is free, open-source software (MIT license): nothing is charged for
 it. Signing and notarizing it with Apple requires a paid yearly Apple
@@ -88,7 +92,7 @@ app, press **OK** on the warning, then **System Settings → Privacy & Security
 → Open Anyway**. **Never disable Gatekeeper:** the exception applies to
 GitCRAFT only.
 
-### How to check the app
+#### How to check the app
 
 Without Apple's signature, you can check what you download yourself:
 
@@ -108,7 +112,7 @@ Without Apple's signature, you can check what you download yourself:
   build dates and an *ad-hoc* signature), so building is an alternative to
   downloading, not a way to check a downloaded file.
 
-## Uninstalling
+### Uninstalling
 
 1. Quit GitCRAFT (⌘Q).
 2. Drag **GitCRAFT** from Applications to the Trash.
@@ -131,3 +135,110 @@ terminal:
   `.git/config`);
 - gh's credential helper, if you turned it on;
 - the gh session.
+
+## Windows
+
+> **Not published yet:** the installer comes with v0.4.1.
+
+For Windows 11, on x64 and ARM64. **It is not signed** (see
+[why](#why-isnt-it-signed-on-windows) below), so Windows warns before opening
+it. You do not need to disable any protection. The ARM64 one is only tested
+automatically, in CI.
+
+**What it needs:** [Git for Windows](https://git-scm.com/downloads/win)
+(`winget install --id Git.Git`), 2.30 or later; GitCRAFT does not bundle its
+own Git. `gh` is optional (`winget install --id GitHub.cli`), for the GitHub
+features.
+
+### Installing on Windows
+
+1. Download `GitCRAFT_<version>_x64-setup.exe` (or `_arm64-setup.exe`, if your
+   computer is ARM) from
+   [Releases](https://github.com/epmoreno/GitCRAFT/releases).
+2. Compare its SHA-256 with the one in the Release's notes (in PowerShell):
+
+   ```powershell
+   Get-FileHash "$HOME\Downloads\GitCRAFT_<version>_x64-setup.exe"
+   ```
+
+3. Open it and follow the steps. It installs for your user only, without
+   administrator rights, in `%LOCALAPPDATA%\GitCRAFT`. If WebView2 is missing
+   (Windows 11 already has it), it is downloaded from Microsoft.
+
+### The SmartScreen warning
+
+**What you see.** When you open the downloaded installer, a blue Microsoft
+Defender SmartScreen window: "Windows protected your PC", which says it
+prevented an unrecognized app from starting. Before that, the browser may warn
+that the file is not commonly downloaded.
+
+**How to open it, without turning anything off:**
+
+1. Check the SHA-256 first (above).
+2. If the browser warns, keep the file (in Edge, **… → Keep**).
+3. In the blue window, press **More info**. The file's name and "Unknown
+   publisher" appear: that is expected, because it is not signed.
+4. Press **Run anyway**.
+
+The exception is for that file only: SmartScreen stays on for everything else.
+**Do not turn off** SmartScreen, Microsoft Defender or Smart App Control.
+
+**If Smart App Control blocks it,** there is no button to go on: that Windows 11
+protection blocks unsigned apps Microsoft does not know, and allows no
+exception for a single one. With it on, GitCRAFT may not install; we do not
+recommend turning it off for this.
+
+### Why isn't it signed on Windows?
+
+GitCRAFT is free, open-source software (MIT license), and a code-signing
+certificate costs money every year. Without one, Windows cannot say who made
+the installer. Signing it would not always remove the warning either:
+SmartScreen also looks at how many people have already downloaded that file.
+[Microsoft explains it here](https://learn.microsoft.com/windows/apps/package-and-deploy/smartscreen-reputation).
+SignPath Foundation's free signing for open-source projects is still to be
+looked into.
+
+You can check what you download just as on macOS: SHA-256 and VirusTotal in
+every Release's notes, or build it yourself with `npm run dist` (on Windows,
+with [7-Zip](https://www.7-zip.org) installed, which it uses to check inside
+the installer).
+
+### Uninstalling on Windows
+
+**Settings → Apps → Installed apps → GitCRAFT → Uninstall.** Tick **"Delete the
+application data"** to also delete its settings and recents; it deletes no
+repository.
+
+## Linux
+
+> **Not published yet:** the package comes with v0.4.1.
+
+A `.deb` for Ubuntu 22.04 or later, on x64 (`amd64`) and ARM64 (`arm64`). The
+ARM64 one is only tested automatically, in CI.
+
+### Installing on Linux
+
+1. Download `GitCRAFT_<version>_amd64.deb` (or `_arm64.deb`) from
+   [Releases](https://github.com/epmoreno/GitCRAFT/releases).
+2. Compare its SHA-256 with the one in the Release's notes:
+
+   ```sh
+   sha256sum GitCRAFT_<version>_amd64.deb
+   ```
+
+3. Install it with apt (with `./` in front), which adds whatever is missing,
+   Git included:
+
+   ```sh
+   sudo apt install ./GitCRAFT_<version>_amd64.deb
+   ```
+
+The package is not signed and does not come from an apt repository: the
+SHA-256 is the check. `gh` is optional, for the GitHub features.
+
+### Uninstalling on Linux
+
+`sudo apt remove git-craft`. The settings and recents stay in
+`~/.config/dev.gitcraft.app`, `~/.local/share/dev.gitcraft.app` and
+`~/.cache/dev.gitcraft.app` (those that exist): move them to the Trash if you
+want them gone too. Your repositories and Git are not touched.

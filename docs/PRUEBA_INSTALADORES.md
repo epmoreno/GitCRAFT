@@ -1,123 +1,165 @@
 # Prueba de los instaladores de Windows y Linux
 
-Guía para probar a mano, en máquinas virtuales, los instaladores de la tarea I
-de `docs/ROADMAP.md`. Lo que no se prueba aquí no se da por verificado.
+Guía para probar a mano los instaladores de la tarea I de `docs/ROADMAP.md`. Lo
+que no se prueba aquí no se da por verificado.
+
+| Sistema | Dónde | Archivo |
+| --- | --- | --- |
+| Windows 11 x64 | en un ordenador, sin máquina virtual | `GitCRAFT_<versión>_x64-setup.exe` |
+| Ubuntu 26.04 x64 | en una máquina virtual | `GitCRAFT_<versión>_amd64.deb` |
+
+Los de ARM64 (`…_arm64-setup.exe` y `…_arm64.deb`) solo los prueba el CI.
 
 Anota en cada paso si sale bien o qué ves distinto (con captura si puedes). Si
 un paso marcado con ⛔ falla, para y dímelo: lo demás no tendría sentido.
 
-## Antes de empezar
+## Reglas
 
-En el Mac hacen falta:
+- **Siempre con los repositorios de prueba de esta guía, nunca con repositorios
+  reales.** No abras, clones ni arrastres a GitCRAFT ninguno tuyo mientras dure
+  la prueba.
+- **No cambies tu identidad global ni tu sesión de GitHub:** en Ajustes →
+  Identidad de Git y Ajustes → Cuenta de GitHub, solo mira. El repositorio de
+  prueba lleva su propia identidad, inventada.
+- **No desactives ninguna protección** (SmartScreen, Smart App Control,
+  Defender, AppArmor…). Si algo bloquea GitCRAFT sin dar opción a seguir, para
+  y dímelo.
+- En Ubuntu, haz una **instantánea** de la máquina virtual antes de instalar:
+  así la instalación limpia se puede repetir.
 
-| Qué | De dónde | Espacio |
-| --- | --- | --- |
-| UTM 5 (gratis y de código abierto; macOS 13 o posterior) | <https://mac.getutm.app> o <https://github.com/utmapp/UTM/releases> | descarga de 290 MB |
-| ISO de Windows 11 para Arm64 | <https://www.microsoft.com/software-download/windows11arm64> (el enlace caduca a las 24 h; la página da el SHA-256) | unos 5–8 GB (estimado) |
-| ISO de Ubuntu Desktop 26.04.1 LTS para ARM64 | <https://cdimage.ubuntu.com/releases/26.04/release/>, `ubuntu-26.04.1-desktop-arm64.iso` (con `SHA256SUMS`) | 4,2 GB |
-| Disco de la máquina de Windows (64 GB virtuales) | — | unos 25–35 GB reales (estimado) |
-| Disco de la máquina de Ubuntu (30 GB virtuales) | — | unos 12–15 GB reales (estimado) |
+## Qué hace falta
 
-- **Espacio:** unos 60 GB con todo a la vez. Conviene tener 80 GB libres, o
-  hacer primero Ubuntu y borrar su ISO y su máquina antes de Windows.
-- **Memoria:** una sola máquina encendida a la vez. Con 16 GB en el Mac: 6 GB
-  para Windows y 4 GB para Ubuntu.
-- **Licencia:** Windows exige una licencia válida de Microsoft también en una
-  máquina virtual.
-- No hace falta instalar Rust, Node ni Visual Studio en las máquinas: los
-  instaladores llegan hechos del CI.
+- **Windows:** Git para Windows, de <https://git-scm.com/downloads/win> o con
+  `winget install --id Git.Git -e` en PowerShell (trae **Git Bash**, con el que
+  se crea el repositorio de prueba). Si ya lo tienes, vale: `git --version`
+  tiene que dar 2.30 o posterior.
+- **Ubuntu:** nada. El `.deb` instala Git si falta; si lo quieres antes, `sudo
+  apt install git`.
+- **`gh` (GitHub CLI) es opcional** en los dos: sin él, GitCRAFT explica cómo
+  instalarlo y el resto funciona.
+- No hace falta Rust, Node ni Visual Studio.
 
-Crear las máquinas en UTM (botón **+** → **Virtualize**):
+## Descargar los instaladores
 
-- **Windows:** elige *Windows*, marca *Install Windows 10 or higher* e *Install
-  drivers and SPICE tools*, y selecciona la ISO. 6 GB de memoria, 4 núcleos y
-  64 GB de disco. Guía: <https://docs.getutm.app/guides/windows/>. Si la
-  pantalla se queda negra al instalar, la guía de UTM lo describe como un
-  problema conocido de los controladores gráficos (desde Windows 11 24H2):
-  expulsa la ISO de las herramientas, reinicia la máquina, instala Windows y
-  monta después las herramientas.
-- **Ubuntu:** elige *Linux* y la ISO de escritorio. 4 GB de memoria, 4 núcleos y
-  30 GB de disco. La guía de UTM usa Ubuntu Server y añade el escritorio
-  (<https://docs.getutm.app/guides/ubuntu/>): es la alternativa si la ISO de
-  escritorio no arranca.
+1. En el navegador, **con la sesión iniciada en GitHub** (sin sesión no deja
+   descargar), abre la página de la ejecución que te haya pasado: en el
+   repositorio, **Actions → Installers**.
+2. Abajo, en **Artifacts**, pulsa el archivo de tu sistema. Se descarga tal
+   cual, sin `.zip`. Se borran a los 7 días.
+3. Descárgalo en el mismo sistema donde lo vas a probar, para que los avisos
+   sean los de verdad.
+4. En Windows, el navegador puede avisar de que el archivo «no se descarga
+   habitualmente»: en Edge, pasa el ratón por el archivo, **… → Conservar** y,
+   si vuelve a preguntar, **Conservar de todos modos**. Apunta qué ha salido.
 
-Al terminar de instalar cada sistema, haz una **instantánea o un duplicado** de
-la máquina en UTM: así la instalación limpia se puede repetir.
+Comprueba el SHA-256 **antes de abrirlo**. Tiene que ser el que te haya dado y
+el que enseña GitHub en la columna **Digest**. ⛔
 
-Los instaladores se descargan en el Mac y se pasan con la carpeta compartida
-de UTM. Archivos que hacen falta:
+- **Windows,** en PowerShell:
 
-| Sistema | Archivo |
-| --- | --- |
-| Windows ARM64 | `GitCRAFT_<versión>_arm64-setup.exe` |
-| Windows x64 (en la misma máquina, emulado) | `GitCRAFT_<versión>_x64-setup.exe` |
-| Ubuntu ARM64 | `GitCRAFT_<versión>_arm64.deb` |
+  ```powershell
+  cd "$HOME\Downloads"
+  Get-FileHash .\GitCRAFT_<versión>_x64-setup.exe -Algorithm SHA256
+  ```
 
-## A. Windows 11
+  Sale en mayúsculas: es lo mismo.
+- **Ubuntu,** en la terminal, en la carpeta de las descargas:
+
+  ```sh
+  sha256sum GitCRAFT_<versión>_amd64.deb
+  ```
+
+## A. Windows 11 x64
 
 ### A1. Instalar
 
-1. Abre PowerShell en la carpeta del instalador y comprueba el SHA-256 con el
-   que te haya dado: `Get-FileHash .\GitCRAFT_<versión>_arm64-setup.exe`. ⛔
-2. **Sin Git todavía:** doble clic en el instalador. Si aparece SmartScreen
-   («Windows protegió su PC»), pulsa **Más información → Ejecutar de todas
-   formas**. No desactives SmartScreen ni Defender. Con la carpeta compartida
-   puede no aparecer; apunta si ha salido.
-3. El instalador sale en tu idioma, no pide permisos de administrador y
-   termina sin errores. ⛔
-4. GitCRAFT está en el menú Inicio con su icono, y en **Ajustes → Aplicaciones
-   → Aplicaciones instaladas** con su versión y el editor «GitCRAFT», sin
-   ningún nombre personal.
-5. Ábrelo: se abre la ventana, sin ninguna consola negra detrás. Como falta
-   Git, lo explica y propone `winget install --id Git.Git`. ⛔
-6. Instala Git en la máquina virtual: `winget install --id Git.Git -e`. Cierra
-   GitCRAFT y ábrelo de nuevo: ya no falta Git.
+1. Doble clic en el instalador. Si aparece SmartScreen («Windows protegió su
+   PC»), pulsa **Más información**, comprueba que dice el nombre del archivo y
+   «Editor desconocido», y **Ejecutar de todas formas**. Apunta si ha salido y
+   con qué texto: lo cuentan las guías de instalación.
+2. Si lo bloquea **Smart App Control**, no hay botón para seguir: no lo
+   desactives y dímelo. ⛔
+3. El instalador sale en tu idioma, enseña la licencia MIT, no pide permisos de
+   administrador y termina sin errores. ⛔
+4. GitCRAFT está en el menú Inicio con su icono, y en **Configuración →
+   Aplicaciones → Aplicaciones instaladas** con su versión y el editor
+   «GitCRAFT».
+5. Ábrelo: se abre la ventana, sin ninguna consola negra detrás. ⛔
+6. Solo si el equipo no tenía Git: GitCRAFT lo explica y propone `winget
+   install --id Git.Git`. Instálalo, cierra GitCRAFT y ábrelo: ya no falta. Si
+   ya lo tenías, **no lo desinstales** para probar esto.
 
 ### A2. Usar
 
 Crea el repositorio de prueba (más abajo, «Repositorio de prueba») en **Git
-Bash**, y pasa la lista C.
+Bash** y pasa la lista C.
 
 Además, solo en Windows:
 
 7. **Papelera:** descarta `notas.txt` → va a la **Papelera de reciclaje** (el
    texto lo dice así). «Deshacer» lo devuelve igual y lo quita de la Papelera.
 8. **Consolas:** durante todo el uso no parpadea ninguna ventana de consola.
-9. **Rutas:** abre el repositorio desde la raíz, desde su carpeta `sub` y
-   escribiendo la ruta con otras mayúsculas: una sola pestaña y una sola línea
-   en «Recientes».
-10. **CRLF:** en Git Bash, dentro del repositorio, `git config core.autocrlf
-    true`; edita dos líneas separadas de `lista.txt` con el Bloc de notas,
-    prepara solo una línea, haz el commit y descarta la otra. En el diff del
-    commit solo sale esa línea.
+9. **Rutas:** abre el repositorio de prueba desde la raíz, desde su carpeta
+   `sub` y escribiendo la ruta con otras mayúsculas: una sola pestaña y una
+   sola línea en «Recientes».
+10. **CRLF:** en Git Bash, dentro del repositorio de prueba, `git config
+    core.autocrlf true`; edita dos líneas separadas de `lista.txt` con el Bloc
+    de notas, prepara solo una línea, haz el commit y descarta la otra. En el
+    diff del commit solo sale esa línea.
 11. **Escalado:** Configuración → Pantalla → 125 % y 150 %: el grafo y el texto
-    se ven nítidos, y ningún diálogo se corta.
-12. **GitHub y textos:** Ajustes → Cuenta de GitHub: sin `gh`, propone `winget`.
-    Ajustes → Identidad de Git nombra `%USERPROFILE%\.gitconfig`. Opcional, si
-    instalas `gh`: iniciar sesión abre el navegador, y la pantalla dice dónde
-    guarda `gh` la sesión.
+    se ven nítidos, y ningún diálogo se corta. Vuelve a dejar el que tenías.
+12. **GitHub y textos:** Ajustes → Cuenta de GitHub: sin `gh`, propone `winget`;
+    con `gh`, dice quién tiene la sesión y dónde la guarda (no la cierres).
+    Ajustes → Identidad de Git nombra `%USERPROFILE%\.gitconfig`.
 
-### A3. Actualizar y desinstalar
+### A3. Reinstalar
 
-13. Con GitCRAFT instalado, vuelve a ejecutar el mismo instalador: actualiza o
-    reinstala sin duplicar la entrada, y se conservan recientes y ajustes.
-14. Desinstala desde **Aplicaciones instaladas**: desaparece del menú Inicio y
-    la carpeta `%LOCALAPPDATA%\GitCRAFT` ya no está. El repositorio de prueba
-    sigue intacto. ⛔
-15. Repite A1 (pasos 1, 3 y 5) y una prueba corta con el instalador **x64**:
-    Windows lo ejecuta emulado.
+13. Con GitCRAFT cerrado, vuelve a ejecutar el mismo instalador y elige
+    **«Añadir o reinstalar componentes»**: no duplica la entrada en «Aplicaciones instaladas», y se conservan
+    recientes y ajustes.
 
-## B. Ubuntu
+### A4. Desinstalar y comprobar que no queda nada
+
+14. Cierra GitCRAFT y desinstálalo desde **Aplicaciones instaladas**. En la
+    ventana que sale, marca **«Eliminar los datos de aplicación»** (borra
+    solo los ajustes y recientes de GitCRAFT; ningún repositorio). ⛔
+15. En PowerShell, esto solo mira y no cambia nada. Las siete líneas tienen que
+    decir `False`: ⛔
+
+    ```powershell
+    Test-Path "$env:LOCALAPPDATA\GitCRAFT"
+    Test-Path "$env:LOCALAPPDATA\dev.gitcraft.app"
+    Test-Path "$env:APPDATA\dev.gitcraft.app"
+    Test-Path "HKCU:\Software\GitCRAFT"
+    Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\GitCRAFT"
+    Test-Path "$([Environment]::GetFolderPath('Programs'))\GitCRAFT.lnk"
+    Test-Path "$([Environment]::GetFolderPath('Desktop'))\GitCRAFT.lnk"
+    ```
+
+    Son, por orden: el programa, los datos de la ventana, los ajustes, lo que
+    recuerda el instalador, la entrada de «Aplicaciones instaladas» y los
+    accesos directos del menú Inicio y del escritorio. Sin marcar la casilla,
+    la segunda, la tercera y la cuarta dan `True`: es lo esperado.
+16. El repositorio de prueba sigue intacto, y `git --version` sigue
+    funcionando. ⛔
+17. Al acabar, lleva la carpeta `gitcraft-prueba-instalador` (en
+    `C:\Users\<tu usuario>`) a la Papelera.
+
+## B. Ubuntu 26.04 x64
 
 ### B1. Instalar
 
-1. En la terminal, en la carpeta del archivo: `sha256sum
-   GitCRAFT_<versión>_arm64.deb`, y compáralo. ⛔
-2. `sudo apt install ./GitCRAFT_<versión>_arm64.deb` (con `./` delante): instala
-   también lo que falte, Git incluido, sin errores. ⛔
-3. `dpkg -s git-craft` o el nombre que haya mostrado apt: versión correcta y
-   *Maintainer* sin ningún nombre ni correo personal.
-4. GitCRAFT sale en las aplicaciones con su icono. Ábrelo: ventana con la
+1. En la terminal, en la carpeta de las descargas (con `./` delante):
+
+   ```sh
+   sudo apt install ./GitCRAFT_<versión>_amd64.deb
+   ```
+
+   Instala también lo que falte, Git incluido, sin errores. ⛔ Una nota final
+   sobre «unsandboxed» o el usuario `_apt` es normal: apt no puede leer tu
+   carpeta con su usuario propio.
+2. `dpkg -s git-craft`: versión correcta y `Maintainer: GitCRAFT`.
+3. GitCRAFT sale en las aplicaciones con su icono. Ábrelo: ventana con la
    interfaz completa. ⛔ Si sale en blanco, dímelo con `echo
    $XDG_SESSION_TYPE` y no cambies nada más.
 
@@ -125,26 +167,58 @@ Además, solo en Windows:
 
 Crea el repositorio de prueba en la terminal y pasa la lista C. Además:
 
-5. **Papelera:** descarta `notas.txt` → va a la Papelera de Archivos.
+4. **Papelera:** descarta `notas.txt` → va a la Papelera de Archivos.
    «Deshacer» lo devuelve igual y lo quita de la Papelera.
-6. **Ventana:** mover, redimensionar, maximizar y cerrar funcionan; la barra de
+5. **Ventana:** mover, redimensionar, maximizar y cerrar funcionan; la barra de
    título es la del sistema.
-7. **Fuentes y nitidez:** el texto y el grafo se ven bien, también al 200 % en
+6. **Fuentes y nitidez:** el texto y el grafo se ven bien, también al 200 % en
    Configuración → Pantallas.
-8. **GitHub:** Ajustes → Cuenta de GitHub: sin `gh`, dice cómo instalarlo.
-   Opcional, si lo instalas: iniciar sesión abre el navegador, y la pantalla
-   dice dónde guarda `gh` la sesión.
+7. **GitHub:** Ajustes → Cuenta de GitHub: sin `gh`, dice cómo instalarlo.
 
-### B3. Actualizar y desinstalar
+### B3. Reinstalar
 
-9. Instala otra vez el mismo `.deb`: no falla y se conservan los ajustes.
-10. `sudo apt remove` con el nombre del paquete: desaparece de las aplicaciones.
-    Git y el repositorio de prueba siguen. ⛔
+8. `sudo apt install --reinstall ./GitCRAFT_<versión>_amd64.deb`: no falla y se
+   conservan los ajustes.
+
+### B4. Desinstalar y comprobar que no queda nada
+
+9. Cierra GitCRAFT y `sudo apt remove git-craft`: desaparece de las
+   aplicaciones. ⛔
+10. Esto solo mira y no cambia nada. `dpkg` dice que no está instalado y los
+    demás, que no existe nada: ⛔
+
+    ```sh
+    dpkg -s git-craft
+    command -v gitcraft || echo "no está"
+    ls -d /usr/share/applications/GitCRAFT.desktop /usr/share/doc/git-craft
+    ```
+
+11. Los datos de GitCRAFT (ajustes y recientes) se quedan, como con cualquier
+    paquete. Mira cuáles hay:
+
+    ```sh
+    ls -d ~/.config/dev.gitcraft.app ~/.local/share/dev.gitcraft.app ~/.cache/dev.gitcraft.app
+    ```
+
+    Para quitarlos, en Archivos (Ctrl+H enseña lo oculto) lleva a la Papelera
+    **solo** esas carpetas `dev.gitcraft.app`. Repite la orden: no queda
+    ninguna.
+12. El repositorio de prueba y Git siguen. ⛔ Al acabar, lleva la carpeta
+    `gitcraft-prueba-instalador` a la Papelera, o vuelve a la instantánea.
+
+Las bibliotecas que apt instaló con GitCRAFT las quitaría `sudo apt autoremove`,
+pero esa orden también puede quitar otras que no son suyas: no hace falta.
 
 ## Repositorio de prueba
 
-En Git Bash (Windows) o en la terminal (Ubuntu). Crea
-`~/gitcraft-prueba-instalador`; si ya existe, se detiene sin tocar nada.
+**Windows:** abre **Git Bash** desde el menú Inicio (no PowerShell), copia el
+bloque entero, pégalo con Mayús+Insert o el botón derecho → *Paste*, y pulsa
+Intro. La carpeta queda en `C:\Users\<tu usuario>\gitcraft-prueba-instalador`.
+
+**Ubuntu:** lo mismo en la terminal (Ctrl+Mayús+V). Necesita Git, así que se
+hace después de instalar el `.deb`.
+
+Crea `~/gitcraft-prueba-instalador`; si ya existe, se detiene sin tocar nada.
 
 ```sh
 mkdir ~/gitcraft-prueba-instalador && cd ~/gitcraft-prueba-instalador && {
@@ -179,7 +253,8 @@ git status --short
 ```
 
 Debe acabar enseñando cuatro commits, y `lista.txt` modificado y `notas.txt` sin
-seguimiento.
+seguimiento. En Windows pueden salir avisos como «LF will be replaced by CRLF»:
+no son errores.
 
 ## C. Lo que se prueba en los dos sistemas
 
@@ -196,8 +271,9 @@ seguimiento.
 6. **Conflicto:** merge de `choca` y «Abortar»: todo queda como antes. Repite el
    merge, elige una versión del bloque, márcalo como resuelto y «Continuar». ⛔
 7. **Push y fetch:** Push y después Fetch con el remoto local, sin errores.
-8. **Clonar y cancelar:** «Clonar repositorio…» con
-   `https://github.com/epmoreno/GitCRAFT.git` termina bien. Después, con
+8. **Clonar y cancelar:** «Clonar repositorio…» dentro de la carpeta de prueba,
+   `gitcraft-prueba-instalador`, con
+   `https://github.com/epmoreno/GitCRAFT.git`, termina bien. Después, con
    `https://github.com/git/git.git`, pulsa «Cancelar clonación» a mitad: no
    queda la carpeta. ⛔
 9. **Cancelar un fetch:** en el clon de GitCRAFT, en la terminal, `git remote
@@ -216,5 +292,6 @@ seguimiento.
 ## Al terminar
 
 Dime, por sistema: qué versión (Windows: `winver`; Ubuntu: `lsb_release -d` y
-`echo $XDG_SESSION_TYPE`), qué pasos han ido bien, cuáles no y cuáles no has
-hecho. Solo se marca como verificado lo que confirmes.
+`echo $XDG_SESSION_TYPE`), el SHA-256 del archivo probado, qué pasos han ido
+bien, cuáles no y cuáles no has hecho. Solo se marca como verificado lo que
+confirmes.

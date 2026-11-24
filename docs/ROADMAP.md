@@ -1057,11 +1057,11 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
 
 **Terminada** (P.1–P.11). El código compila, pasa los tests y arranca en
 macOS, Windows y Linux en el CI, sin tests ignorados por la Fase P. Queda la
-prueba a mano en máquinas virtuales.
+prueba a mano, con los instaladores (tarea I de la Fase final).
 
 Objetivo: el código compila, pasa los tests y arranca en macOS, Windows y
-Linux, comprobado por el CI. La prueba manual en máquinas virtuales la hará el
-usuario más adelante. Los instaladores quedan para la fase de publicación.
+Linux, comprobado por el CI. La prueba manual la hará el usuario más
+adelante. Los instaladores quedan para la fase de publicación.
 
 - [x] **P.1 Inventario y norma.** Tabla en ARCHITECTURE.md con todo lo específico
       de macOS, su equivalente en Windows y Linux y su tarea. Se añade a
@@ -1306,6 +1306,14 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 
 | Test | Archivo | Tarea | Qué falla en Windows |
 | --- | --- | --- | --- |
+
+### «Timeout waiting for worker» de vitest
+
+El 24 de noviembre de 2026, `npm run check` falló en el Mac con 5 «Timeout
+waiting for worker» y 2 tests de frontend que pasaron de sus 5 s; no se hizo
+commit. Según el registro de energía, el Mac entró en reposo 2 s después de
+empezar los tests y estuvo así 3 min 23 s; tardaron 218 s en vez de los 8
+habituales. Es lo que encaja con el fallo (no se ha reproducido).
 
 ### Modo de humo
 
@@ -3578,7 +3586,7 @@ una instalación se propone y se espera la aprobación (norma 8).
 - [ ] **24. Ocultar la barra de menús en Windows y Linux:** una opción en
       Ajustes; los atajos siguen funcionando y Alt la enseña.
       *Verificable:* tests de ajustes; en macOS la opción no aparece; prueba
-      del usuario en las máquinas virtuales.
+      del usuario en Windows y en Linux.
 - [ ] **25. Inicio de sesión de GitHub propio** (OAuth *device flow*), como
       alternativa a `gh`.
       - [ ] **25.1 Decidir antes si se hace.** Choca con dos reglas: «no se
@@ -3597,11 +3605,19 @@ una instalación se propone y se espera la aprobación (norma 8).
 
 ## Fase final — Publicación
 
-- [ ] **I. Instaladores de Windows y Linux.** Van antes de la Fase 3. **No se
-      publica ningún instalador para Windows mientras quede algún test de la
-      lista «Tests ignorados en Windows» de la Fase P** (hoy, ninguno). Nada de
-      firma: ni se configura ni se simula.
-      *Formatos propuestos:*
+- [ ] **I. Instaladores de Windows y Linux (v0.4.1).** Van antes de la Fase 3.
+      **No se publica ningún instalador para Windows mientras quede algún test
+      de la lista «Tests ignorados en Windows» de la Fase P** (hoy, ninguno).
+      Nada de firma: ni se configura ni se simula.
+      *Decidido el 24 de noviembre de 2026:* los formatos de la tabla ahora;
+      `.msi` y AppImage, después. v0.4.1, con los tres sistemas en la misma
+      Release. `actions/upload-artifact`, aprobada y fijada a la v7.0.2 por su
+      commit. Se publican también los que solo prueba el CI, diciéndolo.
+      *Quién prueba qué:* el usuario prueba a mano, en su ordenador de
+      sobremesa x64, el `-setup.exe` x64 (Windows 11, sin máquina virtual) y el
+      `.deb` x64 (Ubuntu 26.04, en máquina virtual). **Los dos de ARM64 los
+      prueba solo el CI**, y así se dice en las guías y en las notas.
+      *Formatos:*
 
       | Sistema | Formato | Arquitecturas | Por qué |
       | --- | --- | --- | --- |
@@ -3617,29 +3633,31 @@ una instalación se propone y se espera la aprobación (norma 8).
       *Base de Linux:* Ubuntu 22.04, la más antigua con WebKitGTK 4.1 y la que
       recomienda Tauri: lo compilado ahí sirve en 22.04 y posteriores y en
       Debian 12. Si el runner desaparece, 24.04.
-      - [ ] **I.1 Configuración.** `bundle` por sistema
+      - [x] **I.1 Configuración.** `bundle` por sistema
         (`tauri.windows.conf.json`, `tauri.linux.conf.json`; la de macOS no
         cambia): NSIS `currentUser`, español e inglés, editor «GitCRAFT»,
-        licencia MIT; `.deb` con `git` en sus dependencias, sección, y un
+        licencia MIT; `.deb` con `git` y `xdg-utils` en sus dependencias, sección, y un
         `Maintainer` sin datos personales.
         *Verificable:* test que lee la configuración (formatos, sin nombre ni
         correo); el `.dmg` sale con la misma configuración que antes.
+        *Hecho* (`394aa88`): `src/test/installers.test.ts`; `tauri.conf.json`
+        solo cambia de versión, y `npm run dist` en macOS hace y comprueba el
+        `.dmg` de la 0.4.1 como antes. El paquete de Debian se llama
+        `git-craft`: Tauri lo saca del nombre del producto y no deja cambiarlo.
       - [ ] **I.2 `npm run dist` en Windows y en Linux**, incluida la
-        comprobación de datos personales. Hasta ahora solo se ha ejecutado
-        entero en macOS: en Windows y Linux el CI pasa los tests de
-        `scripts/personal-data.mjs`, pero no ejecuta `npm run dist`, que allí
-        genera el ejecutable sin instalador (`--no-bundle`).
+        comprobación de datos personales.
         - Genera el instalador y lo comprueba por dentro, porque va
           comprimido: el `.deb` se extrae con `dpkg-deb` y se miran también
-          sus metadatos; el de NSIS se instala en silencio y se mira la
-          carpeta instalada.
+          sus metadatos; el de NSIS se desempaqueta con 7-Zip sin instalarlo (sin
+          7-Zip, la comprobación falla), y el CI mira además la carpeta
+          instalada.
         - En Windows, atención a la ruta del `.pdb` que el enlazador puede
           escribir en el `.exe`: no la cambia `--remap-path-prefix`.
         - En el CI el usuario es «runner» o parecido: no se busca suelto, pero
           su carpeta sí.
-        *Verificable:* la comprobación falla con una compilación sin
-        `--remap-path-prefix` y pasa con ella, en los dos sistemas; tests del
-        script para cada formato.
+        *Verificable:* la comprobación encuentra la carpeta personal en una
+        compilación sin `--remap-path-prefix` y pasa con ella, en los dos
+        sistemas; tests del script.
       - [ ] **I.3 CI: `installers.yml`,** que solo se lanza a mano
         (`workflow_dispatch`), con permisos de solo lectura y sin secretos. No
         publica nada. Matriz: `windows-latest` (x64), `windows-11-arm`,
@@ -3655,40 +3673,38 @@ una instalación se propone y se espera la aprobación (norma 8).
         5. desinstala y comprueba que no queda el programa;
         6. escribe el SHA-256 y sube el instalador como artefacto, que se
            borra a los 7 días.
-        Usa `actions/upload-artifact`, que es una acción nueva en el proyecto:
-        se aprueba antes (norma 8).
+        El `.deb` se prueba además en un contenedor limpio de Ubuntu 26.04.
         *Verificable:* los cuatro trabajos en verde desde un commit de `main`
         con el CI normal en verde.
       - [ ] **I.4 Documentación:** README, guías de instalación por sistema
-        (español e inglés en el mismo commit: requisitos, SmartScreen sin
-        desactivarlo, `apt install`, comprobar el SHA-256, desinstalar) y
-        ARCHITECTURE.md (Empaquetado y sección 8).
+        (español e inglés en el mismo commit: requisitos, `apt install`,
+        comprobar el SHA-256, desinstalar) y ARCHITECTURE.md (Empaquetado y
+        sección 8). **SmartScreen se explica como Gatekeeper, en las guías y en
+        las notas de la Release:** qué sale, por qué no está firmado y cómo
+        abrirlo sin desactivar nada.
+        *Estado:* guías y ARCHITECTURE.md escritos. Al publicar falta quitar
+        de las guías «Todavía no publicado», ajustar el texto de SmartScreen a
+        lo que vea el usuario, y el README.
         *Verificable:* los enlaces funcionan y solo dicen lo comprobado.
-      - [ ] **I.5 Prueba del usuario en máquinas virtuales,** con
-        `docs/PRUEBA_INSTALADORES.md`. Windows 11 ARM64 (instaladores ARM64 y
-        x64, este emulado) y Ubuntu 26.04 ARM64.
+      - [ ] **I.5 Prueba del usuario,** con `docs/PRUEBA_INSTALADORES.md`, en
+        Windows 11 x64 y en Ubuntu 26.04 x64, siempre con repositorios de
+        prueba.
         *Verificable:* el usuario la confirma, sistema por sistema.
       - [ ] **I.6 Publicarlos:** el usuario sube cada instalador a VirusTotal;
         SHA-256 y resultado en las notas; borrador de Release que publica el
         usuario.
-      *Qué queda sin probar a mano:* el `.deb` x64 (solo el CI: el Mac es ARM)
-      y Windows en un equipo x64 real. Se dirá así en la documentación.
-      *Decisiones pendientes:*
-      1. ¿Formatos: NSIS y `.deb` ahora; `.msi` y AppImage después?
-      2. ¿Se publica el `.deb` x64, probado solo en el CI? (Propuesta: sí,
-         diciéndolo.)
-      3. ¿Versión? (Propuesta: 0.4.1, porque el código del tag `v0.4.0` no
-         incluye los instaladores; con los tres sistemas en la misma Release.)
-      4. ¿Se aprueba `actions/upload-artifact`?
+      *Qué queda sin probar a mano:* los dos instaladores de ARM64, que solo
+      prueba el CI.
 - [ ] **Pruebas a mano en Windows y Linux (requisito de los instaladores).**
       Antes de publicar los instaladores de Windows y Linux, el usuario prueba
-      la app en máquinas virtuales en su Mac. Lo que no se ha probado a mano
-      en un sistema no se da por verificado en él. La guía, con lo que hace
-      falta en el Mac (UTM, imágenes y espacio), es
+      la app en Windows 11 x64 (sin máquina virtual) y en Ubuntu 26.04 x64 (en
+      máquina virtual), en su ordenador de sobremesa y solo con repositorios
+      de prueba. Lo que no se ha probado a mano en un sistema no se da por
+      verificado en él: ARM64 queda probado solo en el CI. La guía es
       `docs/PRUEBA_INSTALADORES.md`: menú y atajos, Papelera, cancelar, rutas,
       GitHub, textos, lo que solo se ve a mano y CRLF en Windows. Se hace con
-      los instaladores del CI, así que en las máquinas no hace falta Rust, Node
-      ni Visual Studio.
+      los instaladores del CI, así que no hace falta Rust, Node ni Visual
+      Studio.
 - [ ] **Sin firma de Apple (decidido).** GitCRAFT no se firma ni se notariza con
       Apple: es software libre y gratuito, y la firma exige una cuota anual de
       pago. En su lugar:

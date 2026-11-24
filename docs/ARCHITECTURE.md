@@ -1015,14 +1015,27 @@ previas que fallan dejan seguir y el error de la operación real se explica.
   el historial, del más reciente al más antiguo. Filtros: solo la pestaña
   activa (por carpeta) y ocultar las lecturas.
 
-### Empaquetado (macOS)
+### Empaquetado
 
-- `npm run dist` → `scripts/dist.mjs`: `tauri build --bundles app,dmg` (con
-  `CI=true`, para que el `.dmg` se cree sin automatizar Finder; en Windows y
-  Linux, `--no-bundle`). Compila para la arquitectura del Mac
-  que lo ejecuta (arm64 en Apple Silicon); salida en
-  `target/release/bundle/{macos,dmg}`. Instalación y primer arranque:
+- `npm run dist` → `scripts/dist.mjs`: `tauri build --bundles …` con lo de cada
+  sistema (`scripts/installers.mjs`): `app,dmg` en macOS (con `CI=true`, para
+  que el `.dmg` se cree sin automatizar Finder), `nsis` en Windows y `deb` en
+  Linux. Compila para la arquitectura del equipo que lo ejecuta; salida en
+  `target/release/bundle/{macos,dmg,nsis,deb}`. Instalación y primer arranque:
   `docs/INSTALACION.md` (en inglés, `docs/INSTALL.md`).
+- **Configuración por sistema:** la común y la de macOS, en `tauri.conf.json`;
+  `tauri.windows.conf.json` (NSIS por usuario, español e inglés) y
+  `tauri.linux.conf.json` (`.deb`, que depende de `git` y `xdg-utils` además de
+  WebKitGTK y GTK, que añade Tauri) solo cambian `bundle`. El editor y el
+  `Maintainer` son «GitCRAFT». Nada de firma en Windows ni Linux.
+- **Los instaladores de Windows y Linux se hacen en el CI**
+  (`.github/workflows/installers.yml`, solo a mano): `npm run dist`, instalar,
+  arrancar la app instalada con `--smoke`, reinstalar, desinstalar y comprobar
+  que no queda el programa (`.github/scripts/try-installer.ps1` y
+  `try-deb.sh`, que se niegan a ejecutarse fuera del CI). Antes, el workflow
+  comprueba que la búsqueda de datos personales los ve en una compilación que
+  los lleva (`dist.mjs --must-find`). Los archivos se guardan 7 días, sin
+  comprimir en un `.zip`, y no se publica nada.
 - **Sin datos personales** (`scripts/personal-data.mjs`): rustc escribe en el
   ejecutable la ruta de cada archivo que puede hacer `panic!`, así que
   `dist` compila con `--remap-path-prefix` para la carpeta personal, el
@@ -1030,8 +1043,10 @@ previas que fallan dejan seguir y el error de la operación real se explica.
   admite espacios y conserva los flags que ya hubiera). Al final busca la
   carpeta personal y el nombre de usuario (sin distinguir mayúsculas, en
   UTF-8 y UTF-16) en `dist/` (la interfaz va comprimida dentro del
-  ejecutable), el ejecutable, el `.app` y el `.dmg` (sus archivos y la imagen
-  de disco entera), y falla diciendo el archivo y las veces, sin el nombre.
+  ejecutable), el ejecutable, el `.app`, el `.dmg` (sus archivos y la imagen
+  de disco entera), el `.deb` (sus dos archivos tar, con `dpkg-deb`) y el
+  instalador de NSIS (lo que lleva, con 7-Zip y sin instalarlo; sin 7-Zip la
+  comprobación falla), y falla diciendo el archivo y las veces, sin el nombre.
   Un nombre corto o genérico («root», «runner») no se busca suelto; la
   carpeta, siempre. `node scripts/dist.mjs --check-only` solo comprueba.
 - **Firma ad-hoc** (`signingIdentity: "-"`): no identifica a ningún
@@ -1170,8 +1185,8 @@ específica de un sistema se apunta en esta tabla.
 | Diff de un archivo sin seguimiento | `ops/worktree.rs` (`diff --no-index -- /dev/null <ruta>`) | Funciona | Funciona con Git for Windows (los tests de stage parcial de archivos sin seguimiento pasan en el CI) | Funciona | Comprobado en P.8 |
 | Rutas | `platform.rs` (`native_path`, `without_verbatim_prefix`), usado por `ops/repo.rs`; `folderName` del panel de operaciones | La que da git (ya resuelta), `/` | La real: `\`, unidad, sin `\\?\`, nombres largos (no 8.3) y mayúsculas de verdad, así que una carpeta tiene una sola forma en sesión, recientes y pestañas | `/`, la que da git | Hecho en P.8 |
 | Manifest de la app en Windows | `src-tauri/build.rs`, `src-tauri/windows-app-manifest.xml` | Sin efecto | tauri-build solo incrusta el manifest (Common Controls v6) en el ejecutable de la app y los binarios de tests no arrancan (`STATUS_ENTRYPOINT_NOT_FOUND`). Se desactiva el suyo y el enlazador incrusta una copia (`/MANIFEST:EMBED`, `/MANIFESTINPUT`) en todos los ejecutables del crate; el CI comprueba que `gitcraft.exe` lo lleva. Arreglo provisional de [tauri#13419](https://github.com/tauri-apps/tauri/issues/13419), pendiente de [tauri#16320](https://github.com/tauri-apps/tauri/pull/16320) | Sin efecto | Quitar cuando Tauri lo resuelva; al actualizar tauri-build, comprobar que su manifest por defecto no ha cambiado |
-| Scripts de npm | `package.json`: `bindings` es `node scripts/bindings.mjs`; `dist`, `node scripts/dist.mjs` | Funcionan | `dist` compila y comprueba el ejecutable, sin instalador; sin probar todavía en un Windows real | Igual que Windows | Hecho en P.3 (`bindings`) y con la v0.4.0 (`dist`); instaladores, Fase final |
-| Empaquetado | `tauri.conf.json` (`targets: app, dmg`, `macOS.minimumSystemVersion`, firma ad-hoc), `npm run dist` | `.app` y `.dmg` | Instalador (`.msi` o NSIS) | `.deb`, AppImage… | Fase final |
+| Scripts de npm | `package.json`: `bindings` es `node scripts/bindings.mjs`; `dist`, `node scripts/dist.mjs` | Funcionan | `dist` hace y comprueba el instalador de NSIS (necesita 7-Zip) | `dist` hace y comprueba el `.deb` (necesita `dpkg-deb`) | Hecho en P.3 (`bindings`) y con los instaladores (`dist`) |
+| Empaquetado | `tauri.conf.json` (`targets: app, dmg`, `macOS.minimumSystemVersion`, firma ad-hoc), `tauri.windows.conf.json`, `tauri.linux.conf.json`, `scripts/installers.mjs`, `npm run dist` | `.app` y `.dmg` | NSIS por usuario (x64 y ARM64), sin firmar | `.deb` (x64 y ARM64), compilado en Ubuntu 22.04 | Tarea I de la Fase final; `.msi` y AppImage, después |
 | Scripts de desarrollo | `scripts/*.sh` (`make-remote-sandbox.sh` usa `osascript` y Finder) | Funcionan | No | Parcialmente | Solo para desarrollo en macOS; sin tarea |
 
 

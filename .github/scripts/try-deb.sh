@@ -34,7 +34,10 @@ dpkg-deb --contents "$deb"
 [ "$(dpkg-deb -f "$deb" Version)" = "$version" ] || fail "the version"
 [ "$(dpkg-deb -f "$deb" Architecture)" = "$arch" ] || fail "the architecture"
 [ "$(dpkg-deb -f "$deb" Maintainer)" = "GitCRAFT" ] || fail "the maintainer"
-files=$(dpkg-deb --fsys-tarfile "$deb" | tar -t | sed 's|^\./||; /\/$/d')
+unpacked=$(mktemp -d)
+dpkg-deb --extract "$deb" "$unpacked"
+files=$(cd "$unpacked" && find . ! -type d | sed 's|^\./||')
+[ -n "$files" ] || fail "it has no files"
 
 if dpkg -s "$package" >/dev/null 2>&1; then fail "already installed"; fi
 export DEBIAN_FRONTEND=noninteractive
