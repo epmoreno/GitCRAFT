@@ -1034,6 +1034,9 @@ tres sistemas sea gratis. Cada tarea espera la aprobación del usuario.
       SHA-256 y el enlace a su análisis de VirusTotal en las notas. GitHub
       confirma el mismo SHA-256 del archivo subido.
       <https://github.com/epmoreno/GitCRAFT/releases/tag/v0.2.1>
+      *Descarga retirada* el 24 de noviembre de 2026, con un aviso en las
+      notas: la comprobación de `npm run dist` encontró 429 rutas con la
+      carpeta personal en su ejecutable. La Release y el tag siguen.
 
       Verificado manualmente por el usuario: README comprobado en GitHub en una
       ventana de incógnito (bloque de seis idiomas, árabe a la derecha, sin HTML
@@ -2283,6 +2286,8 @@ principio y toda operación destructiva pasa por confirmación.
         (`f721b941…6b1240`) y el enlace a VirusTotal en las notas. GitHub
         da el mismo SHA-256, y el archivo descargado de la Release también.
         <https://github.com/epmoreno/GitCRAFT/releases/tag/v0.3.0>
+      - *Descarga retirada* el 24 de noviembre de 2026, igual que la de la
+        v0.2.1 (430 rutas). La Release y el tag siguen.
 
       *Verificado manualmente por el usuario* con la app instalada desde el
       `.dmg` en macOS 27.0.1:

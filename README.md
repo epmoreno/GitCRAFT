@@ -83,7 +83,7 @@ _The interface is shown in Spanish; it is also available in English._
   commits by dragging them or with the keyboard, edit messages, combine a
   commit with the one below it and drop commits. Before applying, GitCRAFT
   shows where it would stop with conflicts, which commits would end up empty
-  and which ones are already published; dropped commits can be got back.
+  and which ones are already published; dropped commits can be recovered.
 - **Undo and redo**: the toolbar's Undo and Redo (⌘Z and ⇧⌘Z) take back the
   last operations — commits, merges, rebases, resets, checkouts, branch and
   tag changes… — after showing exactly what will change.
