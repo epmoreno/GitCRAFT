@@ -3364,24 +3364,208 @@ principio y toda operación destructiva pasa por confirmación.
 
 ## Fase 3
 
-- [ ] Submódulos · Worktrees · Git LFS · Firma GPG/SSH (verificar y mostrar) ·
-      Perfiles de identidad · Atajos configurables · Tema claro/oscuro.
-- [ ] Inicio de sesión de GitHub propio dentro de la app (OAuth *device
-      flow*, token guardado en el almacén de credenciales del sistema: Llavero
-      en macOS), como alternativa a `gh`.
-- [ ] **Más idiomas.** Traducir la app a árabe, alemán, francés y portugués,
-      además de español e inglés, con soporte de interfaz de derecha a
-      izquierda (RTL) para el árabe. El README ya tiene la descripción en esos
-      idiomas.
-- [ ] **Coloreado de sintaxis** en diffs y en la vista de conflictos. Cuando
-      llegue, valorar un editor de código para editar bloques en conflicto
-      (hoy, un área de texto simple, sin dependencias; 9.5). Sería una
-      dependencia nueva, que se propone y se aprueba antes.
-- [ ] **Ocultar la barra de menús en Windows y Linux:** una opción en
-      Ajustes (los atajos siguen funcionando).
-- [ ] **README completo en árabe, alemán, francés y portugués**
+**Planificada, sin empezar.** Antes van los instaladores de Windows y Linux
+(Fase final).
+
+Orden: 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25. Como en la
+Fase 2: todo es multiplataforma desde el principio, toda operación destructiva
+pasa por confirmación, nada se ejecuta sin que el usuario lo pida, un commit
+por paso y el último paso de cada tarea es la prueba del usuario. Antes de
+empezar cada tarea se responden sus *decisiones pendientes*. Una dependencia o
+una instalación se propone y se espera la aprobación (norma 8).
+
+- [ ] **14. Submódulos.**
+      *Ya existe:* la vista de conflictos los reconoce (modo `160000`) y solo
+      ofrece elegir una versión entera; el resto de la app no los distingue.
+      *Principios:* nunca se inicializan ni se actualizan solos (descargan de
+      una URL que elige el repositorio); la URL se enseña antes; nunca
+      `--force` ni `deinit -f`; no se relaja `protocol.file.allow`.
+      - [ ] **14.1 Leerlos (core).** `submodules()`: ruta y commit fijado
+        (`git ls-files -s -z`, modo `160000`), nombre y URL
+        (`git config -z --file .gitmodules`), y su estado: sin inicializar,
+        en el commit fijado, en otro commit, con cambios dentro o en conflicto
+        (campo `sub` de `status --porcelain=v2`).
+        *Verificable:* parser con fixtures reales y un test de integración por
+        estado, incluidos un `.gitmodules` que falta o está mal y uno anidado.
+      - [ ] **14.2 Verlos.** Sección «Submódulos» en la barra lateral, con su
+        estado, y «Abrir en una pestaña». En el panel de cambios y en el diff,
+        un submódulo dice qué es y de qué commit a qué commit pasa.
+        *Verificable:* tests de interfaz con cada estado.
+      - [ ] **14.3 Inicializar y actualizar**, uno o todos, con progreso y
+        cancelación. La confirmación enseña la URL y el commit. Si dentro hay
+        cambios, o commits que quedarían sin rama, se listan y no se sigue.
+        *Verificable:* integración con remotos locales: inicializar,
+        actualizar, cancelar sin dejar nada a medias, y negarse en los dos
+        casos.
+      - [ ] **14.4 Al cambiar de rama, hacer pull o clonar:** un aviso dice qué
+        submódulos han quedado desfasados y ofrece actualizarlos. Clonar los
+        incluye solo si se marca.
+        *Verificable:* integración y test del aviso.
+      - [ ] **14.5 Prueba del usuario:** script de ejemplo y guía.
+      *Fuera:* añadir, mover o quitar submódulos, y cambiar su URL.
+      *Decisiones pendientes:* si «Actualizar» incluye los anidados por
+      defecto (propuesta: sí, listándolos).
+- [ ] **15. Worktrees.**
+      *Ya existe:* abrir un worktree enlazado (`git_dir` y `common_dir`
+      separados) y saber si una rama está en otro (`worktree list
+      --porcelain -z`), para el merge y el rebase.
+      *Principios:* nunca `--force`; quitar uno con cambios no se ofrece; la
+      rama no se borra al quitarlo.
+      - [ ] **15.1 Leerlos (core).** Lista completa: ruta, commit, rama o HEAD
+        separado, bloqueado con su motivo, y perdido (`prunable`).
+        *Verificable:* parser con fixtures (rutas con espacios, acentos y
+        saltos de línea) e integración.
+      - [ ] **15.2 Verlos.** Sección en la barra lateral y «Abrir en una
+        pestaña»; las ramas ocupadas por otro worktree lo dicen y explican
+        por qué no se puede cambiar a ellas.
+        *Verificable:* tests de interfaz; el vigilante ve los cambios hechos
+        desde otro worktree.
+      - [ ] **15.3 Crear y quitar**, de una rama existente o nueva. Crear nunca
+        usa una carpeta con contenido. Quitar pide confirmación con la ruta;
+        si hay cambios o archivos sin seguimiento, los lista y no sigue.
+        *Verificable:* integración de los dos, con sus negativas.
+      - [ ] **15.4 Bloquear, desbloquear y limpiar** los perdidos, con la lista
+        de lo que se limpia (solo las anotaciones de git, nunca archivos).
+        *Verificable:* integración.
+      - [ ] **15.5 Prueba del usuario:** script de ejemplo y guía.
+      *Decisiones pendientes:* la carpeta sugerida (propuesta: junto al
+      repositorio, `<repo>-<rama>`).
+- [ ] **16. Firma GPG/SSH: verificar y mostrar.**
+      *Ya existe:* la app usa la configuración de git al hacer commit; los
+      commits desechables de las vistas previas llevan `--no-gpg-sign`.
+      *Principios:* GitCRAFT no toca claves ni las pide; solo enseña lo que
+      dice git, sin suavizarlo.
+      - [ ] **16.1 Leer la firma (core)** de un commit o un tag anotado, bajo
+        demanda y con cancelación (`%G?`, `%GS`, `%GK`, `%GF`, `%GT`), nunca
+        para todo el historial. Cada resultado es distinto: válida, válida de
+        confianza desconocida, caducada, revocada, mala, sin la clave, sin
+        firma, y «no se puede comprobar» (falta `gpg`, o
+        `gpg.ssh.allowedSignersFile`).
+        *Verificable:* fixtures de cada código, e integración con claves SSH
+        creadas en el propio test (nunca las del usuario ni su agente).
+      - [ ] **16.2 Mostrarla** en el panel de detalle, con texto además de
+        color, quién firma, la huella y qué falta si no se puede comprobar.
+        *Verificable:* tests de interfaz de cada estado, también para quien
+        usa lector de pantalla.
+      - [ ] **16.3 Al hacer commit con firma activada:** se dice que se va a
+        firmar y con qué formato; un fallo (clave ausente, frase de paso que
+        no se puede pedir) es un error claro y los cambios siguen preparados.
+        *Verificable:* integración con una clave que no existe.
+      - [ ] **16.4 Prueba del usuario:** guía con claves de prueba en una
+        carpeta desechable.
+      *Fuera:* crear, importar o elegir claves.
+- [ ] **17. Perfiles de identidad.**
+      *Ya existe:* Ajustes → Identidad de Git (global y por repositorio).
+      - [ ] **17.1 Guardar perfiles** (nombre del perfil, nombre y email) en
+        los ajustes de GitCRAFT: crear, editar y borrar. No guardan
+        credenciales.
+        *Verificable:* tests de ajustes, también con un archivo antiguo.
+      - [ ] **17.2 Aplicar a un repositorio:** escribe solo en la
+        configuración local de ese repositorio, tras enseñar lo que cambia.
+        Se puede volver a la global.
+        *Verificable:* integración: la global no cambia.
+      - [ ] **17.3 Ver cuál se usa** junto a la caja de commit, y un aviso si
+        la identidad del repositorio no es la de ningún perfil.
+        *Verificable:* tests de interfaz, con varias pestañas.
+      - [ ] **17.4 Prueba del usuario.**
+      *Decisiones pendientes:* si un perfil se puede proponer según el remoto
+      (propuesta: no en esta tarea).
+- [ ] **18. Tema claro y oscuro.**
+      *Ya existe:* solo el oscuro; los colores salen de `tokens.css`, con un
+      test de contraste, y la ventana tiene `theme: Dark` fijo.
+      - [ ] **18.1 Paleta clara propia** con los mismos tokens (también carriles
+        del grafo y diffs).
+        *Verificable:* el test de contraste pasa en los dos temas con los
+        mismos mínimos, y ningún componente usa un color que no sea un token.
+      - [ ] **18.2 Ajuste** Oscuro / Claro / Como el sistema; cambia al
+        momento, también el grafo, la barra de título y los menús, y sigue al
+        sistema mientras la app está abierta. Sin destello al arrancar.
+        *Verificable:* tests de ajustes y de interfaz; modo de humo en los dos
+        temas en los tres sistemas.
+      - [ ] **18.3 Prueba del usuario** y capturas.
+      *Decisiones pendientes:* valor por defecto (propuesta: Oscuro, para que
+      nada cambie sin pedirlo).
+- [ ] **19. Atajos configurables.**
+      *Ya existe:* Ajustes → Atajos, solo de consulta; `src/app/shortcuts.ts`.
+      - [ ] **19.1 Modelo:** los atajos de fábrica más los cambios del usuario,
+        guardados por acción y no por tecla; conflictos y teclas reservadas
+        del sistema detectados.
+        *Verificable:* tests con teclados distintos y los tres sistemas.
+      - [ ] **19.2 Editarlos:** grabar la combinación, avisar del conflicto con
+        el nombre de la otra acción, quitar, y restaurar uno o todos. Se hace
+        entero con el teclado.
+        *Verificable:* tests de interfaz; las acciones de Deshacer, Salir y
+        Esc no se pueden dejar sin salida.
+      - [ ] **19.3 Menús y ayudas:** el menú del sistema y los textos de los
+        botones enseñan el atajo actual.
+        *Verificable:* tests del menú y de las ayudas.
+      - [ ] **19.4 Prueba del usuario.**
+- [ ] **20. Git LFS.** Necesita `git-lfs` instalado para probarlo: se pide
+      permiso antes, y se comprueba cuáles de los runners del CI lo traen.
+      *Principios:* sin `git-lfs` la app funciona igual y lo explica; nunca
+      instala hooks ni cambia `.gitattributes` sin pedirlo.
+      - [ ] **20.1 Detectar (core):** qué rutas usan LFS
+        (`check-attr -z filter`), si `git-lfs` está, y los punteros.
+        *Verificable:* parser de punteros con fixtures; integración sin
+        `git-lfs`.
+      - [ ] **20.2 Mostrar:** en el diff, tamaño antes y después en vez del
+        texto del puntero; aviso de los contenidos que faltan por descargar.
+        *Verificable:* tests de interfaz.
+      - [ ] **20.3 Descargar lo que falta**, con progreso y cancelación, y
+        errores claros (cuota, autenticación, sin red).
+        *Verificable:* integración con un servidor simulado local.
+      - [ ] **20.4 Prueba del usuario.**
+      *Fuera:* `lfs migrate` (reescribe el historial) y bloqueos de archivos.
+- [ ] **21. Coloreado de sintaxis** en diffs, blame y vista de conflictos.
+      - [ ] **21.1 Propuesta de biblioteca:** al menos tres opciones con
+        licencia, tamaño, mantenimiento, velocidad y compatibilidad con la
+        CSP. No se añade nada sin aprobarla.
+        *Verificable:* medidas en un diff de 10 000 líneas.
+      - [ ] **21.2 Diffs y blame**, sin bloquear la interfaz: primero el texto
+        y después el color, y nada de color por encima de un tamaño.
+        *Verificable:* los colores salen de tokens con contraste comprobado en
+        los dos temas, la selección de líneas no cambia, y una medida de
+        rendimiento antes y después.
+      - [ ] **21.3 Vista de conflictos,** y valorar un editor de código para
+        editar bloques (hoy, un área de texto simple; 9.5).
+      - [ ] **21.4 Prueba del usuario.**
+- [ ] **22. Más idiomas:** alemán, francés, portugués y árabe.
+      - [ ] **22.1 De derecha a izquierda:** propiedades lógicas en el CSS y
+        dirección por idioma; el código, las rutas, los hashes y el grafo
+        siguen de izquierda a derecha.
+        *Verificable:* ningún `left` o `right` físico sin justificar; modo de
+        humo en RTL.
+      - [ ] **22.2 Un paso por idioma,** con sus plurales (seis formas en
+        árabe).
+        *Verificable:* el test de claves, ampliado a todos los idiomas y a las
+        formas de plural.
+      - [ ] **22.3 Revisión de cada idioma por alguien que lo hable.** Sin
+        ella se marca como traducción sin revisar.
+- [ ] **23. README completo en árabe, alemán, francés y portugués**
       (`README.ar.md`, `README.de.md`, `README.fr.md`, `README.pt.md`), con el
-      árabe envuelto en `<div dir="rtl">`. La barra de idiomas pasa a enlazarlos.
+      árabe envuelto en `<div dir="rtl">`. La barra de idiomas pasa a
+      enlazarlos.
+      *Verificable:* los enlaces funcionan, y cada README tiene las mismas
+      secciones que el inglés.
+- [ ] **24. Ocultar la barra de menús en Windows y Linux:** una opción en
+      Ajustes; los atajos siguen funcionando y Alt la enseña.
+      *Verificable:* tests de ajustes; en macOS la opción no aparece; prueba
+      del usuario en las máquinas virtuales.
+- [ ] **25. Inicio de sesión de GitHub propio** (OAuth *device flow*), como
+      alternativa a `gh`.
+      - [ ] **25.1 Decidir antes si se hace.** Choca con dos reglas: «no se
+        guardan credenciales» (CLAUDE.md) y el alcance de VISION.md. El
+        usuario decide si se cambian; si no, la tarea se descarta.
+        Necesita además que el usuario registre una OAuth App y dependencias
+        nuevas (almacén de credenciales y cliente HTTP).
+        *Verificable:* decisión escrita aquí.
+      - [ ] **25.2 Diseño de seguridad:** permisos mínimos, token solo en el
+        almacén del sistema (Llavero, Administrador de credenciales, Secret
+        Service), nunca en logs, ajustes ni Operaciones; cerrar sesión lo
+        borra. Sin almacén disponible no se guarda en ningún otro sitio.
+        *Verificable:* documento aprobado por el usuario antes de programar.
+      - [ ] **25.3 Implementación y prueba del usuario.** Ningún test ni
+        prueba automática inicia sesión de verdad.
 
 ## Fase final — Publicación
 
