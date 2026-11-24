@@ -157,6 +157,7 @@ pub fn rebase_todo_helper() -> Option<i32> {
 }
 
 pub fn run() {
+    smoke::start_deadline();
     let builder = specta_builder();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -177,7 +178,6 @@ pub fn run() {
             let git = Git::discover().ok().map(|git| {
                 git.with_log(Arc::clone(&history) as Arc<dyn gitcraft_core::CommandLog>)
             });
-            smoke.start_deadline();
             app.manage(smoke);
             app.manage(Arc::clone(&history));
             app.manage(AppState::new(

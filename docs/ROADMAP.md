@@ -1307,7 +1307,7 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 | Test | Archivo | Tarea | Qué falla en Windows |
 | --- | --- | --- | --- |
 
-### Modo de humo: pendiente
+### Modo de humo
 
 - [x] **P.12 La comprobación de los títulos fijos de Ajustes falla a veces en
       Windows.** Probablemente intermitente: el diálogo se desplazó 10 px
@@ -1336,12 +1336,40 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
       *Resuelta:* CI en verde en macOS, Ubuntu y Windows con el arreglo en los
       runs 45212081471 (`2eb0d00`), 45216357806 (`c8b6c4b`) y 45247134848
       (tag `v0.4.0`, `c8b6c4b`).
-- [ ] **P.13 El límite de 120 s del modo de humo no cortó un cuelgue.** En
-      macOS, con la pantalla en reposo, una prueba `--smoke` siguió casi 6
-      minutos sin salida hasta pararla a mano: no la cortó
-      `Smoke::start_deadline` (120 s, en un hilo de Rust) ni el límite de
-      90 s con el que se había lanzado. Hay que averiguar por qué y
-      arreglarlo, para que un cuelgue en el CI no deje el job parado.
+- [x] **P.13 Un cuelgue del modo de humo no puede dejar parado el CI.** Se
+      abrió porque una prueba `--smoke` en macOS, el 21 de noviembre de 2026,
+      parecía haber seguido casi 6 minutos sin que la cortaran ni su límite
+      de 120 s ni el de 90 s con el que se lanzó.
+      *Esa conclusión era equivocada:* según el registro de energía, el Mac
+      estuvo en reposo casi todo ese tiempo y solo unos 81 s despierto, así
+      que ningún límite había vencido. En macOS, el reloj del límite no
+      cuenta el tiempo en reposo (es lo que encaja con las horas del
+      registro; no se ha reproducido). En el CI no importa y no hace falta
+      cambiarlo. Que no terminara en los 57 s que estuvo despierto antes de
+      dormirse se debe probablemente a que esperaba un fotograma que macOS no
+      da a una ventana oculta (no está probado); desde `415de27` esa espera
+      tiene una alternativa de 50 ms.
+      *El fallo real, encontrado al investigarlo:* Tauri crea la ventana y su
+      motor web antes de ejecutar el `setup` de la app, donde se armaba el
+      límite. Un cuelgue ahí no tenía límite, y el job quedaba parado hasta
+      sus 45 minutos.
+      *Arreglo:* `smoke::start_deadline` es lo primero de `run()`; en el CI,
+      la compilación y la prueba son pasos distintos, y la prueba tiene
+      `timeout-minutes: 5`.
+      *Por qué 5 minutos:* en 11 runs del CI, la prueba sola tarda de 3,4 a
+      10,5 s en macOS, de 3,0 a 9,3 s en Windows y de 32,6 a 37,7 s en Ubuntu
+      (en el run que se ha mirado, unos 30 s pasan antes de que la ventana
+      empiece a dibujarse; sin investigar).
+      La app se corta sola a los 150 s como mucho (120 para informar y 30
+      para cerrarse), y el paso, al doble.
+      *Comprobado en la app real en macOS* con cambios temporales en local,
+      ya quitados (no hay ningún mecanismo de cuelgue en el código). Antes del
+      arreglo, con el límite acortado a 10 s, un cuelgue previo a la ventana
+      seguía a los 40 s. Con el arreglo sale con 2: ese mismo, a los 121 s
+      con el límite real; y a los 11 s, con el de 10, el hilo principal
+      parado y la interfaz que nunca informa con la ventana ya abierta. Sin
+      cuelgue, sale con 0 en 2 s. El corte del paso por `timeout-minutes` no
+      se ha provocado en el CI.
 
 ## Fase 2
 

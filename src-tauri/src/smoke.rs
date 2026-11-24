@@ -18,11 +18,30 @@ use std::time::Duration;
 
 use tauri::{AppHandle, State};
 
-/// How long the interface has to load and report.
+/// How long the app has to open its window, load the interface and report.
+/// On macOS the time the computer sleeps does not count.
 const LIMIT: Duration = Duration::from_secs(120);
 
 /// How long the app has to close after the interface asks it to quit.
 const QUIT_LIMIT: Duration = Duration::from_secs(30);
+
+/// Whether this run was asked to be a smoke run.
+fn requested() -> bool {
+    std::env::args().any(|arg| arg == "--smoke")
+}
+
+/// Ends a smoke run that never reports. Called before anything else: Tauri
+/// creates the window and its web engine before the app's `setup`, and a
+/// hang there must end too.
+pub fn start_deadline() {
+    if requested() {
+        std::thread::spawn(|| {
+            std::thread::sleep(LIMIT);
+            eprintln!("smoke: the interface did not report within {LIMIT:?}");
+            std::process::exit(2);
+        });
+    }
+}
 
 /// Whether this run is a smoke run, and its own configuration folder.
 pub struct Smoke {
@@ -32,7 +51,7 @@ pub struct Smoke {
 
 impl Smoke {
     pub fn from_args() -> std::io::Result<Self> {
-        Self::new(std::env::args().any(|arg| arg == "--smoke"))
+        Self::new(requested())
     }
 
     /// With `enabled`, creates the run's own empty configuration folder.
@@ -62,17 +81,6 @@ impl Smoke {
         }
         if let Some(dir) = &self.config {
             let _ = std::fs::remove_dir_all(dir);
-        }
-    }
-
-    /// Ends a smoke run that never reports.
-    pub fn start_deadline(&self) {
-        if self.enabled {
-            std::thread::spawn(|| {
-                std::thread::sleep(LIMIT);
-                eprintln!("smoke: the interface did not report within {LIMIT:?}");
-                std::process::exit(2);
-            });
         }
     }
 }

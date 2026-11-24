@@ -83,11 +83,19 @@ jobs:
       # interface in the system's web engine (WKWebView, WebView2,
       # WebKitGTK), checks what it needs from it and exits: 0 if all is
       # there. See src-tauri/src/smoke.rs. Linux has no display: Xvfb.
-      - name: Smoke run of the app
+      - name: Build the app for the smoke run
+        id: smoke_build
         if: success() || failure()
         shell: bash
+        run: npx tauri build --debug --no-bundle
+
+      # The app ends itself within 150 s at most (120 to report, 30 to quit);
+      # this is for one that cannot. It usually takes 3 to 40 s.
+      - name: Smoke run of the app
+        if: (success() || failure()) && steps.smoke_build.outcome == 'success'
+        timeout-minutes: 5
+        shell: bash
         run: |
-          npx tauri build --debug --no-bundle
           app=target/debug/gitcraft
           if [ "$RUNNER_OS" = "Linux" ]; then
             xvfb-run -a "$app" --smoke
