@@ -3569,55 +3569,98 @@ una instalación se propone y se espera la aprobación (norma 8).
 
 ## Fase final — Publicación
 
-- [ ] Instaladores de Windows y Linux. **No se publica ningún instalador para
-      Windows mientras quede algún test de la lista «Tests ignorados en
-      Windows» de la Fase P.**
-  - [ ] **Probar `npm run dist` completo en Windows y en Linux**, incluida la
-        comprobación de datos personales del final. Hasta ahora solo se ha
-        ejecutado entero en macOS: en Windows y Linux el CI pasa los tests de
+- [ ] **I. Instaladores de Windows y Linux.** Van antes de la Fase 3. **No se
+      publica ningún instalador para Windows mientras quede algún test de la
+      lista «Tests ignorados en Windows» de la Fase P** (hoy, ninguno). Nada de
+      firma: ni se configura ni se simula.
+      *Formatos propuestos:*
+
+      | Sistema | Formato | Arquitecturas | Por qué |
+      | --- | --- | --- | --- |
+      | Windows | NSIS, `-setup.exe` | x64 y ARM64 | Por usuario, sin permisos de administrador; un solo instalador en español e inglés; WebView2 se descarga solo si falta (Windows 11 ya lo trae) |
+      | Linux | `.deb` | x64 y ARM64 | Declara sus dependencias (WebKitGTK 4.1, GTK 3 y Git) y se desinstala con apt |
+
+      *Se dejan para después:* **`.msi`** (solo aporta instalación por
+      directiva en empresas, es otra vía de instalación que puede quedar
+      duplicada con la de NSIS, y la documentación de Tauri no dice que
+      admita ARM64) y **AppImage** (más de 70 MB; además cambia variables de
+      entorno como `LD_LIBRARY_PATH`, que heredarían `git`, `gh` y el
+      navegador que abre la app: primero hay que limpiarlas y probarlo).
+      *Base de Linux:* Ubuntu 22.04, la más antigua con WebKitGTK 4.1 y la que
+      recomienda Tauri: lo compilado ahí sirve en 22.04 y posteriores y en
+      Debian 12. Si el runner desaparece, 24.04.
+      - [ ] **I.1 Configuración.** `bundle` por sistema
+        (`tauri.windows.conf.json`, `tauri.linux.conf.json`; la de macOS no
+        cambia): NSIS `currentUser`, español e inglés, editor «GitCRAFT»,
+        licencia MIT; `.deb` con `git` en sus dependencias, sección, y un
+        `Maintainer` sin datos personales.
+        *Verificable:* test que lee la configuración (formatos, sin nombre ni
+        correo); el `.dmg` sale con la misma configuración que antes.
+      - [ ] **I.2 `npm run dist` en Windows y en Linux**, incluida la
+        comprobación de datos personales. Hasta ahora solo se ha ejecutado
+        entero en macOS: en Windows y Linux el CI pasa los tests de
         `scripts/personal-data.mjs`, pero no ejecuta `npm run dist`, que allí
-        genera el ejecutable sin instalador (`--no-bundle`). Al añadir los
-        instaladores, la comprobación tiene que revisarlos también.
+        genera el ejecutable sin instalador (`--no-bundle`).
+        - Genera el instalador y lo comprueba por dentro, porque va
+          comprimido: el `.deb` se extrae con `dpkg-deb` y se miran también
+          sus metadatos; el de NSIS se instala en silencio y se mira la
+          carpeta instalada.
+        - En Windows, atención a la ruta del `.pdb` que el enlazador puede
+          escribir en el `.exe`: no la cambia `--remap-path-prefix`.
+        - En el CI el usuario es «runner» o parecido: no se busca suelto, pero
+          su carpeta sí.
+        *Verificable:* la comprobación falla con una compilación sin
+        `--remap-path-prefix` y pasa con ella, en los dos sistemas; tests del
+        script para cada formato.
+      - [ ] **I.3 CI: `installers.yml`,** que solo se lanza a mano
+        (`workflow_dispatch`), con permisos de solo lectura y sin secretos. No
+        publica nada. Matriz: `windows-latest` (x64), `windows-11-arm`,
+        `ubuntu-22.04` (x64) y `ubuntu-22.04-arm`. Cada trabajo, con límite de
+        tiempo por paso:
+        1. `npm ci` y `npm run dist`;
+        2. instala: `-setup.exe /S`, o `apt install ./….deb`;
+        3. arranca la app **instalada** con `--smoke` (en Windows, esperando a
+           que termine: es un programa sin consola; en Linux, con `xvfb`) y
+           exige código 0;
+        4. comprueba versión, editor, entrada de desinstalación y que el
+           ejecutable lleva su manifest;
+        5. desinstala y comprueba que no queda el programa;
+        6. escribe el SHA-256 y sube el instalador como artefacto, que se
+           borra a los 7 días.
+        Usa `actions/upload-artifact`, que es una acción nueva en el proyecto:
+        se aprueba antes (norma 8).
+        *Verificable:* los cuatro trabajos en verde desde un commit de `main`
+        con el CI normal en verde.
+      - [ ] **I.4 Documentación:** README, guías de instalación por sistema
+        (español e inglés en el mismo commit: requisitos, SmartScreen sin
+        desactivarlo, `apt install`, comprobar el SHA-256, desinstalar) y
+        ARCHITECTURE.md (Empaquetado y sección 8).
+        *Verificable:* los enlaces funcionan y solo dicen lo comprobado.
+      - [ ] **I.5 Prueba del usuario en máquinas virtuales,** con
+        `docs/PRUEBA_INSTALADORES.md`. Windows 11 ARM64 (instaladores ARM64 y
+        x64, este emulado) y Ubuntu 26.04 ARM64.
+        *Verificable:* el usuario la confirma, sistema por sistema.
+      - [ ] **I.6 Publicarlos:** el usuario sube cada instalador a VirusTotal;
+        SHA-256 y resultado en las notas; borrador de Release que publica el
+        usuario.
+      *Qué queda sin probar a mano:* el `.deb` x64 (solo el CI: el Mac es ARM)
+      y Windows en un equipo x64 real. Se dirá así en la documentación.
+      *Decisiones pendientes:*
+      1. ¿Formatos: NSIS y `.deb` ahora; `.msi` y AppImage después?
+      2. ¿Se publica el `.deb` x64, probado solo en el CI? (Propuesta: sí,
+         diciéndolo.)
+      3. ¿Versión? (Propuesta: 0.4.1, porque el código del tag `v0.4.0` no
+         incluye los instaladores; con los tres sistemas en la misma Release.)
+      4. ¿Se aprueba `actions/upload-artifact`?
 - [ ] **Pruebas a mano en Windows y Linux (requisito de los instaladores).**
       Antes de publicar los instaladores de Windows y Linux, el usuario prueba
       la app en máquinas virtuales en su Mac. Lo que no se ha probado a mano
-      en un sistema no se da por verificado en él.
-      *Máquinas virtuales con UTM* (gratuito y de código abierto, funciona en
-      Apple Silicon; lo instala el usuario si lo decide):
-      - **Linux (Ubuntu 24.04 para ARM):** máquina virtual con la ISO de
-        Ubuntu Desktop ARM64 y unos 4 GB de RAM. Dentro: Git, Node 22, Rust
-        (rustup) y las librerías de Tauri que usa el CI
-        (`sudo apt install git libwebkit2gtk-4.1-dev libgtk-3-dev
-        libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev
-        libjavascriptcoregtk-4.1-dev`). Se clona GitCRAFT y se ejecuta
-        `npm ci` y `npm run tauri dev`.
-      - **Windows 11 para ARM:** máquina virtual con la ISO oficial de
-        Windows 11 ARM64 de Microsoft (WebView2 ya viene incluido). Dentro:
-        Git for Windows, Node 22, Rust (rustup) y Visual Studio Build Tools
-        con «Desarrollo para el escritorio con C++». Se clona GitCRAFT y se
-        ejecuta `npm ci` y `npm run tauri dev`.
-      *Qué probar en cada sistema* (con un repo de prueba desechable):
-      1. **Menú y atajos:** la barra Archivo, Edición y Ayuda; Ctrl+T, Ctrl+W,
-         Ctrl+,, Ctrl+1…9, Ctrl+Tab, Ctrl+Intro para confirmar y Ctrl+Supr
-         para descartar, con el foco en la lista de cambios.
-      2. **Papelera:** descartar un archivo sin seguimiento lo lleva a la
-         Papelera de reciclaje (Windows) o a la Papelera (Linux); «Deshacer»
-         lo devuelve igual y lo quita de la Papelera.
-      3. **Cancelar:** cancelar un clon (no queda carpeta) y un fetch. En
-         Windows, además, que no aparece ninguna ventana de consola al
-         ejecutar git.
-      4. **Rutas:** el mismo repo abierto desde la raíz, desde una subcarpeta
-         y, en Windows, con la ruta escrita con otras mayúsculas sale una sola
-         vez en recientes y en pestañas.
-      5. **GitHub:** Ajustes → GitHub encuentra gh o muestra cómo instalarlo
-         (winget o apt), e iniciar sesión abre el navegador.
-      6. **Textos:** Papelera de reciclaje y `%USERPROFILE%\.gitconfig` en
-         Windows; dónde guarda gh la sesión en cada sistema.
-      7. **Lo que solo se ve a mano:** fuentes, barras de desplazamiento,
-         zoom, nitidez del grafo con el escalado de pantalla al 125 % y 150 %
-         en Windows, y copiar al portapapeles.
-      8. **CRLF en Windows:** un repo con `core.autocrlf=true`, con stage
-         parcial por líneas y descarte.
+      en un sistema no se da por verificado en él. La guía, con lo que hace
+      falta en el Mac (UTM, imágenes y espacio), es
+      `docs/PRUEBA_INSTALADORES.md`: menú y atajos, Papelera, cancelar, rutas,
+      GitHub, textos, lo que solo se ve a mano y CRLF en Windows. Se hace con
+      los instaladores del CI, así que en las máquinas no hace falta Rust, Node
+      ni Visual Studio.
 - [ ] **Sin firma de Apple (decidido).** GitCRAFT no se firma ni se notariza con
       Apple: es software libre y gratuito, y la firma exige una cuota anual de
       pago. En su lugar:
