@@ -3644,7 +3644,7 @@ una instalación se propone y se espera la aprobación (norma 8).
         solo cambia de versión, y `npm run dist` en macOS hace y comprueba el
         `.dmg` de la 0.4.1 como antes. El paquete de Debian se llama
         `git-craft`: Tauri lo saca del nombre del producto y no deja cambiarlo.
-      - [ ] **I.2 `npm run dist` en Windows y en Linux**, incluida la
+      - [x] **I.2 `npm run dist` en Windows y en Linux**, incluida la
         comprobación de datos personales.
         - Genera el instalador y lo comprueba por dentro, porque va
           comprimido: el `.deb` se extrae con `dpkg-deb` y se miran también
@@ -3658,7 +3658,13 @@ una instalación se propone y se espera la aprobación (norma 8).
         *Verificable:* la comprobación encuentra la carpeta personal en una
         compilación sin `--remap-path-prefix` y pasa con ella, en los dos
         sistemas; tests del script.
-      - [ ] **I.3 CI: `installers.yml`,** que solo se lanza a mano
+        *Hecho* (run 45498820518, `e79451c`): en la compilación de desarrollo,
+        sin esos flags, encuentra la carpeta personal 643 veces en Windows (x64
+        y ARM64), 2223 en Linux x64 y 3003 en Linux ARM64. En lo que hace `npm
+        run dist`, ninguna: 13 archivos mirados en Windows y 15 en Linux, y los
+        2 de la carpeta instalada en Windows. El test del `.deb` por dentro
+        solo se ejecuta en Linux; el de NSIS solo lo prueba el workflow.
+      - [x] **I.3 CI: `installers.yml`,** que solo se lanza a mano
         (`workflow_dispatch`), con permisos de solo lectura y sin secretos. No
         publica nada. Matriz: `windows-latest` (x64), `windows-11-arm`,
         `ubuntu-22.04` (x64) y `ubuntu-22.04-arm`. Cada trabajo, con límite de
@@ -3676,6 +3682,14 @@ una instalación se propone y se espera la aprobación (norma 8).
         El `.deb` se prueba además en un contenedor limpio de Ubuntu 26.04.
         *Verificable:* los cuatro trabajos en verde desde un commit de `main`
         con el CI normal en verde.
+        *Hecho:* run 45498820518 (`e79451c`), los cuatro en verde: instala,
+        arranca con 0, reinstala y desinstala en Windows Server 2025 x64,
+        Windows 11 ARM64, y Ubuntu 22.04 y 26.04 (x64 y ARM64). El primer
+        intento (45494477744) falló en Linux por la propia comprobación, que
+        tomó la carpeta `/usr` por un resto del paquete. La desinstalación en
+        silencio de Windows no marca «Eliminar los datos de aplicación»: deja
+        `%LOCALAPPDATA%\dev.gitcraft.app` y `HKCU\Software\GitCRAFT`; la casilla
+        solo se prueba a mano.
       - [ ] **I.4 Documentación:** README, guías de instalación por sistema
         (español e inglés en el mismo commit: requisitos, `apt install`,
         comprobar el SHA-256, desinstalar) y ARCHITECTURE.md (Empaquetado y
