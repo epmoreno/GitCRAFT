@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "targets": ["nsis"],
+    "publisher": "GitCRAFT",
+    "homepage": "https://github.com/epmoreno/GitCRAFT",
+    "licenseFile": "../LICENSE",
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English", "Spanish"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

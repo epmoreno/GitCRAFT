@@ -1,21 +1,30 @@
 // `npm run dist`: builds the app to publish, without the paths of the folder
 // it is built in, and checks that nothing in it says whose computer made it
-// (personal-data.mjs). On macOS, GitCRAFT.app and the .dmg; on Windows and
-// Linux, which have no installer yet, the executable.
+// (personal-data.mjs). On macOS, GitCRAFT.app and the .dmg; on Windows, the
+// NSIS installer; on Linux, the .deb. It looks inside the installers: on
+// Windows that needs 7-Zip, and without it the check fails.
 //
-//   node scripts/dist.mjs --check-only   checks what is already built
+//   node scripts/dist.mjs --check-only          checks what is already built
+//   node scripts/dist.mjs --check-folder <dir>  checks the files in a folder
+//   node scripts/dist.mjs --must-find <file>    fails if the check sees
+//       nothing in a file known to have personal data: the check works here
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
 } from "node:fs";
 import { homedir, tmpdir, userInfo } from "node:os";
 import path from "node:path";
+import {
+  INSTALLERS,
+  installersIn,
+  unpackDeb,
+  unpackNsis,
+} from "./installers.mjs";
 import {
   describe,
   encodedRustflags,
@@ -27,6 +36,7 @@ import {
 
 const project = realpathSync(path.join(import.meta.dirname, ".."));
 const mac = process.platform === "darwin";
+const { bundles } = INSTALLERS[process.platform];
 const homes = [...new Set([homedir(), realpathSync(homedir())])];
 const names = [...new Set([userInfo().username, path.basename(homedir())])];
 
@@ -56,14 +66,13 @@ function build() {
     cargoHome: process.env.CARGO_HOME ?? path.join(homedir(), ".cargo"),
   });
   const tauri = path.join(project, "node_modules/@tauri-apps/cli/tauri.js");
-  const bundles = mac ? ["--bundles", "app,dmg"] : ["--no-bundle"];
   // CI: the .dmg is made without asking Finder to arrange its window.
   const env = {
     ...process.env,
     CI: "true",
     CARGO_ENCODED_RUSTFLAGS: encodedRustflags(process.env, flags),
   };
-  const result = run(process.execPath, [tauri, "build", ...bundles], {
+  const result = run(process.execPath, [tauri, "build", "--bundles", bundles], {
     stdio: "inherit",
     env,
   });
@@ -98,6 +107,48 @@ function scanDmg(dmg, label, patterns) {
   }
 }
 
+/** The .deb and the NSIS installer are compressed too: looks at them as they
+ * are, and at what they carry. */
+function scanUnpacked(installer, label, patterns, unpack) {
+  const temp = mkdtempSync(path.join(tmpdir(), "gitcraft-dist-"));
+  try {
+    unpack(installer, temp);
+    return [
+      scan(installer, label, patterns),
+      scan(temp, `${label} (inside)`, patterns),
+    ];
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+}
+
+const scanInstaller = {
+  darwin: scanDmg,
+  win32: (...args) => scanUnpacked(...args, unpackNsis),
+  linux: (...args) => scanUnpacked(...args, unpackDeb),
+}[process.platform];
+
+function ownPatterns() {
+  if (names.every(isGenericName)) {
+    console.log("dist: the user name is too generic to look for by itself");
+  }
+  return personalPatterns({ homes, names });
+}
+
+/** Ends with an error if anything was found. */
+function report(results) {
+  const found = results.flatMap((r) => r.found);
+  const checked = results.reduce((sum, r) => sum + r.checked, 0);
+  if (checked === 0) throw new Error("nothing to check");
+  if (found.length > 0) {
+    console.error("dist: personal data in what would be published:");
+    for (const one of found) console.error(`  ${describe(one)}`);
+    console.error("dist: do not publish this build");
+    process.exit(1);
+  }
+  console.log(`dist: no personal data in the ${checked} files checked`);
+}
+
 function check() {
   const metadata = JSON.parse(
     output("cargo", ["metadata", "--no-deps", "--format-version", "1"]),
@@ -106,10 +157,7 @@ function check() {
   const { version } = JSON.parse(
     readFileSync(path.join(project, "package.json"), "utf8"),
   );
-  const patterns = personalPatterns({ homes, names });
-  if (names.every(isGenericName)) {
-    console.log("dist: the user name is too generic to look for by itself");
-  }
+  const patterns = ownPatterns();
 
   // The interface goes compressed inside the executable: it is checked here.
   const places = [
@@ -134,27 +182,46 @@ function check() {
       throw new Error(`${label} is missing: nothing to check`);
     results.push(scan(place, label, patterns));
   }
-  if (mac) {
-    const folder = path.join(release, "bundle/dmg");
-    const dmgs = readdirSync(folder).filter(
-      (f) => f.startsWith(`GitCRAFT_${version}_`) && f.endsWith(".dmg"),
+  const installers = installersIn(
+    path.join(release, "bundle"),
+    version,
+    process.platform,
+  );
+  if (installers.length === 0) {
+    throw new Error(`there is no installer of ${version}`);
+  }
+  for (const installer of installers) {
+    results.push(
+      ...scanInstaller(installer, path.basename(installer), patterns),
     );
-    if (dmgs.length === 0) throw new Error(`there is no .dmg of ${version}`);
-    for (const dmg of dmgs) {
-      results.push(...scanDmg(path.join(folder, dmg), dmg, patterns));
-    }
   }
-
-  const found = results.flatMap((r) => r.found);
-  const checked = results.reduce((sum, r) => sum + r.checked, 0);
-  if (found.length > 0) {
-    console.error("dist: personal data in what would be published:");
-    for (const one of found) console.error(`  ${describe(one)}`);
-    console.error("dist: do not publish this build");
-    process.exit(1);
-  }
-  console.log(`dist: no personal data in the ${checked} files checked`);
+  report(results);
 }
 
-if (!process.argv.includes("--check-only")) build();
-check();
+function mustFind(file) {
+  const { found } = scan(file, path.basename(file), ownPatterns());
+  if (found.length === 0) {
+    console.error("dist: the check saw nothing where there is personal data");
+    process.exit(1);
+  }
+  for (const one of found) console.log(`dist: as expected, ${describe(one)}`);
+}
+
+const [mode, place] = process.argv.slice(2);
+switch (mode) {
+  case undefined:
+    build();
+    check();
+    break;
+  case "--check-only":
+    check();
+    break;
+  case "--check-folder":
+    report([scan(path.resolve(place), "the folder", ownPatterns())]);
+    break;
+  case "--must-find":
+    mustFind(path.resolve(place));
+    break;
+  default:
+    throw new Error(`unknown option ${mode}`);
+}

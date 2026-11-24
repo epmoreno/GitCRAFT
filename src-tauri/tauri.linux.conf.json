@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "targets": ["deb"],
+    "publisher": "GitCRAFT",
+    "homepage": "https://github.com/epmoreno/GitCRAFT",
+    "linux": {
+      "deb": {
+        "section": "vcs",
+        "depends": ["git", "xdg-utils"],
+        "files": { "/usr/share/doc/git-craft/copyright": "../LICENSE" }
+      }
+    }
+  }
+}
