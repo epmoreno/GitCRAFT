@@ -1141,6 +1141,18 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 /**  `gh` failed for another reason (its output says why). */
 "ghFailed" | "cancelled" | "timedOut" | "unknown";
 
+/**
+ *  Whose words an error's details are, so the UI does not call "git's output"
+ *  what git never said.
+ */
+export type ErrorSource = 
+/**  The output of a git command. */
+"git" | 
+/**  The output of a gh command. */
+"gh" | 
+/**  GitCRAFT's own technical details. */
+"app";
+
 /**  How long git keeps reflog entries before `git gc` expires them. */
 export type Expiry = 
 /**  About this many days. */
@@ -1771,30 +1783,35 @@ export type InteractiveResult_Serialize = {
 
 /**
  *  Error returned by every command. The UI shows a translated message for
- *  `kind` and offers `details` (git's original output) on demand.
+ *  `kind` and offers `details` (the original output of git or gh, or GitCRAFT's
+ *  technical details: `source` says which) on demand.
  */
 export type IpcError = IpcError_Serialize | IpcError_Deserialize;
 
 /**
  *  Error returned by every command. The UI shows a translated message for
- *  `kind` and offers `details` (git's original output) on demand.
+ *  `kind` and offers `details` (the original output of git or gh, or GitCRAFT's
+ *  technical details: `source` says which) on demand.
  */
 export type IpcError_Deserialize = {
 	kind: ErrorKind,
 	/**  Technical summary (English), for logs. */
 	message: string,
 	details?: string | null,
+	source: ErrorSource,
 };
 
 /**
  *  Error returned by every command. The UI shows a translated message for
- *  `kind` and offers `details` (git's original output) on demand.
+ *  `kind` and offers `details` (the original output of git or gh, or GitCRAFT's
+ *  technical details: `source` says which) on demand.
  */
 export type IpcError_Serialize = {
 	kind: ErrorKind,
 	/**  Technical summary (English), for logs. */
 	message: string,
 	details: string | null,
+	source: ErrorSource,
 };
 
 export type Language = "es" | "en";

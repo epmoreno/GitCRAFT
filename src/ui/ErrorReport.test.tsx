@@ -95,12 +95,36 @@ describe("ErrorReport", () => {
           kind: "unknown",
           message: "unexpected git output: bad line",
           details: null,
+          source: "app",
         }}
       />,
     );
     const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent(/no reconoce/);
+    expect(alert).toHaveTextContent(/GitCRAFT no reconoce/);
+    // Git said nothing: neither the text nor the button blame it.
+    expect(alert).not.toHaveTextContent(/Git devolvió|salida original/);
+    expect(
+      within(alert).getByText("Ver los detalles técnicos"),
+    ).toBeInTheDocument();
     expect(within(alert).getByText(/bad line/)).toHaveClass("selectable");
+  });
+
+  it("says whose output it is: git's, gh's or neither's", () => {
+    const summary = (index: number) =>
+      screen.getAllByRole("alert")[index]?.querySelector("summary");
+    render(
+      <ErrorReport
+        error={commandError("ghFailed", "$ gh auth status", "gh")}
+      />,
+    );
+    expect(summary(0)).toHaveTextContent("Ver la salida original de gh");
+    render(
+      <ErrorReport error={commandError("trashFailed", "no Trash", "app")} />,
+    );
+    expect(summary(1)).toHaveTextContent("Ver los detalles técnicos");
+    render(<ErrorReport error={commandError("unknown", "$ git x", "git")} />);
+    expect(summary(2)).toHaveTextContent("Ver la salida original de Git");
+    expect(screen.getAllByRole("alert")[2]).toHaveTextContent(/Git devolvió/);
   });
 
   it("offers nothing to expand when there is no output", () => {

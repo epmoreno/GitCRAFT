@@ -408,11 +408,11 @@ impl Gh {
         let stderr = child
             .stderr
             .take()
-            .ok_or_else(|| GitError::Parse("no stderr".into()))?;
+            .ok_or_else(|| GitError::GhParse("no stderr".into()))?;
         let mut stdout = child
             .stdout
             .take()
-            .ok_or_else(|| GitError::Parse("no stdout".into()))?;
+            .ok_or_else(|| GitError::GhParse("no stdout".into()))?;
         let mut said = String::new();
         let mut lines = BufReader::new(stderr).lines();
         let read = async {
@@ -538,7 +538,7 @@ impl Gh {
         let response = self.api(&args, Access::Write, &[], cancel).await?;
         match response.status {
             201 => serde_json::from_str(&response.body)
-                .map_err(|e| GitError::Parse(format!("POST user/repos: {e}"))),
+                .map_err(|e| GitError::GhParse(format!("POST user/repos: {e}"))),
             422 if response.rejects_field("name") => Err(GitError::GhRepoExists(name.to_owned())),
             _ => Err(response.into_error("user/repos")),
         }
@@ -579,8 +579,8 @@ fn finish<T>(pending: Option<Pending>, outcome: CommandOutcome, result: &Result<
 }
 
 fn parse_accounts(json: &str) -> Result<Vec<GhAccount>> {
-    let status: StatusJson =
-        serde_json::from_str(json).map_err(|e| GitError::Parse(format!("gh auth status: {e}")))?;
+    let status: StatusJson = serde_json::from_str(json)
+        .map_err(|e| GitError::GhParse(format!("gh auth status: {e}")))?;
     Ok(status
         .hosts
         .get(GITHUB_HOST)
@@ -643,7 +643,7 @@ fn spawn_error(err: std::io::Error) -> GitError {
     if err.kind() == std::io::ErrorKind::NotFound {
         GitError::GhNotFound
     } else {
-        GitError::Spawn(err)
+        GitError::GhSpawn(err)
     }
 }
 

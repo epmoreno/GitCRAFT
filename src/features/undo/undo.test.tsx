@@ -338,7 +338,7 @@ describe("the dialog", () => {
     ).toBeNull();
     ipc.revertPreview.mockResolvedValue({
       status: "error",
-      error: { kind: "cancelled", message: "", details: null },
+      error: { kind: "cancelled", message: "", details: null, source: "app" },
     } as never);
     const user = userEvent.setup();
     await user.click(

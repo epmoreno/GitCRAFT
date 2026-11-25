@@ -316,8 +316,9 @@ export function opened(id: number, path: string): OpenedRepository {
 export function commandError(
   kind: ErrorKind,
   details: string | null = null,
+  source: CommandError["source"] = "git",
 ): CommandError {
-  return { kind, message: `${kind} (test)`, details };
+  return { kind, message: `${kind} (test)`, details, source };
 }
 
 export function defaultGeneralSettings(): GeneralSettings {

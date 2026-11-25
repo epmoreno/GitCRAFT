@@ -21,7 +21,7 @@ pub mod windows_job;
 #[cfg(windows)]
 pub mod windows_trash;
 
-pub use error::{ErrorKind, GitError, Result};
+pub use error::{ErrorKind, ErrorSource, GitError, Result};
 pub use runner::{
     Access, CommandEvent, CommandLog, CommandOutcome, Git, GitCommand, GitOutput, GitVersion,
 };

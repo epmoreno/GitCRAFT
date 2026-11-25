@@ -222,7 +222,7 @@ describe("an entry's menu", () => {
   it("resets the current branch there, with the reset dialog", async () => {
     ipc.resetPreview.mockResolvedValue({
       status: "error",
-      error: { kind: "cancelled", message: "", details: null },
+      error: { kind: "cancelled", message: "", details: null, source: "app" },
     } as never);
     await openFor("refs/heads/main");
     const menu = await menuOf("Perdido");

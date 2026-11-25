@@ -910,12 +910,14 @@ corrupto, se usan los valores por defecto. **Nunca** guarda credenciales.
 
 ### Errores hacia la UI
 
-Los errores llegan como `IpcError { kind, message, details }`:
+Los errores llegan como `IpcError { kind, message, details, source }`:
 
 - `kind` (`ErrorKind`) lo clasifica el core a partir del stderr, que con
   `LC_ALL=C` es estable, y elige el mensaje traducido `errors.<kind>`.
-- `details` contiene el comando y la salida original de git, que la UI muestra
-  bajo demanda.
+- `details` contiene el comando y la salida original de git o de gh, o los
+  detalles técnicos de GitCRAFT; la UI lo muestra bajo demanda.
+- `source` (`ErrorSource`) dice de quién son esos detalles: `git`, `gh` o `app`.
+  Así nunca se llama «salida de Git» a lo que no dijo git.
 
 **Catálogo (`ErrorKind`).** Cada tipo tiene un mensaje en `errors.<kind>` que
 dice qué pasa y qué hacer:
@@ -931,13 +933,14 @@ dice qué pasa y qué hacer:
 | Otros | `cancelled` (no se muestra como error), `unknown` | — |
 
 `unknown` también tiene explicación: dice que GitCRAFT no reconoce el error y
-remite a la salida original, que siempre existe (si git no la dio, se usa el
-mensaje técnico). Los mensajes que nombran una carpeta (`{{path}}`) tienen una
+remite a la salida original de Git o, si git no dijo nada (`unknownApp`), a los
+detalles técnicos. Los mensajes que nombran una carpeta (`{{path}}`) tienen una
 variante `_noPath` para cuando no hay ruta que nombrar.
 
 **Un único componente: `src/ui/ErrorReport.tsx`.** Muestra qué se intentaba
 (`lead`), la explicación del catálogo, notas propias del contexto y, si hay
-salida, un desplegable «Ver la salida original de Git» con el texto
+salida, un desplegable («Ver la salida original de Git», «… de gh» o «Ver los
+detalles técnicos», según `source`) con el texto
 seleccionable y el botón «Copiar la salida». Un test comprueba que todo
 `ErrorKind` tiene mensaje en cada idioma (la lista `ERROR_KINDS` la mantiene
 completa el compilador).

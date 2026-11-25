@@ -132,6 +132,12 @@ pub enum GitError {
     #[error("GitHub could not be reached")]
     GhUnreachable,
 
+    #[error("failed to start gh: {0}")]
+    GhSpawn(#[source] io::Error),
+
+    #[error("unexpected gh output: {0}")]
+    GhParse(String),
+
     /// `gh` ran and failed.
     #[error("`gh {}` failed with exit code {exit_code:?}: {}", args.join(" "), stderr.trim())]
     GhFailed {
@@ -150,6 +156,20 @@ pub enum GhHttp {
     /// `gh api` got no HTTP response at all.
     NoResponse,
     Status(u16),
+}
+
+/// Whose words an error's details are, so the UI does not call "git's output"
+/// what git never said.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "specta", derive(specta::Type))]
+pub enum ErrorSource {
+    /// The output of a git command.
+    Git,
+    /// The output of a gh command.
+    Gh,
+    /// GitCRAFT's own technical details.
+    App,
 }
 
 /// What went wrong, in terms the UI can explain. Each kind has a translated
@@ -264,11 +284,22 @@ impl GitError {
             Self::GhFailed {
                 exit_code, http, ..
             } => classify_gh(*exit_code, *http),
+            Self::GhSpawn(_) | Self::GhParse(_) => ErrorKind::GhFailed,
             Self::Spawn(_) | Self::Io(_) | Self::Parse(_) => ErrorKind::Unknown,
         }
     }
 
-    /// The original git output, for the "show details" part of error reports.
+    /// Whose words [`Self::details`] are.
+    pub fn source_of_details(&self) -> ErrorSource {
+        match self {
+            Self::Failed { .. } => ErrorSource::Git,
+            Self::GhFailed { .. } => ErrorSource::Gh,
+            _ => ErrorSource::App,
+        }
+    }
+
+    /// The original git or gh output, or the technical details, for the "show
+    /// details" part of error reports.
     pub fn details(&self) -> Option<String> {
         match self {
             Self::Failed {
@@ -301,9 +332,12 @@ impl GitError {
                 }
                 Some(redact_credentials(text.trim_end()).into_owned())
             }
-            Self::Spawn(_) | Self::Io(_) | Self::Parse(_) | Self::TimedOut(_) => {
-                Some(redact_credentials(&self.to_string()).into_owned())
-            }
+            Self::Spawn(_)
+            | Self::Io(_)
+            | Self::Parse(_)
+            | Self::TimedOut(_)
+            | Self::GhSpawn(_)
+            | Self::GhParse(_) => Some(redact_credentials(&self.to_string()).into_owned()),
             Self::UndoConflict(_) | Self::UndoUnsupported(_) | Self::TrashFailed { .. } => {
                 Some(self.to_string())
             }
@@ -545,6 +579,30 @@ mod tests {
             GitError::TimedOut(Duration::from_secs(1)).kind(),
             ErrorKind::TimedOut
         );
+    }
+
+    #[test]
+    fn the_details_say_whose_words_they_are() {
+        let gh = GitError::GhFailed {
+            args: vec!["auth".into(), "status".into()],
+            exit_code: Some(1),
+            stderr: "unknown flag: --json".into(),
+            http: GhHttp::NotApi,
+        };
+        assert_eq!(gh.source_of_details(), ErrorSource::Gh);
+        assert_eq!(failed("fatal: x\n").source_of_details(), ErrorSource::Git);
+        let trash = GitError::TrashFailed {
+            path: "a.txt".into(),
+            reason: "no Trash".into(),
+        };
+        assert_eq!(trash.source_of_details(), ErrorSource::App);
+        // Not git's fault, so never "an error of git".
+        let started = GitError::GhSpawn(std::io::ErrorKind::PermissionDenied.into());
+        for err in [started, GitError::GhParse("bad".into())] {
+            assert_eq!(err.kind(), ErrorKind::GhFailed);
+            assert_eq!(err.source_of_details(), ErrorSource::App);
+            assert!(err.details().is_some());
+        }
     }
 
     #[test]

@@ -68,20 +68,26 @@ export function explainError(
   error: CommandError,
   path?: string,
 ): string {
-  const key = osKey(`errors.${error.kind}`, (k) => i18n.exists(k));
+  // An unrecognised error is only git's when git said it.
+  const kind =
+    error.kind === "unknown" && error.source !== "git"
+      ? "unknownApp"
+      : error.kind;
+  const key = osKey(`errors.${kind}`, (k) => i18n.exists(k));
   // (Variants per system: how to install git or gh, the Recycle Bin, the
   // credential helper.)
   return path ? t(key, { path }) : t(key, { context: "noPath" });
 }
 
-/** git's original output, or the technical message when git said nothing
+/** The original output of git or gh, or the technical message when they said nothing
  * (an unrecognised error always has something to show). */
 export function errorOutput(error: CommandError): string | null {
   return error.details ?? (error.kind === "unknown" ? error.message : null);
 }
 
 /** How every error is shown: what failed (`lead`), why and what to do
- * (from the catalog), then git's original output on demand, copyable. */
+ * (from the catalog), then the original output on demand, copyable: of git,
+ * of gh, or GitCRAFT's own technical details. */
 export function ErrorReport({
   error,
   lead,
@@ -113,7 +119,7 @@ export function ErrorReport({
       {children}
       {output && (
         <details className={styles.details}>
-          <summary>{t("errors.showDetails")}</summary>
+          <summary>{t(`errors.showDetails_${error.source}`)}</summary>
           <pre className={`${styles.output} selectable`}>{output}</pre>
           <button
             type="button"

@@ -952,6 +952,23 @@ ningún producto.
       nuevo» recupera @epmoreno y el formulario de publicar.
 - [ ] **Mejora menor (sin fecha).** Si `gh auth login` falla por red, explicar
       que es la red en vez del mensaje genérico.
+- [ ] **Mejora futura, si alguien lo pide: admitir gh desde la 2.40.0.** Hoy se
+      exige la 2.81.0, con un solo camino, el verificado a mano. Lo único que la
+      exige es `gh auth status --json hosts`; `gh auth login --skip-ssh-key`
+      pide la 2.48.0 y `gh auth logout --user`, la 2.40.0. Otra vía para la
+      cuenta: `gh api --include user` (usuario, 401 o sin sesión) y `gh config
+      get git_protocol --host github.com`, sin `--skip-ssh-key` (esa pregunta
+      solo sale en modo interactivo con SSH). Se perderían las cuentas no
+      activas, y falta probar de dónde sale el usuario con la sesión caducada.
+- [ ] **Después de la v0.4.1: «Deshacer» de la barra tras un descarte.** Es el
+      diseño (ARCHITECTURE, 5j): la pila deshace lo que mueve ramas, tags o
+      HEAD, y un descarte no mueve ninguno; se deshace desde su aviso y después
+      desde Stashes y la Papelera. Pero confunde: tras descartar, el botón
+      ofrece deshacer la operación anterior (con vista previa). Para
+      unificarlo, el descarte entraría en la misma pila, con su vista previa y
+      la regla de hoy (exacto o nada). *Por decidir antes:* qué pasa si el
+      archivo cambió después (no debe bloquear lo que hay debajo en la pila) y
+      si «Rehacer» vuelve a descartar.
 
 ## R.P — Abrir el repo
 
@@ -3700,13 +3717,56 @@ una instalación se propone y se espera la aprobación (norma 8).
         de las guías «Todavía no publicado», ajustar el texto de SmartScreen a
         lo que vea el usuario, y el README.
         *Verificable:* los enlaces funcionan y solo dicen lo comprobado.
-      - [ ] **I.5 Prueba del usuario,** con `docs/PRUEBA_INSTALADORES.md`, en
+      - [x] **I.5 Prueba del usuario,** con `docs/PRUEBA_INSTALADORES.md`, en
         Windows 11 x64 y en Ubuntu 26.04 x64, siempre con repositorios de
         prueba.
         *Verificable:* el usuario la confirma, sistema por sistema.
+        *Verificado manualmente por el usuario* con los instaladores del run
+        45498820518 (`e79451c`):
+        - **Windows 11 x64 nativo, `-setup.exe` x64:** instalación con
+          SmartScreen («Más información → Ejecutar de todas formas») y sin
+          pedir administrador; inicio de sesión en GitHub desde Ajustes
+          (código y navegador); repo de prueba con grafo, ramas, commit,
+          rebase interactivo y merge; inicializar un repo, crear dos ramas y
+          cambiar de rama (los archivos de la carpeta cambian bien);
+          descartar: los cambios de archivos con seguimiento van al stash y
+          un archivo nuevo, a la Papelera de reciclaje con su ubicación
+          original; atajos con Ctrl, barra de menús y cerrar con la X;
+          desinstalación desde Configuración → Aplicaciones con «Eliminar los
+          datos de aplicación»: desaparece del menú Inicio y no queda la
+          carpeta de datos.
+        - **Ubuntu 26.04 x64 en máquina virtual (VMware), `.deb` x64:**
+          instalación con `sudo apt install ./…deb` y arranque desde Mostrar
+          aplicaciones; repo de prueba con grafo, ramas, descarte al stash,
+          archivo nuevo a la Papelera, commit, rebase interactivo, merge y
+          cerrar con la X; desinstalación con apt: desaparece de Mostrar
+          aplicaciones y no quedan carpetas de datos; inicio de sesión en
+          GitHub, después de instalar gh desde el repositorio oficial de
+          GitHub CLI.
+        - *Lo que encontró,* en I.7. Hay que repetir con los instaladores
+          nuevos lo que cambie ahí.
       - [ ] **I.6 Publicarlos:** el usuario sube cada instalador a VirusTotal;
         SHA-256 y resultado en las notas; borrador de Release que publica el
         usuario.
+      - [ ] **I.7 Lo que encontró la prueba,** antes de la v0.4.1 (va antes de
+        I.6):
+        - [x] **«Ver la salida original de Git» en errores de gh.** El texto
+          dice de quién es la salida (Git, gh, o «Ver los detalles técnicos» si
+          no es de ninguno), y un error no reconocido solo se atribuye a Git si
+          lo dijo Git (`ErrorSource`).
+          *Tests:* el origen de cada error en el core y los tres textos.
+        - [ ] **gh antiguo:** con un gh anterior a la 2.81.0 (la primera con
+          `gh auth status --json`), decir la versión que hay, la que hace falta
+          y cómo instalar la oficial en cada sistema. Ubuntu trae por apt una
+          demasiado antigua, así que no se recomienda.
+        - [ ] **Acerca de GitCRAFT** igual en los tres sistemas: nombre,
+          versión, licencia y enlace al repositorio.
+        - [ ] **Archivo descartado que sigue en el panel central.**
+        - [ ] **Rama inicial al inicializar:** «main», salvo la de la
+          configuración personal (no la de sistema).
+        - [ ] **Ventana estrecha** (mínimo 900×560): barra, paneles y etiquetas,
+          con su comprobación en el modo de humo. *Causa:* la barra no encoge
+          (1226 px en español en macOS) y ensancha toda la ventana por dentro.
       *Qué queda sin probar a mano:* los dos instaladores de ARM64, que solo
       prueba el CI.
 - [ ] **Pruebas a mano en Windows y Linux (requisito de los instaladores).**
