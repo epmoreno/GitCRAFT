@@ -121,7 +121,11 @@ export function CurrentBranch({ repoId }: { repoId: number | null }) {
   );
   if (refs.head.type === "detached") {
     return (
-      <span className={styles.branch} title={t("tracking.detached")}>
+      <span
+        className={styles.branch}
+        data-part="branchName"
+        title={t("tracking.detached")}
+      >
         {t("sidebar.detachedHead")}
         {failed}
       </span>
@@ -134,6 +138,7 @@ export function CurrentBranch({ repoId }: { repoId: number | null }) {
   return (
     <span
       className={styles.branch}
+      data-part="branchName"
       title={description}
       aria-label={`${name}. ${description}`}
     >

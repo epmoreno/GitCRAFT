@@ -10,7 +10,7 @@
 .header,
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px 110px 72px;
+  grid-template-columns: var(--graph-columns);
   gap: var(--space-3);
   align-items: center;
   padding-right: var(--space-3);
@@ -103,6 +103,7 @@
 .chips {
   display: inline-flex;
   flex: none;
+  min-width: 0;
   gap: var(--space-1);
   max-width: 60%;
   overflow: hidden;
@@ -149,6 +150,7 @@
 }
 
 .chipMore {
+  flex: none;
   border-color: var(--border-strong);
   color: var(--text-faint);
 }

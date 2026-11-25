@@ -43,6 +43,10 @@ vi.mock("./smokeLayout", () => ({
   rebaseLayoutProblems: async () => [],
 }));
 
+vi.mock("./smokeNarrow", () => ({
+  narrowLayout: async () => ({ problems: [], notes: ["another"] }),
+}));
+
 describe("smoke run, quitting", () => {
   it("reports, then quits through the warning and closes the window", async () => {
     const { commands } = await import("../ipc");
@@ -67,7 +71,10 @@ describe("smoke run, quitting", () => {
 
     await reportIfSmokeRun();
 
-    expect(commands.smokeReport).toHaveBeenCalledWith([], ["a measure"]);
+    expect(commands.smokeReport).toHaveBeenCalledWith(
+      [],
+      ["a measure", "another"],
+    );
     expect(guardWindowClose).toHaveBeenCalled();
     expect(closeWindow).toHaveBeenCalled();
     expect(useConflictStore.getState().drafts).toEqual({});

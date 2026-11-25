@@ -16,6 +16,7 @@
     "openRepo": "Abrir repositorio",
     "needsRepo": "Abre un repositorio primero",
     "fetch": "Fetch",
+    "more": "Más acciones",
     "moreOptions": "Más opciones de {{action}}",
     "newRepository": "Más formas de abrir un repositorio"
   },

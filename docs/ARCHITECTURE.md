@@ -1121,6 +1121,32 @@ mínimo actual:
 | `--focus-ring` (ídem) | 3:1 | 4,59 |
 | Carriles sobre `--surface-0` y los fondos de selección | 3:1 | 4,83 |
 
+### Ventana estrecha
+
+La ventana mide como mínimo 900×560. Nada se sale ni se parte en dos líneas:
+
+- **Rejilla:** la columna de la ventana es `minmax(0, 1fr)`, así que ninguna
+  zona la ensancha por dentro.
+- **Barra de herramientas (`useToolbarFit.ts`):** se mide y cede hasta que
+  cabe, en este orden: el nombre «GitCRAFT», parte de la rama actual y, al menú
+  «…» (`ToolbarMenu.tsx`), Publicar, Stash, Rama, Operaciones y, solo con texto
+  grande, Deshacer y Rehacer. Ajustes no se mueve nunca. Al medir, vale para
+  cualquier idioma, fuente y tamaño de texto. Lo que cede está en
+  `data-dropped` y lo oculta el CSS.
+- **Paneles:** el izquierdo va de 180 a 240 px y el derecho de 300 a 380 px
+  (`tokens.css`).
+- **Historial (`graph/columns.ts`):** el asunto y las etiquetas conservan unos
+  220 px; para eso se ocultan el hash, el autor y la fecha, por ese orden (salen
+  en el tooltip de la fila), los carriles ocupan como mucho el 45 % y las
+  etiquetas que no caben se resumen en «+N».
+- **Otras vistas:** por debajo de 1080 px, el historial de un archivo pone la
+  lista encima del diff y el rebase interactivo oculta el hash y el autor.
+- **Comprobación (`smokeNarrow.ts`):** el modo de humo deja la ventana en su
+  mínimo, abre dos repositorios de ejemplo en su propia carpeta temporal (uno
+  con un conflicto) y, en español y en inglés, falla si algún control queda
+  cortado o fuera, si una acción no está ni en la barra ni en «…», o si el
+  asunto, las etiquetas o el botón de commit no tienen sitio.
+
 ### Estados de interacción
 
 Son reglas comunes en `tokens.css`: ningún componente las redefine.

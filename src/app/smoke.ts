@@ -6,6 +6,7 @@ import {
   rebaseLayoutProblems,
   settingsLayout,
 } from "./smokeLayout";
+import { narrowLayout } from "./smokeNarrow";
 import { confirmClosing, installWindowCloseGuard, requestQuit } from "./quit";
 
 /**
@@ -57,7 +58,10 @@ export async function reportIfSmokeRun(): Promise<void> {
     ...(await aboutProblems()),
     ...(await rebaseLayoutProblems()),
   ];
-  await commands.smokeReport(problems, settings.notes);
+  // Last: it opens a repository and leaves the window narrow.
+  const narrow = await narrowLayout();
+  problems.push(...narrow.problems);
+  await commands.smokeReport(problems, [...settings.notes, ...narrow.notes]);
   if (problems.length > 0) return;
   try {
     await quitLikeTheUser();

@@ -21,6 +21,44 @@ function editable(target: EventTarget | null): boolean {
   );
 }
 
+/** "Undo" and "Redo": whether each is there, why not, and what it does. */
+export function useUndoActions(repoId: number | null) {
+  const { t } = useTranslation();
+  const label = useShortcutLabel();
+  const tops = useUndoStore((s) => (repoId === null ? null : s.tops[repoId]));
+  const request = useUndoStore((s) => s.request);
+  const hint = (direction: Direction, top: StackTop | null | undefined) => {
+    if (repoId === null) return t("toolbar.needsRepo");
+    if (!top) return t(`undo.toolbar.nothing.${direction}`);
+    const what = describeOp(t, top.kind);
+    if (top.refused?.type === "inProgress") {
+      return t("undo.toolbar.inProgress");
+    }
+    const shortcut = label(direction);
+    if (top.refused) {
+      return t(`undo.toolbar.changed.${direction}`, { what, shortcut });
+    }
+    return t(`undo.toolbar.hint.${direction}`, { what, shortcut });
+  };
+
+  return DIRECTIONS.map((direction) => {
+    const top = tops?.[direction];
+    // Something changed: still enabled, so the dialog says why and
+    // offers the branch history. Only an operation waiting disables it.
+    const enabled =
+      repoId !== null && !!top && top.refused?.type !== "inProgress";
+    return {
+      direction,
+      label: t(`undo.toolbar.${direction}`),
+      hint: hint(direction, top),
+      enabled,
+      run: () => {
+        if (enabled && repoId !== null) void request(repoId, direction);
+      },
+    };
+  });
+}
+
 /**
  * "Undo" and "Redo" in the toolbar (task 11.4), and their shortcuts. Each
  * opens the dialog with the preview, also when something changed and it
@@ -34,9 +72,7 @@ export function UndoButtons({
   repoId: number | null;
   className?: string;
 }) {
-  const { t } = useTranslation();
-  const label = useShortcutLabel();
-  const tops = useUndoStore((s) => (repoId === null ? null : s.tops[repoId]));
+  const actions = useUndoActions(repoId);
   const refresh = useUndoStore((s) => s.refresh);
   const request = useUndoStore((s) => s.request);
   // Asked again whenever the refs or the status change (an operation here
@@ -69,43 +105,20 @@ export function UndoButtons({
     return () => window.removeEventListener("keydown", onKey);
   }, [repoId, request]);
 
-  const hint = (direction: Direction, top: StackTop | null | undefined) => {
-    if (repoId === null) return t("toolbar.needsRepo");
-    if (!top) return t(`undo.toolbar.nothing.${direction}`);
-    const what = describeOp(t, top.kind);
-    if (top.refused?.type === "inProgress") {
-      return t("undo.toolbar.inProgress");
-    }
-    const shortcut = label(direction);
-    if (top.refused) {
-      return t(`undo.toolbar.changed.${direction}`, { what, shortcut });
-    }
-    return t(`undo.toolbar.hint.${direction}`, { what, shortcut });
-  };
-
   return (
     <>
-      {DIRECTIONS.map((direction) => {
-        const top = tops?.[direction];
-        // Something changed: still enabled, so the dialog says why and
-        // offers the branch history. Only an operation waiting disables it.
-        const enabled =
-          repoId !== null && !!top && top.refused?.type !== "inProgress";
-        return (
-          <Tooltip key={direction} label={hint(direction, top)}>
-            <button
-              type="button"
-              className={className}
-              disabled={!enabled}
-              onClick={() => {
-                if (enabled && repoId !== null) void request(repoId, direction);
-              }}
-            >
-              {t(`undo.toolbar.${direction}`)}
-            </button>
-          </Tooltip>
-        );
-      })}
+      {actions.map((action) => (
+        <Tooltip key={action.direction} label={action.hint}>
+          <button
+            type="button"
+            className={className}
+            disabled={!action.enabled}
+            onClick={action.run}
+          >
+            {action.label}
+          </button>
+        </Tooltip>
+      ))}
     </>
   );
 }

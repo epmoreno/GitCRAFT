@@ -143,6 +143,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::clear_command_history,
             smoke::smoke_mode,
             smoke::smoke_report,
+            smoke::smoke_sample_repository,
+            smoke::smoke_conflict,
+            smoke::smoke_resize,
         ])
 }
 

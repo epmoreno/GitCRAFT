@@ -112,8 +112,9 @@
 
   --toolbar-height: 44px;
   --tabbar-height: 30px;
-  --sidebar-width: 240px;
-  --detail-width: 380px;
+  /* Both panels give way in a narrow window (the minimum is 900px). */
+  --sidebar-width: clamp(180px, 20vw, 240px);
+  --detail-width: clamp(300px, 27.2vw, 380px);
 }
 
 *,

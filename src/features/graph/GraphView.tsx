@@ -1,5 +1,13 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { isShortcut } from "../../app/shortcuts";
 import { useTranslation } from "react-i18next";
 import type { RepoInfo } from "../../ipc";
@@ -10,6 +18,7 @@ import { branchMenuItems } from "../merge/menu";
 import { CommitMenu } from "./CommitMenu";
 import { useRememberedScroll } from "../repo/viewState";
 import { UncommittedRow } from "../workdir/UncommittedRow";
+import { graphLayout } from "./columns";
 import { drawGraph } from "./drawGraph";
 import { OptimizeNotice } from "./OptimizeNotice";
 import { LANE_COUNT, ROW_HEIGHT, graphWidth, laneColor } from "./geometry";
@@ -59,7 +68,24 @@ export function GraphView({
   const lines = useMemo(() => graph?.lines ?? [], [graph?.lines]);
   const refs = graph?.refs ?? null;
   const selectedOid = graph?.selectedOid ?? null;
-  const width = graphWidth(graph?.maxColumn ?? 0);
+  const viewRef = useRef<HTMLDivElement>(null);
+  const [viewWidth, setViewWidth] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const measure = () => setViewWidth(view.clientWidth);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(view);
+    return () => observer.disconnect();
+  }, []);
+  const lanes = graphWidth(graph?.maxColumn ?? 0);
+  // In a narrow window some columns give way to the summary.
+  const layout = graphLayout(viewWidth ?? Infinity, lanes);
+  const width = layout.lanes;
+  const hides = (column: (typeof layout.hidden)[number]) =>
+    layout.hidden.includes(column);
   const labels = useMemo(() => labelsByCommit(refs), [refs]);
   const head = useMemo(() => headOid(refs), [refs]);
   const now = Date.now();
@@ -167,7 +193,11 @@ export function GraphView({
   const rebasing = useInteractiveRebaseStore((s) => s.view?.repoId === repoId);
 
   return (
-    <div className={styles.view}>
+    <div
+      ref={viewRef}
+      className={styles.view}
+      style={{ "--graph-columns": layout.template } as CSSProperties}
+    >
       <SearchBar
         repoId={repoId}
         lines={lines}
@@ -178,9 +208,9 @@ export function GraphView({
       />
       <div className={styles.header} style={{ paddingLeft: width }}>
         <span>{t("graph.columnDescription")}</span>
-        <span>{t("graph.columnAuthor")}</span>
-        <span>{t("graph.columnDate")}</span>
-        <span>{t("graph.columnCommit")}</span>
+        {!hides("author") && <span>{t("graph.columnAuthor")}</span>}
+        {!hides("date") && <span>{t("graph.columnDate")}</span>}
+        {!hides("sha") && <span>{t("graph.columnCommit")}</span>}
       </div>
 
       {graph?.error && (
@@ -258,6 +288,11 @@ export function GraphView({
                   transform: `translateY(${item.start}px)`,
                   paddingLeft: width,
                 }}
+                title={
+                  layout.hidden.length > 0
+                    ? `${line.oid.slice(0, 7)} · ${line.author} · ${absoluteTime(line.time, language)}`
+                    : undefined
+                }
                 onClick={() => select(repoId, line.oid)}
                 onContextMenu={(event) => {
                   event.preventDefault();
@@ -272,6 +307,7 @@ export function GraphView({
                 <span className={styles.description}>
                   <RefChips
                     labels={labels.get(line.oid)}
+                    max={layout.labels}
                     color={laneColor(line.color)}
                     repoId={repoId}
                     onBranchMenu={(label, event) => {
@@ -288,16 +324,22 @@ export function GraphView({
                     {line.summary}
                   </span>
                 </span>
-                <span className={styles.author}>{line.author}</span>
-                <span
-                  className={styles.date}
-                  title={absoluteTime(line.time, language)}
-                >
-                  {relativeTime(line.time, now, language)}
-                </span>
-                <span className={`${styles.sha} selectable`} title={line.oid}>
-                  {line.oid.slice(0, 7)}
-                </span>
+                {!hides("author") && (
+                  <span className={styles.author}>{line.author}</span>
+                )}
+                {!hides("date") && (
+                  <span
+                    className={styles.date}
+                    title={absoluteTime(line.time, language)}
+                  >
+                    {relativeTime(line.time, now, language)}
+                  </span>
+                )}
+                {!hides("sha") && (
+                  <span className={`${styles.sha} selectable`} title={line.oid}>
+                    {line.oid.slice(0, 7)}
+                  </span>
+                )}
               </div>
             );
           })}

@@ -3,6 +3,8 @@
   grid-template-rows:
     var(--toolbar-height) var(--tabbar-height) minmax(0, 1fr)
     auto;
+  /* Never wider than the window, whatever is inside. */
+  grid-template-columns: minmax(0, 1fr);
   height: 100%;
 }
 
@@ -27,11 +29,56 @@
   color: var(--accent);
 }
 
-.toolbarActions {
+.toolbar > * {
+  flex: none;
+}
+
+.toolbar > .toolbarActions {
   display: flex;
   flex: 1;
-  justify-content: center;
+  min-width: 0;
   gap: var(--space-1);
+}
+
+/* Centred, but what does not fit only overflows to the right, where it is
+   measured (useToolbarFit). */
+.toolbarActions::before,
+.toolbarActions::after {
+  content: "";
+  flex: 1 0 0;
+}
+
+.toolbarActions > * {
+  flex: none;
+}
+
+/* A group of actions that can move to the "…" menu. */
+.toolbar .part {
+  display: contents;
+}
+
+.toolbar [data-part="menu"] {
+  display: none;
+}
+
+.toolbar[data-dropped~="menu"] [data-part="menu"] {
+  display: contents;
+}
+
+.toolbar[data-dropped~="brand"] [data-part="brand"],
+.toolbar[data-dropped~="publish"] [data-part="publish"],
+.toolbar[data-dropped~="stash"] [data-part="stash"],
+.toolbar[data-dropped~="branch"] [data-part="branch"],
+.toolbar[data-dropped~="operations"] [data-part="operations"],
+.toolbar[data-dropped~="undo"] [data-part="undo"] {
+  display: none;
+}
+
+/* The current branch gives way, down to a few letters. */
+.toolbar[data-dropped~="branchName"] [data-part="branchName"] {
+  flex: 0 1 auto;
+  min-width: 72px;
+  overflow: hidden;
 }
 
 .toolButton,
@@ -41,6 +88,7 @@
   border-radius: var(--radius);
   border: 1px solid transparent;
   background: transparent;
+  white-space: nowrap;
 }
 
 .iconButton {
@@ -79,7 +127,9 @@
 /* Three zones */
 .workspace {
   display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr var(--detail-width);
+  grid-template-columns:
+    var(--sidebar-width) minmax(0, 1fr)
+    var(--detail-width);
   min-height: 0;
 }
 

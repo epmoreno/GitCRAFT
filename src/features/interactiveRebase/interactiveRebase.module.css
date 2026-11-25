@@ -313,3 +313,16 @@
   padding: var(--space-2) var(--space-3);
   border-top: 1px solid var(--border);
 }
+
+/* Narrow window: the subject keeps its room; the detail panel has the rest of
+   the chosen commit. */
+@media (max-width: 1080px) {
+  .row .meta,
+  .row .sha {
+    display: none;
+  }
+
+  .action {
+    width: 130px;
+  }
+}

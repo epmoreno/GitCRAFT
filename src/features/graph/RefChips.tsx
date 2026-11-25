@@ -5,6 +5,8 @@ import dragStyles from "../merge/merge.module.css";
 import styles from "./graph.module.css";
 
 const MAX_VISIBLE = 3;
+/** A label is never cut below this, or below its whole text if shorter. */
+const MIN_WIDTH = 60;
 
 const KIND_CLASS: Record<RefLabel["kind"], string | undefined> = {
   head: styles.chipHead,
@@ -19,9 +21,12 @@ export function RefChips({
   color,
   repoId,
   onBranchMenu,
+  max = MAX_VISIBLE,
 }: {
   labels: RefLabel[] | undefined;
   color: string;
+  /** How many are shown; the rest are "+N". */
+  max?: number;
   /** Branch labels can be dragged onto another branch (task 8.4). */
   repoId?: number;
   /** Right click on a branch label: its own menu, not the commit's. */
@@ -29,8 +34,8 @@ export function RefChips({
 }) {
   const { t } = useTranslation();
   if (!labels?.length) return null;
-  const visible = labels.slice(0, MAX_VISIBLE);
-  const hidden = labels.slice(MAX_VISIBLE);
+  const visible = labels.slice(0, max);
+  const hidden = labels.slice(max);
   return (
     <span
       className={styles.chips}
@@ -80,6 +85,9 @@ function Chip({
       ]
         .filter(Boolean)
         .join(" ")}
+      style={{
+        minWidth: `min(${MIN_WIDTH}px, calc(${label.text.length}ch + 14px))`,
+      }}
       title={t(`graph.refKind.${label.kind}`, { name: label.text })}
       // Every label says it is one, so the cursor shows where a branch
       // cannot be dropped (canDrop accepts local branches only).

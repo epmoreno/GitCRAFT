@@ -1,4 +1,5 @@
 import { isMac } from "./platform";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useBranchStore } from "../features/branches/store";
 import { NewRepositoryMenu } from "../features/create/NewRepositoryMenu";
@@ -13,12 +14,18 @@ import { useOperationsStore } from "../features/operations/store";
 import { useActiveRepository, useRepoStore } from "../features/repo/store";
 import { useStashStore } from "../features/stash/store";
 import { useWorkdirStore } from "../features/workdir/store";
-import { PublishButton } from "../features/publish/PublishButton";
+import {
+  PublishButton,
+  usePublishAction,
+} from "../features/publish/PublishButton";
 import { useSettingsStore } from "../features/settings/store";
-import { UndoButtons } from "../features/undo/UndoButtons";
+import { UndoButtons, useUndoActions } from "../features/undo/UndoButtons";
+import type { MenuItem } from "../ui/ContextMenu";
 import { Tooltip } from "../ui/Tooltip";
 import styles from "./App.module.css";
+import { ToolbarMenu } from "./ToolbarMenu";
 import { useShortcutLabel } from "./useShortcutLabel";
+import { useToolbarFit, type ToolbarPart } from "./useToolbarFit";
 
 /**
  * Top bar. Doubles as the window title bar on macOS (overlay title bar),
@@ -62,9 +69,68 @@ export function Toolbar() {
   const canStash =
     !!active && !!head?.oid && hasChanges && status?.conflicted.length === 0;
 
+  const canBranch = !!active && !!head?.oid;
+  const branchReason = !active
+    ? t("toolbar.needsRepo")
+    : head?.oid
+      ? t("branches.newFromHead")
+      : t("branches.needsCommit");
+  const newBranch = () => {
+    if (!active || !head?.oid) return;
+    requestCreate(
+      active.id,
+      head.oid,
+      head.type === "branch" ? head.name : head.oid.slice(0, 7),
+    );
+  };
+  const newStash = () => {
+    if (active && canStash) requestStash(active.id);
+  };
+
+  const bar = useRef<HTMLElement>(null);
+  const middle = useRef<HTMLDivElement>(null);
+  const dropped = useToolbarFit(bar, middle);
+  const publish = usePublishAction(active?.id ?? null);
+  const undoActions = useUndoActions(active?.id ?? null);
+  const inMenu: Partial<Record<ToolbarPart, MenuItem[]>> = {
+    publish: publish
+      ? [
+          {
+            label: t("publish.button"),
+            disabled: publish.why !== null,
+            hint: publish.why ?? undefined,
+            onSelect: publish.run,
+          },
+        ]
+      : [],
+    stash: [
+      {
+        label: t("toolbar.stash"),
+        disabled: !canStash,
+        hint: stashReason,
+        onSelect: newStash,
+      },
+    ],
+    branch: [
+      {
+        label: t("toolbar.branch"),
+        disabled: !canBranch,
+        hint: branchReason,
+        onSelect: newBranch,
+      },
+    ],
+    operations: [{ label: t("operations.button"), onSelect: toggleOperations }],
+    undo: undoActions.map((action) => ({
+      label: action.label,
+      disabled: !action.enabled,
+      hint: action.hint,
+      onSelect: action.run,
+    })),
+  };
+
   return (
-    <header className={styles.toolbar} {...dragRegion}>
-      <span className={styles.brand} {...dragRegion}>
+    <header ref={bar} className={styles.toolbar} {...dragRegion}>
+      <span className={styles.brand} data-part="brand" {...dragRegion}>
         GitCRAFT
       </span>
       <button
@@ -76,53 +142,50 @@ export function Toolbar() {
         {t("toolbar.openRepo")}
       </button>
       <NewRepositoryMenu />
-      <div className={styles.toolbarActions} {...dragRegion}>
+      <div ref={middle} className={styles.toolbarActions} {...dragRegion}>
         <CurrentBranch repoId={active?.id ?? null} />
         <FetchButton repoId={active?.id ?? null} />
         <PullButton repoId={active?.id ?? null} />
         <PushButton repoId={active?.id ?? null} />
-        <PublishButton repoId={active?.id ?? null} />
-        <Tooltip
-          label={
-            !active
-              ? t("toolbar.needsRepo")
-              : head?.oid
-                ? t("branches.newFromHead")
-                : t("branches.needsCommit")
-          }
-        >
-          <button
-            type="button"
+        <span className={styles.part} data-part="publish">
+          <PublishButton repoId={active?.id ?? null} />
+        </span>
+        <span className={styles.part} data-part="branch">
+          <Tooltip label={branchReason}>
+            <button
+              type="button"
+              className={styles.toolButton}
+              disabled={!canBranch}
+              onClick={newBranch}
+            >
+              {t("toolbar.branch")}
+            </button>
+          </Tooltip>
+        </span>
+        <span className={styles.part} data-part="stash">
+          <Tooltip label={stashReason}>
+            <button
+              type="button"
+              className={styles.toolButton}
+              disabled={!canStash}
+              onClick={newStash}
+            >
+              {t("toolbar.stash")}
+            </button>
+          </Tooltip>
+        </span>
+        <span className={styles.part} data-part="undo">
+          <UndoButtons
+            repoId={active?.id ?? null}
             className={styles.toolButton}
-            disabled={!active || !head?.oid}
-            onClick={() => {
-              if (!active || !head?.oid) return;
-              requestCreate(
-                active.id,
-                head.oid,
-                head.type === "branch" ? head.name : head.oid.slice(0, 7),
-              );
-            }}
-          >
-            {t("toolbar.branch")}
-          </button>
-        </Tooltip>
-        <Tooltip label={stashReason}>
-          <button
-            type="button"
-            className={styles.toolButton}
-            disabled={!canStash}
-            onClick={() => {
-              if (active && canStash) requestStash(active.id);
-            }}
-          >
-            {t("toolbar.stash")}
-          </button>
-        </Tooltip>
-        <UndoButtons
-          repoId={active?.id ?? null}
-          className={styles.toolButton}
-        />
+          />
+        </span>
+        <span className={styles.part} data-part="menu">
+          <ToolbarMenu
+            items={dropped.flatMap((part) => inMenu[part] ?? [])}
+            busy={runningCommands > 0 && dropped.includes("operations")}
+          />
+        </span>
       </div>
       <Tooltip label={t("settings.openHint", { shortcut: label("settings") })}>
         <button
@@ -137,27 +200,29 @@ export function Toolbar() {
           </svg>
         </button>
       </Tooltip>
-      <Tooltip label={t("operations.hint")}>
-        <button
-          type="button"
-          className={styles.toolButton}
-          aria-pressed={operationsOpen}
-          onClick={toggleOperations}
-        >
-          {t("operations.button")}
-          {runningCommands > 0 && (
-            <span
-              className={styles.busy}
-              aria-label={t("operations.runningCount", {
-                count: runningCommands,
-              })}
-            >
-              {" "}
-              ●
-            </span>
-          )}
-        </button>
-      </Tooltip>
+      <span className={styles.part} data-part="operations">
+        <Tooltip label={t("operations.hint")}>
+          <button
+            type="button"
+            className={styles.toolButton}
+            aria-pressed={operationsOpen}
+            onClick={toggleOperations}
+          >
+            {t("operations.button")}
+            {runningCommands > 0 && (
+              <span
+                className={styles.busy}
+                aria-label={t("operations.runningCount", {
+                  count: runningCommands,
+                })}
+              >
+                {" "}
+                ●
+              </span>
+            )}
+          </button>
+        </Tooltip>
+      </span>
     </header>
   );
 }

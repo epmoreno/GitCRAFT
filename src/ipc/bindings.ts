@@ -349,6 +349,19 @@ export const commands = {
 	 *  Ignored outside a smoke run.
 	 */
 	smokeReport: (problems: string[], notes: string[]) => __TAURI_INVOKE<void>("smoke_report", { problems, notes }),
+	/**
+	 *  For the layout checks: a small repository in the run's own folder, with
+	 *  everything that takes room (a long branch name, labels, parallel lanes,
+	 *  changes of every kind). `None` outside a smoke run.
+	 */
+	smokeSampleRepository: () => typedError<string | null, IpcError_Serialize>(__TAURI_INVOKE("smoke_sample_repository")),
+	/**  The sample repository, stopped at a merge with a conflict. */
+	smokeConflict: () => typedError<string | null, IpcError_Serialize>(__TAURI_INVOKE("smoke_conflict")),
+	/**
+	 *  Resizes the window (inside size, in logical pixels), to lay the interface
+	 *  out at its narrowest. Ignored outside a smoke run.
+	 */
+	smokeResize: (width: number | null, height: number | null) => __TAURI_INVOKE<void>("smoke_resize", { width, height }),
 };
 
 /** Events */

@@ -295,3 +295,26 @@ Dime, por sistema: qué versión (Windows: `winver`; Ubuntu: `lsb_release -d` y
 `echo $XDG_SESSION_TYPE`), el SHA-256 del archivo probado, qué pasos han ido
 bien, cuáles no y cuáles no has hecho. Solo se marca como verificado lo que
 confirmes.
+
+## Qué repetir con los instaladores nuevos
+
+Después de la primera prueba cambiaron varias cosas (tarea I.7 del ROADMAP). Con
+los instaladores nuevos basta con esto, en Windows y en Ubuntu:
+
+1. **Instalar y abrir** encima de lo que haya (o tras desinstalar), y al final
+   desinstalar.
+2. **Ventana estrecha,** en español y en inglés (Ajustes → General): estrecha la
+   ventana hasta el mínimo con el repositorio de prueba abierto. La barra queda
+   en una línea; Ajustes sigue a la vista; lo que no cabe está en «…» y
+   funciona (Operaciones, Stash, Rama, Publicar). El panel derecho y el cuadro
+   de commit se ven enteros, y las etiquetas se leen.
+3. **Acerca de GitCRAFT** (menú Ayuda): nombre, versión 0.4.1, licencia, y el
+   enlace abre el repositorio en el navegador.
+4. **gh:** en Ubuntu, con el gh de apt (2.46.0), Ajustes → Cuenta de GitHub dice
+   esa versión, que hace falta la 2.81.0 y cómo instalar la oficial, y
+   «Publicar en GitHub» también. En Windows, con un gh reciente, todo como antes.
+   No hace falta cerrar ninguna sesión.
+5. **Descartar un archivo nuevo que se está viendo:** vuelve el historial, con su
+   aviso. Al prepararlo entero, su diff sigue abierto.
+6. **Inicializar un repositorio:** propone «main» (en Windows, aunque el
+   instalador de Git dejara «master»), o la rama de tu configuración personal.

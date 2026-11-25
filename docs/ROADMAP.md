@@ -3778,9 +3778,16 @@ una instalación se propone y se espera la aprobación (norma 8).
           elegirla.
           *Tests:* con «master» en la de sistema, y la personal vacía, con otra
           rama y con un archivo incluido.
-        - [ ] **Ventana estrecha** (mínimo 900×560): barra, paneles y etiquetas,
-          con su comprobación en el modo de humo. *Causa:* la barra no encoge
-          (1226 px en español en macOS) y ensancha toda la ventana por dentro.
+        - [x] **Ventana estrecha** (mínimo 900×560): barra, paneles y etiquetas,
+          con su comprobación en el modo de humo. *Causa:* la barra no encogía
+          (1226 px en español en macOS) y ensanchaba toda la ventana por dentro.
+          Cómo queda, en ARCHITECTURE.md («Ventana estrecha»). La comprobación
+          encontró además tres cosas que no cabían: los botones de los grupos
+          de cambios, los del historial de un archivo y las filas del rebase
+          interactivo.
+          *Tests:* qué cede la barra y en qué orden, las columnas del
+          historial, y el modo de humo a 900×560 en los dos idiomas (sin el
+          arreglo, falla).
       *Qué queda sin probar a mano:* los dos instaladores de ARM64, que solo
       prueba el CI.
 - [ ] **Pruebas a mano en Windows y Linux (requisito de los instaladores).**

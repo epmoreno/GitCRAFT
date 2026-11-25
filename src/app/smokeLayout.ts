@@ -185,11 +185,15 @@ function sampleRebaseView(repoId: number) {
  * rows of one line and fixed height (dragging measures with it), the line
  * joining a combination drawn, and the buttons inside the view. */
 export async function rebaseLayoutProblems(): Promise<string[]> {
+  return rebaseLayoutAt(820);
+}
+
+export async function rebaseLayoutAt(width: number): Promise<string[]> {
   const problems: string[] = [];
+  const where = `rebase view at ${width}px`;
   const repoId = -1;
   const host = document.createElement("div");
-  host.style.cssText =
-    "position:fixed;left:0;top:0;width:820px;height:560px;visibility:hidden";
+  host.style.cssText = `position:fixed;left:0;top:0;width:${width}px;height:486px;visibility:hidden`;
   document.body.append(host);
   const root = createRoot(host);
   useInteractiveRebaseStore.setState({ view: sampleRebaseView(repoId) });
@@ -206,15 +210,15 @@ export async function rebaseLayoutProblems(): Promise<string[]> {
     const rows = [...host.querySelectorAll<HTMLElement>("[data-rebase-row]")];
     const footer = host.querySelector("footer");
     if (!view || rows.length !== 3 || !footer) {
-      return ["rebase view: it did not render"];
+      return [`${where}: it did not render`];
     }
     for (const row of rows) {
       const height = row.getBoundingClientRect().height;
       if (Math.abs(height - 34) > 1) {
-        problems.push(`rebase view: a row is ${height}px high, not 34`);
+        problems.push(`${where}: a row is ${height}px high, not 34`);
       }
       if (row.scrollWidth > row.clientWidth + 1) {
-        problems.push("rebase view: a row overflows sideways");
+        problems.push(`${where}: a row overflows sideways`);
       }
     }
     const lines = rows.map((row) => {
@@ -224,13 +228,16 @@ export async function rebaseLayoutProblems(): Promise<string[]> {
         : 0;
     });
     if (!(lines[0]! > 4 && lines[1]! > 4 && lines[2] === 0)) {
-      problems.push(`rebase view: the combination line is ${lines.join(", ")}`);
+      problems.push(`${where}: the combination line is ${lines.join(", ")}`);
+    }
+    if (footer.scrollWidth > footer.clientWidth + 1) {
+      problems.push(`${where}: the buttons overflow sideways`);
     }
     if (
       footer.getBoundingClientRect().bottom >
       view.getBoundingClientRect().bottom + 0.5
     ) {
-      problems.push("rebase view: the buttons are outside the view");
+      problems.push(`${where}: the buttons are outside the view`);
     }
   } finally {
     root.unmount();

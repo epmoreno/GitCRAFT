@@ -164,3 +164,21 @@
   border-bottom: 1px solid var(--border);
   background: var(--surface-1);
 }
+
+/* Narrow window: the list above the diff, not beside it. */
+@media (max-width: 1080px) {
+  .body {
+    flex-direction: column;
+  }
+
+  .listPane {
+    flex: 0 0 38%;
+    /* Over the width chosen with the divider, which is not there now. */
+    width: auto !important;
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  .body > [role="separator"] {
+    display: none;
+  }
+}
