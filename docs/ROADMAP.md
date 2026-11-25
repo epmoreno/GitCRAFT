@@ -3806,6 +3806,12 @@ una instalación se propone y se espera la aprobación (norma 8).
           encontró además tres cosas que no cabían: los botones de los grupos
           de cambios, los del historial de un archivo y las filas del rebase
           interactivo.
+          En el CI de Ubuntu (run 45669106233) encontró que «Guardar y marcar
+          como resuelto», en la vista de conflictos, no cabía con su letra. La
+          espera de esa vista no era buena (a la cabecera, no a los botones):
+          ahora espera al contenido de cada vista y mira también a lo alto, y
+          así salió otro: con Operaciones abierto se cortaba el cuadro de
+          commit.
           *Tests:* qué cede la barra y en qué orden, las columnas del
           historial, y el modo de humo a 900×560 en los dos idiomas (sin el
           arreglo, falla).

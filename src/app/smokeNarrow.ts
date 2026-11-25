@@ -5,8 +5,11 @@ import {
   WORKTREE,
   type OpenFile,
 } from "../features/graph/store";
+import { useConflictStore } from "../features/conflicts/store";
+import { useOperationsStore } from "../features/operations/store";
 import { useRepoStore } from "../features/repo/store";
 import { useSearchStore } from "../features/search/store";
+import { useSettingsStore } from "../features/settings/store";
 import { frameOrTick, settles } from "./settle";
 import { rebaseLayoutAt, type LayoutReport } from "./smokeLayout";
 
@@ -45,7 +48,36 @@ const shown = (element: Element) =>
   element.getBoundingClientRect().width > 0 &&
   getComputedStyle(element).visibility !== "hidden";
 
-/** Controls that are out of sight sideways, wholly or in part. */
+/** Less than this, what scrolls cannot really be used. */
+const SCROLLER_MIN = 40;
+
+/** Why `control` cannot be seen whole from top to bottom: something that does
+ * not scroll cuts it, or what scrolls it is too low. */
+function cutVertically(control: Element): string | null {
+  let box = control.getBoundingClientRect();
+  const span = (top: number, bottom: number) =>
+    box.top < top - 1 || box.bottom > bottom + 1
+      ? `${Math.round(box.top)}–${Math.round(box.bottom)} down, of ${Math.round(top)}–${Math.round(bottom)}`
+      : null;
+  for (let up = control.parentElement; up; up = up.parentElement) {
+    const overflow = getComputedStyle(up).overflowY;
+    const limits = up.getBoundingClientRect();
+    if (overflow === "auto" || overflow === "scroll") {
+      if (up.scrollHeight <= up.clientHeight + 1) continue;
+      if (up.clientHeight < SCROLLER_MIN) {
+        return `in a list ${up.clientHeight}px high`;
+      }
+      // Reached by scrolling: what has to be in sight is what scrolls.
+      box = limits;
+    } else if (OVERFLOWS.has(overflow)) {
+      const cut = span(limits.top, limits.bottom);
+      if (cut) return cut;
+    }
+  }
+  return span(0, window.innerHeight);
+}
+
+/** Controls that are out of sight, wholly or in part. */
 function cutControls(): string[] {
   return [
     ...document.querySelectorAll(
@@ -56,11 +88,15 @@ function cutControls(): string[] {
     .flatMap((control) => {
       const box = control.getBoundingClientRect();
       const span = visibleSpan(control);
-      return box.left < span.left - 0.5 || box.right > span.right + 1
-        ? [
-            `"${name(control)}" (${Math.round(box.left)}–${Math.round(box.right)} of ${Math.round(span.left)}–${Math.round(span.right)})`,
-          ]
-        : [];
+      const found: string[] = [];
+      if (box.left < span.left - 0.5 || box.right > span.right + 1) {
+        found.push(
+          `"${name(control)}" (${Math.round(box.left)}–${Math.round(box.right)} across, of ${Math.round(span.left)}–${Math.round(span.right)})`,
+        );
+      }
+      const down = cutVertically(control);
+      if (down) found.push(`"${name(control)}" (${down})`);
+      return found;
     });
 }
 
@@ -189,63 +225,132 @@ async function open(path: string) {
   return newest ? { id, newest } : null;
 }
 
-/** Waits for `selector` and looks for anything cut. */
-async function cutIn(where: string, selector: string): Promise<string[]> {
-  const there = await settles(
-    () => document.querySelector(selector) !== null,
-    10000,
-  );
-  if (!there.ok) return [`${where}: it did not open`];
+const PATH = "changed-file-with-a-long-name.txt";
+const DELETED = "deleted-by-the-other-side.txt";
+
+/** Waits for every one of `parts` (the view's content, never only its frame,
+ * which is there before) and looks for anything cut. */
+async function cutIn(where: string, ...parts: string[]): Promise<LayoutReport> {
+  const missing = () =>
+    parts.filter((part) => document.querySelector(part) === null);
+  const there = await settles(() => missing().length === 0, 10000);
+  if (!there.ok) {
+    return { problems: [`${where}: no ${missing().join(", no ")}`], notes: [] };
+  }
   await frameOrTick();
   await frameOrTick();
   const cut = cutControls();
-  return cut.length > 0 ? [`${where}: cut: ${cut.join(", ")}`] : [];
+  return {
+    problems: cut.length > 0 ? [`${where}: cut: ${cut.join(", ")}`] : [],
+    notes: [`${where}: looked at`],
+  };
 }
 
-/** The views that take the history's place, and the search. */
-async function viewProblems(
+function click(text: string, within: string) {
+  [...document.querySelectorAll<HTMLElement>(`${within} button`)]
+    .find((b) => name(b) === text)
+    ?.click();
+}
+
+const DIFF_LINES = "tr[data-kind]";
+
+/** The views that take the history's place, the search, the operations and
+ * the settings. */
+async function* views(
   where: string,
   id: number,
   newest: string,
-): Promise<string[]> {
+): AsyncGenerator<LayoutReport> {
   const graph = useGraphStore.getState();
-  const path = "changed-file-with-a-long-name.txt";
-  const problems: string[] = [];
-  const files: [string, OpenFile][] = [
-    ["diff", { kind: "worktree", area: "unstaged", path, oldPath: null }],
-    ["history of a file", { kind: "history", path, rev: "HEAD", chosen: null }],
-    ["blame", { kind: "blame", path, rev: newest, chosen: null, back: [] }],
-  ];
   graph.select(id, WORKTREE);
-  for (const [what, file] of files) {
+  const files: [string, OpenFile, string[]][] = [
+    [
+      "diff",
+      { kind: "worktree", area: "unstaged", path: PATH, oldPath: null },
+      [`main ${DIFF_LINES}`],
+    ],
+    [
+      "history of a file",
+      { kind: "history", path: PATH, rev: "HEAD", chosen: null },
+      ["main section [data-index]", `main section section ${DIFF_LINES}`],
+    ],
+    [
+      "blame",
+      { kind: "blame", path: PATH, rev: newest, chosen: null, back: [] },
+      ['main [role="row"] button'],
+    ],
+  ];
+  for (const [what, file, parts] of files) {
     graph.openFileDiff(id, file);
-    // Its content, not only its frame.
-    const content =
-      file.kind === "worktree"
-        ? "main table"
-        : "main section li, main section [role]";
-    problems.push(...(await cutIn(`${where}, ${what}`, content)));
+    yield await cutIn(`${where}, ${what}`, ...parts);
     graph.closeFile(id);
   }
   useSearchStore.getState().openBar(id);
-  problems.push(...(await cutIn(`${where}, search`, "main input")));
+  yield await cutIn(`${where}, search`, 'main [role="search"] select');
   useSearchStore.getState().close(id);
-  return problems;
+  useOperationsStore.setState({ open: true });
+  yield await cutIn(
+    `${where}, operations`,
+    `section[aria-label="${i18n.t("operations.title")}"] header button`,
+  );
+  useOperationsStore.setState({ open: false });
+  for (const section of [
+    "general",
+    "identity",
+    "github",
+    "shortcuts",
+  ] as const) {
+    useSettingsStore.getState().openSettings(section);
+    yield await cutIn(
+      `${where}, settings: ${section}`,
+      '[role="dialog"] [aria-current="page"]',
+    );
+    useSettingsStore.getState().close();
+  }
 }
 
-/** The file in conflict of the second sample. */
-async function conflictProblems(where: string, id: number): Promise<string[]> {
+/** A merge stopped at conflicts: the panel, a file by blocks (also while it is
+ * being resolved) and one that is kept or deleted whole. */
+async function* conflictViews(
+  where: string,
+  id: number,
+): AsyncGenerator<LayoutReport> {
   const graph = useGraphStore.getState();
   graph.select(id, WORKTREE);
-  const path = "changed-file-with-a-long-name.txt";
-  const problems = await cutIn(
+  // The panel's list and the banner with its buttons.
+  yield await cutIn(
     `${where}, conflict panel`,
-    "main [role], main button",
+    `aside li button[aria-label$="${PATH}"]`,
+    'main [role="status"] button',
   );
-  graph.openFileDiff(id, { kind: "conflict", path });
-  problems.push(...(await cutIn(`${where}, conflict`, "main section header")));
+  graph.openFileDiff(id, { kind: "conflict", path: PATH });
+  const blocks = [
+    "main section footer button",
+    'main [data-testid="conflict-result"]',
+    "main [data-current] button",
+  ];
+  yield await cutIn(`${where}, conflict`, ...blocks);
+  click(i18n.t("conflicts.showBase"), "main [data-current]");
+  click(i18n.t("conflicts.edit"), "main [data-current]");
+  yield await cutIn(
+    `${where}, conflict being edited`,
+    ...blocks,
+    "main [data-current] textarea",
+  );
+  click(i18n.t("conflicts.applyEdit"), "main [data-current]");
+  yield await cutIn(
+    `${where}, conflict with a choice`,
+    ...blocks,
+    "main [data-chosen]",
+  );
+  useConflictStore.getState().clearDraft(id, PATH);
+  graph.openFileDiff(id, { kind: "conflict", path: DELETED });
+  yield await cutIn(
+    `${where}, conflict, whole file`,
+    "main section dl",
+    "main section dl + div button",
+  );
   graph.closeFile(id);
-  return problems;
 }
 
 export async function narrowLayout(): Promise<LayoutReport> {
@@ -300,9 +405,10 @@ export async function narrowLayout(): Promise<LayoutReport> {
       }
       const width = document.querySelector("main")?.clientWidth ?? 0;
       report.problems.push(...(await rebaseLayoutAt(width)));
-      report.problems.push(
-        ...(await viewProblems(`narrow, ${lang}`, main.id, main.newest)),
-      );
+      for await (const seen of views(`narrow, ${lang}`, main.id, main.newest)) {
+        report.problems.push(...seen.problems);
+        report.notes.push(...seen.notes);
+      }
     }
     const stopped = await open(conflict.data);
     if (!stopped) {
@@ -311,12 +417,21 @@ export async function narrowLayout(): Promise<LayoutReport> {
     }
     for (const lang of languages) {
       await i18n.changeLanguage(lang);
-      report.problems.push(
-        ...(await conflictProblems(`narrow, ${lang}`, stopped.id)),
-      );
+      for await (const seen of conflictViews(`narrow, ${lang}`, stopped.id)) {
+        report.problems.push(...seen.problems);
+        report.notes.push(...seen.notes);
+      }
     }
   } finally {
     await i18n.changeLanguage(language);
   }
+  // One line: which views were really looked at.
+  report.notes = [
+    ...report.notes.filter((note) => !note.endsWith(": looked at")),
+    `narrow, looked at: ${report.notes
+      .filter((note) => note.endsWith(": looked at"))
+      .map((note) => note.slice("narrow, ".length, -": looked at".length))
+      .join("; ")}`,
+  ];
   return report;
 }

@@ -25,12 +25,16 @@
 }
 
 .toolbar {
-  height: 30px;
+  min-height: 30px;
   border-bottom: 1px solid var(--border);
 }
 
+/* In a narrow window the buttons go to a second line. */
 .footer {
-  height: 44px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-height: 44px;
+  padding-block: 9px;
   border-top: 1px solid var(--border);
 }
 
@@ -49,6 +53,13 @@
   background: transparent;
   font-size: var(--font-size-small);
   white-space: nowrap;
+}
+
+/* Never wider than its place, whatever the branch is called. */
+.choice {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav {
@@ -89,12 +100,14 @@
 
 .counter {
   flex: 1;
+  min-width: 0;
   color: var(--text-muted);
   font-size: var(--font-size-small);
 }
 
-.spacer {
-  flex: 1;
+/* The first one, away from the rest. */
+.footer > :first-child {
+  margin-right: auto;
 }
 
 .note,

@@ -130,10 +130,12 @@ async fn conflict_repository(repo: &Path) -> Result<()> {
     let git = sample_git()?;
     let cancel = CancellationToken::new();
     let run = async |args: &[&str]| git.write(repo).args(args).output(&cancel).await.map(drop);
+    std::fs::write(repo.join(DELETED), "two\n")?;
     run(&["add", "."]).await?;
     run(&["commit", "-q", "-m", "Our change"]).await?;
     run(&["switch", "-q", "lane-1"]).await?;
     std::fs::write(repo.join(CONFLICTED), "three\n")?;
+    run(&["rm", "-q", DELETED]).await?;
     run(&["commit", "-q", "-a", "-m", "Their change"]).await?;
     run(&["switch", "-q", BRANCH]).await?;
     git.write(repo)
@@ -145,6 +147,8 @@ async fn conflict_repository(repo: &Path) -> Result<()> {
 }
 
 const BRANCH: &str = "feature/a-branch-with-quite-a-long-name";
+/// Changed on our side, deleted on theirs: kept or deleted whole.
+const DELETED: &str = "deleted-by-the-other-side.txt";
 const CONFLICTED: &str = "changed-file-with-a-long-name.txt";
 
 /// git with its own identity and none of the user's configuration.
@@ -170,6 +174,7 @@ async fn sample_repository(repo: &Path) -> Result<()> {
     run(&["init", "-q", "-b", BRANCH]).await?;
     file("staged-file-with-a-long-name.txt", "one\n")?;
     file(CONFLICTED, "one\n")?;
+    file(DELETED, "one\n")?;
     run(&["add", "."]).await?;
     run(&[
         "commit",
@@ -314,7 +319,7 @@ mod tests {
         )
         .await
         .expect("status");
-        assert_eq!(status.conflicted.len(), 1);
+        assert_eq!(status.conflicted.len(), 2);
     }
 
     #[test]

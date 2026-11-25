@@ -230,6 +230,10 @@ export async function rebaseLayoutAt(width: number): Promise<string[]> {
     if (!(lines[0]! > 4 && lines[1]! > 4 && lines[2] === 0)) {
       problems.push(`${where}: the combination line is ${lines.join(", ")}`);
     }
+    const list = rows[0]!.closest('[class*="list"]')?.clientHeight ?? 0;
+    if (list < 68) {
+      problems.push(`${where}: the list is ${list}px high`);
+    }
     if (footer.scrollWidth > footer.clientWidth + 1) {
       problems.push(`${where}: the buttons overflow sideways`);
     }

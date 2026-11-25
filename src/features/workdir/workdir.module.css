@@ -62,9 +62,11 @@
 /* Working directory panel */
 .panel {
   display: flex;
-  flex: 1;
+  flex: 1 0 auto;
   flex-direction: column;
-  min-height: 0;
+  /* The changes and the commit box share the panel's height, down to this:
+     then the whole panel scrolls (a low window with Operations open). */
+  height: max(100%, 350px);
 }
 
 .panelMessage {
@@ -95,7 +97,8 @@
   flex: 1;
   flex-direction: column;
   gap: var(--space-3);
-  min-height: 0;
+  /* At least a couple of files, then the commit box gives way. */
+  min-height: 96px;
   overflow-y: auto;
   padding: var(--space-3) var(--space-4);
 }
@@ -133,7 +136,7 @@
 
 .commitArea {
   display: flex;
-  flex: none;
+  flex: 0 1 auto;
   flex-direction: column;
   min-height: 140px;
   max-height: calc(100% - 120px);

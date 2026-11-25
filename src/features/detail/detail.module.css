@@ -9,7 +9,8 @@
 .panelFill {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* Only when there is no room for its minimum (see workdir.module.css). */
+  overflow: hidden auto;
   padding: 0;
 }
 

@@ -484,7 +484,6 @@ function Blocks({
         >
           {t("conflicts.restart")}
         </button>
-        <span className={styles.spacer} />
         <button
           type="button"
           className={styles.secondary}

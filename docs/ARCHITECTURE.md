@@ -1140,12 +1140,29 @@ La ventana mide como mínimo 900×560. Nada se sale ni se parte en dos líneas:
   en el tooltip de la fila), los carriles ocupan como mucho el 45 % y las
   etiquetas que no caben se resumen en «+N».
 - **Otras vistas:** por debajo de 1080 px, el historial de un archivo pone la
-  lista encima del diff y el rebase interactivo oculta el hash y el autor.
+  lista encima del diff, el rebase interactivo oculta el hash y el autor y la
+  columna del blame se estrecha. Los botones de la vista de conflictos pasan a
+  una segunda línea.
+- **Ventana baja:** el panel de Operaciones ocupa como mucho el 35 % del alto. En
+  el panel de cambios, la lista conserva 96 px y el cuadro de commit cede hasta
+  140; si ni así cabe, se desplaza el panel entero.
 - **Comprobación (`smokeNarrow.ts`):** el modo de humo deja la ventana en su
   mínimo, abre dos repositorios de ejemplo en su propia carpeta temporal (uno
-  con un conflicto) y, en español y en inglés, falla si algún control queda
-  cortado o fuera, si una acción no está ni en la barra ni en «…», o si el
-  asunto, las etiquetas o el botón de commit no tienen sitio.
+  con conflictos) y, en español y en inglés, falla si algún control queda
+  cortado o fuera, a lo ancho o a lo alto (o dentro de una lista de menos de
+  40 px), si una acción no está ni en la barra ni en «…», o si el asunto, las
+  etiquetas o el botón de commit no tienen sitio. En cada vista espera a su
+  contenido, y si no llega, falla; las que ha mirado salen en el registro
+  («looked at»).
+  *Cubre:* barra y «…», historial, detalle de un commit, panel de cambios, diff,
+  historial de un archivo, blame, búsqueda, rebase interactivo (su vista, con un
+  plan de ejemplo), conflictos (panel, por bloques, editando, con una elección y
+  archivo entero), Operaciones y las cuatro secciones de Ajustes.
+  *No cubre:* los demás diálogos (merge, rebase, reset, tags, stash, ramas,
+  deshacer, historial de una rama, publicar, clonar, inicializar, Acerca de), la
+  página de inicio, la barra lateral por dentro, los menús contextuales, los
+  avisos, ni el panel de una entrada del stash; y solo mira controles (botones,
+  campos), no si un texto queda cortado con «…».
 
 ### Estados de interacción
 

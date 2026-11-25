@@ -11,6 +11,13 @@
   background: var(--surface-0);
 }
 
+/* Narrow window: more room for the text. */
+@media (max-width: 1080px) {
+  .view {
+    --blame-gutter: 180px;
+  }
+}
+
 .header {
   display: flex;
   flex: none;
