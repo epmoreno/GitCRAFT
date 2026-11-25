@@ -32,6 +32,34 @@ pub const GH_PATH_OVERRIDE: &str = "GITCRAFT_GH";
 /// network before giving up.
 pub const CHECK_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// The oldest gh GitCRAFT works with: the first one whose `gh auth status` has
+/// `--json` (signing in and out need older ones: 2.48.0 and 2.40.0).
+pub const MIN_VERSION: Version = Version(2, 81, 0);
+
+/// gh's version number.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Version(pub u32, pub u32, pub u32);
+
+impl Version {
+    /// From `gh --version`'s first line ("gh version 2.46.0 (2025-01-13 …)").
+    /// `None` when there is no number (a development build).
+    pub fn parse(line: &str) -> Option<Self> {
+        let word = line
+            .strip_prefix("gh version ")?
+            .split_whitespace()
+            .next()?;
+        let mut parts = word.split(['.', '-', '+']).map(str::parse);
+        let mut next = || parts.next()?.ok();
+        Some(Self(next()?, next()?, next()?))
+    }
+}
+
+impl std::fmt::Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.0, self.1, self.2)
+    }
+}
+
 /// A located gh executable.
 #[derive(Debug, Clone)]
 pub struct Gh {
@@ -310,6 +338,18 @@ impl Gh {
         Ok(out.lines().next().unwrap_or_default().trim().to_owned())
     }
 
+    /// `err`, unless the reason is that gh is older than [`MIN_VERSION`]. Only
+    /// asked after a failure: a gh that works needs no extra command.
+    async fn or_too_old(&self, err: GitError, cancel: &CancellationToken) -> GitError {
+        match self.version(cancel).await.map(|line| Version::parse(&line)) {
+            Ok(Some(found)) if found < MIN_VERSION => GitError::GhTooOld {
+                found: found.to_string(),
+                required: MIN_VERSION.to_string(),
+            },
+            _ => err,
+        }
+    }
+
     /// The accounts gh has for github.com (empty: no session).
     pub async fn accounts(&self, cancel: &CancellationToken) -> Result<Vec<GhAccount>> {
         let out = self
@@ -343,6 +383,7 @@ impl Gh {
         let mut accounts = match self.accounts(cancel).await {
             Ok(accounts) => accounts,
             Err(GitError::TimedOut(_)) => return Ok(unreachable(Vec::new())),
+            Err(err @ GitError::GhFailed { .. }) => return Err(self.or_too_old(err, cancel).await),
             Err(err) => return Err(err),
         };
         let checked = |accounts| Session {
@@ -650,6 +691,24 @@ fn spawn_error(err: std::io::Error) -> GitError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_the_version_number() {
+        let parse = Version::parse;
+        assert_eq!(
+            parse("gh version 2.46.0 (2025-01-13 Ubuntu 2.46.0-4)"),
+            Some(Version(2, 46, 0))
+        );
+        assert_eq!(parse("gh version 2.81.0"), Some(MIN_VERSION));
+        assert_eq!(
+            parse("gh version 2.4.0+dfsg1 (2022-03-23 Ubuntu)"),
+            Some(Version(2, 4, 0))
+        );
+        assert_eq!(parse("gh version DEV"), None);
+        assert_eq!(parse(""), None);
+        // As numbers, not as text.
+        assert!(Version(2, 9, 0) < MIN_VERSION && MIN_VERSION < Version(2, 103, 3));
+    }
 
     #[test]
     fn reads_the_github_accounts_from_the_json_status() {

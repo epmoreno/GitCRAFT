@@ -478,6 +478,38 @@ fn token_not_working() -> Reply {
 }
 const SHORT: Duration = Duration::from_millis(300);
 
+/// gh as Ubuntu ships it: `gh auth status` has no `--json`.
+fn old_gh(version: &str) -> Fake {
+    Fake::new(
+        Scenario::always(Reply::ok())
+            .when(
+                &["auth", "status"],
+                Reply::ok().err_line("unknown flag: --json").exit(1),
+            )
+            .when(&["--version"], Reply::ok().out_line(version)),
+    )
+}
+
+#[tokio::test]
+async fn an_old_gh_says_its_version_and_the_one_needed() {
+    let fake = old_gh("gh version 2.46.0 (2025-01-13 Ubuntu 2.46.0-4)");
+    let err = fake.gh.session(&c()).await.expect_err("too old");
+    assert_eq!(err.kind(), ErrorKind::GhTooOld);
+    let GitError::GhTooOld { found, required } = err else {
+        panic!("{err:?}");
+    };
+    assert_eq!((found.as_str(), required.as_str()), ("2.46.0", "2.81.0"));
+}
+
+#[tokio::test]
+async fn other_failures_of_gh_are_not_blamed_on_its_version() {
+    // Recent enough, or a build without a number: gh's own error stays.
+    for version in ["gh version 2.81.0 (2025-10-01)", "gh version DEV"] {
+        let err = old_gh(version).gh.session(&c()).await.expect_err("failed");
+        assert_eq!(err.kind(), ErrorKind::GhFailed, "{version}");
+    }
+}
+
 #[tokio::test]
 async fn no_account_is_no_session_without_asking_github() {
     let fake = session_gh(Reply::ok().out_line(r#"{"hosts":{}}"#), Reply::ok().exit(9));

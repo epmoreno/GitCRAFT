@@ -128,7 +128,9 @@ installers.
    press **OK**, then **System Settings → Privacy & Security → Open Anyway**.
 
 It needs Git installed (Xcode Command Line Tools or Homebrew). GitHub features
-(account, publishing) need GitHub CLI: `brew install gh`.
+(account, publishing) need GitHub CLI 2.81.0 or later: `brew install gh` (on
+Linux, from [its official repository](https://github.com/cli/cli/blob/trunk/docs/install_linux.md):
+the one in Ubuntu's apt is too old).
 
 Tested on macOS 27.0.1; earlier versions are not verified.
 

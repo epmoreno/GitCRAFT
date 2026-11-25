@@ -50,6 +50,7 @@ const KINDS = {
   invalidRepoName: true,
   ghRepoExists: true,
   ghNotFound: true,
+  ghTooOld: true,
   ghNotLoggedIn: true,
   ghUnreachable: true,
   ghFailed: true,

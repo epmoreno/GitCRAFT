@@ -3755,10 +3755,12 @@ una instalación se propone y se espera la aprobación (norma 8).
           no es de ninguno), y un error no reconocido solo se atribuye a Git si
           lo dijo Git (`ErrorSource`).
           *Tests:* el origen de cada error en el core y los tres textos.
-        - [ ] **gh antiguo:** con un gh anterior a la 2.81.0 (la primera con
+        - [x] **gh antiguo:** con un gh anterior a la 2.81.0 (la primera con
           `gh auth status --json`), decir la versión que hay, la que hace falta
           y cómo instalar la oficial en cada sistema. Ubuntu trae por apt una
           demasiado antigua, así que no se recomienda.
+          *Tests:* gh simulado antiguo, reciente y sin número; el aviso en los
+          tres sistemas, y en Publicar.
         - [ ] **Acerca de GitCRAFT** igual en los tres sistemas: nombre,
           versión, licencia y enlace al repositorio.
         - [ ] **Archivo descartado que sigue en el panel central.**

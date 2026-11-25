@@ -26,8 +26,9 @@ open it. You do not need to disable Gatekeeper.
 - To work with private remotes: a credential helper (on macOS, `osxkeychain`,
   which comes with Git) or an SSH key in the agent. GitCRAFT never stores or
   asks for passwords.
-- For the GitHub account and "Publish on GitHub": GitHub CLI
-  (`brew install gh`). GitCRAFT stores no tokens; gh keeps the session in the
+- For the GitHub account and "Publish on GitHub": GitHub CLI 2.81.0 or later
+  (`brew install gh`; if you already have it, `brew upgrade gh`). To see your
+  version: `gh --version`. GitCRAFT stores no tokens; gh keeps the session in the
   Keychain.
 
 ### Building the `.dmg`
@@ -147,8 +148,9 @@ automatically, in CI.
 
 **What it needs:** [Git for Windows](https://git-scm.com/downloads/win)
 (`winget install --id Git.Git`), 2.30 or later; GitCRAFT does not bundle its
-own Git. `gh` is optional (`winget install --id GitHub.cli`), for the GitHub
-features.
+own Git. `gh` is optional, for the GitHub features: GitHub CLI 2.81.0 or later
+(`winget install --id GitHub.cli`; if you already have it, `winget upgrade --id
+GitHub.cli`).
 
 ### Installing on Windows
 
@@ -234,7 +236,12 @@ ARM64 one is only tested automatically, in CI.
    ```
 
 The package is not signed and does not come from an apt repository: the
-SHA-256 is the check. `gh` is optional, for the GitHub features.
+SHA-256 is the check.
+
+`gh` is optional, for the GitHub features: GitHub CLI 2.81.0 or later, installed
+from [its official repository](https://github.com/cli/cli/blob/trunk/docs/install_linux.md).
+The one Ubuntu offers through apt is too old (2.46.0 in Ubuntu 26.04): GitCRAFT
+detects it and says so. To see your version: `gh --version`.
 
 ### Uninstalling on Linux
 

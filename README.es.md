@@ -138,7 +138,9 @@ llegarán sus instaladores.
    Abrir igualmente**.
 
 Necesita Git instalado (Command Line Tools de Xcode o Homebrew). Las funciones
-de GitHub (cuenta, publicar) necesitan GitHub CLI: `brew install gh`.
+de GitHub (cuenta, publicar) necesitan GitHub CLI 2.81.0 o posterior: `brew install gh`
+(en Linux, desde [su repositorio oficial](https://github.com/cli/cli/blob/trunk/docs/install_linux.md):
+el de Ubuntu por apt es demasiado antiguo).
 
 Probado en macOS 27.0.1; versiones anteriores no verificadas.
 

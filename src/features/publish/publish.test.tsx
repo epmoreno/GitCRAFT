@@ -23,6 +23,7 @@ const info = (overrides: Partial<PublishInfo> = {}): PublishInfo => ({
   suggestedName: "Mi-Proyecto",
   account: { login: "ana", active: true, valid: true, gitProtocol: "https" },
   ghInstalled: true,
+  ghOutdated: null,
   sessionUnreachable: false,
   ...overrides,
 });
@@ -310,6 +311,19 @@ describe("Publish on GitHub: the dialog", () => {
       within(dialog).getByRole("textbox", { name: "Nombre del repositorio" }),
     ).toBeVisible();
     expect(ipc.pushBranch).not.toHaveBeenCalled();
+  });
+
+  it("with an old gh, says which version there is and which is needed", async () => {
+    const dialog = await openDialog(
+      info({
+        account: null,
+        ghOutdated: { found: "2.46.0", required: "2.81.0" },
+      }),
+    );
+    expect(dialog).toHaveTextContent(
+      "Tienes gh 2.46.0, y GitCRAFT necesita la 2.81.0 o posterior.",
+    );
+    expect(dialog).not.toHaveTextContent("No hay sesión");
   });
 
   it("without a GitHub session, takes you to Settings", async () => {

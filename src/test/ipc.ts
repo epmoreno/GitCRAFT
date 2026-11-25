@@ -100,6 +100,7 @@ export const ipc = {
   identityChanges: vi.mocked(commands.identityChanges),
   setGitIdentity: vi.mocked(commands.setGitIdentity),
   ghStatus: vi.mocked(commands.ghStatus),
+  openWebPage: vi.mocked(commands.openWebPage),
   ghLogin: vi.mocked(ghLogin),
   cancelGhLogin: vi.mocked(commands.cancelGhLogin),
   ghLogout: vi.mocked(commands.ghLogout),

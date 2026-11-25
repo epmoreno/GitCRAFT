@@ -127,6 +127,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             commands::identity_changes,
             commands::set_git_identity,
             commands::gh_status,
+            commands::open_web_page,
             commands::gh_login,
             commands::cancel_gh_login,
             commands::gh_logout,

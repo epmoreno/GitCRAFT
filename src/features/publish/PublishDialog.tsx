@@ -122,7 +122,13 @@ function NoSession({ info }: { info: PublishInfo }) {
   const openSettings = useSettingsStore((s) => s.openSettings);
   return (
     <>
-      <p>{info.ghInstalled ? t("publish.noSession") : t("publish.noGh")}</p>
+      <p>
+        {info.ghOutdated
+          ? t("publish.ghOutdated", info.ghOutdated)
+          : info.ghInstalled
+            ? t("publish.noSession")
+            : t("publish.noGh")}
+      </p>
       <div className={styles.actions}>
         <button type="button" className={styles.button} onClick={close}>
           {t("publish.cancel")}

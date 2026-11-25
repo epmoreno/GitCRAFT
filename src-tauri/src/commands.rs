@@ -47,7 +47,7 @@ use crate::history::{CommandHistory, CommandRecord};
 use crate::settings::{GeneralSettings, RecentRepository};
 use crate::state::{
     AppState, DiscardResult, GhStatus, GraphEvent, InteractiveResult, MoveResult, OpenedRepository,
-    PublishInfo, PullModeInfo, RepoId, ResetResult, RestoredSession,
+    PublishInfo, PullModeInfo, RepoId, ResetResult, RestoredSession, WebPage,
 };
 use crate::undo::{UndoResult, UndoState};
 use gitcraft_core::gh::LoginEvent;
@@ -702,6 +702,13 @@ pub async fn set_git_identity(
 #[specta::specta]
 pub async fn gh_status(state: State<'_, AppState>) -> Result<GhStatus, IpcError> {
     state.gh_status().await
+}
+
+/// Opens one of GitCRAFT's known pages in the default browser.
+#[tauri::command]
+#[specta::specta]
+pub fn open_web_page(page: WebPage) {
+    page.open();
 }
 
 /// Signs in to GitHub with gh in the browser; the one-time code arrives on

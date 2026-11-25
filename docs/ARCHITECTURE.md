@@ -852,7 +852,15 @@ combinar con el anterior, descartar y reordenar.
   el Llavero.
   - Se ejecuta como git: argumentos en array, sin shell, en su propio grupo
     de procesos, con `NO_COLOR` y sin avisos de actualización.
-  - El estado sale de `gh auth status --hostname github.com --json hosts`.
+  - El estado sale de `gh auth status --hostname github.com --json hosts`, que
+    existe desde **gh 2.81.0** (`gh::MIN_VERSION`). Solo si ese comando falla se
+    mira `gh --version`, de donde solo se lee el número: con una más antigua, el
+    error es `GhTooOld` y la UI dice la que hay, la que hace falta y cómo
+    instalar la oficial (Ajustes y Publicar, con `outdated` en su estado). En
+    Linux se enlaza a las instrucciones oficiales y no se recomienda apt: Ubuntu
+    26.04 trae la 2.46.0.
+  - Las páginas que abre la interfaz son una lista cerrada (`WebPage`), nunca
+    una dirección que venga de ella.
   - **Ninguna decisión depende del texto de gh.** Las llamadas a la API van con
     `gh api --include` y se decide por el código HTTP y el JSON. Fuera de la API,
     por los códigos de salida documentados (4 = hace falta autenticación).

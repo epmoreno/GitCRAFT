@@ -9,13 +9,59 @@ import { os, osKey, type Os } from "../../app/platform";
 import i18n from "../../i18n";
 import styles from "./settings.module.css";
 
-/** The command that installs gh, as each system's usual package manager
- * writes it (shown, never run). */
-const INSTALL_GH: Record<Os, string> = {
+/** The commands that install or update gh with each system's usual package
+ * manager (shown, never run). None on Linux: the gh that distributions ship
+ * is often too old, so there it is the official instructions. */
+const INSTALL_GH: Record<Os, string | null> = {
   mac: "brew install gh",
   windows: "winget install --id GitHub.cli",
-  linux: "sudo apt install gh",
+  linux: null,
 };
+const UPDATE_GH: Record<Os, string | null> = {
+  mac: "brew upgrade gh",
+  windows: "winget upgrade --id GitHub.cli",
+  linux: null,
+};
+
+/** How to install or update gh on this system. */
+function HowToInstall({
+  what,
+  onCheck,
+}: {
+  what: "install" | "update";
+  onCheck: () => void;
+}) {
+  const { t } = useTranslation();
+  const command = (what === "install" ? INSTALL_GH : UPDATE_GH)[os()];
+  return (
+    <>
+      <p>
+        {t(osKey(`settings.github.${what}`, (k) => i18n.exists(k)))}
+        {command && (
+          <>
+            {" "}
+            <code className="selectable">{command}</code>
+          </>
+        )}
+      </p>
+      <p className={styles.hint}>
+        {t(osKey("settings.github.installOther", (k) => i18n.exists(k)))}
+      </p>
+      <div className={styles.fieldControl}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => void commands.openWebPage("installGh")}
+        >
+          {t("settings.github.installPage")}
+        </button>
+        <button type="button" className={styles.button} onClick={onCheck}>
+          {t("settings.github.checkAgain")}
+        </button>
+      </div>
+    </>
+  );
+}
 
 type Login =
   { step: "waiting" } | { step: "code"; code: string; url: string } | null;
@@ -96,17 +142,22 @@ export function GithubSection() {
       {status && status.path === null && (
         <div className={styles.notice} role="status">
           <p>{t("settings.github.notInstalled")}</p>
-          <p>
-            {t(osKey("settings.github.install", (k) => i18n.exists(k)))}{" "}
-            <code className="selectable">{INSTALL_GH[os()]}</code>
-          </p>
-          <p className={styles.hint}>{t("settings.github.installOther")}</p>
-          <button type="button" className={styles.button} onClick={refresh}>
-            {t("settings.github.checkAgain")}
-          </button>
+          <HowToInstall what="install" onCheck={refresh} />
         </div>
       )}
-      {status?.path && (
+      {status?.path && status.outdated && (
+        <div className={styles.notice} role="status">
+          <p>
+            {t("settings.github.outdated", {
+              found: status.outdated.found,
+              required: status.outdated.required,
+              path: status.path,
+            })}
+          </p>
+          <HowToInstall what="update" onCheck={refresh} />
+        </div>
+      )}
+      {status?.path && !status.outdated && (
         <>
           <p className={styles.hint}>
             {t("settings.github.found", {

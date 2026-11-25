@@ -302,6 +302,8 @@ export const commands = {
 	 *  git gets github.com credentials. Never includes a token.
 	 */
 	ghStatus: () => typedError<GhStatus_Serialize, IpcError_Serialize>(__TAURI_INVOKE("gh_status")),
+	/**  Opens one of GitCRAFT's known pages in the default browser. */
+	openWebPage: (page: WebPage) => __TAURI_INVOKE<void>("open_web_page", { page }),
 	/**
 	 *  Signs in to GitHub with gh in the browser; the one-time code arrives on
 	 *  `on_event`. Resolves when the browser confirmed it.
@@ -1134,6 +1136,8 @@ export type ErrorKind = "gitNotFound" | "pathNotFound" | "notARepository" | "bar
 "ghRepoExists" | 
 /**  GitHub CLI (`gh`) is not installed. */
 "ghNotFound" | 
+/**  The installed `gh` is older than GitCRAFT needs. */
+"ghTooOld" | 
 /**  `gh` has no valid session for github.com. */
 "ghNotLoggedIn" | 
 /**  GitHub could not be reached: says nothing about the session. */
@@ -1348,6 +1352,14 @@ export type GhAccount = {
 	gitProtocol: string,
 };
 
+/**  The installed gh is too old. */
+export type GhOutdated = {
+	/**  The installed version. */
+	found: string,
+	/**  The oldest one GitCRAFT works with. */
+	required: string,
+};
+
 /**  Settings → GitHub account. */
 export type GhStatus = GhStatus_Serialize | GhStatus_Deserialize;
 
@@ -1356,6 +1368,8 @@ export type GhStatus_Deserialize = {
 	/**  Where gh is; `None`: not installed. */
 	path?: string | null,
 	version?: string | null,
+	/**  gh is there, but too old: nothing is known about the session. */
+	outdated?: GhOutdated | null,
 	/**  Accounts for github.com (empty: no session). */
 	accounts: GhAccount[],
 	/**
@@ -1379,6 +1393,8 @@ export type GhStatus_Serialize = {
 	/**  Where gh is; `None`: not installed. */
 	path: string | null,
 	version: string | null,
+	/**  gh is there, but too old: nothing is known about the session. */
+	outdated: GhOutdated | null,
 	/**  Accounts for github.com (empty: no session). */
 	accounts: GhAccount[],
 	/**
@@ -2403,6 +2419,8 @@ export type PublishInfo_Deserialize = {
 	 */
 	account?: GhAccount | null,
 	ghInstalled: boolean,
+	/**  gh is there, but too old: nothing is known about the session. */
+	ghOutdated?: GhOutdated | null,
 	/**
 	 *  The session could not be checked (no connection): `account` is empty
 	 *  but that does not mean there is no session.
@@ -2421,6 +2439,8 @@ export type PublishInfo_Serialize = {
 	 */
 	account: GhAccount | null,
 	ghInstalled: boolean,
+	/**  gh is there, but too old: nothing is known about the session. */
+	ghOutdated: GhOutdated | null,
 	/**
 	 *  The session could not be checked (no connection): `account` is empty
 	 *  but that does not mean there is no session.
@@ -3273,6 +3293,18 @@ export type UndoState_Serialize = {
 	undo: StackTop_Serialize | null,
 	redo: StackTop_Serialize | null,
 };
+
+/**
+ *  Opens GitHub's device page (a fixed https URL from gitcraft_core, never
+ *  user input) with the system's opener (`open`, `xdg-open`, `explorer`),
+ *  without a shell.
+ *  A page the interface can ask to open: never an address of its own.
+ */
+export type WebPage = 
+/**  GitCRAFT's repository. */
+"project" | 
+/**  GitHub CLI's official installation instructions for this system. */
+"installGh";
 
 /**  Why a file can only be resolved by keeping one version whole. */
 export type WholeFileReason = 

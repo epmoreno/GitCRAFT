@@ -121,6 +121,7 @@ vi.mock("../ipc", () => ({
     identityChanges: vi.fn(),
     setGitIdentity: vi.fn(),
     ghStatus: vi.fn(),
+    openWebPage: vi.fn(),
     cancelGhLogin: vi.fn(),
     ghLogout: vi.fn(),
     ghSetupGit: vi.fn(),

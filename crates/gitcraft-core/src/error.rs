@@ -138,6 +138,10 @@ pub enum GitError {
     #[error("unexpected gh output: {0}")]
     GhParse(String),
 
+    /// The installed gh lacks what GitCRAFT needs (see [`crate::gh::MIN_VERSION`]).
+    #[error("gh {found} is too old: GitCRAFT needs {required} or later")]
+    GhTooOld { found: String, required: String },
+
     /// `gh` ran and failed.
     #[error("`gh {}` failed with exit code {exit_code:?}: {}", args.join(" "), stderr.trim())]
     GhFailed {
@@ -235,6 +239,8 @@ pub enum ErrorKind {
     GhRepoExists,
     /// GitHub CLI (`gh`) is not installed.
     GhNotFound,
+    /// The installed `gh` is older than GitCRAFT needs.
+    GhTooOld,
     /// `gh` has no valid session for github.com.
     GhNotLoggedIn,
     /// GitHub could not be reached: says nothing about the session.
@@ -279,6 +285,7 @@ impl GitError {
             Self::InvalidRepoName(_) => ErrorKind::InvalidRepoName,
             Self::GhRepoExists(_) => ErrorKind::GhRepoExists,
             Self::GhNotFound => ErrorKind::GhNotFound,
+            Self::GhTooOld { .. } => ErrorKind::GhTooOld,
             Self::GhNotLoggedIn => ErrorKind::GhNotLoggedIn,
             Self::GhUnreachable => ErrorKind::GhUnreachable,
             Self::GhFailed {
@@ -338,9 +345,10 @@ impl GitError {
             | Self::TimedOut(_)
             | Self::GhSpawn(_)
             | Self::GhParse(_) => Some(redact_credentials(&self.to_string()).into_owned()),
-            Self::UndoConflict(_) | Self::UndoUnsupported(_) | Self::TrashFailed { .. } => {
-                Some(self.to_string())
-            }
+            Self::UndoConflict(_)
+            | Self::UndoUnsupported(_)
+            | Self::TrashFailed { .. }
+            | Self::GhTooOld { .. } => Some(self.to_string()),
             Self::GitNotFound
             | Self::PathNotFound(_)
             | Self::Cancelled

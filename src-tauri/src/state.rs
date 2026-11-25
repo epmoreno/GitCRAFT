@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use gitcraft_core::gh::{GITHUB_HOST, Gh, GhAccount, LoginEvent};
+use gitcraft_core::gh::{GITHUB_HOST, Gh, GhAccount, LoginEvent, Session};
 use gitcraft_core::graph::{GraphLine, load_graph};
 use gitcraft_core::ops::blame::{self as blame_ops, BlameOutcome, BlameStream};
 use gitcraft_core::ops::branch::{
@@ -194,9 +194,39 @@ pub struct PublishInfo {
     /// is not installed, see `gh_installed`).
     pub account: Option<GhAccount>,
     pub gh_installed: bool,
+    /// gh is there, but too old: nothing is known about the session.
+    pub gh_outdated: Option<GhOutdated>,
     /// The session could not be checked (no connection): `account` is empty
     /// but that does not mean there is no session.
     pub session_unreachable: bool,
+}
+
+/// The installed gh is too old.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct GhOutdated {
+    /// The installed version.
+    pub found: String,
+    /// The oldest one GitCRAFT works with.
+    pub required: String,
+}
+
+/// gh's session, or that the installed gh is too old to ask.
+async fn session_unless_outdated(
+    gh: &Gh,
+    cancel: &CancellationToken,
+) -> Result<(Session, Option<GhOutdated>), GitError> {
+    match gh.session(cancel).await {
+        Ok(session) => Ok((session, None)),
+        Err(GitError::GhTooOld { found, required }) => Ok((
+            Session {
+                accounts: Vec::new(),
+                unreachable: false,
+            },
+            Some(GhOutdated { found, required }),
+        )),
+        Err(err) => Err(err),
+    }
 }
 
 /// Settings → GitHub account.
@@ -206,6 +236,8 @@ pub struct GhStatus {
     /// Where gh is; `None`: not installed.
     pub path: Option<String>,
     pub version: Option<String>,
+    /// gh is there, but too old: nothing is known about the session.
+    pub outdated: Option<GhOutdated>,
     /// Accounts for github.com (empty: no session).
     pub accounts: Vec<GhAccount>,
     /// GitHub could not be reached, so `accounts` says nothing about whether
@@ -1476,6 +1508,7 @@ impl AppState {
             return Ok(GhStatus {
                 path: None,
                 version: None,
+                outdated: None,
                 accounts: Vec::new(),
                 session_unreachable: false,
                 github_helpers,
@@ -1483,10 +1516,11 @@ impl AppState {
                 git_uses_gh,
             });
         };
-        let session = gh.session(&cancel).await?;
+        let (session, outdated) = session_unless_outdated(&gh, &cancel).await?;
         Ok(GhStatus {
             path: Some(gh.exe().to_string_lossy().into_owned()),
             version: gh.version(&cancel).await.ok(),
+            outdated,
             accounts: session.accounts,
             session_unreachable: session.unreachable,
             github_helpers,
@@ -1538,9 +1572,12 @@ impl AppState {
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
         let gh = self.find_gh();
-        let session = match &gh {
-            Some(gh) => Some(gh.session(&cancel).await?),
-            None => None,
+        let (session, gh_outdated) = match &gh {
+            Some(gh) => {
+                let (session, outdated) = session_unless_outdated(gh, &cancel).await?;
+                (Some(session), outdated)
+            }
+            None => (None, None),
         };
         let session_unreachable = session.as_ref().is_some_and(|s| s.unreachable);
         let account = session
@@ -1551,6 +1588,7 @@ impl AppState {
             suggested_name: publish::suggest_repo_name(&folder),
             account,
             gh_installed: gh.is_some(),
+            gh_outdated,
             session_unreachable,
         })
     }
@@ -1671,6 +1709,38 @@ impl AppState {
 /// Opens GitHub's device page (a fixed https URL from gitcraft_core, never
 /// user input) with the system's opener (`open`, `xdg-open`, `explorer`),
 /// without a shell.
+/// A page the interface can ask to open: never an address of its own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum WebPage {
+    /// GitCRAFT's repository.
+    Project,
+    /// GitHub CLI's official installation instructions for this system.
+    InstallGh,
+}
+
+impl WebPage {
+    fn url(self, os: gitcraft_core::platform::Os) -> &'static str {
+        use gitcraft_core::platform::Os;
+        match (self, os) {
+            (Self::Project, _) => "https://github.com/epmoreno/GitCRAFT",
+            (Self::InstallGh, Os::MacOs) => {
+                "https://github.com/cli/cli/blob/trunk/docs/install_macos.md"
+            }
+            (Self::InstallGh, Os::Windows) => {
+                "https://github.com/cli/cli/blob/trunk/docs/install_windows.md"
+            }
+            (Self::InstallGh, Os::Linux) => {
+                "https://github.com/cli/cli/blob/trunk/docs/install_linux.md"
+            }
+        }
+    }
+
+    pub fn open(self) {
+        open_in_browser(self.url(gitcraft_core::platform::Os::current()));
+    }
+}
+
 fn open_in_browser(url: &str) {
     if !url.starts_with(&format!("https://{GITHUB_HOST}/")) {
         return;

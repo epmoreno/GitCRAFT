@@ -9,7 +9,8 @@ import { useSettingsStore } from "./store";
 
 const status = (overrides: Partial<GhStatus> = {}): GhStatus => ({
   path: "/opt/homebrew/bin/gh",
-  version: "gh version 2.62.0 (2024-11-14)",
+  version: "gh version 2.103.3 (2026-10-26)",
+  outdated: null,
   accounts: [{ login: "ana", active: true, valid: true, gitProtocol: "https" }],
   sessionUnreachable: false,
   githubHelpers: [],
@@ -49,27 +50,78 @@ describe("GitHub account in Settings", () => {
   });
 
   // P.6: the install hint follows the system's package manager.
+  it("on Windows, explains how to install gh there", async () => {
+    setPlatformForTests("windows");
+    const section = await openGithub(
+      status({ path: null, version: null, accounts: [] }),
+    );
+    expect(
+      await within(section).findByText("Instálalo con winget en la terminal:"),
+    ).toBeVisible();
+    expect(
+      within(section).getByText("winget install --id GitHub.cli"),
+    ).toHaveClass("selectable");
+    expect(section).not.toHaveTextContent("brew");
+  });
+
+  // Ubuntu's own gh is too old: never recommended.
+  it("on Linux, points to the official repository, never to apt", async () => {
+    const user = userEvent.setup();
+    setPlatformForTests("linux");
+    const section = await openGithub(
+      status({ path: null, version: null, accounts: [] }),
+    );
+    expect(
+      await within(section).findByText(/repositorio oficial de GitHub CLI/),
+    ).toBeVisible();
+    expect(section).not.toHaveTextContent(/apt install|brew/);
+    await user.click(
+      within(section).getByRole("button", {
+        name: "Abrir las instrucciones oficiales",
+      }),
+    );
+    expect(ipc.openWebPage).toHaveBeenCalledWith("installGh");
+  });
+
   it.each([
-    [
-      "windows",
-      "Instálalo con winget en la terminal:",
-      "winget install --id GitHub.cli",
-    ],
-    [
-      "linux",
-      "Instálalo con el gestor de paquetes de tu distribución; por ejemplo, en Debian o Ubuntu:",
-      "sudo apt install gh",
-    ],
+    ["mac", "brew upgrade gh"],
+    ["windows", "winget upgrade --id GitHub.cli"],
+    ["linux", null],
   ] as const)(
-    "on %s, explains how to install gh there",
-    async (system, text, command) => {
+    "on %s, an old gh: the version there is, the one needed and how to get it",
+    async (system, command) => {
+      const user = userEvent.setup();
       setPlatformForTests(system);
       const section = await openGithub(
-        status({ path: null, version: null, accounts: [] }),
+        status({
+          path: "/usr/bin/gh",
+          version: "gh version 2.46.0 (2025-01-13 Ubuntu 2.46.0-4)",
+          outdated: { found: "2.46.0", required: "2.81.0" },
+          accounts: [],
+        }),
       );
-      expect(await within(section).findByText(text)).toBeVisible();
-      expect(within(section).getByText(command)).toHaveClass("selectable");
-      expect(section).not.toHaveTextContent("brew");
+      expect(
+        await within(section).findByText(
+          /Tienes gh 2\.46\.0 \(\/usr\/bin\/gh\), y GitCRAFT necesita la 2\.81\.0 o posterior/,
+        ),
+      ).toBeVisible();
+      if (command) {
+        expect(within(section).getByText(command)).toBeVisible();
+      } else {
+        expect(section).not.toHaveTextContent(/apt install|brew|winget/);
+      }
+      // Not "no session", nor anything to sign in with.
+      expect(section).not.toHaveTextContent("No hay sesión");
+      expect(
+        within(section).queryByRole("button", {
+          name: "Iniciar sesión en GitHub",
+        }),
+      ).not.toBeInTheDocument();
+      ipc.ghStatus.mockResolvedValue({ status: "ok", data: status() });
+      await user.click(
+        within(section).getByRole("button", { name: "Comprobar de nuevo" }),
+      );
+      expect(await within(section).findByText("@ana")).toBeVisible();
     },
   );
 
@@ -94,7 +146,7 @@ describe("GitHub account in Settings", () => {
     const user = userEvent.setup();
     const section = await openGithub();
     expect(await within(section).findByText("@ana")).toBeVisible();
-    expect(section).toHaveTextContent("gh version 2.62.0");
+    expect(section).toHaveTextContent("gh version 2.103.3");
     expect(section).toHaveTextContent("No guarda ningún token propio");
     expect(section).not.toHaveTextContent(/gh[opsu]_/);
 
