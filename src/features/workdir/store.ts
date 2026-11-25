@@ -10,6 +10,7 @@ import {
   type WorktreeArea,
 } from "../../ipc";
 import { useGraphStore } from "../graph/store";
+import { followOpenFile } from "./followOpenFile";
 
 export type RepoStatus = {
   status: WorkingStatus | null;
@@ -236,6 +237,7 @@ export const useWorkdirStore = create<WorkdirState>()((set, get) => {
             }
           : { error: result.error },
       );
+      if (result.status === "ok") followOpenFile(repoId, result.data);
     },
 
     forget: (repoId) =>

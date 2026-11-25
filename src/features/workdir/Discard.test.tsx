@@ -96,6 +96,44 @@ describe("discarding changes", () => {
     });
   });
 
+  it("after discarding the new file on screen, shows the history again", async () => {
+    const user = userEvent.setup();
+    const lost = loss({ path: "scratch.txt", untracked: true, lines: 1 });
+    ipc.discardPreview.mockResolvedValue({ status: "ok", data: [lost] });
+    ipc.discardChanges.mockResolvedValue({
+      status: "ok",
+      data: { undoId: 7, files: [lost], stashed: false },
+    });
+    renderWorkspace();
+    await user.click(
+      screen.getByRole("button", { name: "Ver cambios de scratch.txt" }),
+    );
+    expect(
+      screen.getByRole("region", { name: "Diff de scratch.txt" }),
+    ).toBeVisible();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Descartar los cambios de scratch.txt",
+      }),
+    );
+    ipc.workingStatus.mockResolvedValue({
+      status: "ok",
+      data: { ...status(), untracked: [] },
+    });
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Descartar",
+      }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Deshacer" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("region", { name: "Diff de scratch.txt" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("always asks first, saying exactly what is lost", async () => {
     const user = userEvent.setup();
     ipc.discardPreview.mockResolvedValue({ status: "ok", data: [loss({})] });

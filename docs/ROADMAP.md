@@ -3767,7 +3767,11 @@ una instalación se propone y se espera la aprobación (norma 8).
           en Windows y Linux no salía ni la versión.
           *Tests:* el diálogo en los dos idiomas, el menú en los tres sistemas,
           y la versión en el modo de humo.
-        - [ ] **Archivo descartado que sigue en el panel central.**
+        - [x] **Archivo descartado que sigue en el panel central.** Con cada
+          estado nuevo, el cambio abierto sigue a su archivo si cambia de lista
+          (al prepararlo o quitarlo entero) o vuelve al historial si ya no es
+          un cambio (descarte, commit o borrado fuera): `followOpenFile.ts`.
+          *Tests:* los cuatro casos, y descartar el archivo nuevo en pantalla.
         - [ ] **Rama inicial al inicializar:** «main», salvo la de la
           configuración personal (no la de sistema).
         - [ ] **Ventana estrecha** (mínimo 900×560): barra, paneles y etiquetas,
