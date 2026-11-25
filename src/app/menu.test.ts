@@ -34,6 +34,7 @@ vi.mock("@tauri-apps/api/menu", () => {
 
 const actions = {
   openSettings: vi.fn(),
+  about: vi.fn(),
   newTab: vi.fn(),
   closeTab: vi.fn(),
   quit: vi.fn(),
@@ -68,7 +69,7 @@ describe("menu bar", () => {
   it("on macOS, is the one it always was", async () => {
     await install();
     expect(outline()).toEqual([
-      "GitCRAFT: About, —, Ajustes… [CmdOrCtrl+,], —, Services, —, Hide, HideOthers, ShowAll, —, Salir de GitCRAFT [CmdOrCtrl+Q]",
+      "GitCRAFT: Acerca de GitCRAFT, —, Ajustes… [CmdOrCtrl+,], —, Services, —, Hide, HideOthers, ShowAll, —, Salir de GitCRAFT [CmdOrCtrl+Q]",
       "Archivo: Nueva pestaña [CmdOrCtrl+T]",
       "Edición: Undo, Redo, —, Cut, Copy, Paste, SelectAll",
       "Ventana: Cerrar pestaña [CmdOrCtrl+W], —, Minimize, Fullscreen",
@@ -86,6 +87,20 @@ describe("menu bar", () => {
         "Edición: Cortar, Copiar, Pegar, —, Seleccionar todo",
         "Ayuda: Acerca de GitCRAFT",
       ]);
+    },
+  );
+
+  it.each(["mac", "windows", "linux"] as const)(
+    "on %s, About opens the app's own dialog",
+    async (system) => {
+      setPlatformForTests(system);
+      await install();
+      const about = built.menu
+        .flatMap((sub) => sub.items ?? [])
+        .find((n) => n.id === "about");
+      expect(about?.item).toBeUndefined();
+      about?.action?.();
+      expect(actions.about).toHaveBeenCalled();
     },
   );
 

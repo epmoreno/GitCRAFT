@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { AboutDialog } from "../features/about/AboutDialog";
+import { useAboutStore } from "../features/about/store";
 import { BranchDialogs, BranchToast } from "../features/branches/BranchDialogs";
 import { CreateDialogs } from "../features/create/CreateDialogs";
 import { DetailPanel } from "../features/detail/DetailPanel";
@@ -75,6 +77,9 @@ export function App() {
     void installAppMenu(t, {
       openSettings: () => {
         if (!dialogOpen()) useSettingsStore.getState().openSettings();
+      },
+      about: () => {
+        if (!dialogOpen()) useAboutStore.getState().open();
       },
       newTab: () => {
         if (!dialogOpen()) tabs().newTab();
@@ -173,6 +178,7 @@ export function App() {
         <RemoteDialogs />
         <CreateDialogs />
         <SettingsDialog />
+        <AboutDialog />
         <PublishDialog />
         <UnsavedDialog />
         <HistoryDialogs />

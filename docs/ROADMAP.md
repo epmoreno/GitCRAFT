@@ -3761,8 +3761,12 @@ una instalación se propone y se espera la aprobación (norma 8).
           demasiado antigua, así que no se recomienda.
           *Tests:* gh simulado antiguo, reciente y sin número; el aviso en los
           tres sistemas, y en Publicar.
-        - [ ] **Acerca de GitCRAFT** igual en los tres sistemas: nombre,
-          versión, licencia y enlace al repositorio.
+        - [x] **Acerca de GitCRAFT** igual en los tres sistemas: nombre,
+          versión, licencia y enlace al repositorio. Un diálogo propio
+          (`src/features/about/`): el de cada sistema enseña cosas distintas, y
+          en Windows y Linux no salía ni la versión.
+          *Tests:* el diálogo en los dos idiomas, el menú en los tres sistemas,
+          y la versión en el modo de humo.
         - [ ] **Archivo descartado que sigue en el panel central.**
         - [ ] **Rama inicial al inicializar:** «main», salvo la de la
           configuración personal (no la de sistema).

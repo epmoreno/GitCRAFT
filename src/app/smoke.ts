@@ -1,7 +1,11 @@
 import { useConflictStore } from "../features/conflicts/store";
 import { commands } from "../ipc";
 import { frameOrTick, settles } from "./settle";
-import { rebaseLayoutProblems, settingsLayout } from "./smokeLayout";
+import {
+  aboutProblems,
+  rebaseLayoutProblems,
+  settingsLayout,
+} from "./smokeLayout";
 import { confirmClosing, installWindowCloseGuard, requestQuit } from "./quit";
 
 /**
@@ -50,6 +54,7 @@ export async function reportIfSmokeRun(): Promise<void> {
   const problems = [
     ...engineProblems(),
     ...settings.problems,
+    ...(await aboutProblems()),
     ...(await rebaseLayoutProblems()),
   ];
   await commands.smokeReport(problems, settings.notes);

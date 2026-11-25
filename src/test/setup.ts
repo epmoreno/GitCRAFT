@@ -45,6 +45,7 @@ import {
   initialWorkdirViewPrefs,
   useWorkdirViewPrefs,
 } from "../features/workdir/viewPrefs";
+import { useAboutStore } from "../features/about/store";
 import { resetIpcMock } from "./ipc";
 import { setPlatformForTests } from "../app/platform";
 
@@ -175,6 +176,7 @@ vi.mock("../ipc", () => ({
     pushTag: vi.fn(),
     deleteRemoteTag: vi.fn(),
   },
+  appVersion: vi.fn(() => Promise.resolve("0.0.0")),
   setUiZoom: vi.fn(),
   ghLogin: vi.fn(),
   pickFolder: vi.fn(),
@@ -227,6 +229,7 @@ beforeEach(() => {
   useCreateStore.setState(initialCreateState);
   useOperationsStore.setState(initialOperationsState);
   useGraphStore.setState({ graphs: {} });
+  useAboutStore.setState({ isOpen: false });
   useSettingsStore.setState(initialSettingsState);
   usePublishStore.setState(initialPublishState);
   localStorage.clear();

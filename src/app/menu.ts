@@ -10,6 +10,7 @@ import { accelerator } from "./shortcuts";
 
 type MenuActions = {
   openSettings: () => void;
+  about: () => void;
   newTab: () => void;
   closeTab: () => void;
   /** Quit the app: asks first if conflict choices are unsaved. */
@@ -35,14 +36,12 @@ async function macMenu(t: TFunction, actions: MenuActions) {
   const app = await Submenu.new({
     text: "GitCRAFT",
     items: [
-      await PredefinedMenuItem.new({
-        item: {
-          // `credits` is what macOS shows; `comments`, Windows and Linux.
-          About: {
-            credits: t("app.description"),
-            comments: t("app.description"),
-          },
-        },
+      // The app's own dialog, not each system's panel: they all show
+      // different things.
+      await MenuItem.new({
+        id: "about",
+        text: t("menu.about"),
+        action: actions.about,
       }),
       await separator(),
       await MenuItem.new({
@@ -166,9 +165,10 @@ async function windowsAndLinuxMenu(t: TFunction, actions: MenuActions) {
   const help = await Submenu.new({
     text: t("menu.help"),
     items: [
-      await PredefinedMenuItem.new({
+      await MenuItem.new({
+        id: "about",
         text: t("menu.about"),
-        item: { About: { comments: t("app.description") } },
+        action: actions.about,
       }),
     ],
   });

@@ -39,6 +39,7 @@ describe("smoke run checks", () => {
 // The layout checks need a real engine; jsdom lays nothing out.
 vi.mock("./smokeLayout", () => ({
   settingsLayout: async () => ({ problems: [], notes: ["a measure"] }),
+  aboutProblems: async () => [],
   rebaseLayoutProblems: async () => [],
 }));
 

@@ -671,6 +671,15 @@
     "about": "About GitCRAFT",
     "quitMac": "Quit GitCRAFT"
   },
+  "about": {
+    "title": "About GitCRAFT",
+    "version": "Version",
+    "license": "License",
+    "mit": "MIT License",
+    "repository": "Repository",
+    "openRepository": "Open in the browser",
+    "close": "Close"
+  },
   "init": {
     "pickerTitle": "Folder for the new repository",
     "title": "Initialize repository",

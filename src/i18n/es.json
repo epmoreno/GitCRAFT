@@ -671,6 +671,15 @@
     "about": "Acerca de GitCRAFT",
     "quitMac": "Salir de GitCRAFT"
   },
+  "about": {
+    "title": "Acerca de GitCRAFT",
+    "version": "Versión",
+    "license": "Licencia",
+    "mit": "Licencia MIT",
+    "repository": "Repositorio",
+    "openRepository": "Abrir en el navegador",
+    "close": "Cerrar"
+  },
   "init": {
     "pickerTitle": "Carpeta para el nuevo repositorio",
     "title": "Inicializar repositorio",

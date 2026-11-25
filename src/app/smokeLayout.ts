@@ -2,7 +2,8 @@ import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { InteractiveRebaseView } from "../features/interactiveRebase/InteractiveRebaseView";
 import { useInteractiveRebaseStore } from "../features/interactiveRebase/store";
-import type { RangeCommit } from "../ipc";
+import { useAboutStore } from "../features/about/store";
+import { appVersion, type RangeCommit } from "../ipc";
 import { useSettingsStore } from "../features/settings/store";
 import { frameOrTick, settles } from "./settle";
 
@@ -106,6 +107,22 @@ export async function settingsLayout(): Promise<LayoutReport> {
     useSettingsStore.getState().close();
   }
   return { problems, notes };
+}
+
+/** "About GitCRAFT" shows the version this app was built with. */
+export async function aboutProblems(): Promise<string[]> {
+  const version = await appVersion();
+  useAboutStore.getState().open();
+  try {
+    const text = () =>
+      document.querySelector('[role="dialog"]')?.textContent ?? "";
+    const shown = await settles(() => text().includes(version));
+    return shown.ok && /^\d+\.\d+\.\d+/.test(version)
+      ? []
+      : [`about: the version ${version} is not in "${text()}"`];
+  } finally {
+    useAboutStore.getState().close();
+  }
 }
 
 /** A made-up plan for the view's layout check: C combined into B, A kept.

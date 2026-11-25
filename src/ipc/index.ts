@@ -1,4 +1,5 @@
 import { Channel } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -15,6 +16,10 @@ import {
 } from "./bindings";
 
 export { commands } from "./bindings";
+
+/** The app's version, as it was built. */
+export const appVersion = (): Promise<string> => getVersion();
+
 export type {
   AmendInfo,
   ApplyOutcome,
