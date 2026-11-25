@@ -808,7 +808,8 @@ combinar con el anterior, descartar y reordenar.
 ## 5f. Crear repositorios
 
 - **Inicializar** (`ops/init.rs`): `check_init` dice antes qué pasaría (rama
-  propuesta `init.defaultBranch` o «main», si ya es un repositorio, si
+  propuesta: el `init.defaultBranch` de la configuración personal o «main», nunca
+  el de sistema, que escribe el instalador de Git; si ya es un repositorio, si
   quedaría anidado en otro, si la carpeta está vacía). Nunca reinicializa un
   repositorio existente; los archivos que haya quedan sin seguimiento.
 - **Clonar** (`ops/clone.rs`): `git clone --progress -- <url> <destino>`. El

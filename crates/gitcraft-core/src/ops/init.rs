@@ -11,7 +11,9 @@ use crate::{CancellationToken, Git, GitError, Result};
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 pub struct InitCheck {
-    /// Initial branch suggested: the user's `init.defaultBranch`, or "main".
+    /// Initial branch suggested: the user's own `init.defaultBranch`, or
+    /// "main". The system's does not count: it is the one Git's installer
+    /// writes ("master" on Windows), not something the user chose.
     pub default_branch: String,
     /// The folder already is the top of a repository (nothing to create).
     pub already_repository: bool,
@@ -39,7 +41,8 @@ pub async fn check_init(git: &Git, path: &Path, cancel: &CancellationToken) -> R
         .output(cancel);
     let default = git
         .read(path)
-        .args(["config", "--get", "init.defaultBranch"])
+        .args(["config", "--global", "--includes", "--get"])
+        .arg("init.defaultBranch")
         .accept_exit_code(1)
         .output(cancel);
     let (toplevel, default) = tokio::try_join!(toplevel, default)?;

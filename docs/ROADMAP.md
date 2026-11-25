@@ -3772,8 +3772,12 @@ una instalación se propone y se espera la aprobación (norma 8).
           (al prepararlo o quitarlo entero) o vuelve al historial si ya no es
           un cambio (descarte, commit o borrado fuera): `followOpenFile.ts`.
           *Tests:* los cuatro casos, y descartar el archivo nuevo en pantalla.
-        - [ ] **Rama inicial al inicializar:** «main», salvo la de la
-          configuración personal (no la de sistema).
+        - [x] **Rama inicial al inicializar:** «main», salvo la de la
+          configuración personal (no la de sistema, que es donde puede dejar
+          «master» el instalador de Git para Windows). El diálogo ya dejaba
+          elegirla.
+          *Tests:* con «master» en la de sistema, y la personal vacía, con otra
+          rama y con un archivo incluido.
         - [ ] **Ventana estrecha** (mínimo 900×560): barra, paneles y etiquetas,
           con su comprobación en el modo de humo. *Causa:* la barra no encoge
           (1226 px en español en macOS) y ensancha toda la ventana por dentro.

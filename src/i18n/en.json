@@ -684,7 +684,7 @@
     "pickerTitle": "Folder for the new repository",
     "title": "Initialize repository",
     "branch": "Initial branch",
-    "branchHint": "The repository's first branch. Your Git configuration's (init.defaultBranch) or “main” is suggested.",
+    "branchHint": "The repository's first branch. The one in your personal Git configuration (init.defaultBranch) is suggested or, if you have not chosen any, “main”.",
     "nested": "This folder is inside the repository “{{parent}}”: the new one would be nested in it and the outer one would see it as just another folder. If that is not what you want, cancel and open that repository.",
     "empty": "The folder is empty.",
     "notEmpty": "Files already in the folder are not changed: they stay untracked, ready to be staged and committed.",

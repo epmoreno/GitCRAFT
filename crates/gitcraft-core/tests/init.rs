@@ -29,24 +29,7 @@ async fn creates_a_repository_with_the_chosen_first_branch() {
     assert!(!check.already_repository);
     assert_eq!(check.inside, None);
     assert!(check.empty);
-    // The user's init.defaultBranch, or "main".
-    let configured = git()
-        .read(dir.path())
-        .args(["config", "--get", "init.defaultBranch"])
-        .accept_exit_code(1)
-        .output(&c())
-        .await
-        .expect("config")
-        .stdout_lossy();
-    let expected = configured.trim();
-    assert_eq!(
-        check.default_branch,
-        if expected.is_empty() {
-            "main"
-        } else {
-            expected
-        }
-    );
+    assert_eq!(check.default_branch, "main", "nothing configured");
 
     init_repository(&git(), dir.path(), "trunk", &c())
         .await
@@ -60,6 +43,55 @@ async fn creates_a_repository_with_the_chosen_first_branch() {
         .expect_err("already a repository");
     assert_eq!(err.kind(), ErrorKind::AlreadyARepository);
     assert_eq!(head_branch(dir.path()).await, "trunk", "untouched");
+}
+
+#[tokio::test]
+async fn suggests_the_users_own_branch_never_the_systems() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let repo = dir.path().join("repo");
+    std::fs::create_dir(&repo).expect("folder");
+    let write = |name: &str, text: &str| {
+        let path = dir.path().join(name);
+        std::fs::write(&path, text).expect("config");
+        path
+    };
+    // What Git's installer writes on Windows.
+    let system = write("system", "[init]\n\tdefaultBranch = master\n");
+    let included = write("included", "[init]\n\tdefaultBranch = develop\n");
+    let none = write("none", "");
+    let own = write("own", "[init]\n\tdefaultBranch = trunk\n");
+    let include = write(
+        "include",
+        &format!(
+            "[include]\n\tpath = {}\n",
+            included
+                .to_string_lossy()
+                .replace(std::path::MAIN_SEPARATOR, "/")
+        ),
+    );
+    for (global, expected) in [(none, "main"), (own, "trunk"), (include, "develop")] {
+        let git = git()
+            .with_env("GIT_CONFIG_NOSYSTEM", "0")
+            .with_env("GIT_CONFIG_SYSTEM", &system)
+            .with_env("GIT_CONFIG_GLOBAL", &global);
+        // The system's value is really there.
+        let effective = git
+            .read(&repo)
+            .args(["config", "--system", "--get", "init.defaultBranch"])
+            .output(&c())
+            .await
+            .expect("config");
+        assert_eq!(effective.stdout_lossy().trim(), "master");
+        let check = check_init(&git, &repo, &c()).await.expect("check");
+        assert_eq!(check.default_branch, expected);
+        // And that is the branch the repository gets.
+        let target = dir.path().join(expected);
+        std::fs::create_dir(&target).expect("folder");
+        init_repository(&git, &target, &check.default_branch, &c())
+            .await
+            .expect("init");
+        assert_eq!(head_branch(&target).await, expected);
+    }
 }
 
 #[tokio::test]

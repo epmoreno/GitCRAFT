@@ -1632,7 +1632,11 @@ export type InitCheck = InitCheck_Serialize | InitCheck_Deserialize;
 
 /**  What `git init` would do in a folder, shown before doing it. */
 export type InitCheck_Deserialize = {
-	/**  Initial branch suggested: the user's `init.defaultBranch`, or "main". */
+	/**
+	 *  Initial branch suggested: the user's own `init.defaultBranch`, or
+	 *  "main". The system's does not count: it is the one Git's installer
+	 *  writes ("master" on Windows), not something the user chose.
+	 */
 	defaultBranch: string,
 	/**  The folder already is the top of a repository (nothing to create). */
 	alreadyRepository: boolean,
@@ -1647,7 +1651,11 @@ export type InitCheck_Deserialize = {
 
 /**  What `git init` would do in a folder, shown before doing it. */
 export type InitCheck_Serialize = {
-	/**  Initial branch suggested: the user's `init.defaultBranch`, or "main". */
+	/**
+	 *  Initial branch suggested: the user's own `init.defaultBranch`, or
+	 *  "main". The system's does not count: it is the one Git's installer
+	 *  writes ("master" on Windows), not something the user chose.
+	 */
 	defaultBranch: string,
 	/**  The folder already is the top of a repository (nothing to create). */
 	alreadyRepository: boolean,

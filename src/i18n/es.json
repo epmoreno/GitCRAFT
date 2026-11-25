@@ -684,7 +684,7 @@
     "pickerTitle": "Carpeta para el nuevo repositorio",
     "title": "Inicializar repositorio",
     "branch": "Rama inicial",
-    "branchHint": "La primera rama del repositorio. Se propone la de tu configuración de Git (init.defaultBranch) o «main».",
+    "branchHint": "La primera rama del repositorio. Se propone la de tu configuración personal de Git (init.defaultBranch) o, si no has elegido ninguna, «main».",
     "nested": "Esta carpeta está dentro del repositorio «{{parent}}»: el nuevo quedaría anidado en él y el de fuera lo vería como una carpeta más. Si no es lo que quieres, cancela y abre ese repositorio.",
     "empty": "La carpeta está vacía.",
     "notEmpty": "Los archivos que ya hay en la carpeta no se modifican: quedarán como archivos sin seguimiento, listos para preparar y confirmar.",
