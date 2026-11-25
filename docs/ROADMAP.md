@@ -1324,6 +1324,24 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 | Test | Archivo | Tarea | Qué falla en Windows |
 | --- | --- | --- | --- |
 
+### `a_burst_of_changes_is_debounced`, intermitente en Windows (arreglado)
+
+Falló en Windows en los runs 43908704259 (16 de noviembre de 2026, `6e225a5`) y
+45647157840 (25 de noviembre de 2026, `3761f4e`): llegaron dos avisos en vez de
+uno. El test lanzaba tres `git branch` y exigía que el watcher los juntara, pero
+el watcher solo junta lo que llega con menos de 300 ms de pausa; *causa
+probable* (el test no medía los tiempos): en un equipo lento, dos procesos se
+separan más. El watcher no tenía ningún fallo y no ha cambiado.
+
+*Arreglo:* el test escribe las ramas directamente, sin lanzar procesos: cinco,
+una cada 50 ms; si el equipo se detiene entre dos (más de la mitad del margen),
+no cuenta como ráfaga y se repite, hasta cinco veces. Las pausas hacen falta:
+sin ellas, macOS puede entregar las escrituras como un solo aviso y el test
+pasaría aunque el watcher no juntara nada (con 0 ms de margen fallaba 5 veces de
+10). No se ignora en Windows ni se sube el margen.
+*Comprobado* en macOS, repitiéndolo 25 veces: con 300 ms, 25 correctas; con 0 ms
+puestos a propósito, 25 fallos.
+
 ### «Timeout waiting for worker» de vitest
 
 El 24 de noviembre de 2026, `npm run check` falló en el Mac con 5 «Timeout

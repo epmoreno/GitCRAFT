@@ -356,13 +356,43 @@ mod tests {
     #[tokio::test]
     async fn a_burst_of_changes_is_debounced() {
         let w = watched().await;
-        for i in 0..3 {
-            w.repo.run(&["branch", &format!("burst-{i}")]).await;
+        let head = w.repo.head().await;
+        let mut attempt = 0;
+        while !write_burst(&w, &head, attempt) {
+            // The machine stopped halfway: that was not a burst.
+            attempt += 1;
+            assert!(attempt < 5, "no burst without a pause in {attempt} tries");
+            settle().await;
+            drain_earlier_events(&w).await;
         }
         wait_for_any(&w).await;
         settle().await;
-        assert_eq!(w.changes().len(), 1);
+        assert_eq!(w.changes(), [REFS]);
     }
+
+    /// Five branches, one every [`BURST_GAP`]: written directly, because
+    /// `git branch` processes can take longer than the debounce on a slow
+    /// machine (seen on Windows). The gaps are there because the system may
+    /// deliver writes without any as one event, which would pass without a
+    /// debounce. `false` if a gap got near the debounce.
+    fn write_burst(w: &Watched, head: &str, attempt: u32) -> bool {
+        let mut last = Instant::now();
+        let mut burst = true;
+        for i in 0..5 {
+            if i > 0 {
+                std::thread::sleep(BURST_GAP);
+            }
+            w.repo.write_file(
+                &format!(".git/refs/heads/burst-{attempt}-{i}"),
+                &format!("{head}\n"),
+            );
+            burst &= last.elapsed() < DEBOUNCE / 2;
+            last = Instant::now();
+        }
+        burst
+    }
+
+    const BURST_GAP: Duration = Duration::from_millis(50);
 
     #[tokio::test]
     async fn editing_a_file_is_a_worktree_change() {
