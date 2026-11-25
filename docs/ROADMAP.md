@@ -1335,7 +1335,10 @@ separan más. El watcher no tenía ningún fallo y no ha cambiado.
 
 *Arreglo:* el test escribe las ramas directamente, sin lanzar procesos: cinco,
 una cada 50 ms; si el equipo se detiene entre dos (más de la mitad del margen),
-no cuenta como ráfaga y se repite, hasta cinco veces. Las pausas hacen falta:
+no cuenta como ráfaga y se repite, hasta tres intentos en total, con una línea
+en la salida cada vez («slow machine, try 2 of 3»). Eso se decide solo con los
+tiempos de escritura, antes de mirar lo que dijo el watcher, así que no puede
+tapar un fallo suyo; al tercero sin ráfaga, el test falla. Las pausas hacen falta:
 sin ellas, macOS puede entregar las escrituras como un solo aviso y el test
 pasaría aunque el watcher no juntara nada (con 0 ms de margen fallaba 5 veces de
 10). No se ignora en Windows ni se sube el margen.

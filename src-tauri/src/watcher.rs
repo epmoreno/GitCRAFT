@@ -210,6 +210,7 @@ fn classify(roots: &Roots, path: &Path) -> Change {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
     use std::sync::Mutex;
     use std::time::Instant;
 
@@ -319,7 +320,9 @@ mod tests {
     /// and wait for it: events are delivered in order, so once the marker
     /// is reported every earlier event has been reported too.
     async fn drain_earlier_events(w: &Watched) {
-        w.repo.write_file(".git/logs/refs/stash", "");
+        // Other content each time: the same one might not be an event.
+        let marker = format!("{:?}", Instant::now());
+        w.repo.write_file(".git/logs/refs/stash", &marker);
         let deadline = Instant::now() + Duration::from_secs(10);
         while !w.changes().iter().any(|c| c.stash) {
             assert!(
@@ -359,9 +362,20 @@ mod tests {
         let head = w.repo.head().await;
         let mut attempt = 0;
         while !write_burst(&w, &head, attempt) {
-            // The machine stopped halfway: that was not a burst.
+            // The machine stopped halfway: that was not a burst. Decided from
+            // the writing alone, before looking at what the watcher said, so
+            // it cannot hide its failures.
             attempt += 1;
-            assert!(attempt < 5, "no burst without a pause in {attempt} tries");
+            assert!(
+                attempt < BURST_TRIES,
+                "no burst without a pause in {attempt} tries"
+            );
+            // Not `eprintln!`: the test harness would hide it if it passes.
+            let _ = writeln!(
+                std::io::stderr(),
+                "a_burst_of_changes_is_debounced: slow machine, try {} of {BURST_TRIES}",
+                attempt + 1
+            );
             settle().await;
             drain_earlier_events(&w).await;
         }
@@ -393,6 +407,8 @@ mod tests {
     }
 
     const BURST_GAP: Duration = Duration::from_millis(50);
+    /// Tries to write a burst; more than that is a failure.
+    const BURST_TRIES: u32 = 3;
 
     #[tokio::test]
     async fn editing_a_file_is_a_worktree_change() {
