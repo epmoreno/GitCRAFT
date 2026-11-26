@@ -1324,7 +1324,7 @@ los cinco de P.8 (rutas: repos duplicados, recientes y pestañas) en P.8.
 | Test | Archivo | Tarea | Qué falla en Windows |
 | --- | --- | --- | --- |
 
-### `a_burst_of_changes_is_debounced`, intermitente en Windows (arreglado)
+### `a_burst_of_changes_is_debounced`, intermitente en Windows y luego en macOS (arreglado)
 
 Falló en Windows en los runs 43908704259 (16 de noviembre de 2026, `6e225a5`) y
 45647157840 (25 de noviembre de 2026, `3761f4e`): llegaron dos avisos en vez de
@@ -1333,17 +1333,30 @@ el watcher solo junta lo que llega con menos de 300 ms de pausa; *causa
 probable* (el test no medía los tiempos): en un equipo lento, dos procesos se
 separan más. El watcher no tenía ningún fallo y no ha cambiado.
 
-*Arreglo:* el test escribe las ramas directamente, sin lanzar procesos: cinco,
-una cada 50 ms; si el equipo se detiene entre dos (más de la mitad del margen),
-no cuenta como ráfaga y se repite, hasta tres intentos en total, con una línea
-en la salida cada vez («slow machine, try 2 of 3»). Eso se decide solo con los
-tiempos de escritura, antes de mirar lo que dijo el watcher, así que no puede
-tapar un fallo suyo; al tercero sin ráfaga, el test falla. Las pausas hacen falta:
-sin ellas, macOS puede entregar las escrituras como un solo aviso y el test
-pasaría aunque el watcher no juntara nada (con 0 ms de margen fallaba 5 veces de
-10). No se ignora en Windows ni se sube el margen.
-*Comprobado* en macOS, repitiéndolo 25 veces: con 300 ms, 25 correctas; con 0 ms
-puestos a propósito, 25 fallos.
+*Primer arreglo (`e9eb751`, `33b2a04`), sustituido:* el test escribía cinco
+ramas directamente, una cada 50 ms, y repetía la ráfaga hasta tres veces si una
+pausa pasaba de 150 ms (la mitad del margen). Hacían falta pausas reales, porque
+sin ellas el sistema puede entregar las escrituras como un solo aviso y el test
+pasaría aunque el watcher no juntara nada. En el CI de `94bc7d0` (run
+45714414828, 25 de noviembre de 2026) falló en macOS: las tres ráfagas tuvieron
+alguna pausa de más de 150 ms. Un test con tiempos reales es frágil en algún
+sistema.
+
+*Arreglo:* el bucle que junta los avisos (`debounce` en `watcher.rs`) espera
+sus mensajes a través de un `Inbox`: en la app es el canal, igual que antes, y
+en los tests un reloj simulado con pasos en milisegundos fijos. Así la lógica
+se prueba sin depender de lo rápido que sea el equipo: tres cambios separados
+por 200 ms dan un aviso, una pausa de 1 s da dos, y lo que pasa durante una
+operación propia espera a que termine. El test con archivos reales
+(`a_branch_written_directly_is_reported_once`) queda solo de punta a punta:
+escribe una rama sin pausas y espera un aviso de refs. El margen sigue en
+300 ms, el watcher se comporta igual y no se ignora ningún test.
+*Comprobado* en macOS con cambios temporales, ya quitados. Con 0 ms de margen
+falla `changes_closer_than_the_debounce_are_reported_once` («changes closer
+than the debounce must be merged into one»: tres avisos en vez de uno), y
+también `an_external_commit_is_reported_once_as_a_ref_change`. Avisando de
+cada cambio sin juntarlos fallan esos dos, el de la rama escrita y el de
+editar un archivo.
 
 ### «Timeout waiting for worker» de vitest
 
@@ -1416,6 +1429,30 @@ habituales. Es lo que encaja con el fallo (no se ha reproducido).
       parado y la interfaz que nunca informa con la ventana ya abierta. Sin
       cuelgue, sale con 0 en 2 s. El corte del paso por `timeout-minutes` no
       se ha provocado en el CI.
+- [ ] **P.14 Una ejecución local del modo de humo no informó en 120 s.** El
+      25 de noviembre de 2026, hacia las 23:31:46 (hora peninsular), en
+      macOS, `target/debug/gitcraft --smoke` (compilación de depuración de
+      `94bc7d0`) salió con 2 a las 23:33:46, «the interface did not report
+      within 120s», sin ninguna otra línea: ni avisos ni notas de la
+      comprobación de la ventana estrecha. Se lanzó justo después de un
+      `npm run check` correcto. Las 10 ejecuciones siguientes, del mismo
+      binario y en el minuto siguiente, salieron con 0 en 2–3 s.
+      *El Mac:* según el registro de energía, despierto y con la pantalla
+      encendida desde las 23:15:20 (sin reposo hasta después de la prueba),
+      con batería (18 %). El registro no muestra actividad de teclado ni de
+      trackpad después de las 23:25:21, así que probablemente no se estaba
+      usando (no hay otra prueba de ello). Durante esos 120 s exactos,
+      `coreaudiod` tuvo seis contextos de audio abiertos que soltó en el
+      mismo segundo en que la app salió (1 min 59 s); en las ejecuciones
+      correctas no aparece nada así. No se sabe qué proceso los pidió.
+      *Relación con P.13:* el límite de P.13 hizo su trabajo y la prueba
+      terminó sola, así que no quedó parada. Puede ser el mismo cuelgue que
+      P.13 no llegó a explicar en local (la espera de un fotograma), pero
+      aquí el Mac estaba despierto y desde `415de27` esa espera tiene una
+      alternativa de 50 ms; no está probado. La causa es desconocida y no se
+      ha reproducido.
+      *Si vuelve a salir:* se añaden aquí la fecha, el binario, el estado del
+      Mac (`pmset -g log`) y lo que diga la salida.
 
 ## Fase 2
 

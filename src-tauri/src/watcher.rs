@@ -15,7 +15,7 @@
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::{self, RecvTimeoutError, Sender};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::time::Duration;
 
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -75,7 +75,7 @@ impl RepoWatcher {
             git_dirs: git_dirs.iter().map(|d| canonical(d)).collect(),
             worktree: canonical(worktree),
         };
-        let (tx, rx) = mpsc::channel::<Message>();
+        let (tx, mut rx) = mpsc::channel::<Message>();
         let busy = Arc::new(AtomicUsize::new(0));
 
         let event_tx = tx.clone();
@@ -106,24 +106,11 @@ impl RepoWatcher {
         std::thread::Builder::new()
             .name("gitcraft-watcher".into())
             .spawn(move || {
-                let mut pending = Change::default();
-                // Ends when the watcher (and with it every sender) is dropped.
-                while let Ok(first) = rx.recv() {
-                    if let Message::Changed(change) = first {
-                        pending.merge(change);
-                    }
-                    loop {
-                        match rx.recv_timeout(DEBOUNCE) {
-                            Ok(Message::Changed(change)) => pending.merge(change),
-                            Ok(Message::Flush) => {}
-                            Err(RecvTimeoutError::Timeout) => break,
-                            Err(RecvTimeoutError::Disconnected) => return,
-                        }
-                    }
-                    if pending.any() && thread_busy.load(Ordering::SeqCst) == 0 {
-                        on_change(std::mem::take(&mut pending));
-                    }
-                }
+                debounce(
+                    &mut rx,
+                    || thread_busy.load(Ordering::SeqCst) > 0,
+                    on_change,
+                )
             })
             .map_err(|e| notify::Error::generic(&e.to_string()))?;
 
@@ -154,6 +141,49 @@ impl Drop for Suppression {
     fn drop(&mut self) {
         if self.busy.fetch_sub(1, Ordering::SeqCst) == 1 {
             let _ = self.tx.send(Message::Flush);
+        }
+    }
+}
+
+/// Where [`debounce`] waits for messages: the channel in the app, a
+/// simulated clock in the tests, so the debounce logic is tested without
+/// depending on how fast the machine is.
+trait Inbox {
+    /// Waits for the next message; `None` when every sender is gone.
+    fn recv(&mut self) -> Option<Message>;
+    /// Waits at most `quiet` for the next message.
+    fn recv_timeout(&mut self, quiet: Duration) -> Result<Message, RecvTimeoutError>;
+}
+
+impl Inbox for Receiver<Message> {
+    fn recv(&mut self) -> Option<Message> {
+        Receiver::recv(self).ok()
+    }
+
+    fn recv_timeout(&mut self, quiet: Duration) -> Result<Message, RecvTimeoutError> {
+        Receiver::recv_timeout(self, quiet)
+    }
+}
+
+/// Merges changes until [`DEBOUNCE`] passes without any, then reports them
+/// once, unless an own operation is running: then they wait for its
+/// [`Message::Flush`]. Returns when the inbox is closed.
+fn debounce(inbox: &mut impl Inbox, busy: impl Fn() -> bool, mut on_change: impl FnMut(Change)) {
+    let mut pending = Change::default();
+    while let Some(first) = inbox.recv() {
+        if let Message::Changed(change) = first {
+            pending.merge(change);
+        }
+        loop {
+            match inbox.recv_timeout(DEBOUNCE) {
+                Ok(Message::Changed(change)) => pending.merge(change),
+                Ok(Message::Flush) => {}
+                Err(RecvTimeoutError::Timeout) => break,
+                Err(RecvTimeoutError::Disconnected) => return,
+            }
+        }
+        if pending.any() && !busy() {
+            on_change(std::mem::take(&mut pending));
         }
     }
 }
@@ -210,7 +240,9 @@ fn classify(roots: &Roots, path: &Path) -> Change {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
+    use std::cell::Cell;
+    use std::collections::VecDeque;
+    use std::rc::Rc;
     use std::sync::Mutex;
     use std::time::Instant;
 
@@ -356,59 +388,19 @@ mod tests {
         assert_eq!(w.changes(), [REFS]);
     }
 
+    /// End to end: writing a branch (one event or several, depending on the
+    /// system) is reported once. Whether close changes are merged is
+    /// decided by [`debounce`], tested on a simulated clock below.
     #[tokio::test]
-    async fn a_burst_of_changes_is_debounced() {
+    async fn a_branch_written_directly_is_reported_once() {
         let w = watched().await;
         let head = w.repo.head().await;
-        let mut attempt = 0;
-        while !write_burst(&w, &head, attempt) {
-            // The machine stopped halfway: that was not a burst. Decided from
-            // the writing alone, before looking at what the watcher said, so
-            // it cannot hide its failures.
-            attempt += 1;
-            assert!(
-                attempt < BURST_TRIES,
-                "no burst without a pause in {attempt} tries"
-            );
-            // Not `eprintln!`: the test harness would hide it if it passes.
-            let _ = writeln!(
-                std::io::stderr(),
-                "a_burst_of_changes_is_debounced: slow machine, try {} of {BURST_TRIES}",
-                attempt + 1
-            );
-            settle().await;
-            drain_earlier_events(&w).await;
-        }
+        w.repo
+            .write_file(".git/refs/heads/written", &format!("{head}\n"));
         wait_for_any(&w).await;
         settle().await;
         assert_eq!(w.changes(), [REFS]);
     }
-
-    /// Five branches, one every [`BURST_GAP`]: written directly, because
-    /// `git branch` processes can take longer than the debounce on a slow
-    /// machine (seen on Windows). The gaps are there because the system may
-    /// deliver writes without any as one event, which would pass without a
-    /// debounce. `false` if a gap got near the debounce.
-    fn write_burst(w: &Watched, head: &str, attempt: u32) -> bool {
-        let mut last = Instant::now();
-        let mut burst = true;
-        for i in 0..5 {
-            if i > 0 {
-                std::thread::sleep(BURST_GAP);
-            }
-            w.repo.write_file(
-                &format!(".git/refs/heads/burst-{attempt}-{i}"),
-                &format!("{head}\n"),
-            );
-            burst &= last.elapsed() < DEBOUNCE / 2;
-            last = Instant::now();
-        }
-        burst
-    }
-
-    const BURST_GAP: Duration = Duration::from_millis(50);
-    /// Tries to write a burst; more than that is a failure.
-    const BURST_TRIES: u32 = 3;
 
     #[tokio::test]
     async fn editing_a_file_is_a_worktree_change() {
@@ -439,5 +431,124 @@ mod tests {
         wait_for_any(&w).await;
         settle().await;
         assert_eq!(w.changes(), [REFS]);
+    }
+
+    /// What happens at a moment of the simulated clock.
+    #[derive(Clone, Copy)]
+    enum Step {
+        Edit(Change),
+        /// An own operation starts.
+        Busy,
+        /// The last own operation ends (as when its guard is dropped).
+        Idle,
+    }
+
+    /// An inbox on a simulated clock: each step happens at a fixed
+    /// millisecond, and waiting longer than the next step means a timeout.
+    struct Script {
+        steps: VecDeque<(Duration, Step)>,
+        now: Duration,
+        busy: Rc<Cell<bool>>,
+    }
+
+    impl Script {
+        /// The next message no later than `limit`, applying busy changes on
+        /// the way (they are not messages).
+        fn next_until(&mut self, limit: Option<Duration>) -> Option<Message> {
+            while let Some(&(at, step)) = self.steps.front() {
+                if limit.is_some_and(|limit| at > limit) {
+                    return None;
+                }
+                self.steps.pop_front();
+                self.now = at;
+                match step {
+                    Step::Edit(change) => return Some(Message::Changed(change)),
+                    Step::Busy => self.busy.set(true),
+                    Step::Idle => {
+                        self.busy.set(false);
+                        return Some(Message::Flush);
+                    }
+                }
+            }
+            None
+        }
+    }
+
+    impl Inbox for Script {
+        fn recv(&mut self) -> Option<Message> {
+            self.next_until(None)
+        }
+
+        fn recv_timeout(&mut self, quiet: Duration) -> Result<Message, RecvTimeoutError> {
+            let limit = self.now + quiet;
+            self.next_until(Some(limit)).ok_or_else(|| {
+                self.now = limit;
+                RecvTimeoutError::Timeout
+            })
+        }
+    }
+
+    /// What [`debounce`] reports for steps at the given milliseconds.
+    fn debounced(steps: &[(u64, Step)]) -> Vec<Change> {
+        let busy = Rc::new(Cell::new(false));
+        let mut script = Script {
+            steps: steps
+                .iter()
+                .map(|&(ms, step)| (Duration::from_millis(ms), step))
+                .collect(),
+            now: Duration::ZERO,
+            busy: Rc::clone(&busy),
+        };
+        let mut seen = Vec::new();
+        debounce(&mut script, || busy.get(), |change| seen.push(change));
+        seen
+    }
+
+    const WORKTREE_AND_STASH: Change = Change {
+        refs: false,
+        worktree: true,
+        stash: true,
+    };
+
+    #[test]
+    fn changes_closer_than_the_debounce_are_reported_once() {
+        // 400 ms in all, more than the debounce, but no gap reaches it.
+        let seen = debounced(&[
+            (0, Step::Edit(STASH)),
+            (200, Step::Edit(WORKTREE)),
+            (400, Step::Edit(STASH)),
+        ]);
+        assert_eq!(
+            seen,
+            [WORKTREE_AND_STASH],
+            "changes closer than the debounce must be merged into one"
+        );
+    }
+
+    #[test]
+    fn a_pause_longer_than_the_debounce_reports_twice() {
+        let seen = debounced(&[(0, Step::Edit(WORKTREE)), (1000, Step::Edit(STASH))]);
+        assert_eq!(seen, [WORKTREE, STASH]);
+    }
+
+    #[test]
+    fn changes_during_own_operations_wait_until_they_end() {
+        let seen = debounced(&[
+            (0, Step::Busy),
+            (10, Step::Edit(STASH)),
+            (1000, Step::Edit(WORKTREE)),
+            (2000, Step::Idle),
+            (5000, Step::Edit(REFS)),
+        ]);
+        assert_eq!(
+            seen,
+            [WORKTREE_AND_STASH, REFS],
+            "held back while busy, then one notification"
+        );
+    }
+
+    #[test]
+    fn an_own_operation_without_changes_reports_nothing() {
+        assert_eq!(debounced(&[(0, Step::Busy), (100, Step::Idle)]), []);
     }
 }

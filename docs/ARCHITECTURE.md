@@ -127,7 +127,9 @@ configuración.
   ~300 ms. Mientras haya una operación propia en curso en ese repo, sus eventos
   se **ignoran**; al terminar la operación se emite un único `repo-changed`.
   Así se evitan los refrescos en bucle (por ejemplo, un `status` que toca el
-  índice y vuelve a disparar el watcher).
+  índice y vuelve a disparar el watcher). El bucle que agrupa (`debounce`)
+  recibe los mensajes a través de un `Inbox`: el canal en la app y un reloj
+  simulado en los tests, para probar los tiempos sin depender del equipo.
 - **Errores:** `GitError::Failed { args, exit_code, stderr, stdout_tail }` y
   variantes propias. Un clasificador con patrones (con `LC_ALL=C` los mensajes
   son estables) los asigna a un `ErrorKind`; el catálogo completo está en
